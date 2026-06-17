@@ -1,9 +1,7 @@
 from app.core.database import engine
 
 try:
-    connection = engine.connect()
-    print("✅ Database connected successfully!")
-    connection.close()
-
+    with engine.connect() as connection:
+        print("Database connected successfully!")
 except Exception as e:
-    print("❌ Error:", e)
+    print("Error:", e)

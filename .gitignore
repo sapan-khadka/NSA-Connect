@@ -13,4 +13,7 @@ __pycache__/
 .pytest_cache/
 
 # Alembic
-alembic/versions/*.pyc
+backend/alembic/versions/*.pyc
+
+# Editor backups
+*.save
