@@ -1,6 +1,6 @@
 # NSA Connect
 
-A membership management platform for NSA (Norwegian Students' Association), built to handle member registration, roles, and approvals in one place.
+A membership management platform for NSA (Nepalese Students' Association), built to handle member registration, roles, and approvals in one place.
 
 **Week 1 status:** Project foundation — API skeleton, database models, Docker dev environment, Alembic migrations, and health checks are in place. Auth, member endpoints, and events are planned next.
 
