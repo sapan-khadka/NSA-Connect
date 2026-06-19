@@ -6,6 +6,8 @@ from alembic import context
 
 from app.core.config import settings
 from app.models import Base
+
+# Import all models so Alembic autogenerate can detect schema changes.
 import app.models.member  # noqa: F401
 
 config = context.config
@@ -17,11 +19,14 @@ target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
+    """Run migrations without a live DB connection (generates SQL scripts)."""
     context.configure(
         url=settings.DATABASE_URL,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        compare_type=True,
+        compare_server_default=True,
     )
 
     with context.begin_transaction():
@@ -29,6 +34,7 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
+    """Run migrations against a live database connection."""
     configuration = config.get_section(config.config_ini_section, {})
     configuration["sqlalchemy.url"] = settings.DATABASE_URL
 
@@ -42,6 +48,8 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
+            compare_type=True,
+            compare_server_default=True,
         )
 
         with context.begin_transaction():

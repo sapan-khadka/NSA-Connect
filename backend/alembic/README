@@ -1,1 +1,26 @@
-Generic single-database configuration.
+Generic single-database configuration with an async dbapi.
+
+See Alembic docs: https://alembic.sqlalchemy.org/
+
+## NSA Connect — Migration workflow
+
+Configure Alembic (alembic.ini + env.py) **before** creating your first migration.
+
+```bash
+cd backend
+
+# Check current migration state
+alembic current
+
+# Create a migration after model changes
+alembic revision --autogenerate -m "describe your change"
+
+# Apply all pending migrations
+alembic upgrade head
+
+# Roll back one migration
+alembic downgrade -1
+```
+
+`env.py` reads `DATABASE_URL` from `app.core.config.settings` and imports all
+models so autogenerate can detect schema changes.
