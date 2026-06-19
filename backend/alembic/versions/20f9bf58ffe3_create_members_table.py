@@ -1,9 +1,11 @@
-"""create members table
+"""Initial schema: create members table
 
 Revision ID: 20f9bf58ffe3
 Revises:
 Create Date: 2026-06-17 08:39:43.884974
 
+First version-controlled database migration.
+Creates memberrole/memberstatus enums and the members table.
 """
 from typing import Sequence, Union
 
