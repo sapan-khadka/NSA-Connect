@@ -1,14 +1,12 @@
-from enum import Enum
+from enum import StrEnum
 
-from sqlalchemy import Column
+from sqlalchemy import Column, Integer, String
 from sqlalchemy import Enum as SqlEnum
-from sqlalchemy import Integer
-from sqlalchemy import String
 
 from app.models.base import Base
 
 
-class MemberRole(str, Enum):
+class MemberRole(StrEnum):
     PRESIDENT = "president"
     TREASURER = "treasurer"
     BOARD = "board"
@@ -22,7 +20,7 @@ class MemberRole(str, Enum):
         return self.level >= required.level
 
 
-class MemberStatus(str, Enum):
+class MemberStatus(StrEnum):
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
@@ -49,7 +47,10 @@ class Member(Base):
         nullable=False,
     )
     status = Column(
-        SqlEnum(MemberStatus, values_callable=lambda statuses: [s.value for s in statuses]),
+        SqlEnum(
+            MemberStatus,
+            values_callable=lambda statuses: [s.value for s in statuses],
+        ),
         default=MemberStatus.PENDING,
         nullable=False,
     )
