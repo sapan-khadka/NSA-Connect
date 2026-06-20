@@ -1,0 +1,41 @@
+.app {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 4rem 1.5rem;
+  text-align: center;
+}
+
+h1 {
+  margin: 0;
+  font-size: 2.5rem;
+  color: #1a1a2e;
+}
+
+.subtitle {
+  margin: 0.5rem 0 2rem;
+  color: #666;
+}
+
+.status-card {
+  padding: 1.5rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.status-card h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #444;
+}
+
+.ok {
+  color: #2e7d32;
+  font-weight: 500;
+}
+
+.error {
+  color: #c62828;
+  font-weight: 500;
+}
