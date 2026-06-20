@@ -1,0 +1,15 @@
+type PlaceholderPageProps = {
+  title: string;
+  description?: string;
+};
+
+export function PlaceholderPage({ title, description }: PlaceholderPageProps) {
+  return (
+    <div className="text-center">
+      <h1 className="text-3xl font-bold text-primary">{title}</h1>
+      <p className="mt-3 text-gray-500">
+        {description ?? "Coming soon — placeholder page."}
+      </p>
+    </div>
+  );
+}
