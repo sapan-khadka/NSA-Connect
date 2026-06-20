@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import "./App.css";
 
 type HealthResponse = {
   status: string;
@@ -20,15 +19,23 @@ function App() {
   }, []);
 
   return (
-    <main className="app">
-      <h1>NSA Connect</h1>
-      <p className="subtitle">Nepalese Students&apos; Association</p>
+    <main className="mx-auto max-w-xl px-6 py-16 text-center">
+      <h1 className="text-4xl font-bold text-primary">NSA Connect</h1>
+      <p className="mt-2 text-gray-500">Nepalese Students&apos; Association</p>
 
-      <section className="status-card">
-        <h2>API Status</h2>
-        {health && <p className="ok">Backend: {health.status}</p>}
-        {error && <p className="error">Backend: {error}</p>}
-        {!health && !error && <p>Checking backend...</p>}
+      <section className="mt-8 rounded-lg border border-gray-200 bg-gray-50 p-6">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+          API Status
+        </h2>
+        {health && (
+          <p className="mt-2 font-medium text-green-700">Backend: {health.status}</p>
+        )}
+        {error && (
+          <p className="mt-2 font-medium text-red-600">Backend: {error}</p>
+        )}
+        {!health && !error && (
+          <p className="mt-2 text-gray-400">Checking backend...</p>
+        )}
       </section>
     </main>
   );
