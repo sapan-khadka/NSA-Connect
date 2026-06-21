@@ -1,5 +1,6 @@
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.validators import SemoEmailStr
 from app.models.member import MemberRole, MemberStatus
 
 # ---------------------------------------------------------------------------
@@ -9,17 +10,17 @@ from app.models.member import MemberRole, MemberStatus
 
 class MemberCreateRequest(BaseModel):
     full_name: str = Field(min_length=1, max_length=255)
-    email: EmailStr
+    email: SemoEmailStr
     password: str = Field(min_length=8, max_length=128)
 
 
 class MemberUpdateRequest(BaseModel):
     full_name: str | None = Field(default=None, min_length=1, max_length=255)
-    email: EmailStr | None = None
+    email: SemoEmailStr | None = None
 
 
 class MemberLoginRequest(BaseModel):
-    email: EmailStr
+    email: SemoEmailStr
     password: str = Field(min_length=1, max_length=128)
 
 
@@ -39,7 +40,7 @@ class MemberStatusUpdateRequest(BaseModel):
 class MemberResponse(BaseModel):
     id: int
     full_name: str
-    email: EmailStr
+    email: SemoEmailStr
     role: MemberRole
     status: MemberStatus
 
