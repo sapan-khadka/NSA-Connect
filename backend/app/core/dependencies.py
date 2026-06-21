@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import decode_access_token
-from app.models.member import Member
+from app.models.member import Member, MemberRole
 
 security = HTTPBearer()
 
@@ -54,3 +54,19 @@ def get_current_member(
         )
 
     return member
+
+
+def _require_role(minimum_role: MemberRole):
+    def guard(current_member: Member = Depends(get_current_member)) -> Member:
+        if not current_member.has_role_at_least(minimum_role):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Requires {minimum_role.value} role or higher",
+            )
+        return current_member
+
+    return guard
+
+
+require_board = _require_role(MemberRole.BOARD)
+require_treasurer = _require_role(MemberRole.TREASURER)
