@@ -2,13 +2,42 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import engine, get_db
 from app.main import app
 from app.models.base import Base
+from app.models.member import Member, MemberStatus
+
+VALID_PASSWORD = "securepass123"
+VALID_EMAIL = "sapan@semo.edu"
+BAD_DOMAIN_EMAIL = "sapan@gmail.com"
+
+
+def register_member(client, email=VALID_EMAIL, password=VALID_PASSWORD):
+    return client.post(
+        "/api/v1/auth/register",
+        json={
+            "full_name": "Sapan Khadka",
+            "email": email,
+            "password": password,
+        },
+    )
+
+
+def approve_member(db_session: Session, email=VALID_EMAIL):
+    member = db_session.scalar(select(Member).where(Member.email == email))
+    member.status = MemberStatus.APPROVED
+    db_session.commit()
+
+
+def login_member(client, email=VALID_EMAIL, password=VALID_PASSWORD):
+    return client.post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": password},
+    )
 
 
 @pytest.fixture
