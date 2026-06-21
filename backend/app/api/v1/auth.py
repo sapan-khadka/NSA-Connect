@@ -2,7 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.dependencies import get_current_member
 from app.core.security import create_access_token
+from app.models.member import Member
 from app.schemas.auth import TokenResponse
 from app.schemas.member import MemberCreateRequest, MemberLoginRequest, MemberResponse
 from app.services.member_service import (
@@ -56,5 +58,9 @@ def login(data: MemberLoginRequest, db: Session = Depends(get_db)):
 
     return TokenResponse(access_token=access_token, expires_at=expires_at)
 
+
+@router.get("/me", response_model=MemberResponse)
+def me(current_member: Member = Depends(get_current_member)):
+    return current_member
+
 # TODO: POST /logout — invalidate session / token
-# TODO: GET /me — return current authenticated member

@@ -1,0 +1,109 @@
+from datetime import UTC, datetime, timedelta
+
+import jwt
+from sqlalchemy import select
+
+from app.core.config import settings
+from app.core.security import JWT_ALGORITHM, create_access_token
+from app.models.member import Member, MemberStatus
+
+
+def _register(client, email="sapan@semo.edu", password="securepass123"):
+    return client.post(
+        "/api/v1/auth/register",
+        json={
+            "full_name": "Sapan Khadka",
+            "email": email,
+            "password": password,
+        },
+    )
+
+
+def _approve_member(db_session, email="sapan@semo.edu"):
+    member = db_session.scalar(select(Member).where(Member.email == email))
+    member.status = MemberStatus.APPROVED
+    db_session.commit()
+
+
+def _login(client, email="sapan@semo.edu", password="securepass123"):
+    return client.post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": password},
+    )
+
+
+def test_me_returns_current_member(client, db_session):
+    _register(client)
+    _approve_member(db_session)
+    login = _login(client)
+    token = login.json()["access_token"]
+
+    response = client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["email"] == "sapan@semo.edu"
+    assert data["role"] == "general"
+    assert data["status"] == "approved"
+
+
+def test_me_rejects_missing_token(client):
+    response = client.get("/api/v1/auth/me")
+
+    assert response.status_code == 401
+
+
+def test_me_rejects_invalid_token(client):
+    response = client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": "Bearer not-a-valid-token"},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid or expired token"
+
+
+def test_me_rejects_expired_token(client, db_session):
+    _register(client)
+    _approve_member(db_session)
+
+    expired_payload = {
+        "member_id": 1,
+        "email": "sapan@semo.edu",
+        "role": "general",
+        "exp": datetime.now(UTC) - timedelta(minutes=1),
+    }
+    expired_token = jwt.encode(
+        expired_payload,
+        settings.SECRET_KEY,
+        algorithm=JWT_ALGORITHM,
+    )
+
+    response = client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {expired_token}"},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid or expired token"
+
+
+def test_me_rejects_unapproved_member_with_valid_token(client, db_session):
+    _register(client)
+
+    token, _ = create_access_token(
+        member_id=1,
+        email="sapan@semo.edu",
+        role="general",
+    )
+
+    response = client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Member account is not approved"
