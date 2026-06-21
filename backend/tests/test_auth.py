@@ -2,9 +2,11 @@
 
 from conftest import (
     BAD_DOMAIN_EMAIL,
-    approve_member,
+    auth_header,
+    create_board_member,
     login_member,
     register_member,
+    set_member_approved,
 )
 
 from app.core.security import decode_access_token
@@ -23,7 +25,7 @@ def test_register_creates_pending_member(client):
 
 def test_login_returns_jwt_for_approved_member(client, db_session):
     register_member(client)
-    approve_member(db_session)
+    set_member_approved(db_session)
 
     response = login_member(client)
 
@@ -51,7 +53,7 @@ def test_login_rejects_non_semo_domain(client):
 
 def test_login_rejects_wrong_password(client, db_session):
     register_member(client)
-    approve_member(db_session)
+    set_member_approved(db_session)
 
     response = login_member(client, password="wrongpassword")
 

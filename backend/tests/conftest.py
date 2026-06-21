@@ -27,10 +27,37 @@ def register_member(client, email=VALID_EMAIL, password=VALID_PASSWORD):
     )
 
 
-def approve_member(db_session: Session, email=VALID_EMAIL):
+def set_member_approved(db_session: Session, email=VALID_EMAIL):
     member = db_session.scalar(select(Member).where(Member.email == email))
     member.status = MemberStatus.APPROVED
     db_session.commit()
+
+
+def create_board_member(
+    db_session: Session,
+    email="board@semo.edu",
+    password=VALID_PASSWORD,
+):
+    from app.core.security import hash_password
+    from app.models.member import MemberRole
+
+    member = Member(
+        full_name="Board Member",
+        email=email,
+        hashed_password=hash_password(password),
+        role=MemberRole.BOARD,
+        status=MemberStatus.APPROVED,
+    )
+    db_session.add(member)
+    db_session.commit()
+    db_session.refresh(member)
+    return member
+
+
+def auth_header(client, email=VALID_EMAIL, password=VALID_PASSWORD):
+    response = login_member(client, email=email, password=password)
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
 
 
 def login_member(client, email=VALID_EMAIL, password=VALID_PASSWORD):
