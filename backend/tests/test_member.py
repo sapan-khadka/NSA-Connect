@@ -31,6 +31,9 @@ def test_member_auth_helpers():
     member = Member(
         full_name="Test User",
         email="test@example.com",
+        student_id="12345678",
+        major="Computer Science",
+        graduation_year=2028,
         hashed_password="hashed",
         role=MemberRole.BOARD,
         status=MemberStatus.APPROVED,
@@ -44,6 +47,9 @@ def test_member_auth_helpers():
     pending_member = Member(
         full_name="Pending User",
         email="pending@example.com",
+        student_id="87654321",
+        major="Biology",
+        graduation_year=2028,
         hashed_password="hashed",
         status=MemberStatus.PENDING,
     )

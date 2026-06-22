@@ -14,60 +14,46 @@ from app.schemas.member import (
 
 SEMO_EMAIL = "sapan@semo.edu"
 NON_SEMO_EMAIL = "sapan@gmail.com"
+VALID_CREATE = {
+    "full_name": "Sapan Khadka",
+    "email": SEMO_EMAIL,
+    "password": "securepass123",
+    "student_id": "12345678",
+    "major": "Computer Science",
+    "graduation_year": 2028,
+}
 
 
 def test_member_create_request_valid_semo_email():
-    data = MemberCreateRequest(
-        full_name="Sapan Khadka",
-        email=SEMO_EMAIL,
-        password="securepass123",
-    )
+    data = MemberCreateRequest(**VALID_CREATE)
     assert data.email == "sapan@semo.edu"
 
 
 def test_member_create_request_accepts_uppercase_semo_email():
     data = MemberCreateRequest(
-        full_name="Sapan Khadka",
-        email="Sapan@SEMO.EDU",
-        password="securepass123",
+        **{**VALID_CREATE, "email": "Sapan@SEMO.EDU"},
     )
     assert data.email == "sapan@semo.edu"
 
 
 def test_member_create_request_rejects_non_semo_email():
     with pytest.raises(ValidationError, match="semo.edu"):
-        MemberCreateRequest(
-            full_name="Sapan Khadka",
-            email=NON_SEMO_EMAIL,
-            password="securepass123",
-        )
+        MemberCreateRequest(**{**VALID_CREATE, "email": NON_SEMO_EMAIL})
 
 
 def test_member_create_request_rejects_semo_email_lookalike():
     with pytest.raises(ValidationError, match="semo.edu"):
-        MemberCreateRequest(
-            full_name="Sapan Khadka",
-            email="sapan@semo.edu.evil.com",
-            password="securepass123",
-        )
+        MemberCreateRequest(**{**VALID_CREATE, "email": "sapan@semo.edu.evil.com"})
 
 
 def test_member_create_request_rejects_short_password():
     with pytest.raises(ValidationError):
-        MemberCreateRequest(
-            full_name="Sapan Khadka",
-            email=SEMO_EMAIL,
-            password="short",
-        )
+        MemberCreateRequest(**{**VALID_CREATE, "password": "short"})
 
 
 def test_member_create_request_rejects_invalid_email():
     with pytest.raises(ValidationError):
-        MemberCreateRequest(
-            full_name="Sapan Khadka",
-            email="not-an-email",
-            password="securepass123",
-        )
+        MemberCreateRequest(**{**VALID_CREATE, "email": "not-an-email"})
 
 
 def test_member_update_request_partial():
@@ -106,6 +92,9 @@ def test_member_response_from_model():
         id=1,
         full_name="Sapan Khadka",
         email=SEMO_EMAIL,
+        student_id="12345678",
+        major="Computer Science",
+        graduation_year=2028,
         hashed_password="hashed",
         role=MemberRole.GENERAL,
         status=MemberStatus.PENDING,
@@ -125,6 +114,9 @@ def test_member_list_response():
             id=1,
             full_name="Alice",
             email="alice@semo.edu",
+            student_id="87654321",
+            major="Biology",
+            graduation_year=2028,
             role=MemberRole.GENERAL,
             status=MemberStatus.APPROVED,
         )

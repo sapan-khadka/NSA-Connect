@@ -40,6 +40,9 @@ class Member(Base):
     id = Column(Integer, primary_key=True, index=True)
     full_name = Column(String(255), nullable=False)
     email = Column(String(255), unique=True, nullable=False)
+    student_id = Column(String(20), unique=True, nullable=False)
+    major = Column(String(255), nullable=False)
+    graduation_year = Column(Integer, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     role = Column(
         SqlEnum(MemberRole, values_callable=lambda roles: [r.value for r in roles]),

@@ -13,17 +13,40 @@ from app.models.member import Member, MemberStatus
 
 VALID_PASSWORD = "securepass123"
 VALID_EMAIL = "sapan@semo.edu"
+VALID_STUDENT_ID = "12345678"
+VALID_MAJOR = "Computer Science"
+VALID_GRADUATION_YEAR = 2028
 BAD_DOMAIN_EMAIL = "sapan@gmail.com"
 
 
-def register_member(client, email=VALID_EMAIL, password=VALID_PASSWORD):
+def register_payload(
+    email=VALID_EMAIL,
+    password=VALID_PASSWORD,
+    student_id=VALID_STUDENT_ID,
+):
+    return {
+        "full_name": "Sapan Khadka",
+        "email": email,
+        "password": password,
+        "student_id": student_id,
+        "major": VALID_MAJOR,
+        "graduation_year": VALID_GRADUATION_YEAR,
+    }
+
+
+def register_member(
+    client,
+    email=VALID_EMAIL,
+    password=VALID_PASSWORD,
+    student_id=VALID_STUDENT_ID,
+):
     return client.post(
         "/api/v1/auth/register",
-        json={
-            "full_name": "Sapan Khadka",
-            "email": email,
-            "password": password,
-        },
+        json=register_payload(
+            email=email,
+            password=password,
+            student_id=student_id,
+        ),
     )
 
 
@@ -44,6 +67,9 @@ def create_board_member(
     member = Member(
         full_name="Board Member",
         email=email,
+        student_id="87654321",
+        major="Administration",
+        graduation_year=VALID_GRADUATION_YEAR,
         hashed_password=hash_password(password),
         role=MemberRole.BOARD,
         status=MemberStatus.APPROVED,

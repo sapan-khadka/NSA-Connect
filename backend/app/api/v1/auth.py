@@ -11,6 +11,7 @@ from app.services.member_service import (
     InvalidCredentialsError,
     MemberAlreadyExistsError,
     MemberNotApprovedError,
+    StudentIdAlreadyExistsError,
     authenticate_member,
     create_member,
 )
@@ -30,6 +31,11 @@ def register(data: MemberCreateRequest, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Email already registered",
+        ) from None
+    except StudentIdAlreadyExistsError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Student ID already registered",
         ) from None
 
     return member

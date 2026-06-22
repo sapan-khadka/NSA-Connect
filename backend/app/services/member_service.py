@@ -10,6 +10,10 @@ class MemberAlreadyExistsError(Exception):
     pass
 
 
+class StudentIdAlreadyExistsError(Exception):
+    pass
+
+
 class InvalidCredentialsError(Exception):
     pass
 
@@ -31,9 +35,18 @@ def create_member(db: Session, data: MemberCreateRequest) -> Member:
     if existing:
         raise MemberAlreadyExistsError
 
+    existing_student_id = db.scalar(
+        select(Member).where(Member.student_id == data.student_id)
+    )
+    if existing_student_id:
+        raise StudentIdAlreadyExistsError
+
     member = Member(
         full_name=data.full_name,
         email=data.email,
+        student_id=data.student_id,
+        major=data.major,
+        graduation_year=data.graduation_year,
         hashed_password=hash_password(data.password),
         role=MemberRole.GENERAL,
         status=MemberStatus.PENDING,

@@ -4,14 +4,13 @@ from app.core.security import decode_access_token
 from app.models.member import Member, MemberStatus
 
 
+from conftest import register_payload
+
+
 def _register(client, email="sapan@semo.edu", password="securepass123"):
     return client.post(
         "/api/v1/auth/register",
-        json={
-            "full_name": "Sapan Khadka",
-            "email": email,
-            "password": password,
-        },
+        json=register_payload(email=email, password=password),
     )
 
 

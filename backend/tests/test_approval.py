@@ -18,7 +18,7 @@ def test_pending_member_cannot_login(client):
 
 
 def test_board_member_approves_pending_signup(client, db_session):
-    register_member(client, email="newmember@semo.edu")
+    register_member(client, email="newmember@semo.edu", student_id="11111111")
     create_board_member(db_session)
 
     pending_login = login_member(client, email="newmember@semo.edu")
@@ -39,8 +39,8 @@ def test_board_member_approves_pending_signup(client, db_session):
 
 
 def test_board_member_lists_pending_signups(client, db_session):
-    register_member(client, email="pending1@semo.edu")
-    register_member(client, email="pending2@semo.edu")
+    register_member(client, email="pending1@semo.edu", student_id="11111111")
+    register_member(client, email="pending2@semo.edu", student_id="22222222")
     create_board_member(db_session)
 
     response = client.get(
@@ -57,7 +57,7 @@ def test_board_member_lists_pending_signups(client, db_session):
 def test_general_member_cannot_approve(client, db_session):
     register_member(client)
     set_member_approved(db_session)
-    register_member(client, email="pending@semo.edu")
+    register_member(client, email="pending@semo.edu", student_id="22222222")
 
     response = client.patch(
         "/api/v1/members/2/approve",
@@ -68,7 +68,7 @@ def test_general_member_cannot_approve(client, db_session):
 
 
 def test_board_member_rejects_pending_signup(client, db_session):
-    register_member(client, email="rejectme@semo.edu")
+    register_member(client, email="rejectme@semo.edu", student_id="33333333")
     create_board_member(db_session)
 
     response = client.patch(
