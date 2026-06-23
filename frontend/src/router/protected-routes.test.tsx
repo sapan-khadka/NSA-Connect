@@ -1,0 +1,102 @@
+import { cleanup, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { createMockMember, renderWithRouter } from "../test/test-utils";
+
+vi.mock("../lib/members-api", () => ({
+  fetchPendingMembers: vi.fn().mockResolvedValue({ members: [], total: 3 }),
+}));
+
+describe("protected route redirects", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("sends unauthenticated users from /board to /login", async () => {
+    const { router } = renderWithRouter(undefined, {
+      initialEntries: ["/board"],
+      auth: { member: null, isAuthenticated: false },
+    });
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/login");
+    });
+    expect(screen.getByRole("heading", { name: "Login" })).toBeInTheDocument();
+  });
+
+  it("allows general members to view /member", async () => {
+    renderWithRouter(undefined, {
+      initialEntries: ["/member"],
+      auth: {
+        member: createMockMember("general"),
+        isAuthenticated: true,
+      },
+    });
+
+    expect(screen.getAllByText("Member Dashboard").length).toBeGreaterThan(0);
+  });
+
+  it("redirects general members from /board to /member", async () => {
+    const { router } = renderWithRouter(undefined, {
+      initialEntries: ["/board"],
+      auth: {
+        member: createMockMember("general"),
+        isAuthenticated: true,
+      },
+    });
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/member");
+    });
+    expect(screen.getAllByText("Member Dashboard").length).toBeGreaterThan(0);
+  });
+
+  it("allows board members to view /board and loads pending approvals", async () => {
+    const { fetchPendingMembers } = await import("../lib/members-api");
+
+    renderWithRouter(undefined, {
+      initialEntries: ["/board"],
+      auth: {
+        member: createMockMember("board"),
+        isAuthenticated: true,
+      },
+    });
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Board Dashboard").length).toBeGreaterThan(0);
+    });
+    expect(fetchPendingMembers).toHaveBeenCalledOnce();
+  });
+
+  it("redirects board members from /member to /board", async () => {
+    const { router } = renderWithRouter(undefined, {
+      initialEntries: ["/member"],
+      auth: {
+        member: createMockMember("board"),
+        isAuthenticated: true,
+      },
+    });
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/board");
+    });
+    expect(screen.getAllByText("Board Dashboard").length).toBeGreaterThan(0);
+  });
+
+  it("blocks general members from /members", async () => {
+    const { router } = renderWithRouter(undefined, {
+      initialEntries: ["/members"],
+      auth: {
+        member: createMockMember("general"),
+        isAuthenticated: true,
+      },
+    });
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/member");
+    });
+    expect(
+      screen.queryByText(/list members, approve\/reject/i),
+    ).not.toBeInTheDocument();
+  });
+});
