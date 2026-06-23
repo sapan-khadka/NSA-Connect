@@ -1,5 +1,7 @@
 import { isAxiosError } from "axios";
 
+import type { MemberRole } from "./roles";
+
 import api from "./api";
 import { normalizeSemoEmail } from "./validation";
 
@@ -39,9 +41,14 @@ export type MemberResponse = {
   student_id: string;
   major: string;
   graduation_year: number;
-  role: string;
+  role: MemberRole;
   status: string;
 };
+
+export async function fetchCurrentMember(): Promise<MemberResponse> {
+  const response = await api.get<MemberResponse>("/v1/auth/me");
+  return response.data;
+}
 
 export async function registerMember(data: RegisterRequest): Promise<MemberResponse> {
   const response = await api.post<MemberResponse>("/v1/auth/register", {

@@ -1,9 +1,13 @@
 import { createContext } from "react";
 
+import type { MemberResponse } from "../lib/auth-api";
+
 export type AuthContextValue = {
   token: string | null;
+  member: MemberResponse | null;
   isAuthenticated: boolean;
-  login: (token: string) => void;
+  isLoading: boolean;
+  login: (token: string) => Promise<MemberResponse>;
   logout: () => void;
 };
 

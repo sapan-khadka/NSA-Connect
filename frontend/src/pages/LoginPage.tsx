@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage, loginMember } from "../lib/auth-api";
+import { getDashboardPath } from "../lib/roles";
 import {
   SEMO_EMAIL_DOMAIN,
   validateLoginForm,
@@ -20,6 +21,9 @@ const initialValues: LoginFormValues = {
 export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirectPath =
+    (location.state as { from?: string } | null)?.from ?? null;
   const [values, setValues] = useState<LoginFormValues>(initialValues);
   const [fieldErrors, setFieldErrors] = useState<LoginFormErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
@@ -61,8 +65,8 @@ export function LoginPage() {
 
     try {
       const token = await loginMember(values);
-      login(token.access_token);
-      navigate("/", { replace: true });
+      const member = await login(token.access_token);
+      navigate(redirectPath ?? getDashboardPath(member.role), { replace: true });
     } catch (error) {
       setServerError(getApiErrorMessage(error));
     } finally {

@@ -1,8 +1,11 @@
 import { createBrowserRouter } from "react-router-dom";
 
+import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppLayout } from "./layouts/AppLayout";
+import { BoardDashboardPage } from "./pages/BoardDashboardPage";
 import { EventsPage } from "./pages/EventsPage";
 import { FinancePage } from "./pages/FinancePage";
+import { GeneralDashboardPage } from "./pages/GeneralDashboardPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { MembersPage } from "./pages/MembersPage";
@@ -17,9 +20,39 @@ export const router = createBrowserRouter([
       { index: true, element: <HomePage /> },
       { path: "login", element: <LoginPage /> },
       { path: "register", element: <RegisterPage /> },
-      { path: "members", element: <MembersPage /> },
+      {
+        path: "dashboard",
+        element: (
+          <ProtectedRoute roles={["general"]}>
+            <GeneralDashboardPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "board",
+        element: (
+          <ProtectedRoute minRole="board">
+            <BoardDashboardPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "members",
+        element: (
+          <ProtectedRoute minRole="board">
+            <MembersPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "finance",
+        element: (
+          <ProtectedRoute minRole="board">
+            <FinancePage />
+          </ProtectedRoute>
+        ),
+      },
       { path: "events", element: <EventsPage /> },
-      { path: "finance", element: <FinancePage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },
