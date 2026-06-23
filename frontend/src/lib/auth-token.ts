@@ -1,13 +1,24 @@
-const TOKEN_KEY = "nsa_connect_access_token";
+type UnauthorizedListener = () => void;
+
+let accessToken: string | null = null;
+const unauthorizedListeners = new Set<UnauthorizedListener>();
 
 export function getAccessToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
+  return accessToken;
 }
 
-export function setAccessToken(token: string): void {
-  localStorage.setItem(TOKEN_KEY, token);
+export function syncAccessToken(token: string | null): void {
+  accessToken = token;
 }
 
-export function clearAccessToken(): void {
-  localStorage.removeItem(TOKEN_KEY);
+export function registerUnauthorizedListener(listener: UnauthorizedListener): () => void {
+  unauthorizedListeners.add(listener);
+  return () => unauthorizedListeners.delete(listener);
+}
+
+export function notifyUnauthorized(): void {
+  accessToken = null;
+  for (const listener of unauthorizedListeners) {
+    listener();
+  }
 }

@@ -1,6 +1,6 @@
 import axios from "axios";
 
-import { clearAccessToken, getAccessToken } from "./auth-token";
+import { getAccessToken, notifyUnauthorized } from "./auth-token";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? "/api",
@@ -23,7 +23,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      clearAccessToken();
+      notifyUnauthorized();
     }
 
     return Promise.reject(error);
