@@ -64,6 +64,10 @@ export async function registerMember(data: RegisterRequest): Promise<MemberRespo
 }
 
 export function getApiErrorMessage(error: unknown): string {
+  if (isPendingApprovalError(error)) {
+    return "";
+  }
+
   if (!isAxiosError(error)) {
     return "Something went wrong. Please try again.";
   }
@@ -87,4 +91,17 @@ export function getApiErrorMessage(error: unknown): string {
   }
 
   return "Something went wrong. Please try again.";
+}
+
+const PENDING_APPROVAL_DETAIL = "Member account is not approved";
+
+export function isPendingApprovalError(error: unknown): boolean {
+  if (!isAxiosError(error)) {
+    return false;
+  }
+
+  return (
+    error.response?.status === 403 &&
+    error.response?.data?.detail === PENDING_APPROVAL_DETAIL
+  );
 }

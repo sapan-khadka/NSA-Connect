@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from "react-router-dom";
 
 import { useAuth } from "../context/useAuth";
+import { useLogout } from "../context/useLogout";
 import { getDashboardPath, isRoleAtLeast } from "../lib/roles";
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -9,9 +10,10 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     : "text-gray-600 hover:text-primary transition-colors";
 
 export function AppLayout() {
-  const { isAuthenticated, member, logout } = useAuth();
+  const { isAuthenticated, member } = useAuth();
+  const logout = useLogout();
   const isBoard = member ? isRoleAtLeast(member.role, "board") : false;
-  const dashboardPath = member ? getDashboardPath(member.role) : "/dashboard";
+  const dashboardPath = member ? getDashboardPath(member.role) : "/member";
 
   return (
     <div className="min-h-screen bg-white">

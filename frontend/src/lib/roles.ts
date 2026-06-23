@@ -23,7 +23,7 @@ export function isRoleAtLeast(role: MemberRole, required: MemberRole): boolean {
 }
 
 export function getDashboardPath(role: MemberRole): string {
-  return isRoleAtLeast(role, "board") ? "/board" : "/dashboard";
+  return isRoleAtLeast(role, "board") ? "/board" : "/member";
 }
 
 export function formatRoleLabel(role: MemberRole): string {

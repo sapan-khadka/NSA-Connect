@@ -21,7 +21,7 @@ export const router = createBrowserRouter([
       { path: "login", element: <LoginPage /> },
       { path: "register", element: <RegisterPage /> },
       {
-        path: "dashboard",
+        path: "member",
         element: (
           <ProtectedRoute roles={["general"]}>
             <GeneralDashboardPage />

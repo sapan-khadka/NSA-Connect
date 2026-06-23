@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/useAuth";
-import { getApiErrorMessage, loginMember } from "../lib/auth-api";
+import { getApiErrorMessage, isPendingApprovalError, loginMember } from "../lib/auth-api";
 import { getDashboardPath } from "../lib/roles";
 import {
   SEMO_EMAIL_DOMAIN,
@@ -27,6 +27,7 @@ export function LoginPage() {
   const [values, setValues] = useState<LoginFormValues>(initialValues);
   const [fieldErrors, setFieldErrors] = useState<LoginFormErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
+  const [isPendingApproval, setIsPendingApproval] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function updateField<K extends keyof LoginFormValues>(
@@ -36,6 +37,7 @@ export function LoginPage() {
     setValues((current) => ({ ...current, [field]: value }));
     setFieldErrors((current) => ({ ...current, [field]: undefined }));
     setServerError(null);
+    setIsPendingApproval(false);
   }
 
   function validateField(field: keyof LoginFormValues) {
@@ -62,13 +64,18 @@ export function LoginPage() {
 
     setIsSubmitting(true);
     setServerError(null);
+    setIsPendingApproval(false);
 
     try {
       const token = await loginMember(values);
       const member = await login(token.access_token);
       navigate(redirectPath ?? getDashboardPath(member.role), { replace: true });
     } catch (error) {
-      setServerError(getApiErrorMessage(error));
+      if (isPendingApprovalError(error)) {
+        setIsPendingApproval(true);
+      } else {
+        setServerError(getApiErrorMessage(error));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -88,6 +95,20 @@ export function LoginPage() {
         noValidate
         className="mt-8 space-y-5 rounded-lg border border-gray-200 bg-gray-50 p-6"
       >
+        {isPendingApproval && (
+          <div
+            role="status"
+            className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+          >
+            <p className="font-medium">Your account is pending approval</p>
+            <p className="mt-1">
+              Your registration was received successfully. A board member will
+              review your request soon. You&apos;ll be able to sign in once your
+              account is approved.
+            </p>
+          </div>
+        )}
+
         {serverError && (
           <p
             role="alert"
