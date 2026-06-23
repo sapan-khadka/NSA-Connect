@@ -3,6 +3,7 @@ from pydantic import ValidationError
 
 from app.models.member import Member, MemberRole, MemberStatus
 from app.schemas.member import (
+    SENSITIVE_MEMBER_FIELDS,
     MemberCreateRequest,
     MemberListResponse,
     MemberLoginRequest,
@@ -100,12 +101,70 @@ def test_member_response_from_model():
         status=MemberStatus.PENDING,
     )
 
+    response = MemberResponse.from_member(member)
+
+    assert response.id == 1
+    assert response.email == "sapan@semo.edu"
+    assert response.public_fields().isdisjoint(SENSITIVE_MEMBER_FIELDS)
+
+
+def test_member_response_model_dump_never_includes_sensitive_fields():
+    member = Member(
+        id=1,
+        full_name="Sapan Khadka",
+        email=SEMO_EMAIL,
+        student_id="S12345678",
+        major="Computer Science",
+        graduation_year=2028,
+        hashed_password="super-secret-hash",
+        role=MemberRole.GENERAL,
+        status=MemberStatus.PENDING,
+    )
+
+    payload = MemberResponse.from_member(member).model_dump()
+
+    assert SENSITIVE_MEMBER_FIELDS.isdisjoint(payload.keys())
+
+
+def test_member_response_strips_sensitive_fields_from_dict_input():
+    response = MemberResponse.model_validate(
+        {
+            "id": 1,
+            "full_name": "Sapan Khadka",
+            "email": SEMO_EMAIL,
+            "student_id": "S12345678",
+            "major": "Computer Science",
+            "graduation_year": 2028,
+            "role": MemberRole.GENERAL,
+            "status": MemberStatus.PENDING,
+            "hashed_password": "super-secret-hash",
+            "password": "plain-text-password",
+        }
+    )
+
+    dumped = response.model_dump()
+    assert "hashed_password" not in dumped
+    assert "password" not in dumped
+
+
+def test_member_response_from_orm_via_model_validate():
+    member = Member(
+        id=1,
+        full_name="Sapan Khadka",
+        email=SEMO_EMAIL,
+        student_id="12345678",
+        major="Computer Science",
+        graduation_year=2028,
+        hashed_password="hashed",
+        role=MemberRole.GENERAL,
+        status=MemberStatus.PENDING,
+    )
+
     response = MemberResponse.model_validate(member)
 
     assert response.id == 1
     assert response.email == "sapan@semo.edu"
-    assert not hasattr(response, "password")
-    assert not hasattr(response, "hashed_password")
+    assert SENSITIVE_MEMBER_FIELDS.isdisjoint(response.model_dump().keys())
 
 
 def test_member_list_response():

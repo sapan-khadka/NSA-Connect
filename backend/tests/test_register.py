@@ -80,10 +80,20 @@ def test_register_rejects_short_password(client):
 def test_register_rejects_invalid_student_id(client):
     response = client.post(
         "/api/v1/auth/register",
-        json=register_payload(student_id="abc"),
+        json=register_payload(student_id="bad-id!"),
     )
 
     assert response.status_code == 422
+
+
+def test_register_accepts_semo_student_id_with_letter(client):
+    response = client.post(
+        "/api/v1/auth/register",
+        json=register_payload(student_id="s12345678"),
+    )
+
+    assert response.status_code == 201
+    assert response.json()["student_id"] == "S12345678"
 
 
 def test_register_rejects_past_graduation_year(client):

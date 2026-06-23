@@ -22,7 +22,10 @@ def list_pending_members(
     db: Session = Depends(get_db),
 ):
     members = list_members_by_status(db, MemberStatus.PENDING)
-    return MemberListResponse(members=members, total=len(members))
+    return MemberListResponse(
+        members=[MemberResponse.from_member(member) for member in members],
+        total=len(members),
+    )
 
 
 @router.patch("/{member_id}/approve", response_model=MemberResponse)
@@ -44,7 +47,7 @@ def approve_member_endpoint(
             detail=str(exc),
         ) from None
 
-    return member
+    return MemberResponse.from_member(member)
 
 
 @router.patch("/{member_id}/reject", response_model=MemberResponse)
@@ -66,7 +69,7 @@ def reject_member_endpoint(
             detail=str(exc),
         ) from None
 
-    return member
+    return MemberResponse.from_member(member)
 
 # TODO: GET / — list all members (board+ only)
 # TODO: GET /{member_id} — get member profile

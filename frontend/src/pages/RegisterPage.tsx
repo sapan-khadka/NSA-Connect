@@ -180,7 +180,6 @@ export function RegisterPage() {
             id="student_id"
             name="student_id"
             type="text"
-            inputMode="numeric"
             autoComplete="off"
             value={values.student_id}
             onChange={(event) => updateField("student_id", event.target.value)}
@@ -188,7 +187,7 @@ export function RegisterPage() {
             aria-invalid={fieldErrors.student_id ? true : undefined}
             aria-describedby={fieldErrors.student_id ? "student_id-error" : undefined}
             className={inputClassName}
-            placeholder="12345678"
+            placeholder="S12345678"
           />
           {fieldErrors.student_id && (
             <p id="student_id-error" className="mt-1 text-sm text-red-600">

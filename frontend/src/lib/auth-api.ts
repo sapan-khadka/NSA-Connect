@@ -3,7 +3,7 @@ import { isAxiosError } from "axios";
 import type { MemberRole } from "./roles";
 
 import api from "./api";
-import { normalizeSemoEmail } from "./validation";
+import { normalizeSemoEmail, normalizeStudentId } from "./validation";
 
 export type LoginRequest = {
   email: string;
@@ -55,7 +55,7 @@ export async function registerMember(data: RegisterRequest): Promise<MemberRespo
     full_name: data.full_name.trim(),
     email: normalizeSemoEmail(data.email),
     password: data.password,
-    student_id: data.student_id.trim(),
+    student_id: normalizeStudentId(data.student_id),
     major: data.major.trim(),
     graduation_year: data.graduation_year,
   });

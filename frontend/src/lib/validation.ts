@@ -39,7 +39,11 @@ export function validateLoginPassword(value: string): string | null {
 
 export const REGISTER_PASSWORD_MIN_LENGTH = 8;
 export const REGISTER_PASSWORD_MAX_LENGTH = 128;
-export const STUDENT_ID_PATTERN = /^\d{6,20}$/;
+export const STUDENT_ID_PATTERN = /^[A-Za-z0-9]{6,20}$/;
+
+export function normalizeStudentId(value: string): string {
+  return value.trim().toUpperCase();
+}
 
 const CURRENT_YEAR = new Date().getFullYear();
 export const MAX_GRADUATION_YEAR = CURRENT_YEAR + 8;
@@ -78,14 +82,14 @@ export function validateRegisterPassword(value: string): string | null {
 }
 
 export function validateStudentId(value: string): string | null {
-  const trimmed = value.trim();
+  const studentId = normalizeStudentId(value);
 
-  if (!trimmed) {
+  if (!studentId) {
     return "Student ID is required";
   }
 
-  if (!STUDENT_ID_PATTERN.test(trimmed)) {
-    return "Student ID must be 6-20 digits";
+  if (!STUDENT_ID_PATTERN.test(studentId)) {
+    return "Student ID must be 6-20 letters or numbers";
   }
 
   return null;
