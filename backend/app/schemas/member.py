@@ -35,6 +35,31 @@ class MemberUpdateRequest(BaseModel):
     email: SemoEmailStr | None = None
 
 
+class MemberProfileUpdateRequest(BaseModel):
+    full_name: str | None = Field(default=None, min_length=1, max_length=255)
+    email: SemoEmailStr | None = None
+    major: str | None = Field(default=None, min_length=1, max_length=255)
+    graduation_year: int | None = Field(
+        default=None,
+        ge=CURRENT_YEAR,
+        le=MAX_GRADUATION_YEAR,
+    )
+
+    @model_validator(mode="after")
+    def require_at_least_one_field(self) -> "MemberProfileUpdateRequest":
+        if not any(
+            value is not None
+            for value in (
+                self.full_name,
+                self.email,
+                self.major,
+                self.graduation_year,
+            )
+        ):
+            raise ValueError("At least one profile field must be provided")
+        return self
+
+
 class MemberLoginRequest(BaseModel):
     email: SemoEmailStr
     password: str = Field(min_length=1, max_length=128)

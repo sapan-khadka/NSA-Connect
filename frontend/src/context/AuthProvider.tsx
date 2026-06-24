@@ -59,6 +59,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     syncAccessToken(null);
   }, []);
 
+  const updateMember = useCallback((updatedMember: MemberResponse) => {
+    setMember(updatedMember);
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       token,
@@ -67,8 +71,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       isLoading,
       login,
       logout,
+      updateMember,
     }),
-    [token, member, isLoading, login, logout],
+    [token, member, isLoading, login, logout, updateMember],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -9,6 +9,7 @@ from app.models.member import Member, MemberStatus
 from app.schemas.member import (
     MemberBoardRoleUpdateRequest,
     MemberListResponse,
+    MemberProfileUpdateRequest,
     MemberResponse,
     PaginatedMemberListResponse,
 )
@@ -16,12 +17,14 @@ from app.services.email_service import send_welcome_email
 from app.services.member_service import (
     InvalidMemberRoleError,
     InvalidMemberStatusError,
+    MemberAlreadyExistsError,
     MemberNotFoundError,
     approve_member,
     list_members_by_status,
     list_members_paginated,
     reject_member,
     update_member_board_role,
+    update_member_profile,
 )
 
 router = APIRouter(prefix="/members", tags=["members"])
@@ -54,6 +57,23 @@ def list_members(
 @router.get("/me", response_model=MemberResponse)
 def get_my_profile(current_member: Member = Depends(get_current_member)):
     return MemberResponse.from_member(current_member)
+
+
+@router.patch("/me", response_model=MemberResponse)
+def update_my_profile(
+    data: MemberProfileUpdateRequest,
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    try:
+        member = update_member_profile(db, current_member.id, data)
+    except MemberAlreadyExistsError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email already registered",
+        ) from None
+
+    return MemberResponse.from_member(member)
 
 
 @router.get("/pending", response_model=MemberListResponse)

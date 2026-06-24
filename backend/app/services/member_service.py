@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import hash_password, verify_password
 from app.models.member import Member, MemberRole, MemberStatus
-from app.schemas.member import MemberCreateRequest
+from app.schemas.member import MemberCreateRequest, MemberProfileUpdateRequest
 
 
 class MemberAlreadyExistsError(Exception):
@@ -156,6 +156,33 @@ def update_member_board_role(db: Session, member_id: int, role: MemberRole) -> M
         raise InvalidMemberRoleError("Only board members can be demoted to general")
 
     member.role = role
+    db.commit()
+    db.refresh(member)
+    return member
+
+
+def update_member_profile(
+    db: Session,
+    member_id: int,
+    data: MemberProfileUpdateRequest,
+) -> Member:
+    member = get_member_by_id(db, member_id)
+
+    if data.email is not None and data.email != member.email:
+        existing = db.scalar(select(Member).where(Member.email == data.email))
+        if existing is not None:
+            raise MemberAlreadyExistsError
+        member.email = data.email
+
+    if data.full_name is not None:
+        member.full_name = data.full_name
+
+    if data.major is not None:
+        member.major = data.major
+
+    if data.graduation_year is not None:
+        member.graduation_year = data.graduation_year
+
     db.commit()
     db.refresh(member)
     return member

@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 
+import { RoleBadge } from "../components/RoleBadge";
 import { useAuth } from "../context/useAuth";
-import { formatRoleLabel } from "../lib/roles";
 
 export function GeneralDashboardPage() {
   const { member } = useAuth();
@@ -27,7 +27,15 @@ export function GeneralDashboardPage() {
 
       <div className="grid gap-6 md:grid-cols-2">
         <section className="rounded-lg border border-gray-200 bg-white p-6">
-          <h2 className="text-lg font-semibold text-primary">Your profile</h2>
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-lg font-semibold text-primary">Your profile</h2>
+            <Link
+              to="/profile"
+              className="text-sm font-medium text-accent hover:text-accent-hover"
+            >
+              Edit profile
+            </Link>
+          </div>
           <dl className="mt-4 space-y-3 text-sm">
             <div className="flex justify-between gap-4">
               <dt className="text-gray-500">Email</dt>
@@ -45,10 +53,10 @@ export function GeneralDashboardPage() {
               <dt className="text-gray-500">Graduation year</dt>
               <dd className="font-medium text-primary">{member.graduation_year}</dd>
             </div>
-            <div className="flex justify-between gap-4">
+            <div className="flex items-center justify-between gap-4">
               <dt className="text-gray-500">Role</dt>
-              <dd className="font-medium text-primary">
-                {formatRoleLabel(member.role)}
+              <dd>
+                <RoleBadge role={member.role} size="md" />
               </dd>
             </div>
           </dl>

@@ -9,6 +9,7 @@ export type AuthContextValue = {
   isLoading: boolean;
   login: (token: string) => Promise<MemberResponse>;
   logout: () => void;
+  updateMember: (member: MemberResponse) => void;
 };
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

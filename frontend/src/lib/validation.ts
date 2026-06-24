@@ -196,3 +196,46 @@ export function validateRegisterField(
 ): string | null {
   return registerValidators[field](value);
 }
+
+export type ProfileFormValues = {
+  full_name: string;
+  email: string;
+  major: string;
+  graduation_year: string;
+};
+
+export type ProfileFormErrors = Partial<Record<keyof ProfileFormValues, string>>;
+
+const profileValidators: Record<
+  keyof ProfileFormValues,
+  (value: string) => string | null
+> = {
+  full_name: validateFullName,
+  email: validateSemoEmail,
+  major: validateMajor,
+  graduation_year: validateGraduationYear,
+};
+
+export function validateProfileForm(
+  values: ProfileFormValues,
+): ProfileFormErrors {
+  const errors: ProfileFormErrors = {};
+
+  for (const field of Object.keys(profileValidators) as Array<
+    keyof ProfileFormValues
+  >) {
+    const error = profileValidators[field](values[field]);
+    if (error) {
+      errors[field] = error;
+    }
+  }
+
+  return errors;
+}
+
+export function validateProfileField(
+  field: keyof ProfileFormValues,
+  value: string,
+): string | null {
+  return profileValidators[field](value);
+}

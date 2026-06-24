@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from "react-router-dom";
 
+import { RoleBadge } from "../components/RoleBadge";
 import { useAuth } from "../context/useAuth";
 import { useLogout } from "../context/useLogout";
 import { getDashboardPath, isRoleAtLeast } from "../lib/roles";
@@ -34,11 +35,18 @@ export function AppLayout() {
               </NavLink>
             </li>
             {isAuthenticated && (
-              <li>
-                <NavLink to={dashboardPath} className={navLinkClass}>
-                  Dashboard
-                </NavLink>
-              </li>
+              <>
+                <li>
+                  <NavLink to="/profile" className={navLinkClass}>
+                    Profile
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to={dashboardPath} className={navLinkClass}>
+                    Dashboard
+                  </NavLink>
+                </li>
+              </>
             )}
             {isBoard && (
               <>
@@ -55,15 +63,22 @@ export function AppLayout() {
               </>
             )}
             {isAuthenticated ? (
-              <li>
-                <button
-                  type="button"
-                  onClick={logout}
-                  className="text-gray-600 transition-colors hover:text-primary"
-                >
-                  Logout
-                </button>
-              </li>
+              <>
+                {member && (
+                  <li aria-label="Your role">
+                    <RoleBadge role={member.role} />
+                  </li>
+                )}
+                <li>
+                  <button
+                    type="button"
+                    onClick={logout}
+                    className="text-gray-600 transition-colors hover:text-primary"
+                  >
+                    Logout
+                  </button>
+                </li>
+              </>
             ) : (
               <li>
                 <NavLink to="/login" className={navLinkClass}>

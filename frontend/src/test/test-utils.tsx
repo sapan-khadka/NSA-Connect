@@ -47,6 +47,7 @@ export function createMockAuthValue(
     isLoading: false,
     login: vi.fn().mockResolvedValue(member),
     logout: vi.fn(),
+    updateMember: vi.fn(),
     ...overrides,
   };
 }
@@ -96,6 +97,7 @@ export function StatefulAuthProvider({
       isLoading: false,
       login,
       logout,
+      updateMember: setMember,
     }),
     [member, login, logout],
   );

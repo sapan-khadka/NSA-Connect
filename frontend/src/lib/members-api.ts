@@ -47,3 +47,22 @@ export async function rejectMember(memberId: number): Promise<MemberResponse> {
   );
   return response.data;
 }
+
+export type UpdateProfileRequest = {
+  full_name?: string;
+  email?: string;
+  major?: string;
+  graduation_year?: number;
+};
+
+export async function fetchMyProfile(): Promise<MemberResponse> {
+  const response = await api.get<MemberResponse>("/v1/members/me");
+  return response.data;
+}
+
+export async function updateMyProfile(
+  data: UpdateProfileRequest,
+): Promise<MemberResponse> {
+  const response = await api.patch<MemberResponse>("/v1/members/me", data);
+  return response.data;
+}
