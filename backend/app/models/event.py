@@ -3,6 +3,7 @@ from enum import StrEnum
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy import Enum as SqlEnum
+from sqlalchemy.orm import relationship
 
 from app.models.base import Base
 
@@ -33,6 +34,11 @@ class Event(Base):
     location = Column(String(255), nullable=True)
     budget = Column(Numeric(10, 2), nullable=False)
     created_by_id = Column(Integer, ForeignKey("members.id"), nullable=False)
+    prep_tasks = relationship(
+        "PrepTask",
+        back_populates="event",
+        order_by="PrepTask.due_date",
+    )
 
     @property
     def is_upcoming(self) -> bool:

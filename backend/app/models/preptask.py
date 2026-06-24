@@ -45,6 +45,7 @@ class PrepTask(Base):
     group_id = Column(Integer, ForeignKey("prep_task_groups.id"), nullable=False)
     due_date = Column(DateTime(timezone=True), nullable=False)
     assignee_id = Column(Integer, ForeignKey("members.id"), nullable=True)
+    event = relationship("Event", back_populates="prep_tasks")
     checklist_items = relationship(
         "PrepTaskChecklistItem",
         back_populates="prep_task",

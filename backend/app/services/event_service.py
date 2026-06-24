@@ -1,10 +1,14 @@
 from datetime import UTC, datetime
 
 from sqlalchemy import extract, func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.event import Event, EventType
 from app.schemas.event import EventCreateRequest
+
+
+class EventNotFoundError(Exception):
+    pass
 
 
 def create_event(
@@ -52,6 +56,22 @@ def list_events(
         query.order_by(Event.starts_at.asc()),
     ).all()
     return list(events), total
+
+
+def get_event_with_prep_tasks(db: Session, event_id: int) -> Event:
+    from app.models.preptask import PrepTask
+
+    event = db.scalar(
+        select(Event)
+        .where(Event.id == event_id)
+        .options(
+            selectinload(Event.prep_tasks).selectinload(PrepTask.checklist_items),
+            selectinload(Event.prep_tasks).selectinload(PrepTask.group),
+        ),
+    )
+    if event is None:
+        raise EventNotFoundError
+    return event
 
 
 def _parse_month(month: str) -> tuple[int, int]:

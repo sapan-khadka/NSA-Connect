@@ -1,12 +1,22 @@
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_member, require_board
 from app.models.event import EventType
 from app.models.member import Member
-from app.schemas.event import EventCreateRequest, EventListResponse, EventResponse
-from app.services.event_service import create_event, list_events
+from app.schemas.event import (
+    EventCreateRequest,
+    EventDetailResponse,
+    EventListResponse,
+    EventResponse,
+)
+from app.services.event_service import (
+    EventNotFoundError,
+    create_event,
+    get_event_with_prep_tasks,
+    list_events,
+)
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -32,6 +42,23 @@ def list_events_endpoint(
         events=[EventResponse.from_event(event) for event in events],
         total=total,
     )
+
+
+@router.get("/{event_id}", response_model=EventDetailResponse)
+def get_event_endpoint(
+    event_id: int,
+    _: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    try:
+        event = get_event_with_prep_tasks(db, event_id)
+    except EventNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        ) from None
+
+    return EventDetailResponse.from_event(event)
 
 
 @router.post(
