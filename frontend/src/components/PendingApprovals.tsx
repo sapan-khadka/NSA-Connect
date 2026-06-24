@@ -44,8 +44,10 @@ export function PendingApprovals({
   }, [loadPendingMembers]);
 
   useEffect(() => {
-    onCountChange?.(pendingMembers.length);
-  }, [onCountChange, pendingMembers.length]);
+    if (!isLoading) {
+      onCountChange?.(pendingMembers.length);
+    }
+  }, [onCountChange, pendingMembers.length, isLoading]);
 
   async function handleApprove(memberId: number) {
     setActionMemberId(memberId);

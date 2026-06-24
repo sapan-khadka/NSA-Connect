@@ -1,21 +1,38 @@
-import type { MemberRole } from "../lib/roles";
-import { formatRoleLabel } from "../lib/roles";
-
-const ROLE_STYLES: Record<MemberRole, string> = {
-  president: "border-purple-200 bg-purple-50 text-purple-800",
-  treasurer: "border-blue-200 bg-blue-50 text-blue-800",
-  board: "border-accent/30 bg-accent/10 text-accent",
-  general: "border-gray-200 bg-gray-50 text-gray-700",
-};
+import {
+  formatRoleLabel,
+  getRoleBadgeClassName,
+  isMemberRole,
+  type MemberRole,
+  type RoleBadgeSize,
+} from "../lib/roles";
 
 type RoleBadgeProps = {
-  role: MemberRole;
+  role: MemberRole | string;
+  size?: RoleBadgeSize;
+  className?: string;
 };
 
-export function RoleBadge({ role }: RoleBadgeProps) {
+export function RoleBadge({ role, size = "sm", className }: RoleBadgeProps) {
+  if (!isMemberRole(role)) {
+    return (
+      <span
+        className={[
+          "inline-flex rounded-full border border-gray-200 bg-gray-50 px-2.5 py-0.5 text-xs font-semibold text-gray-700",
+          className,
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        {role}
+      </span>
+    );
+  }
+
   return (
     <span
-      className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide ${ROLE_STYLES[role]}`}
+      className={[getRoleBadgeClassName(role, size), className]
+        .filter(Boolean)
+        .join(" ")}
     >
       {formatRoleLabel(role)}
     </span>

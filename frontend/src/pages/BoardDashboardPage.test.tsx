@@ -65,7 +65,11 @@ describe("BoardDashboardPage", () => {
     renderBoardDashboard();
 
     expect(await screen.findByText("Pending User")).toBeInTheDocument();
-    expect(screen.getByText("1")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId("pending-approval-count")).toHaveTextContent(
+        "1",
+      );
+    });
     expect(
       screen.getByRole("button", { name: "Approve Pending User" }),
     ).toBeInTheDocument();
@@ -96,7 +100,11 @@ describe("BoardDashboardPage", () => {
       expect(approveMember).toHaveBeenCalledWith(2);
     });
     expect(screen.queryByText("Pending User")).not.toBeInTheDocument();
-    expect(screen.getByText("0")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId("pending-approval-count")).toHaveTextContent(
+        "0",
+      );
+    });
   });
 
   it("does not show reject buttons on the dashboard queue", async () => {

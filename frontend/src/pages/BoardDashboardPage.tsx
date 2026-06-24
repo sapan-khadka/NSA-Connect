@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { PendingApprovals } from "../components/PendingApprovals";
+import { RoleBadge } from "../components/RoleBadge";
 import { useAuth } from "../context/useAuth";
-import { formatRoleLabel } from "../lib/roles";
 
 export function BoardDashboardPage() {
   const { member } = useAuth();
@@ -33,7 +33,10 @@ export function BoardDashboardPage() {
           <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
             Pending approvals
           </h2>
-          <p className="mt-3 text-4xl font-bold text-primary">
+          <p
+            data-testid="pending-approval-count"
+            className="mt-3 text-4xl font-bold text-primary"
+          >
             {pendingCount ?? "..."}
           </p>
         </section>
@@ -42,9 +45,9 @@ export function BoardDashboardPage() {
           <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
             Your role
           </h2>
-          <p className="mt-3 text-2xl font-bold text-primary">
-            {formatRoleLabel(member.role)}
-          </p>
+          <div className="mt-3">
+            <RoleBadge role={member.role} size="md" />
+          </div>
         </section>
 
         <section className="rounded-lg border border-gray-200 bg-white p-6">

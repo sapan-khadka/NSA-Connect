@@ -4,7 +4,6 @@ import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/auth-api";
 import { memberMatchesSearch } from "../lib/member-search";
 import { fetchMembers } from "../lib/members-api";
-import { isMemberRole } from "../lib/roles";
 
 import { RoleBadge } from "./RoleBadge";
 import { StatusBadge } from "./StatusBadge";
@@ -159,11 +158,7 @@ export function MemberDirectory() {
                     {member.graduation_year}
                   </td>
                   <td className="px-6 py-4">
-                    {isMemberRole(member.role) ? (
-                      <RoleBadge role={member.role} />
-                    ) : (
-                      member.role
-                    )}
+                    <RoleBadge role={member.role} />
                   </td>
                   <td className="px-6 py-4">
                     <StatusBadge status={member.status} />
