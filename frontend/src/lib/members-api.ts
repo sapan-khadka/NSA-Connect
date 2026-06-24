@@ -66,3 +66,18 @@ export async function updateMyProfile(
   const response = await api.patch<MemberResponse>("/v1/members/me", data);
   return response.data;
 }
+
+export type UpdateMemberRoleRequest = {
+  role: "general" | "board";
+};
+
+export async function updateMemberRole(
+  memberId: number,
+  data: UpdateMemberRoleRequest,
+): Promise<MemberResponse> {
+  const response = await api.patch<MemberResponse>(
+    `/v1/members/${memberId}/role`,
+    data,
+  );
+  return response.data;
+}

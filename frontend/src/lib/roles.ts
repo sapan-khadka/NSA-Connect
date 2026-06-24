@@ -54,3 +54,22 @@ export function getRoleBadgeClassName(
     ROLE_BADGE_STYLES[role],
   ].join(" ");
 }
+
+export const PROMOTABLE_BOARD_ROLES = ["general", "board"] as const;
+
+export type PromotableBoardRole = (typeof PROMOTABLE_BOARD_ROLES)[number];
+
+export function isPromotableBoardRole(role: string): role is PromotableBoardRole {
+  return PROMOTABLE_BOARD_ROLES.includes(role as PromotableBoardRole);
+}
+
+export function canPresidentPromoteMember(
+  member: { id: number; role: MemberRole; status: string },
+  currentMemberId: number,
+): boolean {
+  return (
+    member.id !== currentMemberId &&
+    member.status === "approved" &&
+    isPromotableBoardRole(member.role)
+  );
+}

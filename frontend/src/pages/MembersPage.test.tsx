@@ -13,6 +13,7 @@ vi.mock("../lib/members-api", () => ({
   fetchPendingMembers: vi.fn(),
   approveMember: vi.fn(),
   rejectMember: vi.fn(),
+  updateMemberRole: vi.fn(),
 }));
 
 const directoryMember: MemberResponse = {
@@ -47,7 +48,19 @@ function mockDirectoryResponse(members: MemberResponse[] = [directoryMember]) {
   };
 }
 
-function renderMembersPage(initialEntry = "/members?tab=pending") {
+function renderMembersPage(
+  initialEntry = "/members?tab=pending",
+  authMember: Partial<MemberResponse> & { role: MemberResponse["role"] } = {
+    id: 1,
+    full_name: "Board User",
+    email: "board@semo.edu",
+    student_id: "87654321",
+    major: "Administration",
+    graduation_year: 2028,
+    role: "board",
+    status: "approved",
+  },
+) {
   return render(
     <MockAuthProvider
       value={{
@@ -60,6 +73,7 @@ function renderMembersPage(initialEntry = "/members?tab=pending") {
           graduation_year: 2028,
           role: "board",
           status: "approved",
+          ...authMember,
         },
         isAuthenticated: true,
       }}
@@ -183,6 +197,101 @@ describe("MembersPage", () => {
       page: 2,
       page_size: 10,
     });
+  });
+
+  it("does not show role promotion controls for board members", async () => {
+    const user = userEvent.setup();
+    const { fetchMembers, fetchPendingMembers } = await import(
+      "../lib/members-api"
+    );
+    vi.mocked(fetchPendingMembers).mockResolvedValue({ members: [], total: 0 });
+    vi.mocked(fetchMembers).mockResolvedValue(mockDirectoryResponse());
+
+    renderMembersPage("/members?tab=pending", { role: "board", id: 1 });
+    await user.click(screen.getByRole("button", { name: "Directory" }));
+    await screen.findByText("Alex Member");
+
+    expect(
+      screen.queryByLabelText("Change role for Alex Member"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Board")).toBeInTheDocument();
+  });
+
+  it("lets presidents promote a general member to board", async () => {
+    const user = userEvent.setup();
+    const { fetchMembers, fetchPendingMembers, updateMemberRole } = await import(
+      "../lib/members-api"
+    );
+    vi.mocked(fetchPendingMembers).mockResolvedValue({ members: [], total: 0 });
+    vi.mocked(fetchMembers).mockResolvedValue(
+      mockDirectoryResponse([
+        {
+          ...directoryMember,
+          id: 4,
+          role: "general",
+          full_name: "Promote Me",
+          email: "promote@semo.edu",
+        },
+      ]),
+    );
+    vi.mocked(updateMemberRole).mockResolvedValue({
+      ...directoryMember,
+      id: 4,
+      role: "board",
+      full_name: "Promote Me",
+      email: "promote@semo.edu",
+    });
+
+    renderMembersPage("/members?tab=pending", {
+      id: 1,
+      role: "president",
+      full_name: "President User",
+      email: "president@semo.edu",
+    });
+    await user.click(screen.getByRole("button", { name: "Directory" }));
+    await screen.findByText("Promote Me");
+
+    await user.selectOptions(
+      screen.getByLabelText("Change role for Promote Me"),
+      "board",
+    );
+
+    await waitFor(() => {
+      expect(updateMemberRole).toHaveBeenCalledWith(4, { role: "board" });
+    });
+  });
+
+  it("does not let presidents change their own role", async () => {
+    const user = userEvent.setup();
+    const { fetchMembers, fetchPendingMembers } = await import(
+      "../lib/members-api"
+    );
+    vi.mocked(fetchPendingMembers).mockResolvedValue({ members: [], total: 0 });
+    vi.mocked(fetchMembers).mockResolvedValue(
+      mockDirectoryResponse([
+        {
+          ...directoryMember,
+          id: 1,
+          role: "president",
+          full_name: "President User",
+          email: "president@semo.edu",
+        },
+      ]),
+    );
+
+    renderMembersPage("/members?tab=pending", {
+      id: 1,
+      role: "president",
+      full_name: "President User",
+      email: "president@semo.edu",
+    });
+    await user.click(screen.getByRole("button", { name: "Directory" }));
+    await screen.findByText("President User");
+
+    expect(
+      screen.queryByLabelText("Change role for President User"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("President")).toBeInTheDocument();
   });
 
   it("lists pending members from the approval queue", async () => {
