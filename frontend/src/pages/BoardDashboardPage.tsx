@@ -1,21 +1,13 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 
+import { PendingApprovals } from "../components/PendingApprovals";
 import { useAuth } from "../context/useAuth";
-import { getApiErrorMessage } from "../lib/auth-api";
-import { fetchPendingMembers } from "../lib/members-api";
 import { formatRoleLabel } from "../lib/roles";
 
 export function BoardDashboardPage() {
   const { member } = useAuth();
   const [pendingCount, setPendingCount] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchPendingMembers()
-      .then((data) => setPendingCount(data.total))
-      .catch((fetchError) => setError(getApiErrorMessage(fetchError)));
-  }, []);
 
   if (!member) {
     return null;
@@ -31,8 +23,8 @@ export function BoardDashboardPage() {
           Board workspace, {member.full_name}
         </h1>
         <p className="mt-3 max-w-2xl text-gray-600">
-          Review pending signups, manage members, and oversee NSA operations from
-          one place.
+          Approve new signups with one click, manage members, and oversee NSA
+          operations from one place.
         </p>
       </section>
 
@@ -44,7 +36,6 @@ export function BoardDashboardPage() {
           <p className="mt-3 text-4xl font-bold text-primary">
             {pendingCount ?? "..."}
           </p>
-          {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
         </section>
 
         <section className="rounded-lg border border-gray-200 bg-white p-6">
@@ -64,17 +55,30 @@ export function BoardDashboardPage() {
         </section>
       </div>
 
+      <PendingApprovals onCountChange={setPendingCount} showReject={false} />
+
       <section className="rounded-lg border border-gray-200 bg-white p-6">
         <h2 className="text-lg font-semibold text-primary">Board actions</h2>
         <ul className="mt-4 grid gap-3 md:grid-cols-2">
           <li>
             <Link
+              to="/members?tab=pending"
+              className="block rounded-md border border-gray-200 px-4 py-3 transition-colors hover:border-accent hover:bg-accent/5"
+            >
+              <p className="font-medium text-primary">Full approval queue</p>
+              <p className="mt-1 text-sm text-gray-500">
+                Review all pending signups and reject if needed.
+              </p>
+            </Link>
+          </li>
+          <li>
+            <Link
               to="/members"
               className="block rounded-md border border-gray-200 px-4 py-3 transition-colors hover:border-accent hover:bg-accent/5"
             >
-              <p className="font-medium text-primary">Review pending members</p>
+              <p className="font-medium text-primary">Member directory</p>
               <p className="mt-1 text-sm text-gray-500">
-                Approve or reject new signup requests.
+                Browse and search all NSA Connect members.
               </p>
             </Link>
           </li>

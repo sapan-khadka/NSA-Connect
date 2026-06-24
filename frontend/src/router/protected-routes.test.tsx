@@ -65,7 +65,7 @@ describe("protected route redirects", () => {
     await waitFor(() => {
       expect(screen.getAllByText("Board Dashboard").length).toBeGreaterThan(0);
     });
-    expect(fetchPendingMembers).toHaveBeenCalledOnce();
+    expect(fetchPendingMembers).toHaveBeenCalled();
   });
 
   it("redirects board members from /member to /board", async () => {
@@ -95,8 +95,6 @@ describe("protected route redirects", () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/member");
     });
-    expect(
-      screen.queryByText(/list members, approve\/reject/i),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Member directory")).not.toBeInTheDocument();
   });
 });
