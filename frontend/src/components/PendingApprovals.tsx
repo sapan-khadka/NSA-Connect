@@ -8,6 +8,8 @@ import {
   rejectMember,
 } from "../lib/members-api";
 
+import { MemberCard } from "./MemberCard";
+
 type PendingApprovalsProps = {
   onCountChange?: (count: number) => void;
   showReject?: boolean;
@@ -115,54 +117,33 @@ export function PendingApprovals({
             const isApproving = approvingMemberId === member.id;
 
             return (
-              <li
-                key={member.id}
-                className="flex flex-col gap-4 px-6 py-5 md:flex-row md:items-center md:justify-between"
-              >
-                <div>
-                  <p className="font-medium text-primary">{member.full_name}</p>
-                  <p className="mt-1 text-sm text-gray-600">{member.email}</p>
-                  <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
-                    <div>
-                      <dt className="text-gray-500">Student ID</dt>
-                      <dd className="font-medium text-primary">
-                        {member.student_id}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-gray-500">Major</dt>
-                      <dd className="font-medium text-primary">{member.major}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-gray-500">Graduation</dt>
-                      <dd className="font-medium text-primary">
-                        {member.graduation_year}
-                      </dd>
-                    </div>
-                  </dl>
-                </div>
-
-                <div className="flex shrink-0 gap-3">
-                  {showReject && (
-                    <button
-                      type="button"
-                      onClick={() => void handleReject(member.id)}
-                      disabled={isActing}
-                      className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      Reject
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => void handleApprove(member.id)}
-                    disabled={isActing}
-                    aria-label={`Approve ${member.full_name}`}
-                    className="min-w-[7.5rem] rounded-md bg-accent px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {isApproving ? "Approving..." : "Approve"}
-                  </button>
-                </div>
+              <li key={member.id} className="px-6 py-5">
+                <MemberCard
+                  member={member}
+                  actions={
+                    <>
+                      {showReject && (
+                        <button
+                          type="button"
+                          onClick={() => void handleReject(member.id)}
+                          disabled={isActing}
+                          className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          Reject
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => void handleApprove(member.id)}
+                        disabled={isActing}
+                        aria-label={`Approve ${member.full_name}`}
+                        className="min-w-[7.5rem] rounded-md bg-accent px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isApproving ? "Approving..." : "Approve"}
+                      </button>
+                    </>
+                  }
+                />
               </li>
             );
           })}
