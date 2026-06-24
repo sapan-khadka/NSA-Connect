@@ -1,10 +1,32 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 if TYPE_CHECKING:
     from app.models.preptask import PrepTask, PrepTaskChecklistItem
+
+
+class PrepTaskCreateRequest(BaseModel):
+    group_name: str = Field(min_length=1, max_length=255)
+    due_date: datetime
+    assignee_id: int | None = None
+
+    @field_validator("group_name", mode="before")
+    @classmethod
+    def strip_group_name(cls, value: str) -> str:
+        if isinstance(value, str):
+            value = value.strip()
+        if not value:
+            raise ValueError("Must not be empty")
+        return value
+
+    @field_validator("due_date")
+    @classmethod
+    def due_date_must_be_timezone_aware(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.tzinfo.utcoffset(value) is None:
+            raise ValueError("due_date must include a timezone")
+        return value
 
 
 class PrepTaskChecklistItemResponse(BaseModel):
