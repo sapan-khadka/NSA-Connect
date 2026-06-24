@@ -25,6 +25,13 @@ class Settings(BaseSettings):
     )
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
+    EMAIL_ENABLED: bool = False
+    EMAIL_FROM: str = "NSA Connect <noreply@semo.edu>"
+    SENDGRID_API_KEY: str = Field(
+        default="",
+        description="SendGrid API key for transactional email",
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

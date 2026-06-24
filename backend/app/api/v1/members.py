@@ -1,19 +1,59 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import math
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import require_board
+from app.core.dependencies import get_current_member, require_board, require_president
 from app.models.member import Member, MemberStatus
-from app.schemas.member import MemberListResponse, MemberResponse
+from app.schemas.member import (
+    MemberBoardRoleUpdateRequest,
+    MemberListResponse,
+    MemberResponse,
+    PaginatedMemberListResponse,
+)
+from app.services.email_service import send_welcome_email
 from app.services.member_service import (
+    InvalidMemberRoleError,
     InvalidMemberStatusError,
     MemberNotFoundError,
     approve_member,
     list_members_by_status,
+    list_members_paginated,
     reject_member,
+    update_member_board_role,
 )
 
 router = APIRouter(prefix="/members", tags=["members"])
+
+
+@router.get("", response_model=PaginatedMemberListResponse)
+def list_members(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    status: MemberStatus | None = None,
+    _: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    members, total = list_members_paginated(
+        db,
+        page=page,
+        page_size=page_size,
+        status=status,
+    )
+    total_pages = math.ceil(total / page_size) if total else 0
+    return PaginatedMemberListResponse(
+        members=[MemberResponse.from_member(member) for member in members],
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+    )
+
+
+@router.get("/me", response_model=MemberResponse)
+def get_my_profile(current_member: Member = Depends(get_current_member)):
+    return MemberResponse.from_member(current_member)
 
 
 @router.get("/pending", response_model=MemberListResponse)
@@ -31,6 +71,7 @@ def list_pending_members(
 @router.patch("/{member_id}/approve", response_model=MemberResponse)
 def approve_member_endpoint(
     member_id: int,
+    background_tasks: BackgroundTasks,
     _: Member = Depends(require_board),
     db: Session = Depends(get_db),
 ):
@@ -46,6 +87,12 @@ def approve_member_endpoint(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
         ) from None
+
+    background_tasks.add_task(
+        send_welcome_email,
+        email=member.email,
+        full_name=member.full_name,
+    )
 
     return MemberResponse.from_member(member)
 
@@ -71,6 +118,33 @@ def reject_member_endpoint(
 
     return MemberResponse.from_member(member)
 
-# TODO: GET / — list all members (board+ only)
+
+@router.patch("/{member_id}/role", response_model=MemberResponse)
+def update_member_role_endpoint(
+    member_id: int,
+    data: MemberBoardRoleUpdateRequest,
+    current_member: Member = Depends(require_president),
+    db: Session = Depends(get_db),
+):
+    if member_id == current_member.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot change your own role",
+        )
+
+    try:
+        member = update_member_board_role(db, member_id, data.role)
+    except MemberNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Member not found",
+        ) from None
+    except InvalidMemberRoleError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from None
+
+    return MemberResponse.from_member(member)
+
 # TODO: GET /{member_id} — get member profile
-# TODO: PATCH /{member_id}/role — update member role (president only)

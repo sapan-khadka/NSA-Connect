@@ -1,7 +1,7 @@
 import pytest
 from fastapi import HTTPException
 
-from app.core.dependencies import require_board, require_treasurer
+from app.core.dependencies import require_board, require_president, require_treasurer
 from app.models.member import Member, MemberRole, MemberStatus
 
 
@@ -61,3 +61,21 @@ def test_require_treasurer_rejects_below_treasurer(role):
 
     assert exc.value.status_code == 403
     assert exc.value.detail == "Requires treasurer role or higher"
+
+
+def test_require_president_allows_president_only():
+    member = _member(MemberRole.PRESIDENT)
+    assert require_president(current_member=member) == member
+
+
+@pytest.mark.parametrize(
+    "role",
+    [MemberRole.GENERAL, MemberRole.BOARD, MemberRole.TREASURER],
+)
+def test_require_president_rejects_below_president(role):
+    member = _member(role)
+    with pytest.raises(HTTPException) as exc:
+        require_president(current_member=member)
+
+    assert exc.value.status_code == 403
+    assert exc.value.detail == "Requires president role or higher"

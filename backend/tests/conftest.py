@@ -80,6 +80,31 @@ def create_board_member(
     return member
 
 
+def create_president_member(
+    db_session: Session,
+    email="president@semo.edu",
+    password=VALID_PASSWORD,
+    student_id="99887766",
+):
+    from app.core.security import hash_password
+    from app.models.member import MemberRole
+
+    member = Member(
+        full_name="President",
+        email=email,
+        student_id=student_id,
+        major="Administration",
+        graduation_year=VALID_GRADUATION_YEAR,
+        hashed_password=hash_password(password),
+        role=MemberRole.PRESIDENT,
+        status=MemberStatus.APPROVED,
+    )
+    db_session.add(member)
+    db_session.commit()
+    db_session.refresh(member)
+    return member
+
+
 def auth_header(client, email=VALID_EMAIL, password=VALID_PASSWORD):
     response = login_member(client, email=email, password=password)
     token = response.json()["access_token"]

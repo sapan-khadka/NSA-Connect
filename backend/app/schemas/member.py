@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.core.validators import SemoEmailStr, StudentIdStr
@@ -40,6 +42,10 @@ class MemberLoginRequest(BaseModel):
 
 class MemberRoleUpdateRequest(BaseModel):
     role: MemberRole
+
+
+class MemberBoardRoleUpdateRequest(BaseModel):
+    role: Literal[MemberRole.BOARD, MemberRole.GENERAL]
 
 
 class MemberStatusUpdateRequest(BaseModel):
@@ -100,3 +106,11 @@ class MemberResponse(BaseModel):
 class MemberListResponse(BaseModel):
     members: list[MemberResponse]
     total: int
+
+
+class PaginatedMemberListResponse(BaseModel):
+    members: list[MemberResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int

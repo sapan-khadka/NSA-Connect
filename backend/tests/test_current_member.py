@@ -106,3 +106,51 @@ def test_me_rejects_unapproved_member_with_valid_token(client, db_session):
 
     assert response.status_code == 403
     assert response.json()["detail"] == "Member account is not approved"
+
+
+def test_members_me_returns_own_profile(client, db_session):
+    _register(client)
+    _approve_member(db_session)
+    login = _login(client)
+    token = login.json()["access_token"]
+
+    response = client.get(
+        "/api/v1/members/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["email"] == "sapan@semo.edu"
+    assert data["full_name"] == "Sapan Khadka"
+    assert data["student_id"] == "12345678"
+    assert data["major"] == "Computer Science"
+    assert data["graduation_year"] == 2028
+    assert data["role"] == "general"
+    assert data["status"] == "approved"
+    assert "password" not in data
+    assert "hashed_password" not in data
+
+
+def test_members_me_rejects_missing_token(client):
+    response = client.get("/api/v1/members/me")
+
+    assert response.status_code == 401
+
+
+def test_members_me_rejects_unapproved_member(client, db_session):
+    _register(client)
+
+    token, _ = create_access_token(
+        member_id=1,
+        email="sapan@semo.edu",
+        role="general",
+    )
+
+    response = client.get(
+        "/api/v1/members/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Member account is not approved"

@@ -70,3 +70,4 @@ def _require_role(minimum_role: MemberRole):
 
 require_board = _require_role(MemberRole.BOARD)
 require_treasurer = _require_role(MemberRole.TREASURER)
+require_president = _require_role(MemberRole.PRESIDENT)

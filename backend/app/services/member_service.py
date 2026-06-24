@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password, verify_password
@@ -27,6 +27,10 @@ class MemberNotFoundError(Exception):
 
 
 class InvalidMemberStatusError(Exception):
+    pass
+
+
+class InvalidMemberRoleError(Exception):
     pass
 
 
@@ -83,6 +87,31 @@ def list_members_by_status(db: Session, status: MemberStatus | None = None) -> l
     return list(db.scalars(query.order_by(Member.id)).all())
 
 
+def list_members_paginated(
+    db: Session,
+    *,
+    page: int = 1,
+    page_size: int = 20,
+    status: MemberStatus | None = None,
+) -> tuple[list[Member], int]:
+    filters = []
+    if status is not None:
+        filters.append(Member.status == status)
+
+    total = db.scalar(select(func.count()).select_from(Member).where(*filters)) or 0
+    offset = (page - 1) * page_size
+    members = list(
+        db.scalars(
+            select(Member)
+            .where(*filters)
+            .order_by(Member.id)
+            .offset(offset)
+            .limit(page_size)
+        ).all()
+    )
+    return members, total
+
+
 def approve_member(db: Session, member_id: int) -> Member:
     member = get_member_by_id(db, member_id)
     if member.status != MemberStatus.PENDING:
@@ -98,6 +127,35 @@ def reject_member(db: Session, member_id: int) -> Member:
     if member.status != MemberStatus.PENDING:
         raise InvalidMemberStatusError("Only pending members can be rejected")
     member.status = MemberStatus.REJECTED
+    db.commit()
+    db.refresh(member)
+    return member
+
+
+def update_member_board_role(db: Session, member_id: int, role: MemberRole) -> Member:
+    member = get_member_by_id(db, member_id)
+
+    if not member.is_approved:
+        raise InvalidMemberRoleError("Only approved members can have their role updated")
+
+    if role not in (MemberRole.BOARD, MemberRole.GENERAL):
+        raise InvalidMemberRoleError(
+            "Only board and general roles can be assigned through this endpoint"
+        )
+
+    if member.role in (MemberRole.PRESIDENT, MemberRole.TREASURER):
+        raise InvalidMemberRoleError("Cannot change role of president or treasurer members")
+
+    if role == member.role:
+        raise InvalidMemberRoleError("Member already has this role")
+
+    if role == MemberRole.BOARD and member.role != MemberRole.GENERAL:
+        raise InvalidMemberRoleError("Only general members can be promoted to board")
+
+    if role == MemberRole.GENERAL and member.role != MemberRole.BOARD:
+        raise InvalidMemberRoleError("Only board members can be demoted to general")
+
+    member.role = role
     db.commit()
     db.refresh(member)
     return member
