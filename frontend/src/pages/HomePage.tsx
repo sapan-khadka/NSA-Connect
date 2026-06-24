@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 
-import api from "../lib/api";
-
 type HealthResponse = {
   status: string;
 };
@@ -11,12 +9,16 @@ export function HomePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api
-      .get<HealthResponse>("/health")
-      .then((res) => setHealth(res.data))
-      .catch((err) =>
-        setError(err.response?.data?.detail ?? err.message ?? "Request failed"),
-      );
+    fetch("/health")
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error("Not Found");
+        }
+
+        return res.json() as Promise<HealthResponse>;
+      })
+      .then((data) => setHealth(data))
+      .catch((err: Error) => setError(err.message ?? "Request failed"));
   }, []);
 
   return (

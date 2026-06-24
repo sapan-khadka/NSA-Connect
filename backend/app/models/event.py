@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import StrEnum
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy import Enum as SqlEnum
 
 from app.models.base import Base
@@ -31,6 +31,7 @@ class Event(Base):
     starts_at = Column(DateTime(timezone=True), nullable=False)
     ends_at = Column(DateTime(timezone=True), nullable=True)
     location = Column(String(255), nullable=True)
+    budget = Column(Numeric(10, 2), nullable=False)
     created_by_id = Column(Integer, ForeignKey("members.id"), nullable=False)
 
     @property

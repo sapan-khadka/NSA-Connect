@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from decimal import Decimal
 
 from app.models.event import Event, EventType
 
@@ -21,6 +22,7 @@ def test_event_is_upcoming():
         description="Annual cultural event",
         event_type=EventType.CULTURAL,
         starts_at=datetime(2026, 12, 1, 18, 0, tzinfo=UTC),
+        budget=Decimal("250.00"),
         created_by_id=1,
     )
     past_event = Event(
@@ -28,6 +30,7 @@ def test_event_is_upcoming():
         description="Monthly check-in",
         event_type=EventType.MEETING,
         starts_at=datetime(2020, 1, 1, 18, 0, tzinfo=UTC),
+        budget=Decimal("0.00"),
         created_by_id=1,
     )
 
