@@ -5,8 +5,17 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.models.event import Event
 from app.models.member import Member, MemberRole, MemberStatus
-from app.models.preptask import PrepTask, PrepTaskGroup, checklist_items_from_group
-from app.schemas.preptask import PrepTaskCreateRequest, PrepTaskUpdateRequest
+from app.models.preptask import (
+    PrepTask,
+    PrepTaskChecklistItem,
+    PrepTaskGroup,
+    checklist_items_from_group,
+)
+from app.schemas.preptask import (
+    PrepTaskCreateRequest,
+    PrepTaskChecklistItemUpdateRequest,
+    PrepTaskUpdateRequest,
+)
 from app.services.event_service import EventNotFoundError
 
 
@@ -27,6 +36,10 @@ class PrepTaskNotFoundError(Exception):
 
 
 class PrepTaskForbiddenError(Exception):
+    pass
+
+
+class PrepTaskChecklistItemNotFoundError(Exception):
     pass
 
 
@@ -133,6 +146,37 @@ def update_prep_task(
             item.is_completed = completed
 
     db.commit()
+    reloaded = _load_prep_task(db, task_id)
+    assert reloaded is not None
+    return reloaded
+
+
+def update_prep_task_checklist_item(
+    db: Session,
+    task_id: int,
+    item_id: int,
+    data: PrepTaskChecklistItemUpdateRequest,
+    current_member: Member,
+) -> PrepTask:
+    prep_task = _load_prep_task(db, task_id)
+    if prep_task is None:
+        raise PrepTaskNotFoundError
+
+    is_board = current_member.has_role_at_least(MemberRole.BOARD)
+    is_assignee = prep_task.assignee_id == current_member.id
+    if not (is_board or is_assignee):
+        raise PrepTaskForbiddenError
+
+    checklist_item = next(
+        (item for item in prep_task.checklist_items if item.id == item_id),
+        None,
+    )
+    if checklist_item is None:
+        raise PrepTaskChecklistItemNotFoundError
+
+    checklist_item.is_completed = data.is_completed
+    db.commit()
+
     reloaded = _load_prep_task(db, task_id)
     assert reloaded is not None
     return reloaded

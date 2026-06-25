@@ -40,6 +40,10 @@ class PrepTaskUpdateRequest(BaseModel):
         return self
 
 
+class PrepTaskChecklistItemUpdateRequest(BaseModel):
+    is_completed: bool
+
+
 class PrepTaskChecklistItemResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
