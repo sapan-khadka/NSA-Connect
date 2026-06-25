@@ -1,5 +1,3 @@
-from unittest.mock import patch
-
 from conftest import (
     VALID_PASSWORD,
     auth_header,
@@ -40,8 +38,7 @@ def test_board_member_approves_pending_signup(client, db_session):
     assert "access_token" in approved_login.json()
 
 
-@patch("app.api.v1.members.send_welcome_email")
-def test_approve_sends_welcome_email(mock_send_welcome_email, client, db_session):
+def test_approve_queues_welcome_email(block_external_integrations, client, db_session):
     register_member(client, email="newmember@semo.edu", student_id="11111111")
     create_board_member(db_session)
 
@@ -51,7 +48,7 @@ def test_approve_sends_welcome_email(mock_send_welcome_email, client, db_session
     )
 
     assert response.status_code == 200
-    mock_send_welcome_email.assert_called_once_with(
+    block_external_integrations["celery_delay"].assert_called_once_with(
         email="newmember@semo.edu",
         full_name="Sapan Khadka",
     )

@@ -9,6 +9,7 @@ from app.models.preptask import (
     PrepTaskGroupItem,
     checklist_items_from_group,
 )
+from app.models.reminder import PrepTaskReminder, ReminderType
 
 __all__ = [
     "Base",
@@ -22,5 +23,7 @@ __all__ = [
     "PrepTaskChecklistItem",
     "PrepTaskGroup",
     "PrepTaskGroupItem",
+    "PrepTaskReminder",
+    "ReminderType",
     "checklist_items_from_group",
 ]

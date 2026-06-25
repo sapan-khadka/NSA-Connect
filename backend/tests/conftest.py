@@ -19,6 +19,25 @@ VALID_GRADUATION_YEAR = 2028
 BAD_DOMAIN_EMAIL = "sapan@gmail.com"
 
 
+@pytest.fixture(autouse=True)
+def block_external_integrations():
+    """Never hit Redis, Celery brokers, or SendGrid during tests."""
+    sendgrid_response = MagicMock(status_code=202, body="accepted")
+
+    with (
+        patch("app.integrations.sendgrid_client.SendGridAPIClient") as sendgrid_client,
+        patch("celery.app.task.Task.delay") as celery_delay,
+        patch("celery.app.task.Task.apply_async") as celery_apply_async,
+        patch("app.services.email_service.settings.EMAIL_ENABLED", False),
+    ):
+        sendgrid_client.return_value.send.return_value = sendgrid_response
+        yield {
+            "sendgrid_client": sendgrid_client,
+            "celery_delay": celery_delay,
+            "celery_apply_async": celery_apply_async,
+        }
+
+
 def register_payload(
     email=VALID_EMAIL,
     password=VALID_PASSWORD,

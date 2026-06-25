@@ -32,6 +32,11 @@ class Settings(BaseSettings):
         description="SendGrid API key for transactional email",
     )
 
+    PREP_TASK_DUE_SOON_DAYS: int = Field(
+        default=3,
+        description="Days ahead to scan for incomplete prep tasks due soon",
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

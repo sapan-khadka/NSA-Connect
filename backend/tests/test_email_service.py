@@ -1,9 +1,13 @@
+
 import logging
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 from app.services.email_service import (
     WELCOME_EMAIL_SUBJECT,
+    build_prep_task_due_soon_email_body,
     build_welcome_email_body,
+    send_prep_task_due_soon_email,
     send_welcome_email,
 )
 
@@ -120,3 +124,34 @@ def test_sendgrid_client_raises_on_error_response(mock_client_class):
         raised = True
 
     assert raised is True
+
+
+def test_build_prep_task_due_soon_email_body_includes_task_details():
+    due_date = datetime(2030, 5, 20, 12, 0, tzinfo=UTC)
+    body = build_prep_task_due_soon_email_body(
+        full_name="Board Member",
+        event_title="Dashain Celebration",
+        group_name="Food & Beverage",
+        due_date=due_date,
+    )
+
+    assert "Hi Board Member," in body
+    assert "Food & Beverage" in body
+    assert "Dashain Celebration" in body
+    assert "May 20, 2030" in body
+
+
+def test_send_prep_task_due_soon_email_skips_when_disabled(caplog):
+    due_date = datetime(2030, 5, 20, 12, 0, tzinfo=UTC)
+
+    with caplog.at_level(logging.INFO):
+        send_prep_task_due_soon_email(
+            email="board@semo.edu",
+            full_name="Board Member",
+            event_title="Dashain Celebration",
+            group_name="Food & Beverage",
+            due_date=due_date,
+        )
+
+    assert "Prep task due-soon email (disabled)" in caplog.text
+    assert "board@semo.edu" in caplog.text

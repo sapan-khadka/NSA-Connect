@@ -1,6 +1,6 @@
 import math
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -13,7 +13,7 @@ from app.schemas.member import (
     MemberResponse,
     PaginatedMemberListResponse,
 )
-from app.services.email_service import send_welcome_email
+from app.tasks.email_tasks import send_welcome_email_task
 from app.services.member_service import (
     InvalidMemberRoleError,
     InvalidMemberStatusError,
@@ -104,7 +104,6 @@ def list_pending_members(
 @router.patch("/{member_id}/approve", response_model=MemberResponse)
 def approve_member_endpoint(
     member_id: int,
-    background_tasks: BackgroundTasks,
     _: Member = Depends(require_board),
     db: Session = Depends(get_db),
 ):
@@ -121,8 +120,7 @@ def approve_member_endpoint(
             detail=str(exc),
         ) from None
 
-    background_tasks.add_task(
-        send_welcome_email,
+    send_welcome_email_task.delay(
         email=member.email,
         full_name=member.full_name,
     )
