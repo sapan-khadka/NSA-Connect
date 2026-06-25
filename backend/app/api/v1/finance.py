@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import require_treasurer
+from app.core.dependencies import require_board, require_treasurer
 from app.integrations.cloudinary_client import CloudinaryUploadError
 from app.lib.semester import SEMESTER_QUERY_PATTERN
 from app.models.finance_entry import FinanceEntryType
@@ -11,12 +11,16 @@ from app.schemas.finance import (
     FinanceEntryCreateRequest,
     FinanceEntryListResponse,
     FinanceEntryResponse,
+    FinanceEventBudgetListResponse,
+    FinanceExpenseCategoryListResponse,
     FinanceSummaryResponse,
     ReceiptUploadResponse,
 )
 from app.services.event_service import EventNotFoundError
 from app.services.finance_service import (
     create_finance_entry,
+    get_event_budget_breakdown,
+    get_expense_by_category,
     get_finance_summary,
     list_finance_entries,
 )
@@ -68,6 +72,33 @@ async def upload_finance_receipt_endpoint(
         format=result.format,
         resource_type=result.resource_type,
     )
+
+
+@router.get("/expenses/by-category", response_model=FinanceExpenseCategoryListResponse)
+def expense_by_category_endpoint(
+    semester: str | None = Query(
+        default=None,
+        pattern=SEMESTER_QUERY_PATTERN,
+        description="Filter expenses by entry semester slug, e.g. 2026-spring",
+    ),
+    db: Session = Depends(get_db),
+    _: Member = Depends(require_board),
+):
+    return get_expense_by_category(db, semester=semester)
+
+
+@router.get("/event-budgets", response_model=FinanceEventBudgetListResponse)
+def event_budget_breakdown_endpoint(
+    semester: str | None = Query(
+        default=None,
+        pattern=SEMESTER_QUERY_PATTERN,
+        description="Filter events by start date semester slug, e.g. 2026-spring",
+    ),
+    db: Session = Depends(get_db),
+    _: Member = Depends(require_board),
+):
+    events = get_event_budget_breakdown(db, semester=semester)
+    return FinanceEventBudgetListResponse(events=events, total=len(events))
 
 
 @router.get("/summary", response_model=FinanceSummaryResponse)

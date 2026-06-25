@@ -1,0 +1,66 @@
+import { formatCurrency, parseCurrencyAmount } from "./format-currency";
+
+export type EventBudgetRow = {
+  event_id: number;
+  event_name: string;
+  planned_budget: string;
+  actual_expense: string;
+  actual_income: string;
+  budget_remaining: string;
+  over_budget: boolean;
+  entry_count: number;
+};
+
+export function budgetUsagePercent(
+  plannedBudget: string,
+  actualExpense: string,
+): number {
+  const budget = parseCurrencyAmount(plannedBudget);
+  const expense = parseCurrencyAmount(actualExpense);
+
+  if (budget <= 0) {
+    return expense > 0 ? 100 : 0;
+  }
+
+  return Math.min(100, Math.round((expense / budget) * 100));
+}
+
+export function budgetStatusLabel(row: EventBudgetRow): string {
+  if (row.over_budget) {
+    return "Over budget";
+  }
+
+  if (parseCurrencyAmount(row.actual_expense) === 0) {
+    return "No spending yet";
+  }
+
+  return "Under budget";
+}
+
+export function budgetStatusClass(row: EventBudgetRow): string {
+  if (row.over_budget) {
+    return "border-red-200 bg-red-50 text-red-800";
+  }
+
+  if (parseCurrencyAmount(row.actual_expense) === 0) {
+    return "border-gray-200 bg-gray-50 text-gray-700";
+  }
+
+  return "border-emerald-200 bg-emerald-50 text-emerald-800";
+}
+
+export function budgetProgressBarClass(row: EventBudgetRow): string {
+  if (row.over_budget) {
+    return "bg-red-500";
+  }
+
+  if (parseCurrencyAmount(row.actual_expense) === 0) {
+    return "bg-gray-300";
+  }
+
+  return "bg-emerald-500";
+}
+
+export function formatBudgetRemaining(amount: string): string {
+  return formatCurrency(amount);
+}

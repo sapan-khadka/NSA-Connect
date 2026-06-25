@@ -95,6 +95,33 @@ class FinanceEventSummary(BaseModel):
     entry_count: int
 
 
+class FinanceEventBudgetSummary(BaseModel):
+    event_id: int
+    event_name: str
+    planned_budget: Decimal
+    actual_expense: Decimal
+    actual_income: Decimal
+    budget_remaining: Decimal
+    over_budget: bool
+    entry_count: int
+
+
+class FinanceEventBudgetListResponse(BaseModel):
+    events: list[FinanceEventBudgetSummary]
+    total: int
+
+
+class FinanceExpenseCategorySummary(BaseModel):
+    category: FinanceCategory
+    total_expense: Decimal
+    entry_count: int
+
+
+class FinanceExpenseCategoryListResponse(BaseModel):
+    categories: list[FinanceExpenseCategorySummary]
+    total_expense: Decimal
+
+
 class FinanceSummaryResponse(BaseModel):
     balance: Decimal
     total_income: Decimal

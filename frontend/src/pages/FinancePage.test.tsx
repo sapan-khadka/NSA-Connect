@@ -3,12 +3,15 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { MemberRole } from "../lib/roles";
 import { MockAuthProvider } from "../test/test-utils";
 
 import { FinancePage } from "./FinancePage";
 
 vi.mock("../lib/finance-api", () => ({
   fetchFinanceSummary: vi.fn(),
+  fetchEventBudgetBreakdown: vi.fn(),
+  fetchExpenseByCategory: vi.fn(),
 }));
 
 const mockSummary = {
@@ -34,14 +37,38 @@ const mockSummary = {
   ],
 };
 
-function renderFinancePage(role: "treasurer" | "president" = "treasurer") {
+const mockExpenseCategories = {
+  total_expense: "165.00",
+  categories: [
+    { category: "venue", total_expense: "100.00", entry_count: 1 },
+    { category: "food_beverage", total_expense: "65.00", entry_count: 2 },
+  ],
+};
+
+const mockBudgetBreakdown = {
+  total: 1,
+  events: [
+    {
+      event_id: 1,
+      event_name: "Dashain Celebration",
+      planned_budget: "250.00",
+      actual_expense: "270.00",
+      actual_income: "120.00",
+      budget_remaining: "-20.00",
+      over_budget: true,
+      entry_count: 3,
+    },
+  ],
+};
+
+function renderFinancePage(role: MemberRole = "treasurer") {
   return render(
     <MockAuthProvider
       value={{
         member: {
           id: 1,
-          full_name: "Treasury User",
-          email: "treasurer@semo.edu",
+          full_name: "Finance User",
+          email: "finance@semo.edu",
           student_id: "55443322",
           major: "Administration",
           graduation_year: 2028,
@@ -64,38 +91,54 @@ describe("FinancePage", () => {
     vi.clearAllMocks();
   });
 
-  it("shows running balance, income, expense, and net balance", async () => {
-    const { fetchFinanceSummary } = await import("../lib/finance-api");
+  it("shows event budget vs actual for board members", async () => {
+    const { fetchEventBudgetBreakdown, fetchExpenseByCategory, fetchFinanceSummary } =
+      await import("../lib/finance-api");
+    vi.mocked(fetchEventBudgetBreakdown).mockResolvedValue(mockBudgetBreakdown);
+    vi.mocked(fetchExpenseByCategory).mockResolvedValue(mockExpenseCategories);
+
+    renderFinancePage("board");
+
+    expect(await screen.findByText("Event budget tracking")).toBeInTheDocument();
+    expect(screen.getByText("Spend by category")).toBeInTheDocument();
+    expect(screen.getByTestId("expense-category-chart")).toBeInTheDocument();
+    expect(screen.getByTestId("event-budget-table")).toBeInTheDocument();
+    expect(screen.getByText("Dashain Celebration")).toBeInTheDocument();
+    expect(screen.getByText("Over budget")).toBeInTheDocument();
+    expect(screen.queryByTestId("finance-running-balance")).not.toBeInTheDocument();
+    expect(fetchFinanceSummary).not.toHaveBeenCalled();
+    expect(fetchExpenseByCategory).toHaveBeenCalledWith(undefined);
+  });
+
+  it("shows running balance and budget breakdown for treasurer", async () => {
+    const { fetchEventBudgetBreakdown, fetchExpenseByCategory, fetchFinanceSummary } =
+      await import("../lib/finance-api");
+    vi.mocked(fetchEventBudgetBreakdown).mockResolvedValue(mockBudgetBreakdown);
+    vi.mocked(fetchExpenseByCategory).mockResolvedValue(mockExpenseCategories);
     vi.mocked(fetchFinanceSummary).mockResolvedValue(mockSummary);
 
-    renderFinancePage();
+    renderFinancePage("treasurer");
 
     expect(await screen.findByTestId("finance-running-balance")).toHaveTextContent(
       "$260.00",
     );
     expect(screen.getByTestId("finance-total-income")).toHaveTextContent("$300.00");
     expect(screen.getByTestId("finance-total-expense")).toHaveTextContent("$40.00");
-    expect(screen.getByTestId("finance-net-balance")).toHaveTextContent("$260.00");
-  });
-
-  it("loads all-time summary by default", async () => {
-    const { fetchFinanceSummary } = await import("../lib/finance-api");
-    vi.mocked(fetchFinanceSummary).mockResolvedValue(mockSummary);
-
-    renderFinancePage();
-
-    await screen.findByTestId("finance-running-balance");
-
+    expect(screen.getByText("Event budget vs actual")).toBeInTheDocument();
+    expect(fetchEventBudgetBreakdown).toHaveBeenCalledWith(undefined);
+    expect(fetchExpenseByCategory).toHaveBeenCalledWith(undefined);
     expect(fetchFinanceSummary).toHaveBeenCalledWith(undefined);
   });
 
-  it("reloads summary when semester filter changes", async () => {
+  it("reloads charts when semester filter changes", async () => {
     const user = userEvent.setup();
-    const { fetchFinanceSummary } = await import("../lib/finance-api");
-    vi.mocked(fetchFinanceSummary).mockResolvedValue(mockSummary);
+    const { fetchEventBudgetBreakdown, fetchExpenseByCategory, fetchFinanceSummary } =
+      await import("../lib/finance-api");
+    vi.mocked(fetchEventBudgetBreakdown).mockResolvedValue(mockBudgetBreakdown);
+    vi.mocked(fetchExpenseByCategory).mockResolvedValue(mockExpenseCategories);
 
-    renderFinancePage();
-    await screen.findByTestId("finance-running-balance");
+    renderFinancePage("board");
+    await screen.findByTestId("event-budget-table");
 
     const semesterSelect = screen.getByRole("combobox", { name: "Semester" });
     const firstSemesterOption = semesterSelect.querySelectorAll("option")[1];
@@ -105,20 +148,13 @@ describe("FinancePage", () => {
     await user.selectOptions(semesterSelect, semesterValue!);
 
     await waitFor(() => {
-      expect(fetchFinanceSummary).toHaveBeenLastCalledWith({
+      expect(fetchExpenseByCategory).toHaveBeenLastCalledWith({
+        semester: semesterValue,
+      });
+      expect(fetchEventBudgetBreakdown).toHaveBeenLastCalledWith({
         semester: semesterValue,
       });
     });
-  });
-
-  it("shows event and pre-event breakdown rows", async () => {
-    const { fetchFinanceSummary } = await import("../lib/finance-api");
-    vi.mocked(fetchFinanceSummary).mockResolvedValue(mockSummary);
-
-    renderFinancePage();
-
-    expect(await screen.findByText("Dashain Celebration")).toBeInTheDocument();
-    expect(screen.getByText("Pre-event / general")).toBeInTheDocument();
-    expect(screen.getByText("3 entries in this view")).toBeInTheDocument();
+    expect(fetchFinanceSummary).not.toHaveBeenCalled();
   });
 });

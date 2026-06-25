@@ -5,11 +5,14 @@ from sqlalchemy.orm import Session
 
 from app.lib.semester import semester_date_range
 from app.models.event import Event
-from app.models.finance_entry import FinanceEntry, FinanceEntryType
+from app.models.finance_entry import FinanceCategory, FinanceEntry, FinanceEntryType
 from app.models.member import Member
 from app.schemas.finance import (
     FinanceEntryCreateRequest,
+    FinanceEventBudgetSummary,
     FinanceEventSummary,
+    FinanceExpenseCategoryListResponse,
+    FinanceExpenseCategorySummary,
     FinanceSummaryBucket,
     FinanceSummaryResponse,
 )
@@ -55,6 +58,91 @@ def _bucket_from_row(income: Decimal, expense: Decimal, entry_count: int) -> Fin
         expense=expense,
         balance=income - expense,
         entry_count=entry_count,
+    )
+
+
+def _event_starts_at_filters(semester: str | None) -> list:
+    if semester is None:
+        return []
+    start, end = semester_date_range(semester)
+    return [Event.starts_at >= start, Event.starts_at < end]
+
+
+def get_event_budget_breakdown(
+    db: Session,
+    *,
+    semester: str | None = None,
+) -> list[FinanceEventBudgetSummary]:
+    event_filters = _event_starts_at_filters(semester)
+    events = list(
+        db.scalars(
+            select(Event)
+            .where(*event_filters)
+            .order_by(Event.starts_at.desc(), Event.id.desc()),
+        ).all(),
+    )
+
+    breakdown: list[FinanceEventBudgetSummary] = []
+    for event in events:
+        row = db.execute(
+            select(
+                _income_sum(),
+                _expense_sum(),
+                func.count(FinanceEntry.id),
+            ).where(FinanceEntry.event_id == event.id),
+        ).one()
+        actual_income = Decimal(row[0])
+        actual_expense = Decimal(row[1])
+        planned_budget = Decimal(event.budget)
+
+        breakdown.append(
+            FinanceEventBudgetSummary(
+                event_id=event.id,
+                event_name=event.title,
+                planned_budget=planned_budget,
+                actual_expense=actual_expense,
+                actual_income=actual_income,
+                budget_remaining=planned_budget - actual_expense,
+                over_budget=actual_expense > planned_budget,
+                entry_count=row[2],
+            ),
+        )
+
+    return breakdown
+
+
+def get_expense_by_category(
+    db: Session,
+    *,
+    semester: str | None = None,
+) -> FinanceExpenseCategoryListResponse:
+    filters = _semester_filters(semester)
+    filters.append(FinanceEntry.entry_type == FinanceEntryType.EXPENSE)
+
+    rows = db.execute(
+        select(
+            FinanceEntry.category,
+            func.coalesce(func.sum(FinanceEntry.amount), Decimal("0")),
+            func.count(FinanceEntry.id),
+        )
+        .where(*filters)
+        .group_by(FinanceEntry.category)
+        .order_by(func.sum(FinanceEntry.amount).desc()),
+    ).all()
+
+    categories = [
+        FinanceExpenseCategorySummary(
+            category=row[0],
+            total_expense=Decimal(row[1]),
+            entry_count=row[2],
+        )
+        for row in rows
+    ]
+    total_expense = sum((category.total_expense for category in categories), Decimal("0"))
+
+    return FinanceExpenseCategoryListResponse(
+        categories=categories,
+        total_expense=total_expense,
     )
 
 

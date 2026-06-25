@@ -7,6 +7,19 @@ vi.mock("../lib/members-api", () => ({
   fetchPendingMembers: vi.fn().mockResolvedValue({ members: [], total: 3 }),
 }));
 
+vi.mock("../lib/finance-api", () => ({
+  fetchFinanceSummary: vi.fn().mockResolvedValue({
+    balance: "0.00",
+    total_income: "0.00",
+    total_expense: "0.00",
+    entry_count: 0,
+    pre_event: { income: "0.00", expense: "0.00", balance: "0.00", entry_count: 0 },
+    events: [],
+  }),
+  fetchEventBudgetBreakdown: vi.fn().mockResolvedValue({ events: [], total: 0 }),
+  fetchExpenseByCategory: vi.fn().mockResolvedValue({ categories: [], total_expense: "0.00" }),
+}));
+
 describe("protected route redirects", () => {
   afterEach(() => {
     cleanup();
@@ -98,8 +111,8 @@ describe("protected route redirects", () => {
     expect(screen.queryByText("Member directory")).not.toBeInTheDocument();
   });
 
-  it("blocks board members from /finance", async () => {
-    const { router } = renderWithRouter(undefined, {
+  it("allows board members to view /finance budget tracking", async () => {
+    renderWithRouter(undefined, {
       initialEntries: ["/finance"],
       auth: {
         member: createMockMember("board"),
@@ -107,9 +120,21 @@ describe("protected route redirects", () => {
       },
     });
 
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/board");
+    expect(await screen.findByText("Event budget tracking")).toBeInTheDocument();
+  });
+
+  it("redirects general members from /finance to /member", async () => {
+    const { router } = renderWithRouter(undefined, {
+      initialEntries: ["/finance"],
+      auth: {
+        member: createMockMember("general"),
+        isAuthenticated: true,
+      },
     });
-    expect(screen.queryByText("Treasury overview")).not.toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/member");
+    });
+    expect(screen.queryByText("Event budget tracking")).not.toBeInTheDocument();
   });
 });

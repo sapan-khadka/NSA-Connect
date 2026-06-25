@@ -10,6 +10,7 @@ from conftest import (
 )
 
 TREASURER_REQUIRED_DETAIL = "Requires treasurer role or higher"
+BOARD_REQUIRED_DETAIL = "Requires board role or higher"
 
 FINANCE_POST_PAYLOAD = {
     "entry_type": "income",
@@ -162,3 +163,49 @@ def test_president_can_access_all_finance_endpoints(
     response = client.request(method, path, headers=president_member_headers, **kwargs)
 
     assert response.status_code == expected_status
+
+
+def test_board_member_can_view_event_budget_breakdown(client, board_member_headers):
+    response = client.get(
+        "/api/v1/finance/event-budgets",
+        headers=board_member_headers,
+    )
+
+    assert response.status_code == 200
+    assert "events" in response.json()
+
+
+def test_general_member_cannot_view_event_budget_breakdown(
+    client,
+    general_member_headers,
+):
+    response = client.get(
+        "/api/v1/finance/event-budgets",
+        headers=general_member_headers,
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == BOARD_REQUIRED_DETAIL
+
+
+def test_board_member_can_view_expense_by_category(client, board_member_headers):
+    response = client.get(
+        "/api/v1/finance/expenses/by-category",
+        headers=board_member_headers,
+    )
+
+    assert response.status_code == 200
+    assert "categories" in response.json()
+
+
+def test_general_member_cannot_view_expense_by_category(
+    client,
+    general_member_headers,
+):
+    response = client.get(
+        "/api/v1/finance/expenses/by-category",
+        headers=general_member_headers,
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == BOARD_REQUIRED_DETAIL
