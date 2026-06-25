@@ -4,9 +4,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.event import Event
-from app.models.member import Member, MemberStatus
+from app.models.member import Member, MemberRole, MemberStatus
 from app.models.preptask import PrepTask, PrepTaskGroup, checklist_items_from_group
-from app.schemas.preptask import PrepTaskCreateRequest
+from app.schemas.preptask import PrepTaskCreateRequest, PrepTaskUpdateRequest
 from app.services.event_service import EventNotFoundError
 
 
@@ -19,6 +19,14 @@ class InvalidAssigneeError(Exception):
 
 
 class InvalidPrepTaskDueDateError(Exception):
+    pass
+
+
+class PrepTaskNotFoundError(Exception):
+    pass
+
+
+class PrepTaskForbiddenError(Exception):
     pass
 
 
@@ -78,3 +86,53 @@ def _as_utc(value: datetime) -> datetime:
     if value.tzinfo is None:
         return value.replace(tzinfo=UTC)
     return value.astimezone(UTC)
+
+
+def _load_prep_task(db: Session, task_id: int) -> PrepTask | None:
+    return db.scalar(
+        select(PrepTask)
+        .where(PrepTask.id == task_id)
+        .options(
+            selectinload(PrepTask.checklist_items),
+            selectinload(PrepTask.group),
+        ),
+    )
+
+
+def update_prep_task(
+    db: Session,
+    task_id: int,
+    data: PrepTaskUpdateRequest,
+    current_member: Member,
+) -> PrepTask:
+    prep_task = _load_prep_task(db, task_id)
+    if prep_task is None:
+        raise PrepTaskNotFoundError
+
+    updates = data.model_dump(exclude_unset=True)
+    is_board = current_member.has_role_at_least(MemberRole.BOARD)
+    is_assignee = prep_task.assignee_id == current_member.id
+
+    if "assignee_id" in updates and not is_board:
+        raise PrepTaskForbiddenError
+
+    if "is_complete" in updates and not (is_board or is_assignee):
+        raise PrepTaskForbiddenError
+
+    if "assignee_id" in updates:
+        assignee_id = updates["assignee_id"]
+        if assignee_id is not None:
+            assignee = db.get(Member, assignee_id)
+            if assignee is None or assignee.status != MemberStatus.APPROVED:
+                raise InvalidAssigneeError
+        prep_task.assignee_id = assignee_id
+
+    if "is_complete" in updates:
+        completed = updates["is_complete"]
+        for item in prep_task.checklist_items:
+            item.is_completed = completed
+
+    db.commit()
+    reloaded = _load_prep_task(db, task_id)
+    assert reloaded is not None
+    return reloaded

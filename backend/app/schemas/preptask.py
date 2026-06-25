@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 if TYPE_CHECKING:
     from app.models.preptask import PrepTask, PrepTaskChecklistItem
@@ -27,6 +27,17 @@ class PrepTaskCreateRequest(BaseModel):
         if value.tzinfo is None or value.tzinfo.utcoffset(value) is None:
             raise ValueError("due_date must include a timezone")
         return value
+
+
+class PrepTaskUpdateRequest(BaseModel):
+    is_complete: bool | None = None
+    assignee_id: int | None = None
+
+    @model_validator(mode="after")
+    def require_at_least_one_field(self) -> "PrepTaskUpdateRequest":
+        if self.model_fields_set.isdisjoint({"is_complete", "assignee_id"}):
+            raise ValueError("At least one field must be provided")
+        return self
 
 
 class PrepTaskChecklistItemResponse(BaseModel):
