@@ -53,6 +53,21 @@ export async function fetchEvents(params?: {
   return response.data;
 }
 
+export type CreateEventRequest = {
+  name: string;
+  starts_at: string;
+  event_type: EventType;
+  description: string;
+  budget: string;
+};
+
+export async function createEvent(
+  data: CreateEventRequest,
+): Promise<EventResponse> {
+  const response = await api.post<EventResponse>("/v1/events", data);
+  return response.data;
+}
+
 export async function fetchEvent(eventId: number): Promise<EventDetailResponse> {
   const response = await api.get<EventDetailResponse>(`/v1/events/${eventId}`);
   return response.data;

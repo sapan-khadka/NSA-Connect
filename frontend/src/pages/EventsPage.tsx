@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { CreateEventForm } from "../components/CreateEventForm";
 import { EventDayPanel } from "../components/EventDayPanel";
 import { MonthlyCalendarGrid } from "../components/MonthlyCalendarGrid";
 import { useAuth } from "../context/useAuth";
@@ -373,6 +374,32 @@ export function EventsPage() {
     setSelectedDate(isoDate);
   }
 
+  const handleEventCreated = useCallback(async (event: EventResponse) => {
+    const eventDate = new Date(event.starts_at);
+    const year = eventDate.getFullYear();
+    const month = eventDate.getMonth();
+
+    setViewYear(year);
+    setViewMonth(month);
+    setSelectedDate(toLocalIsoDate(eventDate));
+    setSelectedEventId(event.id);
+    setError(null);
+
+    try {
+      const response = await fetchEvents({
+        month: formatMonthQuery(year, month),
+      });
+      setEvents(response.events);
+    } catch {
+      setEvents((current) =>
+        [...current, event].sort(
+          (a, b) =>
+            new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
+        ),
+      );
+    }
+  }, []);
+
   return (
     <div className="space-y-6">
       <section>
@@ -381,6 +408,10 @@ export function EventsPage() {
           Browse NSA events by month, RSVP to attend, and track prep progress.
         </p>
       </section>
+
+      {canAssignTasks ? (
+        <CreateEventForm onCreated={(event) => void handleEventCreated(event)} />
+      ) : null}
 
       {loading ? (
         <p className="text-sm text-gray-500">Loading events…</p>

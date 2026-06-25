@@ -1,0 +1,47 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  buildCreateEventPayload,
+  combineDateAndTime,
+  validateCreateEventForm,
+} from "./event-form";
+
+describe("event form", () => {
+  it("combines local date and time with timezone offset", () => {
+    const iso = combineDateAndTime("2030-06-15", "18:00");
+    expect(iso).toMatch(/^2030-06-15T18:00:00[+-]\d{2}:\d{2}$/);
+  });
+
+  it("validates required fields", () => {
+    const errors = validateCreateEventForm({
+      name: "",
+      description: "",
+      event_type: "cultural",
+      event_date: "",
+      event_time: "",
+      budget: "",
+    });
+
+    expect(errors.name).toBeTruthy();
+    expect(errors.description).toBeTruthy();
+    expect(errors.event_date).toBeTruthy();
+    expect(errors.budget).toBeTruthy();
+  });
+
+  it("builds API payload with trimmed values and formatted budget", () => {
+    const payload = buildCreateEventPayload({
+      name: "  Spring Social  ",
+      description: "  Food and games.  ",
+      event_type: "social",
+      event_date: "2030-06-15",
+      event_time: "18:00",
+      budget: "125.5",
+    });
+
+    expect(payload.name).toBe("Spring Social");
+    expect(payload.description).toBe("Food and games.");
+    expect(payload.event_type).toBe("social");
+    expect(payload.budget).toBe("125.50");
+    expect(payload.starts_at).toContain("2030-06-15T18:00:00");
+  });
+});

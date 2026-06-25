@@ -1,0 +1,147 @@
+import type { EventType } from "./event-types";
+import { EVENT_TYPES } from "./event-types";
+
+export type CreateEventFormValues = {
+  name: string;
+  description: string;
+  event_type: EventType;
+  event_date: string;
+  event_time: string;
+  budget: string;
+};
+
+export type CreateEventFormErrors = Partial<
+  Record<keyof CreateEventFormValues, string>
+>;
+
+export const MAX_EVENT_BUDGET = 999_999.99;
+
+export const initialCreateEventValues: CreateEventFormValues = {
+  name: "",
+  description: "",
+  event_type: "cultural",
+  event_date: "",
+  event_time: "18:00",
+  budget: "0.00",
+};
+
+/** Build a timezone-aware ISO string from local date and time inputs. */
+export function combineDateAndTime(date: string, time: string): string {
+  const [year, month, day] = date.split("-").map(Number);
+  const [hours, minutes] = time.split(":").map(Number);
+  const local = new Date(year, month - 1, day, hours, minutes, 0);
+  const offsetMinutes = -local.getTimezoneOffset();
+  const sign = offsetMinutes >= 0 ? "+" : "-";
+  const absoluteOffset = Math.abs(offsetMinutes);
+  const offsetHours = String(Math.floor(absoluteOffset / 60)).padStart(2, "0");
+  const offsetMins = String(absoluteOffset % 60).padStart(2, "0");
+  const pad = (value: number) => String(value).padStart(2, "0");
+
+  return `${year}-${pad(month)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00${sign}${offsetHours}:${offsetMins}`;
+}
+
+export function validateCreateEventField(
+  field: keyof CreateEventFormValues,
+  value: string,
+  values: CreateEventFormValues = initialCreateEventValues,
+): string | null {
+  switch (field) {
+    case "name":
+      if (!value.trim()) {
+        return "Event name is required";
+      }
+      if (value.trim().length > 255) {
+        return "Event name must be 255 characters or fewer";
+      }
+      return null;
+    case "description":
+      if (!value.trim()) {
+        return "Description is required";
+      }
+      if (value.trim().length > 5000) {
+        return "Description must be 5000 characters or fewer";
+      }
+      return null;
+    case "event_type":
+      return EVENT_TYPES.includes(value as EventType)
+        ? null
+        : "Select a valid event type";
+    case "event_date":
+      if (!value) {
+        return "Event date is required";
+      }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return "Enter a valid date";
+      }
+      if (values.event_time && /^\d{2}:\d{2}$/.test(values.event_time)) {
+        const startsAt = new Date(combineDateAndTime(value, values.event_time));
+        if (startsAt <= new Date()) {
+          return "Event date and time must be in the future";
+        }
+      }
+      return null;
+    case "event_time":
+      if (!value) {
+        return "Event time is required";
+      }
+      if (!/^\d{2}:\d{2}$/.test(value)) {
+        return "Enter a valid time";
+      }
+      if (values.event_date && /^\d{4}-\d{2}-\d{2}$/.test(values.event_date)) {
+        const startsAt = new Date(
+          combineDateAndTime(values.event_date, value),
+        );
+        if (startsAt <= new Date()) {
+          return "Event date and time must be in the future";
+        }
+      }
+      return null;
+    case "budget": {
+      if (!value.trim()) {
+        return "Budget is required";
+      }
+      if (!/^\d+(\.\d{1,2})?$/.test(value.trim())) {
+        return "Budget must be a number with up to 2 decimal places";
+      }
+      const amount = Number(value);
+      if (amount < 0) {
+        return "Budget cannot be negative";
+      }
+      if (amount > MAX_EVENT_BUDGET) {
+        return `Budget cannot exceed ${MAX_EVENT_BUDGET.toFixed(2)}`;
+      }
+      return null;
+    }
+    default:
+      return null;
+  }
+}
+
+export function validateCreateEventForm(
+  values: CreateEventFormValues,
+): CreateEventFormErrors {
+  const errors: CreateEventFormErrors = {};
+
+  for (const field of Object.keys(values) as (keyof CreateEventFormValues)[]) {
+    const error = validateCreateEventField(field, values[field], values);
+    if (error) {
+      errors[field] = error;
+    }
+  }
+
+  return errors;
+}
+
+export function formatBudgetForSubmit(value: string): string {
+  return Number(value).toFixed(2);
+}
+
+export function buildCreateEventPayload(values: CreateEventFormValues) {
+  return {
+    name: values.name.trim(),
+    description: values.description.trim(),
+    event_type: values.event_type,
+    starts_at: combineDateAndTime(values.event_date, values.event_time),
+    budget: formatBudgetForSubmit(values.budget),
+  };
+}
