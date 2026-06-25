@@ -37,6 +37,23 @@ class Settings(BaseSettings):
         description="Days ahead to scan for incomplete prep tasks due soon",
     )
 
+    CLOUDINARY_CLOUD_NAME: str = Field(
+        default="",
+        description="Cloudinary cloud name for receipt uploads",
+    )
+    CLOUDINARY_API_KEY: str = Field(
+        default="",
+        description="Cloudinary API key for receipt uploads",
+    )
+    CLOUDINARY_API_SECRET: str = Field(
+        default="",
+        description="Cloudinary API secret for receipt uploads",
+    )
+    CLOUDINARY_RECEIPTS_FOLDER: str = Field(
+        default="nsa-connect/finance-receipts",
+        description="Cloudinary folder for uploaded finance receipts",
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

@@ -97,4 +97,19 @@ describe("protected route redirects", () => {
     });
     expect(screen.queryByText("Member directory")).not.toBeInTheDocument();
   });
+
+  it("blocks board members from /finance", async () => {
+    const { router } = renderWithRouter(undefined, {
+      initialEntries: ["/finance"],
+      auth: {
+        member: createMockMember("board"),
+        isAuthenticated: true,
+      },
+    });
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/board");
+    });
+    expect(screen.queryByText("Treasury overview")).not.toBeInTheDocument();
+  });
 });

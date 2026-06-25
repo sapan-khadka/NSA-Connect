@@ -29,12 +29,26 @@ def block_external_integrations():
         patch("celery.app.task.Task.delay") as celery_delay,
         patch("celery.app.task.Task.apply_async") as celery_apply_async,
         patch("app.services.email_service.settings.EMAIL_ENABLED", False),
+        patch("app.services.receipt_upload_service.upload_receipt") as cloudinary_upload_receipt,
+        patch("app.core.config.settings.CLOUDINARY_CLOUD_NAME", "test-cloud"),
+        patch("app.core.config.settings.CLOUDINARY_API_KEY", "test-key"),
+        patch("app.core.config.settings.CLOUDINARY_API_SECRET", "test-secret"),
     ):
         sendgrid_client.return_value.send.return_value = sendgrid_response
+        from app.integrations.cloudinary_client import CloudinaryUploadResult
+
+        cloudinary_upload_receipt.return_value = CloudinaryUploadResult(
+            receipt_url="https://res.cloudinary.com/test/image/upload/v1/receipt.jpg",
+            public_id="nsa-connect/finance-receipts/receipt",
+            bytes=128,
+            format="jpg",
+            resource_type="image",
+        )
         yield {
             "sendgrid_client": sendgrid_client,
             "celery_delay": celery_delay,
             "celery_apply_async": celery_apply_async,
+            "cloudinary_upload_receipt": cloudinary_upload_receipt,
         }
 
 

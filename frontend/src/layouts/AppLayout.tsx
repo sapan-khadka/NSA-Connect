@@ -14,6 +14,7 @@ export function AppLayout() {
   const { isAuthenticated, member } = useAuth();
   const logout = useLogout();
   const isBoard = member ? isRoleAtLeast(member.role, "board") : false;
+  const isTreasurer = member ? isRoleAtLeast(member.role, "treasurer") : false;
   const dashboardPath = member ? getDashboardPath(member.role) : "/member";
 
   return (
@@ -49,18 +50,18 @@ export function AppLayout() {
               </>
             )}
             {isBoard && (
-              <>
-                <li>
-                  <NavLink to="/members" className={navLinkClass}>
-                    Members
-                  </NavLink>
-                </li>
-                <li>
-                  <NavLink to="/finance" className={navLinkClass}>
-                    Finance
-                  </NavLink>
-                </li>
-              </>
+              <li>
+                <NavLink to="/members" className={navLinkClass}>
+                  Members
+                </NavLink>
+              </li>
+            )}
+            {isTreasurer && (
+              <li>
+                <NavLink to="/finance" className={navLinkClass}>
+                  Finance
+                </NavLink>
+              </li>
             )}
             {isAuthenticated ? (
               <>

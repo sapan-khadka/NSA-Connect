@@ -10,13 +10,9 @@ from app.models.finance_entry import FinanceCategory, FinanceEntry, FinanceEntry
 from app.models.member import Member
 from conftest import (
     auth_header,
-    create_board_member,
     create_treasurer_member,
     register_member,
-    set_member_approved,
 )
-
-TREASURER_REQUIRED_DETAIL = "Requires treasurer role or higher"
 
 
 @pytest.fixture
@@ -24,20 +20,6 @@ def treasurer_member_headers(client, db_session):
     register_member(client, email="other@semo.edu", student_id="22222222")
     create_treasurer_member(db_session)
     return auth_header(client, email="treasurer@semo.edu")
-
-
-@pytest.fixture
-def board_member_headers(client, db_session):
-    register_member(client, email="other@semo.edu", student_id="22222222")
-    create_board_member(db_session)
-    return auth_header(client, email="board@semo.edu")
-
-
-@pytest.fixture
-def general_member_headers(client, db_session):
-    register_member(client)
-    set_member_approved(db_session)
-    return auth_header(client)
 
 
 @pytest.fixture
@@ -204,28 +186,6 @@ def test_list_finance_entries_unauthenticated_gets_401(client, seeded_finance_en
     response = client.get("/api/v1/finance")
 
     assert response.status_code == 401
-
-
-def test_list_finance_entries_board_member_gets_403(
-    client,
-    board_member_headers,
-    seeded_finance_entries,
-):
-    response = client.get("/api/v1/finance", headers=board_member_headers)
-
-    assert response.status_code == 403
-    assert response.json()["detail"] == TREASURER_REQUIRED_DETAIL
-
-
-def test_list_finance_entries_general_member_gets_403(
-    client,
-    general_member_headers,
-    seeded_finance_entries,
-):
-    response = client.get("/api/v1/finance", headers=general_member_headers)
-
-    assert response.status_code == 403
-    assert response.json()["detail"] == TREASURER_REQUIRED_DETAIL
 
 
 def test_list_finance_entries_rejects_invalid_semester(

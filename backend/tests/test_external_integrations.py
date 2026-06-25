@@ -1,5 +1,16 @@
 from app.integrations.sendgrid_client import send_email
+from app.services.receipt_upload_service import upload_finance_receipt
 from app.tasks.email_tasks import send_welcome_email_task
+
+
+def test_cloudinary_upload_is_mocked_during_tests(block_external_integrations):
+    result = upload_finance_receipt(
+        file_bytes=b"\xff\xd8\xffreceipt",
+        content_type="image/jpeg",
+    )
+
+    block_external_integrations["cloudinary_upload_receipt"].assert_called_once()
+    assert result.receipt_url.startswith("https://res.cloudinary.com/")
 
 
 def test_celery_delay_never_executes_real_tasks(block_external_integrations):

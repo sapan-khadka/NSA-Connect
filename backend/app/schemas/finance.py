@@ -102,3 +102,11 @@ class FinanceSummaryResponse(BaseModel):
     entry_count: int
     pre_event: FinanceSummaryBucket
     events: list[FinanceEventSummary]
+
+
+class ReceiptUploadResponse(BaseModel):
+    receipt_url: str
+    public_id: str
+    bytes: int
+    format: str | None
+    resource_type: str

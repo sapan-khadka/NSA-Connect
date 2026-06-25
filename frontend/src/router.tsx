@@ -56,7 +56,7 @@ export const appRoutes: RouteObject[] = [
       {
         path: "finance",
         element: (
-          <ProtectedRoute minRole="board">
+          <ProtectedRoute minRole="treasurer">
             <FinancePage />
           </ProtectedRoute>
         ),

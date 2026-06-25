@@ -38,6 +38,10 @@ services:
       REDIS_URL: redis://redis:6379/0
       ENVIRONMENT: development
       DEBUG: "true"
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      CLOUDINARY_RECEIPTS_FOLDER: ${CLOUDINARY_RECEIPTS_FOLDER:-nsa-connect/finance-receipts}
     volumes:
       - ./backend:/app
     depends_on:

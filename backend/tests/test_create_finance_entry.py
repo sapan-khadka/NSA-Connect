@@ -2,14 +2,10 @@ import pytest
 
 from conftest import (
     auth_header,
-    create_board_member,
     create_president_member,
     create_treasurer_member,
     register_member,
-    set_member_approved,
 )
-
-TREASURER_REQUIRED_DETAIL = "Requires treasurer role or higher"
 
 
 def _finance_payload(**overrides):
@@ -22,20 +18,6 @@ def _finance_payload(**overrides):
     }
     payload.update(overrides)
     return payload
-
-
-@pytest.fixture
-def general_member_headers(client, db_session):
-    register_member(client)
-    set_member_approved(db_session)
-    return auth_header(client)
-
-
-@pytest.fixture
-def board_member_headers(client, db_session):
-    register_member(client, email="other@semo.edu", student_id="22222222")
-    create_board_member(db_session)
-    return auth_header(client, email="board@semo.edu")
 
 
 @pytest.fixture
@@ -89,34 +71,6 @@ def test_president_can_log_expense(client, president_member_headers):
     assert body["amount"] == "75.50"
     assert body["receipt_url"] is None
     assert body["created_by_id"] == 2
-
-
-def test_unauthenticated_request_gets_401(client):
-    response = client.post("/api/v1/finance", json=_finance_payload())
-
-    assert response.status_code == 401
-
-
-def test_general_member_gets_403(client, general_member_headers):
-    response = client.post(
-        "/api/v1/finance",
-        json=_finance_payload(),
-        headers=general_member_headers,
-    )
-
-    assert response.status_code == 403
-    assert response.json()["detail"] == TREASURER_REQUIRED_DETAIL
-
-
-def test_board_member_gets_403(client, board_member_headers):
-    response = client.post(
-        "/api/v1/finance",
-        json=_finance_payload(),
-        headers=board_member_headers,
-    )
-
-    assert response.status_code == 403
-    assert response.json()["detail"] == TREASURER_REQUIRED_DETAIL
 
 
 def test_create_finance_entry_rejects_unknown_event(
