@@ -9,6 +9,7 @@ from app.models import Base
 
 # Import all models so Alembic autogenerate can detect schema changes.
 import app.models.event  # noqa: F401
+import app.models.finance_entry  # noqa: F401
 import app.models.member  # noqa: F401
 import app.models.preptask  # noqa: F401
 
