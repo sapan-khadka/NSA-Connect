@@ -77,3 +77,28 @@ class FinanceEntryResponse(BaseModel):
 class FinanceEntryListResponse(BaseModel):
     entries: list[FinanceEntryResponse]
     total: int
+
+
+class FinanceSummaryBucket(BaseModel):
+    income: Decimal
+    expense: Decimal
+    balance: Decimal
+    entry_count: int
+
+
+class FinanceEventSummary(BaseModel):
+    event_id: int
+    event_name: str
+    income: Decimal
+    expense: Decimal
+    balance: Decimal
+    entry_count: int
+
+
+class FinanceSummaryResponse(BaseModel):
+    balance: Decimal
+    total_income: Decimal
+    total_expense: Decimal
+    entry_count: int
+    pre_event: FinanceSummaryBucket
+    events: list[FinanceEventSummary]

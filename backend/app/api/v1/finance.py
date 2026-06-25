@@ -10,11 +10,29 @@ from app.schemas.finance import (
     FinanceEntryCreateRequest,
     FinanceEntryListResponse,
     FinanceEntryResponse,
+    FinanceSummaryResponse,
 )
 from app.services.event_service import EventNotFoundError
-from app.services.finance_service import create_finance_entry, list_finance_entries
+from app.services.finance_service import (
+    create_finance_entry,
+    get_finance_summary,
+    list_finance_entries,
+)
 
 router = APIRouter(prefix="/finance", tags=["finance"])
+
+
+@router.get("/summary", response_model=FinanceSummaryResponse)
+def finance_summary_endpoint(
+    semester: str | None = Query(
+        default=None,
+        pattern=SEMESTER_QUERY_PATTERN,
+        description="Limit totals to a semester slug, e.g. 2026-spring",
+    ),
+    db: Session = Depends(get_db),
+    _: Member = Depends(require_treasurer),
+):
+    return get_finance_summary(db, semester=semester)
 
 
 @router.get("", response_model=FinanceEntryListResponse)

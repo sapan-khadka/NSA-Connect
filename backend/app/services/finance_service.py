@@ -1,14 +1,120 @@
-from datetime import datetime
+from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
 from app.lib.semester import semester_date_range
 from app.models.event import Event
 from app.models.finance_entry import FinanceEntry, FinanceEntryType
 from app.models.member import Member
-from app.schemas.finance import FinanceEntryCreateRequest
+from app.schemas.finance import (
+    FinanceEntryCreateRequest,
+    FinanceEventSummary,
+    FinanceSummaryBucket,
+    FinanceSummaryResponse,
+)
 from app.services.event_service import EventNotFoundError
+
+
+def _semester_filters(semester: str | None) -> list:
+    if semester is None:
+        return []
+    start, end = semester_date_range(semester)
+    return [FinanceEntry.created_at >= start, FinanceEntry.created_at < end]
+
+
+def _income_sum():
+    return func.coalesce(
+        func.sum(
+            case(
+                (FinanceEntry.entry_type == FinanceEntryType.INCOME, FinanceEntry.amount),
+                else_=Decimal("0"),
+            ),
+        ),
+        Decimal("0"),
+    )
+
+
+def _expense_sum():
+    return func.coalesce(
+        func.sum(
+            case(
+                (FinanceEntry.entry_type == FinanceEntryType.EXPENSE, FinanceEntry.amount),
+                else_=Decimal("0"),
+            ),
+        ),
+        Decimal("0"),
+    )
+
+
+def _bucket_from_row(income: Decimal, expense: Decimal, entry_count: int) -> FinanceSummaryBucket:
+    income = Decimal(income)
+    expense = Decimal(expense)
+    return FinanceSummaryBucket(
+        income=income,
+        expense=expense,
+        balance=income - expense,
+        entry_count=entry_count,
+    )
+
+
+def get_finance_summary(
+    db: Session,
+    *,
+    semester: str | None = None,
+) -> FinanceSummaryResponse:
+    filters = _semester_filters(semester)
+
+    overall = db.execute(
+        select(
+            _income_sum(),
+            _expense_sum(),
+            func.count(FinanceEntry.id),
+        ).where(*filters),
+    ).one()
+    total_income = Decimal(overall[0])
+    total_expense = Decimal(overall[1])
+
+    pre_event_row = db.execute(
+        select(
+            _income_sum(),
+            _expense_sum(),
+            func.count(FinanceEntry.id),
+        ).where(FinanceEntry.event_id.is_(None), *filters),
+    ).one()
+
+    event_rows = db.execute(
+        select(
+            FinanceEntry.event_id,
+            Event.title,
+            _income_sum(),
+            _expense_sum(),
+            func.count(FinanceEntry.id),
+        )
+        .join(Event, FinanceEntry.event_id == Event.id)
+        .where(FinanceEntry.event_id.is_not(None), *filters)
+        .group_by(FinanceEntry.event_id, Event.title)
+        .order_by(Event.title.asc()),
+    ).all()
+
+    return FinanceSummaryResponse(
+        balance=total_income - total_expense,
+        total_income=total_income,
+        total_expense=total_expense,
+        entry_count=overall[2],
+        pre_event=_bucket_from_row(pre_event_row[0], pre_event_row[1], pre_event_row[2]),
+        events=[
+            FinanceEventSummary(
+                event_id=row[0],
+                event_name=row[1],
+                income=Decimal(row[2]),
+                expense=Decimal(row[3]),
+                balance=Decimal(row[2]) - Decimal(row[3]),
+                entry_count=row[4],
+            )
+            for row in event_rows
+        ],
+    )
 
 
 def create_finance_entry(
