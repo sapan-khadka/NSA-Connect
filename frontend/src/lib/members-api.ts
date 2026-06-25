@@ -29,6 +29,11 @@ export async function fetchMembers(
   return response.data;
 }
 
+export async function fetchMemberById(memberId: number): Promise<MemberResponse> {
+  const response = await api.get<MemberResponse>(`/v1/members/${memberId}`);
+  return response.data;
+}
+
 export async function fetchPendingMembers(): Promise<PendingMembersResponse> {
   const response = await api.get<PendingMembersResponse>("/v1/members/pending");
   return response.data;

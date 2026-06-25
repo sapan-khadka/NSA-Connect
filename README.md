@@ -1,8 +1,8 @@
 # NSA Connect
 
-A membership management platform for NSA (Nepalese Students' Association), built to handle member registration, roles, and approvals in one place.
+Membership and operations platform for the Nepalese Students' Association (NSA) at Southeast Missouri State University.
 
-**Week 1 status:** Project foundation — API skeleton, database models, Docker dev environment, Alembic migrations, and health checks are in place. Auth, member endpoints, and events are planned next.
+Handles member registration and approvals, role-based access, events with prep tasks, treasury tracking, and board dashboards.
 
 ---
 
@@ -11,16 +11,14 @@ A membership management platform for NSA (Nepalese Students' Association), built
 | Layer | Technology |
 |-------|------------|
 | API | [FastAPI](https://fastapi.tiangolo.com/) |
+| Frontend | [React 19](https://react.dev/) + [Vite](https://vitejs.dev/) + [Tailwind CSS 4](https://tailwindcss.com/) |
 | Database | [PostgreSQL 16](https://www.postgresql.org/) |
 | ORM | [SQLAlchemy 2](https://www.sqlalchemy.org/) |
 | Migrations | [Alembic](https://alembic.sqlalchemy.org/) |
-| Cache | [Redis 7](https://redis.io/) |
-| Server | [Uvicorn](https://www.uvicorn.org/) |
-| Config | [Pydantic Settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/) |
-| Containers | Docker & Docker Compose |
-| Tests | [pytest](https://docs.pytest.org/) |
-
-All Python dependencies are **pinned** in `requirements.txt` (runtime) and `requirements-dev.txt` (development) for reproducible builds.
+| Cache / queue | [Redis 7](https://redis.io/) + [Celery](https://docs.celeryq.dev/) |
+| Email | [SendGrid](https://sendgrid.com/) |
+| Receipts | [Cloudinary](https://cloudinary.com/) |
+| Tests | [pytest](https://docs.pytest.org/) + [Vitest](https://vitest.dev/) |
 
 ---
 
@@ -28,139 +26,153 @@ All Python dependencies are **pinned** in `requirements.txt` (runtime) and `requ
 
 ```
 NSA-Connect/
-├── docker-compose.yml      # Postgres, Redis, and backend services
+├── docker-compose.yml       # Postgres, Redis, backend, Celery worker/beat
 ├── backend/
-│   ├── app/
-│   │   ├── api/v1/         # API route handlers
-│   │   ├── core/           # Config, database, security
-│   │   ├── models/         # SQLAlchemy models
-│   │   ├── schemas/        # Pydantic schemas
-│   │   └── services/       # Business logic
-│   ├── alembic/            # Database migrations
-│   ├── tests/              # pytest test suite
-│   ├── Dockerfile          # Dev backend image
-│   ├── requirements.txt    # Production/runtime deps
-│   └── requirements-dev.txt
-└── README.md
+│   ├── app/                 # FastAPI application
+│   ├── alembic/             # Database migrations
+│   ├── scripts/             # Dev utilities (seed data)
+│   └── tests/
+└── frontend/                # React SPA
 ```
-
----
-
-## Prerequisites
-
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (recommended), **or**
-- Python 3.13+ and a local PostgreSQL instance
 
 ---
 
 ## Quick Start (Docker)
 
-The fastest way to run everything:
-
 ```bash
-# From the project root
+# From project root
 docker compose up -d
 
-# Apply database migrations
+# Apply migrations
 docker compose exec backend alembic upgrade head
-```
 
-The API will be available at:
+# Optional: seed demo events + finance data
+docker compose exec backend python -m scripts.seed_demo_data
+```
 
 | URL | Description |
 |-----|-------------|
-| http://localhost:8000 | Root endpoint |
-| http://localhost:8000/docs | Interactive API docs (Swagger) |
-| http://localhost:8000/api/v1/health | Health check (includes DB ping) |
+| http://localhost:8000/docs | Swagger API docs |
+| http://localhost:8000/api/v1/health | Health check |
+| http://localhost:5173 | Frontend dev server (run separately) |
 
-Stop all services:
+### Frontend dev server
 
 ```bash
-docker compose down
+cd frontend
+npm install
+npm run dev
+```
+
+Set `VITE_API_URL=http://localhost:8000/api` in `frontend/.env` if needed (defaults to `/api` via Vite proxy in dev).
+
+---
+
+## Local Backend (without Docker for API)
+
+```bash
+docker compose up -d postgres redis
+
+cd backend
+python3 -m venv ../.venv
+source ../.venv/bin/activate
+pip install -r requirements-dev.txt
+
+cp .env.example .env   # edit as needed
+alembic upgrade head
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 ---
 
-## Local Development (without Docker for the API)
+## Environment Variables
 
-Use Docker only for Postgres and Redis, and run the API on your machine:
+Copy `backend/.env.example` to `backend/.env`.
 
-```bash
-# Start Postgres and Redis
-docker compose up -d postgres redis
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `REDIS_URL` | Redis for Celery |
+| `SECRET_KEY` | JWT signing key |
+| `SENDGRID_API_KEY` | Transactional email |
+| `EMAIL_ENABLED` | Set `true` to send real emails |
+| `CLOUDINARY_CLOUD_NAME` | Receipt image uploads |
+| `CLOUDINARY_API_KEY` | Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret |
 
-# Set up Python environment
-cd backend
-python3 -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
-pip install -r requirements-dev.txt
+---
 
-# Run migrations
-alembic upgrade head
+## Roles & Access
 
-# Start the API with hot reload
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
-```
+| Role | Access |
+|------|--------|
+| **general** | Member dashboard, events, profile |
+| **board** | Approvals, member directory, finance budget view |
+| **treasurer** | Full finance (log entries, receipts, summaries) |
+| **president** | All treasurer + board capabilities, role promotion |
 
-### Environment Variables
+---
 
-Create `backend/.env` to override defaults (optional):
+## Key API Endpoints
 
-```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5433/nsa_connect
-```
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5433/nsa_connect` | PostgreSQL connection string |
+| Method | Path | Access |
+|--------|------|--------|
+| `POST` | `/api/v1/auth/register` | Public |
+| `POST` | `/api/v1/auth/login` | Public |
+| `GET` | `/api/v1/members/pending` | Board+ |
+| `GET` | `/api/v1/members/{id}` | Board+ |
+| `GET` | `/api/v1/events` | Authenticated |
+| `POST` | `/api/v1/events` | Board+ |
+| `GET` | `/api/v1/finance/summary` | Treasurer+ |
+| `GET` | `/api/v1/finance/event-budgets` | Board+ |
+| `GET` | `/api/v1/finance/expenses/by-category` | Board+ |
+| `POST` | `/api/v1/finance` | Treasurer+ |
+| `POST` | `/api/v1/finance/receipts` | Treasurer+ |
 
 ---
 
 ## Database
 
 ```bash
-# Create a new migration after model changes
-alembic revision --autogenerate -m "describe your change"
-
-# Apply migrations
+cd backend
+alembic revision --autogenerate -m "describe change"
 alembic upgrade head
-
-# Roll back one migration
-alembic downgrade -1
 ```
 
-**Current schema:** `members` table with roles (`president`, `treasurer`, `board`, `general`) and approval status (`pending`, `approved`, `rejected`).
-
----
-
-## Running Tests
+### Seed demo data
 
 ```bash
 cd backend
-source venv/bin/activate
-pytest
+python -m scripts.seed_demo_data
 ```
+
+Creates sample events and finance entries (skips if entries already exist).
 
 ---
 
-## API Endpoints (Week 1)
+## Tests
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/` | API status message |
-| `GET` | `/api/v1/health` | Health check with database connectivity |
+```bash
+# Backend
+cd backend && pytest
 
-More endpoints (auth, members, events) coming in upcoming weeks.
+# Frontend
+cd frontend && npm test
+
+# Frontend production build
+cd frontend && npm run build
+```
 
 ---
 
 ## Service Ports
 
-| Service | Port | Notes |
-|---------|------|-------|
-| Backend API | `8000` | FastAPI / Uvicorn |
-| PostgreSQL | `5433` | Mapped from container port `5432` |
-| Redis | `6379` | Cache / sessions (planned) |
+| Service | Port |
+|---------|------|
+| Backend API | 8000 |
+| Frontend (Vite) | 5173 |
+| PostgreSQL | 5433 |
+| Redis | 6379 |
 
 ---
 

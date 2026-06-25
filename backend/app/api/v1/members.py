@@ -20,6 +20,7 @@ from app.services.member_service import (
     MemberAlreadyExistsError,
     MemberNotFoundError,
     approve_member,
+    get_member_by_id,
     list_members_by_status,
     list_members_paginated,
     list_assignable_board_members,
@@ -178,4 +179,19 @@ def update_member_role_endpoint(
 
     return MemberResponse.from_member(member)
 
-# TODO: GET /{member_id} — get member profile
+
+@router.get("/{member_id}", response_model=MemberResponse)
+def get_member_endpoint(
+    member_id: int,
+    _: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    try:
+        member = get_member_by_id(db, member_id)
+    except MemberNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Member not found",
+        ) from None
+
+    return MemberResponse.from_member(member)

@@ -3,12 +3,16 @@ import axios from "axios";
 
 import { EventBudgetBreakdown } from "../components/EventBudgetBreakdown";
 import { ExpenseCategoryChart } from "../components/ExpenseCategoryChart";
+import { FinanceEntryList } from "../components/FinanceEntryList";
+import { LogFinanceEntryForm } from "../components/LogFinanceEntryForm";
 import { RoleBadge } from "../components/RoleBadge";
 import { useAuth } from "../context/useAuth";
+import { fetchEvents } from "../lib/events-api";
 import {
   fetchEventBudgetBreakdown,
   fetchExpenseByCategory,
   fetchFinanceSummary,
+  type FinanceEntryResponse,
   type FinanceEventBudgetSummary,
   type FinanceExpenseCategorySummary,
   type FinanceSummaryResponse,
@@ -62,10 +66,50 @@ export function FinancePage() {
   const [expenseCategoryState, setExpenseCategoryState] = useState<ExpenseCategoryState>({
     status: "loading",
   });
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [eventOptions, setEventOptions] = useState<Array<{ id: number; name: string }>>(
+    [],
+  );
 
   const canViewTreasury = member
     ? isRoleAtLeast(member.role, "treasurer")
     : false;
+
+  function handleFinanceEntryCreated(_entry: FinanceEntryResponse) {
+    setRefreshKey((current) => current + 1);
+  }
+
+  useEffect(() => {
+    if (!canViewTreasury) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadEventOptions() {
+      try {
+        const response = await fetchEvents();
+        if (!cancelled) {
+          setEventOptions(
+            response.events.map((event) => ({
+              id: event.id,
+              name: event.name,
+            })),
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setEventOptions([]);
+        }
+      }
+    }
+
+    void loadEventOptions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canViewTreasury, refreshKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -114,7 +158,7 @@ export function FinancePage() {
     return () => {
       cancelled = true;
     };
-  }, [semester]);
+  }, [semester, refreshKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -159,7 +203,7 @@ export function FinancePage() {
     return () => {
       cancelled = true;
     };
-  }, [semester]);
+  }, [semester, refreshKey]);
 
   useEffect(() => {
     if (!canViewTreasury) {
@@ -209,7 +253,7 @@ export function FinancePage() {
     return () => {
       cancelled = true;
     };
-  }, [semester, canViewTreasury]);
+  }, [semester, canViewTreasury, refreshKey]);
 
   if (!member) {
     return null;
@@ -265,6 +309,16 @@ export function FinancePage() {
           </label>
         </div>
       </section>
+
+      {canViewTreasury && (
+        <>
+          <LogFinanceEntryForm
+            eventOptions={eventOptions}
+            onCreated={handleFinanceEntryCreated}
+          />
+          <FinanceEntryList semester={semester} refreshKey={refreshKey} />
+        </>
+      )}
 
       <ExpenseCategoryChart
         categories={

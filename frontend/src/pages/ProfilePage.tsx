@@ -46,6 +46,7 @@ export function ProfilePage() {
       return;
     }
 
+    const currentMember = member;
     setIsLoading(true);
     setServerError(null);
 
@@ -56,12 +57,12 @@ export function ProfilePage() {
       })
       .catch((error) => {
         setServerError(getApiErrorMessage(error));
-        setValues(memberToFormValues(member));
+        setValues(memberToFormValues(currentMember));
       })
       .finally(() => {
         setIsLoading(false);
       });
-  }, [member.id, updateMember]);
+  }, [member, updateMember]);
 
   if (!member || !values) {
     return null;
@@ -78,7 +79,12 @@ export function ProfilePage() {
   }
 
   function validateField(field: keyof ProfileFormValues) {
-    const error = validateProfileField(field, values[field]);
+    const currentValues = values;
+    if (!currentValues) {
+      return;
+    }
+
+    const error = validateProfileField(field, currentValues[field]);
 
     setFieldErrors((current) => ({
       ...current,
@@ -89,7 +95,12 @@ export function ProfilePage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const errors = validateProfileForm(values);
+    const currentValues = values;
+    if (!currentValues) {
+      return;
+    }
+
+    const errors = validateProfileForm(currentValues);
     setFieldErrors(errors);
 
     if (Object.keys(errors).length > 0) {
@@ -102,10 +113,10 @@ export function ProfilePage() {
 
     try {
       const updatedMember = await updateMyProfile({
-        full_name: values.full_name.trim(),
-        email: values.email,
-        major: values.major.trim(),
-        graduation_year: Number(values.graduation_year),
+        full_name: currentValues.full_name.trim(),
+        email: currentValues.email,
+        major: currentValues.major.trim(),
+        graduation_year: Number(currentValues.graduation_year),
       });
       updateMember(updatedMember);
       setValues(memberToFormValues(updatedMember));

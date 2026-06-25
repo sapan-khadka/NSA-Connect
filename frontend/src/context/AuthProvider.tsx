@@ -7,6 +7,7 @@ import {
 } from "react";
 
 import { fetchCurrentMember } from "../lib/auth-api";
+import type { MemberResponse } from "../lib/auth-api";
 import {
   registerUnauthorizedListener,
   syncAccessToken,

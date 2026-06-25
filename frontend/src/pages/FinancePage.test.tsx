@@ -12,6 +12,13 @@ vi.mock("../lib/finance-api", () => ({
   fetchFinanceSummary: vi.fn(),
   fetchEventBudgetBreakdown: vi.fn(),
   fetchExpenseByCategory: vi.fn(),
+  fetchFinanceEntries: vi.fn(),
+  createFinanceEntry: vi.fn(),
+  uploadFinanceReceipt: vi.fn(),
+}));
+
+vi.mock("../lib/events-api", () => ({
+  fetchEvents: vi.fn().mockResolvedValue({ events: [], total: 0 }),
 }));
 
 const mockSummary = {
@@ -111,19 +118,24 @@ describe("FinancePage", () => {
   });
 
   it("shows running balance and budget breakdown for treasurer", async () => {
-    const { fetchEventBudgetBreakdown, fetchExpenseByCategory, fetchFinanceSummary } =
-      await import("../lib/finance-api");
+    const {
+      fetchEventBudgetBreakdown,
+      fetchExpenseByCategory,
+      fetchFinanceSummary,
+      fetchFinanceEntries,
+    } = await import("../lib/finance-api");
     vi.mocked(fetchEventBudgetBreakdown).mockResolvedValue(mockBudgetBreakdown);
     vi.mocked(fetchExpenseByCategory).mockResolvedValue(mockExpenseCategories);
     vi.mocked(fetchFinanceSummary).mockResolvedValue(mockSummary);
+    vi.mocked(fetchFinanceEntries).mockResolvedValue({ entries: [], total: 0 });
 
     renderFinancePage("treasurer");
 
     expect(await screen.findByTestId("finance-running-balance")).toHaveTextContent(
       "$260.00",
     );
-    expect(screen.getByTestId("finance-total-income")).toHaveTextContent("$300.00");
-    expect(screen.getByTestId("finance-total-expense")).toHaveTextContent("$40.00");
+    expect(screen.getByRole("heading", { name: "Log transaction" })).toBeInTheDocument();
+    expect(screen.getByTestId("finance-entry-list")).toBeInTheDocument();
     expect(screen.getByText("Event budget vs actual")).toBeInTheDocument();
     expect(fetchEventBudgetBreakdown).toHaveBeenCalledWith(undefined);
     expect(fetchExpenseByCategory).toHaveBeenCalledWith(undefined);

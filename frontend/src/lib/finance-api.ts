@@ -80,3 +80,72 @@ export async function fetchExpenseByCategory(params?: {
   );
   return response.data;
 }
+
+export type FinanceEntryResponse = {
+  id: number;
+  entry_type: FinanceEntryType;
+  category: string;
+  amount: string;
+  description: string;
+  receipt_url: string | null;
+  event_id: number | null;
+  created_by_id: number;
+  created_at: string;
+};
+
+export type FinanceEntryListResponse = {
+  entries: FinanceEntryResponse[];
+  total: number;
+};
+
+export type FinanceEntryType = "income" | "expense";
+
+export type CreateFinanceEntryRequest = {
+  entry_type: FinanceEntryType;
+  category: string;
+  amount: string;
+  description?: string;
+  receipt_url?: string | null;
+  event_id?: number | null;
+};
+
+export type ReceiptUploadResponse = {
+  receipt_url: string;
+  public_id: string;
+  bytes: number;
+  format: string | null;
+  resource_type: string;
+};
+
+export async function fetchFinanceEntries(params?: {
+  semester?: string;
+  type?: FinanceEntryType;
+  event_id?: number;
+}): Promise<FinanceEntryListResponse> {
+  const response = await api.get<FinanceEntryListResponse>("/v1/finance", {
+    params,
+  });
+  return response.data;
+}
+
+export async function createFinanceEntry(
+  data: CreateFinanceEntryRequest,
+): Promise<FinanceEntryResponse> {
+  const response = await api.post<FinanceEntryResponse>("/v1/finance", data);
+  return response.data;
+}
+
+export async function uploadFinanceReceipt(
+  file: File,
+): Promise<ReceiptUploadResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await api.post<ReceiptUploadResponse>(
+    "/v1/finance/receipts",
+    formData,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+    },
+  );
+  return response.data;
+}

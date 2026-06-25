@@ -150,8 +150,13 @@ export function EventsPage() {
       setDetailLoading(true);
       setDetailError(null);
 
+      const eventId = selectedEventId;
+      if (eventId === null) {
+        return;
+      }
+
       try {
-        const detail = await fetchEvent(selectedEventId);
+        const detail = await fetchEvent(eventId);
         if (!cancelled) {
           setEventDetail(detail);
         }

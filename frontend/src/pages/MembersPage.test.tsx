@@ -65,15 +65,14 @@ function renderMembersPage(
     <MockAuthProvider
       value={{
         member: {
+          ...authMember,
           id: 1,
           full_name: "Board User",
           email: "board@semo.edu",
           student_id: "87654321",
           major: "Administration",
           graduation_year: 2028,
-          role: "board",
           status: "approved",
-          ...authMember,
         },
         isAuthenticated: true,
       }}
