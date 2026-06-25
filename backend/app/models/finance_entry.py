@@ -48,6 +48,7 @@ class FinanceEntry(Base):
     amount = Column(Numeric(10, 2), nullable=False)
     description = Column(Text, nullable=False, default="")
     receipt_url = Column(String(2048), nullable=True)
+    event_id = Column(Integer, ForeignKey("events.id"), nullable=True)
     created_by_id = Column(Integer, ForeignKey("members.id"), nullable=False)
     created_at = Column(
         DateTime(timezone=True),
@@ -56,6 +57,7 @@ class FinanceEntry(Base):
     )
 
     created_by = relationship("Member")
+    event = relationship("Event")
 
     @property
     def signed_amount(self) -> float:

@@ -119,6 +119,20 @@ def test_board_member_gets_403(client, board_member_headers):
     assert response.json()["detail"] == TREASURER_REQUIRED_DETAIL
 
 
+def test_create_finance_entry_rejects_unknown_event(
+    client,
+    treasurer_member_headers,
+):
+    response = client.post(
+        "/api/v1/finance",
+        json=_finance_payload(event_id=999),
+        headers=treasurer_member_headers,
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Event not found"
+
+
 @pytest.mark.parametrize(
     "field, value",
     [

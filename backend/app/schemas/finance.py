@@ -18,6 +18,7 @@ class FinanceEntryCreateRequest(BaseModel):
     amount: Decimal = Field(gt=Decimal("0"), le=MAX_FINANCE_AMOUNT)
     description: str = Field(default="", max_length=5000)
     receipt_url: str | None = Field(default=None, max_length=2048)
+    event_id: int | None = None
 
     @field_validator("description", mode="before")
     @classmethod
@@ -54,6 +55,7 @@ class FinanceEntryResponse(BaseModel):
     amount: Decimal
     description: str
     receipt_url: str | None
+    event_id: int | None
     created_by_id: int
     created_at: datetime
 
@@ -66,6 +68,12 @@ class FinanceEntryResponse(BaseModel):
             amount=entry.amount,
             description=entry.description,
             receipt_url=entry.receipt_url,
+            event_id=entry.event_id,
             created_by_id=entry.created_by_id,
             created_at=entry.created_at,
         )
+
+
+class FinanceEntryListResponse(BaseModel):
+    entries: list[FinanceEntryResponse]
+    total: int
