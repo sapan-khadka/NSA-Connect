@@ -26,10 +26,18 @@ export type EventResponse = {
   description: string;
   budget: string;
   created_by_id: number;
+  rsvp_count: number;
+  current_member_has_rsvped: boolean;
 };
 
 export type EventDetailResponse = EventResponse & {
   prep_tasks: PrepTaskResponse[];
+};
+
+export type EventRsvpStatusResponse = {
+  event_id: number;
+  rsvp_count: number;
+  current_member_has_rsvped: boolean;
 };
 
 export type EventListResponse = {
@@ -47,5 +55,23 @@ export async function fetchEvents(params?: {
 
 export async function fetchEvent(eventId: number): Promise<EventDetailResponse> {
   const response = await api.get<EventDetailResponse>(`/v1/events/${eventId}`);
+  return response.data;
+}
+
+export async function rsvpToEvent(
+  eventId: number,
+): Promise<EventRsvpStatusResponse> {
+  const response = await api.post<EventRsvpStatusResponse>(
+    `/v1/events/${eventId}/rsvp`,
+  );
+  return response.data;
+}
+
+export async function cancelEventRsvp(
+  eventId: number,
+): Promise<EventRsvpStatusResponse> {
+  const response = await api.delete<EventRsvpStatusResponse>(
+    `/v1/events/${eventId}/rsvp`,
+  );
   return response.data;
 }

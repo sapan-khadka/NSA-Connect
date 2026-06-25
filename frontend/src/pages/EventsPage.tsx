@@ -6,12 +6,15 @@ import { useAuth } from "../context/useAuth";
 import { toLocalIsoDate } from "../lib/calendar";
 import { formatMonthQuery } from "../lib/calendar-events";
 import {
+  cancelEventRsvp,
   fetchEvent,
   fetchEvents,
+  rsvpToEvent,
   type EventDetailResponse,
   type EventResponse,
   type PrepTaskResponse,
 } from "../lib/events-api";
+import { applyRsvpStatus } from "../lib/event-rsvp";
 import {
   applyChecklistToggle,
   replacePrepTaskInList,
@@ -35,6 +38,7 @@ export function EventsPage() {
   const [error, setError] = useState<string | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [togglingItemId, setTogglingItemId] = useState<number | null>(null);
+  const [rsvpLoading, setRsvpLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -190,6 +194,94 @@ export function EventsPage() {
     [canToggleChecklist, eventDetail],
   );
 
+  const applyRsvpToState = useCallback(
+    (status: {
+      event_id: number;
+      rsvp_count: number;
+      current_member_has_rsvped: boolean;
+    }) => {
+      setEventDetail((current) =>
+        current ? applyRsvpStatus(current, status) : current,
+      );
+      setEvents((current) =>
+        current.map((event) => applyRsvpStatus(event, status)),
+      );
+    },
+    [],
+  );
+
+  const handleRsvp = useCallback(async () => {
+    if (!eventDetail) {
+      return;
+    }
+
+    const snapshot = eventDetail;
+    const optimistic = {
+      event_id: eventDetail.id,
+      rsvp_count: eventDetail.rsvp_count + 1,
+      current_member_has_rsvped: true,
+    };
+
+    setRsvpLoading(true);
+    applyRsvpToState(optimistic);
+
+    try {
+      const status = await rsvpToEvent(eventDetail.id);
+      applyRsvpToState(status);
+    } catch {
+      setEventDetail(snapshot);
+      setEvents((current) =>
+        current.map((event) =>
+          event.id === snapshot.id
+            ? {
+                ...event,
+                rsvp_count: snapshot.rsvp_count,
+                current_member_has_rsvped: snapshot.current_member_has_rsvped,
+              }
+            : event,
+        ),
+      );
+    } finally {
+      setRsvpLoading(false);
+    }
+  }, [applyRsvpToState, eventDetail]);
+
+  const handleCancelRsvp = useCallback(async () => {
+    if (!eventDetail) {
+      return;
+    }
+
+    const snapshot = eventDetail;
+    const optimistic = {
+      event_id: eventDetail.id,
+      rsvp_count: Math.max(0, eventDetail.rsvp_count - 1),
+      current_member_has_rsvped: false,
+    };
+
+    setRsvpLoading(true);
+    applyRsvpToState(optimistic);
+
+    try {
+      const status = await cancelEventRsvp(eventDetail.id);
+      applyRsvpToState(status);
+    } catch {
+      setEventDetail(snapshot);
+      setEvents((current) =>
+        current.map((event) =>
+          event.id === snapshot.id
+            ? {
+                ...event,
+                rsvp_count: snapshot.rsvp_count,
+                current_member_has_rsvped: snapshot.current_member_has_rsvped,
+              }
+            : event,
+        ),
+      );
+    } finally {
+      setRsvpLoading(false);
+    }
+  }, [applyRsvpToState, eventDetail]);
+
   function handleMonthChange(year: number, month: number) {
     setViewYear(year);
     setViewMonth(month);
@@ -204,8 +296,7 @@ export function EventsPage() {
       <section>
         <h1 className="text-3xl font-bold text-primary">Events</h1>
         <p className="mt-2 max-w-2xl text-gray-600">
-          Browse NSA events by month. Select a day to see event details and prep
-          checklists.
+          Browse NSA events by month, RSVP to attend, and track prep progress.
         </p>
       </section>
 
@@ -236,6 +327,13 @@ export function EventsPage() {
           togglingItemId={togglingItemId}
           onToggleChecklistItem={(taskId, itemId, isCompleted) => {
             void handleToggleChecklistItem(taskId, itemId, isCompleted);
+          }}
+          rsvpLoading={rsvpLoading}
+          onRsvp={() => {
+            void handleRsvp();
+          }}
+          onCancelRsvp={() => {
+            void handleCancelRsvp();
           }}
         />
       </div>

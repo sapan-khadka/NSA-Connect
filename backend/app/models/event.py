@@ -39,6 +39,11 @@ class Event(Base):
         back_populates="event",
         order_by="PrepTask.due_date",
     )
+    rsvps = relationship(
+        "EventRsvp",
+        back_populates="event",
+        cascade="all, delete-orphan",
+    )
 
     @property
     def is_upcoming(self) -> bool:

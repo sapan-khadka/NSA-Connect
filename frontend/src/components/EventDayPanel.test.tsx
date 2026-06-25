@@ -13,6 +13,8 @@ const dayEvent: EventResponse = {
   description: "Annual cultural night.",
   budget: "250.00",
   created_by_id: 2,
+  rsvp_count: 0,
+  current_member_has_rsvped: false,
 };
 
 const eventDetail: EventDetailResponse = {
@@ -47,6 +49,9 @@ const panelProps = {
   canToggleChecklist: () => true,
   togglingItemId: null,
   onToggleChecklistItem: vi.fn(),
+  rsvpLoading: false,
+  onRsvp: vi.fn(),
+  onCancelRsvp: vi.fn(),
 };
 
 describe("EventDayPanel", () => {
@@ -90,7 +95,30 @@ describe("EventDayPanel", () => {
     expect(screen.getByRole("heading", { name: "Dashain Celebration" })).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "Prep progress" })).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "Task progress" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "RSVP" })).toBeInTheDocument();
     expect(screen.getByText("Order catering")).toBeInTheDocument();
+  });
+
+  it("shows cancel RSVP when member is already going", () => {
+    render(
+      <EventDayPanel
+        selectedDate="2030-06-15"
+        dayEvents={[dayEvent]}
+        selectedEventId={1}
+        onSelectEvent={vi.fn()}
+        eventDetail={{
+          ...eventDetail,
+          rsvp_count: 3,
+          current_member_has_rsvped: true,
+        }}
+        detailLoading={false}
+        detailError={null}
+        {...panelProps}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Cancel RSVP" })).toBeInTheDocument();
+    expect(screen.getByText("3 members going")).toBeInTheDocument();
   });
 
   it("switches events when multiple occur on the same day", async () => {

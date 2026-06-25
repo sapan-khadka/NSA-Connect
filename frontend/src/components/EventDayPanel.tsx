@@ -1,3 +1,4 @@
+import { EventRsvpButton } from "./EventRsvpButton";
 import { PrepProgressBar } from "./PrepProgressBar";
 import { PrepTaskChecklist } from "./PrepTaskChecklist";
 import type { EventDetailResponse, EventResponse } from "../lib/events-api";
@@ -9,6 +10,7 @@ import {
 } from "../lib/format-datetime";
 import { calcPrepProgress } from "../lib/prep-progress";
 import type { PrepTaskResponse } from "../lib/events-api";
+import { isEventUpcoming } from "../lib/event-rsvp";
 
 type EventDayPanelProps = {
   selectedDate: string | null;
@@ -25,6 +27,9 @@ type EventDayPanelProps = {
     itemId: number,
     isCompleted: boolean,
   ) => void;
+  rsvpLoading: boolean;
+  onRsvp: () => void;
+  onCancelRsvp: () => void;
 };
 
 export function EventDayPanel({
@@ -38,6 +43,9 @@ export function EventDayPanel({
   canToggleChecklist,
   togglingItemId,
   onToggleChecklistItem,
+  rsvpLoading,
+  onRsvp,
+  onCancelRsvp,
 }: EventDayPanelProps) {
   const eventProgress = eventDetail
     ? calcPrepProgress(eventDetail.prep_tasks)
@@ -121,6 +129,15 @@ export function EventDayPanel({
                       {eventDetail.description}
                     </p>
                   </div>
+
+                  <EventRsvpButton
+                    hasRsvped={eventDetail.current_member_has_rsvped}
+                    rsvpCount={eventDetail.rsvp_count}
+                    canRsvp={isEventUpcoming(eventDetail.starts_at)}
+                    loading={rsvpLoading}
+                    onRsvp={onRsvp}
+                    onCancelRsvp={onCancelRsvp}
+                  />
 
                   {eventDetail.prep_tasks.length > 0 ? (
                     <PrepProgressBar progress={eventProgress} />

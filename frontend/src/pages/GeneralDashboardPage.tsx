@@ -67,13 +67,8 @@ export function GeneralDashboardPage() {
           <ul className="mt-4 space-y-3 text-sm">
             <li>
               <Link to="/events" className="font-medium text-accent hover:text-accent-hover">
-                Browse upcoming events
+                Browse events and RSVP
               </Link>
-            </li>
-            <li>
-              <span className="text-gray-600">
-                RSVP and attendance tools are coming soon.
-              </span>
             </li>
           </ul>
         </section>

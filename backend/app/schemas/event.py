@@ -64,9 +64,17 @@ class EventResponse(BaseModel):
     description: str
     budget: Decimal
     created_by_id: int
+    rsvp_count: int
+    current_member_has_rsvped: bool
 
     @classmethod
-    def from_event(cls, event: "Event") -> "EventResponse":
+    def from_event(
+        cls,
+        event: "Event",
+        *,
+        rsvp_count: int = 0,
+        current_member_has_rsvped: bool = False,
+    ) -> "EventResponse":
         return cls(
             id=event.id,
             name=event.title,
@@ -75,7 +83,15 @@ class EventResponse(BaseModel):
             description=event.description,
             budget=Decimal(event.budget),
             created_by_id=event.created_by_id,
+            rsvp_count=rsvp_count,
+            current_member_has_rsvped=current_member_has_rsvped,
         )
+
+
+class EventRsvpStatusResponse(BaseModel):
+    event_id: int
+    rsvp_count: int
+    current_member_has_rsvped: bool
 
 
 class EventListResponse(BaseModel):
@@ -87,8 +103,18 @@ class EventDetailResponse(EventResponse):
     prep_tasks: list[PrepTaskResponse]
 
     @classmethod
-    def from_event(cls, event: "Event") -> "EventDetailResponse":
-        base = EventResponse.from_event(event)
+    def from_event(
+        cls,
+        event: "Event",
+        *,
+        rsvp_count: int = 0,
+        current_member_has_rsvped: bool = False,
+    ) -> "EventDetailResponse":
+        base = EventResponse.from_event(
+            event,
+            rsvp_count=rsvp_count,
+            current_member_has_rsvped=current_member_has_rsvped,
+        )
         return cls(
             **base.model_dump(),
             prep_tasks=[
