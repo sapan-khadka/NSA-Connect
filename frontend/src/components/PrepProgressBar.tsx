@@ -3,12 +3,17 @@ import type { PrepProgress } from "../lib/prep-progress";
 type PrepProgressBarProps = {
   progress: PrepProgress;
   label?: string;
+  variant?: "default" | "danger";
 };
 
 export function PrepProgressBar({
   progress,
   label = "Prep progress",
+  variant = "default",
 }: PrepProgressBarProps) {
+  const fillClass =
+    variant === "danger" ? "bg-red-500" : "bg-emerald-500";
+
   return (
     <div>
       <div className="flex items-center justify-between gap-3 text-sm">
@@ -26,7 +31,7 @@ export function PrepProgressBar({
         className="mt-2 h-2 overflow-hidden rounded-full bg-gray-200"
       >
         <div
-          className="h-full rounded-full bg-emerald-500 transition-[width] duration-300 ease-out"
+          className={`h-full rounded-full transition-[width] duration-300 ease-out ${fillClass}`}
           style={{ width: `${progress.percent}%` }}
         />
       </div>

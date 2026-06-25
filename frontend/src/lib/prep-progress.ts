@@ -25,6 +25,10 @@ export function calcTaskProgress(task: PrepTaskResponse): PrepProgress {
   return calcPrepProgress([task]);
 }
 
+export function isOverdueIncompleteTask(task: PrepTaskResponse): boolean {
+  return task.is_overdue && !task.is_complete;
+}
+
 export function applyChecklistToggle(
   task: PrepTaskResponse,
   itemId: number,

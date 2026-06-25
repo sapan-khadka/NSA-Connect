@@ -5,6 +5,7 @@ import {
   applyChecklistToggle,
   calcPrepProgress,
   calcTaskProgress,
+  isOverdueIncompleteTask,
 } from "./prep-progress";
 
 const task: PrepTaskResponse = {
@@ -32,6 +33,18 @@ describe("prep progress", () => {
 
   it("calculates task progress", () => {
     expect(calcTaskProgress(task).percent).toBe(33);
+  });
+
+  it("flags overdue styling only for incomplete tasks", () => {
+    expect(
+      isOverdueIncompleteTask({ ...task, is_overdue: true, is_complete: false }),
+    ).toBe(true);
+    expect(
+      isOverdueIncompleteTask({ ...task, is_overdue: true, is_complete: true }),
+    ).toBe(false);
+    expect(
+      isOverdueIncompleteTask({ ...task, is_overdue: false, is_complete: false }),
+    ).toBe(false);
   });
 
   it("updates checklist completion optimistically", () => {

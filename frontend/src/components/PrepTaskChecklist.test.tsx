@@ -51,8 +51,31 @@ describe("PrepTaskChecklist", () => {
 
     expect(screen.getByText("Setup")).toBeInTheDocument();
     expect(screen.getByText("Overdue")).toBeInTheDocument();
+    expect(screen.getByRole("article")).toHaveClass("border-red-300");
     expect(screen.getByRole("progressbar", { name: "Task progress" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("progressbar", { name: "Task progress" }).firstChild,
+    ).toHaveClass("bg-red-500");
     expect(screen.getByText("Reserve room")).toBeInTheDocument();
+  });
+
+  it("does not show overdue styling for completed tasks past due date", () => {
+    render(
+      <PrepTaskChecklist
+        task={{ ...task, is_overdue: true, is_complete: true }}
+        canToggle={false}
+        canAssign={false}
+        assignableMembers={assignableMembers}
+        onToggleItem={vi.fn()}
+        onAssign={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText("Overdue")).not.toBeInTheDocument();
+    expect(screen.getByRole("article")).toHaveClass("border-gray-200");
+    expect(
+      screen.getByRole("progressbar", { name: "Task progress" }).firstChild,
+    ).toHaveClass("bg-emerald-500");
   });
 
   it("shows assignee dropdown for board members", async () => {

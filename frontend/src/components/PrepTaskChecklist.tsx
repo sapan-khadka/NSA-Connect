@@ -1,7 +1,7 @@
 import type { MemberResponse } from "../lib/auth-api";
 import type { PrepTaskResponse } from "../lib/events-api";
 import { formatEventDateTime } from "../lib/format-datetime";
-import { calcTaskProgress } from "../lib/prep-progress";
+import { calcTaskProgress, isOverdueIncompleteTask } from "../lib/prep-progress";
 import { PrepProgressBar } from "./PrepProgressBar";
 import { PrepTaskAssigneeSelect } from "./PrepTaskAssigneeSelect";
 
@@ -42,9 +42,15 @@ export function PrepTaskChecklist({
   );
   const taskProgress = calcTaskProgress(task);
   const assigneeLabel = getAssigneeLabel(task.assignee_id, assignableMembers);
+  const showOverdue = isOverdueIncompleteTask(task);
 
   return (
-    <article className="rounded-md border border-gray-200 p-3">
+    <article
+      className={[
+        "rounded-md border p-3",
+        showOverdue ? "border-red-300 bg-red-50" : "border-gray-200",
+      ].join(" ")}
+    >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <h4 className="font-medium text-primary">{task.group_name}</h4>
         <div className="flex flex-wrap gap-2 text-xs">
@@ -53,7 +59,7 @@ export function PrepTaskChecklist({
               Complete
             </span>
           ) : null}
-          {task.is_overdue ? (
+          {showOverdue ? (
             <span className="rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-800">
               Overdue
             </span>
@@ -61,7 +67,12 @@ export function PrepTaskChecklist({
         </div>
       </div>
 
-      <p className="mt-1 text-xs text-gray-500">
+      <p
+        className={[
+          "mt-1 text-xs",
+          showOverdue ? "font-medium text-red-700" : "text-gray-500",
+        ].join(" ")}
+      >
         Due {formatEventDateTime(task.due_date)}
         {!canAssign && assigneeLabel ? ` · ${assigneeLabel}` : null}
       </p>
@@ -77,7 +88,11 @@ export function PrepTaskChecklist({
 
       {sortedItems.length > 0 ? (
         <div className="mt-3">
-          <PrepProgressBar progress={taskProgress} label="Task progress" />
+          <PrepProgressBar
+            progress={taskProgress}
+            label="Task progress"
+            variant={showOverdue ? "danger" : "default"}
+          />
         </div>
       ) : null}
 
