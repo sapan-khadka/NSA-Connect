@@ -112,6 +112,21 @@ def list_members_paginated(
     return members, total
 
 
+def list_assignable_board_members(db: Session) -> list[Member]:
+    return list(
+        db.scalars(
+            select(Member)
+            .where(Member.status == MemberStatus.APPROVED)
+            .where(
+                Member.role.in_(
+                    [MemberRole.BOARD, MemberRole.TREASURER, MemberRole.PRESIDENT],
+                ),
+            )
+            .order_by(Member.full_name.asc()),
+        ).all(),
+    )
+
+
 def approve_member(db: Session, member_id: int) -> Member:
     member = get_member_by_id(db, member_id)
     if member.status != MemberStatus.PENDING:

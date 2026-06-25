@@ -34,6 +34,11 @@ export async function fetchPendingMembers(): Promise<PendingMembersResponse> {
   return response.data;
 }
 
+export async function fetchAssignableMembers(): Promise<PendingMembersResponse> {
+  const response = await api.get<PendingMembersResponse>("/v1/members/assignees");
+  return response.data;
+}
+
 export async function approveMember(memberId: number): Promise<MemberResponse> {
   const response = await api.patch<MemberResponse>(
     `/v1/members/${memberId}/approve`,

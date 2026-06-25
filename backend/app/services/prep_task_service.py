@@ -24,7 +24,18 @@ class PrepTaskGroupNotFoundError(Exception):
 
 
 class InvalidAssigneeError(Exception):
-    pass
+    """Assignee must be an approved board member or higher."""
+
+
+def _validate_assignee(db: Session, assignee_id: int | None) -> None:
+    if assignee_id is None:
+        return
+
+    assignee = db.get(Member, assignee_id)
+    if assignee is None or assignee.status != MemberStatus.APPROVED:
+        raise InvalidAssigneeError
+    if not assignee.has_role_at_least(MemberRole.BOARD):
+        raise InvalidAssigneeError
 
 
 class InvalidPrepTaskDueDateError(Exception):
@@ -63,10 +74,7 @@ def create_prep_task_for_event(
     _validate_due_date(data.due_date, event.starts_at)
 
     assignee_id = data.assignee_id
-    if assignee_id is not None:
-        assignee = db.get(Member, assignee_id)
-        if assignee is None or assignee.status != MemberStatus.APPROVED:
-            raise InvalidAssigneeError
+    _validate_assignee(db, assignee_id)
 
     prep_task = PrepTask(
         event_id=event_id,
@@ -134,10 +142,7 @@ def update_prep_task(
 
     if "assignee_id" in updates:
         assignee_id = updates["assignee_id"]
-        if assignee_id is not None:
-            assignee = db.get(Member, assignee_id)
-            if assignee is None or assignee.status != MemberStatus.APPROVED:
-                raise InvalidAssigneeError
+        _validate_assignee(db, assignee_id)
         prep_task.assignee_id = assignee_id
 
     if "is_complete" in updates:

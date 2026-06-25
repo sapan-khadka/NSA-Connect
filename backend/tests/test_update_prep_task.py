@@ -98,11 +98,10 @@ def test_board_member_can_assign_prep_task(
     client,
     db_session,
     board_member_headers,
-    general_member_headers,
 ):
     from app.models.member import Member
 
-    assignee = db_session.query(Member).filter_by(email="sapan@semo.edu").one()
+    assignee = db_session.query(Member).filter_by(email="board@semo.edu").one()
     task = _create_event_with_task(client, board_member_headers, db_session)
 
     response = client.patch(
@@ -119,11 +118,10 @@ def test_board_member_can_update_completion_and_assignee_together(
     client,
     db_session,
     board_member_headers,
-    general_member_headers,
 ):
     from app.models.member import Member
 
-    assignee = db_session.query(Member).filter_by(email="sapan@semo.edu").one()
+    assignee = db_session.query(Member).filter_by(email="board@semo.edu").one()
     task = _create_event_with_task(client, board_member_headers, db_session)
 
     response = client.patch(
@@ -142,11 +140,10 @@ def test_board_member_can_unassign_prep_task(
     client,
     db_session,
     board_member_headers,
-    general_member_headers,
 ):
     from app.models.member import Member
 
-    assignee = db_session.query(Member).filter_by(email="sapan@semo.edu").one()
+    assignee = db_session.query(Member).filter_by(email="board@semo.edu").one()
     task = _create_event_with_task(
         client,
         board_member_headers,
@@ -169,11 +166,10 @@ def test_assignee_can_mark_own_prep_task_complete(
     client,
     db_session,
     board_member_headers,
-    general_member_headers,
 ):
     from app.models.member import Member
 
-    assignee = db_session.query(Member).filter_by(email="sapan@semo.edu").one()
+    assignee = db_session.query(Member).filter_by(email="board@semo.edu").one()
     task = _create_event_with_task(
         client,
         board_member_headers,
@@ -184,14 +180,14 @@ def test_assignee_can_mark_own_prep_task_complete(
     response = client.patch(
         f"/api/v1/tasks/{task['id']}",
         json={"is_complete": True},
-        headers=general_member_headers,
+        headers=board_member_headers,
     )
 
     assert response.status_code == 200
     assert response.json()["is_complete"] is True
 
 
-def test_assignee_cannot_change_assignee(
+def test_patch_rejects_general_member_assignee(
     client,
     db_session,
     board_member_headers,
@@ -199,8 +195,28 @@ def test_assignee_cannot_change_assignee(
 ):
     from app.models.member import Member
 
-    assignee = db_session.query(Member).filter_by(email="sapan@semo.edu").one()
-    other_member = db_session.query(Member).filter_by(email="other@semo.edu").one()
+    general_member = db_session.query(Member).filter_by(email="sapan@semo.edu").one()
+    task = _create_event_with_task(client, board_member_headers, db_session)
+
+    response = client.patch(
+        f"/api/v1/tasks/{task['id']}",
+        json={"assignee_id": general_member.id},
+        headers=board_member_headers,
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Assignee must be an approved board member"
+
+
+def test_general_member_cannot_reassign_prep_task(
+    client,
+    db_session,
+    board_member_headers,
+    general_member_headers,
+):
+    from app.models.member import Member
+
+    assignee = db_session.query(Member).filter_by(email="board@semo.edu").one()
     task = _create_event_with_task(
         client,
         board_member_headers,
@@ -210,7 +226,7 @@ def test_assignee_cannot_change_assignee(
 
     response = client.patch(
         f"/api/v1/tasks/{task['id']}",
-        json={"assignee_id": other_member.id},
+        json={"assignee_id": None},
         headers=general_member_headers,
     )
 
@@ -277,4 +293,4 @@ def test_update_prep_task_rejects_invalid_assignee(
     )
 
     assert response.status_code == 422
-    assert response.json()["detail"] == "Assignee must be an approved member"
+    assert response.json()["detail"] == "Assignee must be an approved board member"

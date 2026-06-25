@@ -22,6 +22,7 @@ from app.services.member_service import (
     approve_member,
     list_members_by_status,
     list_members_paginated,
+    list_assignable_board_members,
     reject_member,
     update_member_board_role,
     update_member_profile,
@@ -74,6 +75,18 @@ def update_my_profile(
         ) from None
 
     return MemberResponse.from_member(member)
+
+
+@router.get("/assignees", response_model=MemberListResponse)
+def list_assignable_members(
+    _: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    members = list_assignable_board_members(db)
+    return MemberListResponse(
+        members=[MemberResponse.from_member(member) for member in members],
+        total=len(members),
+    )
 
 
 @router.get("/pending", response_model=MemberListResponse)

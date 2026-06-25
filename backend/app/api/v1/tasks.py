@@ -43,7 +43,7 @@ def update_prep_task_endpoint(
     except InvalidAssigneeError:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Assignee must be an approved member",
+            detail="Assignee must be an approved board member",
         ) from None
 
     return PrepTaskResponse.from_prep_task(prep_task)

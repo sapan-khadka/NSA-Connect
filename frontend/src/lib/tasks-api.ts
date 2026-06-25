@@ -12,3 +12,13 @@ export async function updatePrepTaskChecklistItem(
   );
   return response.data;
 }
+
+export async function updatePrepTaskAssignee(
+  taskId: number,
+  assigneeId: number | null,
+): Promise<PrepTaskResponse> {
+  const response = await api.patch<PrepTaskResponse>(`/v1/tasks/${taskId}`, {
+    assignee_id: assigneeId,
+  });
+  return response.data;
+}

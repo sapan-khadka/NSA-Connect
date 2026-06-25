@@ -94,14 +94,39 @@ def test_board_member_can_add_prep_task_to_event(
     assert len(event_response.json()["prep_tasks"]) == 1
 
 
-def test_board_member_can_assign_prep_task_to_approved_member(
+def test_board_member_can_assign_prep_task_to_board_member(
     client,
     db_session,
     board_member_headers,
 ):
+    from app.models.member import Member
+
     _seed_prep_task_group(db_session, group_name="Setup", labels=["Reserve room"])
+    board_member = db_session.query(Member).filter_by(email="board@semo.edu").one()
+    event_id = _create_event(client, board_member_headers).json()["id"]
+
+    response = client.post(
+        f"/api/v1/events/{event_id}/tasks",
+        json=_prep_task_payload(
+            group_name="Setup",
+            due_date="2030-05-15T12:00:00+00:00",
+            assignee_id=board_member.id,
+        ),
+        headers=board_member_headers,
+    )
+
+    assert response.status_code == 201
+    assert response.json()["assignee_id"] == board_member.id
+
+
+def test_add_prep_task_rejects_general_member_assignee(
+    client,
+    db_session,
+    board_member_headers,
+):
     register_member(client, email="assignee@semo.edu", student_id="55555555")
     set_member_approved(db_session, email="assignee@semo.edu")
+    _seed_prep_task_group(db_session, group_name="Setup", labels=["Reserve room"])
     event_id = _create_event(client, board_member_headers).json()["id"]
 
     response = client.post(
@@ -114,8 +139,8 @@ def test_board_member_can_assign_prep_task_to_approved_member(
         headers=board_member_headers,
     )
 
-    assert response.status_code == 201
-    assert response.json()["assignee_id"] == 3
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Assignee must be an approved board member"
 
 
 def test_unauthenticated_request_gets_401(client, board_member_headers, db_session):

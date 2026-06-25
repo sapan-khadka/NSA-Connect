@@ -1,16 +1,16 @@
 import { EventRsvpButton } from "./EventRsvpButton";
 import { PrepProgressBar } from "./PrepProgressBar";
 import { PrepTaskChecklist } from "./PrepTaskChecklist";
-import type { EventDetailResponse, EventResponse } from "../lib/events-api";
+import type { MemberResponse } from "../lib/auth-api";
+import type { EventDetailResponse, EventResponse, PrepTaskResponse } from "../lib/events-api";
 import { EVENT_TYPE_BADGE_CLASS, EVENT_TYPE_LABELS } from "../lib/event-types";
 import {
   formatCurrency,
   formatEventDateTime,
   formatIsoDateLabel,
 } from "../lib/format-datetime";
-import { calcPrepProgress } from "../lib/prep-progress";
-import type { PrepTaskResponse } from "../lib/events-api";
 import { isEventUpcoming } from "../lib/event-rsvp";
+import { calcPrepProgress } from "../lib/prep-progress";
 
 type EventDayPanelProps = {
   selectedDate: string | null;
@@ -21,12 +21,16 @@ type EventDayPanelProps = {
   detailLoading: boolean;
   detailError: string | null;
   canToggleChecklist: (task: PrepTaskResponse) => boolean;
+  canAssignTasks: boolean;
+  assignableMembers: MemberResponse[];
   togglingItemId: number | null;
+  assigningTaskId: number | null;
   onToggleChecklistItem: (
     taskId: number,
     itemId: number,
     isCompleted: boolean,
   ) => void;
+  onAssignTask: (taskId: number, assigneeId: number | null) => void;
   rsvpLoading: boolean;
   onRsvp: () => void;
   onCancelRsvp: () => void;
@@ -41,8 +45,12 @@ export function EventDayPanel({
   detailLoading,
   detailError,
   canToggleChecklist,
+  canAssignTasks,
+  assignableMembers,
   togglingItemId,
+  assigningTaskId,
   onToggleChecklistItem,
+  onAssignTask,
   rsvpLoading,
   onRsvp,
   onCancelRsvp,
@@ -158,8 +166,12 @@ export function EventDayPanel({
                             key={task.id}
                             task={task}
                             canToggle={canToggleChecklist(task)}
+                            canAssign={canAssignTasks}
+                            assignableMembers={assignableMembers}
                             togglingItemId={togglingItemId}
+                            assigningTaskId={assigningTaskId}
                             onToggleItem={onToggleChecklistItem}
+                            onAssign={onAssignTask}
                           />
                         ))}
                       </div>

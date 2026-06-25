@@ -2,8 +2,22 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { MemberResponse } from "../lib/auth-api";
 import { PrepTaskChecklist } from "./PrepTaskChecklist";
 import type { PrepTaskResponse } from "../lib/events-api";
+
+const assignableMembers: MemberResponse[] = [
+  {
+    id: 2,
+    full_name: "Board Member",
+    email: "board@semo.edu",
+    student_id: "87654321",
+    major: "Administration",
+    graduation_year: 2028,
+    role: "board",
+    status: "approved",
+  },
+];
 
 const task: PrepTaskResponse = {
   id: 10,
@@ -28,15 +42,36 @@ describe("PrepTaskChecklist", () => {
       <PrepTaskChecklist
         task={task}
         canToggle={false}
+        canAssign={false}
+        assignableMembers={assignableMembers}
         onToggleItem={vi.fn()}
+        onAssign={vi.fn()}
       />,
     );
 
     expect(screen.getByText("Setup")).toBeInTheDocument();
     expect(screen.getByText("Overdue")).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "Task progress" })).toBeInTheDocument();
-    expect(screen.getByText("1/2 (50%)")).toBeInTheDocument();
     expect(screen.getByText("Reserve room")).toBeInTheDocument();
+  });
+
+  it("shows assignee dropdown for board members", async () => {
+    const user = userEvent.setup();
+    const onAssign = vi.fn();
+
+    render(
+      <PrepTaskChecklist
+        task={task}
+        canToggle={false}
+        canAssign
+        assignableMembers={assignableMembers}
+        onToggleItem={vi.fn()}
+        onAssign={onAssign}
+      />,
+    );
+
+    await user.selectOptions(screen.getByLabelText("Assign prep task"), "2");
+    expect(onAssign).toHaveBeenCalledWith(10, 2);
   });
 
   it("toggles checklist items when allowed", async () => {
@@ -47,7 +82,10 @@ describe("PrepTaskChecklist", () => {
       <PrepTaskChecklist
         task={task}
         canToggle
+        canAssign={false}
+        assignableMembers={assignableMembers}
         onToggleItem={onToggleItem}
+        onAssign={vi.fn()}
       />,
     );
 

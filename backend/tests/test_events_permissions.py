@@ -248,8 +248,7 @@ def test_general_member_cannot_reassign_prep_task(
         group_name="Setup",
         labels=["Reserve room"],
     )
-    assignee = db_session.query(Member).filter_by(email="sapan@semo.edu").one()
-    other_member = db_session.query(Member).filter_by(email="other@semo.edu").one()
+    assignee = db_session.query(Member).filter_by(email="board@semo.edu").one()
 
     create_response = client.post(
         f"/api/v1/events/{event_id}/tasks",
@@ -263,7 +262,7 @@ def test_general_member_cannot_reassign_prep_task(
 
     response = client.patch(
         f"/api/v1/tasks/{task_id}",
-        json={"assignee_id": other_member.id},
+        json={"assignee_id": None},
         headers=general_member_headers,
     )
 
@@ -275,7 +274,6 @@ def test_assignee_can_mark_assigned_prep_task_complete(
     client,
     db_session,
     board_member_headers,
-    general_member_headers,
     event_id,
 ):
     from app.models.member import Member
@@ -285,7 +283,7 @@ def test_assignee_can_mark_assigned_prep_task_complete(
         group_name="Setup",
         labels=["Reserve room"],
     )
-    assignee = db_session.query(Member).filter_by(email="sapan@semo.edu").one()
+    assignee = db_session.query(Member).filter_by(email="board@semo.edu").one()
 
     create_response = client.post(
         f"/api/v1/events/{event_id}/tasks",
@@ -300,7 +298,7 @@ def test_assignee_can_mark_assigned_prep_task_complete(
     response = client.patch(
         f"/api/v1/tasks/{task_id}",
         json={"is_complete": True},
-        headers=general_member_headers,
+        headers=board_member_headers,
     )
 
     assert response.status_code == 200

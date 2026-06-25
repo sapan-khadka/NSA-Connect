@@ -205,7 +205,7 @@ def add_prep_task_endpoint(
     except InvalidAssigneeError:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Assignee must be an approved member",
+            detail="Assignee must be an approved board member",
         ) from None
     except InvalidPrepTaskDueDateError as exc:
         raise HTTPException(

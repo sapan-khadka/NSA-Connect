@@ -47,8 +47,12 @@ const eventDetail: EventDetailResponse = {
 
 const panelProps = {
   canToggleChecklist: () => true,
+  canAssignTasks: false,
+  assignableMembers: [] as import("../lib/auth-api").MemberResponse[],
   togglingItemId: null,
+  assigningTaskId: null,
   onToggleChecklistItem: vi.fn(),
+  onAssignTask: vi.fn(),
   rsvpLoading: false,
   onRsvp: vi.fn(),
   onCancelRsvp: vi.fn(),

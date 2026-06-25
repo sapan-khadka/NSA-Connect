@@ -15,12 +15,17 @@ import {
   type PrepTaskResponse,
 } from "../lib/events-api";
 import { applyRsvpStatus } from "../lib/event-rsvp";
+import { fetchAssignableMembers } from "../lib/members-api";
 import {
   applyChecklistToggle,
   replacePrepTaskInList,
 } from "../lib/prep-progress";
 import { isRoleAtLeast } from "../lib/roles";
-import { updatePrepTaskChecklistItem } from "../lib/tasks-api";
+import {
+  updatePrepTaskAssignee,
+  updatePrepTaskChecklistItem,
+} from "../lib/tasks-api";
+import type { MemberResponse } from "../lib/auth-api";
 
 export function EventsPage() {
   const { member } = useAuth();
@@ -38,7 +43,13 @@ export function EventsPage() {
   const [error, setError] = useState<string | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [togglingItemId, setTogglingItemId] = useState<number | null>(null);
+  const [assigningTaskId, setAssigningTaskId] = useState<number | null>(null);
   const [rsvpLoading, setRsvpLoading] = useState(false);
+  const [assignableMembers, setAssignableMembers] = useState<MemberResponse[]>(
+    [],
+  );
+
+  const canAssignTasks = member ? isRoleAtLeast(member.role, "board") : false;
 
   useEffect(() => {
     let cancelled = false;
@@ -72,6 +83,34 @@ export function EventsPage() {
       cancelled = true;
     };
   }, [viewYear, viewMonth]);
+
+  useEffect(() => {
+    if (!canAssignTasks) {
+      setAssignableMembers([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadAssignableMembers() {
+      try {
+        const response = await fetchAssignableMembers();
+        if (!cancelled) {
+          setAssignableMembers(response.members);
+        }
+      } catch {
+        if (!cancelled) {
+          setAssignableMembers([]);
+        }
+      }
+    }
+
+    void loadAssignableMembers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canAssignTasks]);
 
   const selectedDayEvents = useMemo(() => {
     if (!selectedDate) {
@@ -192,6 +231,49 @@ export function EventsPage() {
       }
     },
     [canToggleChecklist, eventDetail],
+  );
+
+  const handleAssignTask = useCallback(
+    async (taskId: number, assigneeId: number | null) => {
+      if (!eventDetail || !canAssignTasks) {
+        return;
+      }
+
+      const snapshot = eventDetail;
+      const task = eventDetail.prep_tasks.find((entry) => entry.id === taskId);
+      if (!task) {
+        return;
+      }
+
+      setAssigningTaskId(taskId);
+      setEventDetail({
+        ...eventDetail,
+        prep_tasks: replacePrepTaskInList(eventDetail.prep_tasks, {
+          ...task,
+          assignee_id: assigneeId,
+        }),
+      });
+
+      try {
+        const updatedTask = await updatePrepTaskAssignee(taskId, assigneeId);
+        setEventDetail((current) =>
+          current
+            ? {
+                ...current,
+                prep_tasks: replacePrepTaskInList(
+                  current.prep_tasks,
+                  updatedTask,
+                ),
+              }
+            : current,
+        );
+      } catch {
+        setEventDetail(snapshot);
+      } finally {
+        setAssigningTaskId(null);
+      }
+    },
+    [canAssignTasks, eventDetail],
   );
 
   const applyRsvpToState = useCallback(
@@ -324,9 +406,15 @@ export function EventsPage() {
           detailLoading={detailLoading}
           detailError={detailError}
           canToggleChecklist={canToggleChecklist}
+          canAssignTasks={canAssignTasks}
+          assignableMembers={assignableMembers}
           togglingItemId={togglingItemId}
+          assigningTaskId={assigningTaskId}
           onToggleChecklistItem={(taskId, itemId, isCompleted) => {
             void handleToggleChecklistItem(taskId, itemId, isCompleted);
+          }}
+          onAssignTask={(taskId, assigneeId) => {
+            void handleAssignTask(taskId, assigneeId);
           }}
           rsvpLoading={rsvpLoading}
           onRsvp={() => {
