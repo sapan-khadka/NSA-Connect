@@ -3,7 +3,11 @@ import { NavLink, Outlet } from "react-router-dom";
 import { RoleBadge } from "../components/RoleBadge";
 import { useAuth } from "../context/useAuth";
 import { useLogout } from "../context/useLogout";
-import { getDashboardPath, isRoleAtLeast } from "../lib/roles";
+import {
+  canAccessFinance,
+  canViewMemberDirectory,
+  getDashboardPath,
+} from "../lib/roles";
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   isActive
@@ -13,7 +17,8 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
 export function AppLayout() {
   const { isAuthenticated, member } = useAuth();
   const logout = useLogout();
-  const isBoard = member ? isRoleAtLeast(member.role, "board") : false;
+  const showMemberDirectory = member ? canViewMemberDirectory(member.role) : false;
+  const showFinance = member ? canAccessFinance(member.role) : false;
   const dashboardPath = member ? getDashboardPath(member.role) : "/member";
 
   return (
@@ -48,19 +53,19 @@ export function AppLayout() {
                 </li>
               </>
             )}
-            {isBoard && (
-              <>
-                <li>
-                  <NavLink to="/members" className={navLinkClass}>
-                    Members
-                  </NavLink>
-                </li>
-                <li>
-                  <NavLink to="/finance" className={navLinkClass}>
-                    Finance
-                  </NavLink>
-                </li>
-              </>
+            {showMemberDirectory && (
+              <li>
+                <NavLink to="/members" className={navLinkClass}>
+                  Members
+                </NavLink>
+              </li>
+            )}
+            {showFinance && (
+              <li>
+                <NavLink to="/finance" className={navLinkClass}>
+                  Finance
+                </NavLink>
+              </li>
             )}
             {isAuthenticated ? (
               <>

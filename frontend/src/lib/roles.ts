@@ -26,6 +26,16 @@ export function getDashboardPath(role: MemberRole): string {
   return isRoleAtLeast(role, "board") ? "/board" : "/member";
 }
 
+/** Matches GET /v1/finance/event-budgets and the /finance route (board+). */
+export function canAccessFinance(role: MemberRole): boolean {
+  return isRoleAtLeast(role, "board");
+}
+
+/** Matches GET /v1/members and the /members route (board+). */
+export function canViewMemberDirectory(role: MemberRole): boolean {
+  return isRoleAtLeast(role, "board");
+}
+
 export function formatRoleLabel(role: MemberRole): string {
   return role.charAt(0).toUpperCase() + role.slice(1);
 }
