@@ -13,6 +13,7 @@ from app.schemas.event import (
     EventRsvpStatusResponse,
 )
 from app.schemas.preptask import PrepTaskCreateRequest, PrepTaskResponse
+from app.schemas.volunteer import VolunteerSlotCreateRequest, VolunteerSlotResponse
 from app.services.event_service import (
     EventNotFoundError,
     create_event,
@@ -33,6 +34,7 @@ from app.services.rsvp_service import (
     get_event_rsvp_status,
     rsvp_to_event,
 )
+from app.services.volunteer_service import create_volunteer_slot_for_event
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -214,6 +216,28 @@ def add_prep_task_endpoint(
         ) from None
 
     return PrepTaskResponse.from_prep_task(prep_task)
+
+
+@router.post(
+    "/{event_id}/slots",
+    response_model=VolunteerSlotResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_volunteer_slot_endpoint(
+    event_id: int,
+    data: VolunteerSlotCreateRequest,
+    _: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    try:
+        slot = create_volunteer_slot_for_event(db, event_id, data)
+    except EventNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        ) from None
+
+    return VolunteerSlotResponse.from_slot(slot)
 
 
 @router.post(
