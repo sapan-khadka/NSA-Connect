@@ -25,7 +25,10 @@ def _get_slot_with_signups(db: Session, slot_id: int) -> VolunteerSlot | None:
     return db.scalar(
         select(VolunteerSlot)
         .where(VolunteerSlot.id == slot_id)
-        .options(selectinload(VolunteerSlot.signups)),
+        .options(
+            selectinload(VolunteerSlot.signups),
+            selectinload(VolunteerSlot.event),
+        ),
     )
 
 

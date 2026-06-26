@@ -6,8 +6,10 @@ from unittest.mock import MagicMock, patch
 from app.services.email_service import (
     WELCOME_EMAIL_SUBJECT,
     build_prep_task_due_soon_email_body,
+    build_volunteer_task_assigned_email_body,
     build_welcome_email_body,
     send_prep_task_due_soon_email,
+    send_volunteer_task_assigned_email,
     send_welcome_email,
 )
 
@@ -155,3 +157,34 @@ def test_send_prep_task_due_soon_email_skips_when_disabled(caplog):
 
     assert "Prep task due-soon email (disabled)" in caplog.text
     assert "board@semo.edu" in caplog.text
+
+
+def test_build_volunteer_task_assigned_email_body_includes_task_details():
+    event_starts_at = datetime(2030, 6, 1, 18, 0, tzinfo=UTC)
+    body = build_volunteer_task_assigned_email_body(
+        full_name="Test User",
+        task_name="Setup crew",
+        event_title="Dashain Celebration",
+        event_starts_at=event_starts_at,
+    )
+
+    assert "Hi Test User," in body
+    assert "Setup crew" in body
+    assert "Dashain Celebration" in body
+    assert "June 01, 2030" in body
+
+
+def test_send_volunteer_task_assigned_email_skips_when_disabled(caplog):
+    event_starts_at = datetime(2030, 6, 1, 18, 0, tzinfo=UTC)
+
+    with caplog.at_level(logging.INFO):
+        send_volunteer_task_assigned_email(
+            email="test@semo.edu",
+            full_name="Test User",
+            task_name="Setup crew",
+            event_title="Dashain Celebration",
+            event_starts_at=event_starts_at,
+        )
+
+    assert "Volunteer task assigned email (disabled)" in caplog.text
+    assert "test@semo.edu" in caplog.text

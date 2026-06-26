@@ -5,6 +5,7 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_member
 from app.models.member import Member
 from app.schemas.volunteer import VolunteerSignupResponse
+from app.tasks.email_tasks import send_volunteer_task_assigned_email_task
 from app.services.volunteer_service import (
     AlreadySignedUpError,
     VolunteerSlotFullError,
@@ -42,5 +43,13 @@ def signup_for_volunteer_slot_endpoint(
             status_code=status.HTTP_409_CONFLICT,
             detail="Already signed up for this volunteer slot",
         ) from None
+
+    send_volunteer_task_assigned_email_task.delay(
+        email=current_member.email,
+        full_name=current_member.full_name,
+        task_name=slot.title,
+        event_title=slot.event.title,
+        event_starts_at_iso=slot.event.starts_at.isoformat(),
+    )
 
     return VolunteerSignupResponse.from_signup(signup, slot)

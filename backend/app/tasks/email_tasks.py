@@ -2,7 +2,11 @@ from datetime import datetime
 
 from app.celery_app import celery_app
 from app.core.database import SessionLocal
-from app.services.email_service import send_prep_task_due_soon_email, send_welcome_email
+from app.services.email_service import (
+    send_prep_task_due_soon_email,
+    send_volunteer_task_assigned_email,
+    send_welcome_email,
+)
 from app.services.prep_task_reminder_store import record_due_soon_reminder
 
 
@@ -41,3 +45,20 @@ def send_prep_task_due_soon_email_task(
         )
     finally:
         db.close()
+
+
+@celery_app.task(name="email.send_volunteer_task_assigned")
+def send_volunteer_task_assigned_email_task(
+    email: str,
+    full_name: str,
+    task_name: str,
+    event_title: str,
+    event_starts_at_iso: str,
+) -> None:
+    send_volunteer_task_assigned_email(
+        email=email,
+        full_name=full_name,
+        task_name=task_name,
+        event_title=event_title,
+        event_starts_at=datetime.fromisoformat(event_starts_at_iso),
+    )

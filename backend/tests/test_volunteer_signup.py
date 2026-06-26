@@ -63,7 +63,12 @@ def _create_slot(client, board_member_headers, **slot_overrides):
     return slot_response.json()
 
 
-def test_member_can_sign_up_for_volunteer_slot(client, board_member_headers, general_member_headers):
+def test_member_can_sign_up_for_volunteer_slot(
+    client,
+    board_member_headers,
+    general_member_headers,
+    block_external_integrations,
+):
     slot = _create_slot(client, board_member_headers)
 
     response = client.post(
@@ -81,6 +86,11 @@ def test_member_can_sign_up_for_volunteer_slot(client, board_member_headers, gen
     assert body["spots_remaining"] == 1
     assert body["is_full"] is False
     assert "created_at" in body
+    block_external_integrations["celery_delay"].assert_called_once()
+    call_kwargs = block_external_integrations["celery_delay"].call_args.kwargs
+    assert call_kwargs["email"] == "sapan@semo.edu"
+    assert call_kwargs["task_name"] == "Setup crew"
+    assert call_kwargs["event_title"] == "Dashain Celebration"
 
 
 def test_signup_returns_409_when_slot_is_full(

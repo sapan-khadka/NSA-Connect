@@ -1,6 +1,7 @@
 from app.celery_app import celery_app
 from app.tasks.email_tasks import (
     send_prep_task_due_soon_email_task,
+    send_volunteer_task_assigned_email_task,
     send_welcome_email_task,
 )
 
@@ -18,3 +19,8 @@ def test_celery_registers_welcome_email_task():
 def test_celery_registers_prep_task_due_soon_email_task():
     assert send_prep_task_due_soon_email_task.name == "email.send_prep_task_due_soon"
     assert "email.send_prep_task_due_soon" in celery_app.tasks
+
+
+def test_celery_registers_volunteer_task_assigned_email_task():
+    assert send_volunteer_task_assigned_email_task.name == "email.send_volunteer_task_assigned"
+    assert "email.send_volunteer_task_assigned" in celery_app.tasks
