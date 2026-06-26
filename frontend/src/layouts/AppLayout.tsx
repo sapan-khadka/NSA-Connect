@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 
 import { RoleBadge } from "../components/RoleBadge";
 import { useAuth } from "../context/useAuth";
@@ -17,9 +17,12 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
 export function AppLayout() {
   const { isAuthenticated, member } = useAuth();
   const logout = useLogout();
+  const location = useLocation();
   const showMemberDirectory = member ? canViewMemberDirectory(member.role) : false;
   const showFinance = member ? canAccessFinance(member.role) : false;
+  const showBoardTasks = showMemberDirectory;
   const dashboardPath = member ? getDashboardPath(member.role) : "/member";
+  const isWidePage = location.pathname === "/board/tasks";
 
   return (
     <div className="min-h-screen bg-white">
@@ -60,6 +63,13 @@ export function AppLayout() {
                 </NavLink>
               </li>
             )}
+            {showBoardTasks && (
+              <li>
+                <NavLink to="/board/tasks" className={navLinkClass}>
+                  Tasks
+                </NavLink>
+              </li>
+            )}
             {showFinance && (
               <li>
                 <NavLink to="/finance" className={navLinkClass}>
@@ -95,7 +105,12 @@ export function AppLayout() {
         </nav>
       </header>
 
-      <main className="mx-auto max-w-5xl px-6 py-12">
+      <main
+        className={[
+          "mx-auto px-6 py-12",
+          isWidePage ? "max-w-7xl" : "max-w-5xl",
+        ].join(" ")}
+      >
         <Outlet />
       </main>
     </div>

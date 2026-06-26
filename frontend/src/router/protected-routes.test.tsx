@@ -20,6 +20,11 @@ vi.mock("../lib/finance-api", () => ({
   fetchExpenseByCategory: vi.fn().mockResolvedValue({ categories: [], total_expense: "0.00" }),
 }));
 
+vi.mock("../lib/events-api", () => ({
+  fetchEvents: vi.fn().mockResolvedValue({ events: [], total: 0 }),
+  fetchEvent: vi.fn(),
+}));
+
 describe("protected route redirects", () => {
   afterEach(() => {
     cleanup();
@@ -136,5 +141,32 @@ describe("protected route redirects", () => {
       expect(router.state.location.pathname).toBe("/member");
     });
     expect(screen.queryByText("Event budget tracking")).not.toBeInTheDocument();
+  });
+
+  it("allows board members to view /board/tasks kanban", async () => {
+    renderWithRouter(undefined, {
+      initialEntries: ["/board/tasks"],
+      auth: {
+        member: createMockMember("board"),
+        isAuthenticated: true,
+      },
+    });
+
+    expect(await screen.findByText("Prep task kanban")).toBeInTheDocument();
+  });
+
+  it("redirects general members from /board/tasks to /member", async () => {
+    const { router } = renderWithRouter(undefined, {
+      initialEntries: ["/board/tasks"],
+      auth: {
+        member: createMockMember("general"),
+        isAuthenticated: true,
+      },
+    });
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/member");
+    });
+    expect(screen.queryByText("Prep task kanban")).not.toBeInTheDocument();
   });
 });

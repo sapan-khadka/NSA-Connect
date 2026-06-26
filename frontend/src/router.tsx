@@ -3,6 +3,7 @@ import { createBrowserRouter, type RouteObject } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppLayout } from "./layouts/AppLayout";
 import { BoardDashboardPage } from "./pages/BoardDashboardPage";
+import { BoardTasksPage } from "./pages/BoardTasksPage";
 import { EventsPage } from "./pages/EventsPage";
 import { FinancePage } from "./pages/FinancePage";
 import { GeneralDashboardPage } from "./pages/GeneralDashboardPage";
@@ -42,6 +43,14 @@ export const appRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute minRole="board">
             <BoardDashboardPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "board/tasks",
+        element: (
+          <ProtectedRoute minRole="board">
+            <BoardTasksPage />
           </ProtectedRoute>
         ),
       },

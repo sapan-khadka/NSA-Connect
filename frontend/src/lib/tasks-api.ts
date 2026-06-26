@@ -22,3 +22,13 @@ export async function updatePrepTaskAssignee(
   });
   return response.data;
 }
+
+export async function updatePrepTaskCompletion(
+  taskId: number,
+  isComplete: boolean,
+): Promise<PrepTaskResponse> {
+  const response = await api.patch<PrepTaskResponse>(`/v1/tasks/${taskId}`, {
+    is_complete: isComplete,
+  });
+  return response.data;
+}

@@ -43,6 +43,7 @@ describe("AppLayout navigation", () => {
 
     expect(screen.getByRole("link", { name: "Finance" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Members" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Tasks" })).toBeInTheDocument();
   });
 
   it("shows Finance link for treasurer members", () => {

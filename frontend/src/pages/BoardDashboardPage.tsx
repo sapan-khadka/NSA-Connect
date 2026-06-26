@@ -65,6 +65,17 @@ export function BoardDashboardPage() {
         <ul className="mt-4 grid gap-3 md:grid-cols-2">
           <li>
             <Link
+              to="/board/tasks"
+              className="block rounded-md border border-accent/30 bg-gradient-to-br from-accent/10 to-white px-4 py-3 transition-all hover:border-accent hover:shadow-md"
+            >
+              <p className="font-medium text-primary">Prep task kanban</p>
+              <p className="mt-1 text-sm text-gray-500">
+                Drag tasks across To do, In progress, and Done.
+              </p>
+            </Link>
+          </li>
+          <li>
+            <Link
               to="/members?tab=pending"
               className="block rounded-md border border-gray-200 px-4 py-3 transition-colors hover:border-accent hover:bg-accent/5"
             >
