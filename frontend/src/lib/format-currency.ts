@@ -11,3 +11,17 @@ export function parseCurrencyAmount(amount: string): number {
   const value = Number.parseFloat(amount);
   return Number.isFinite(value) ? value : 0;
 }
+
+export function currencyBalanceToneClass(amount: string): string {
+  const value = parseCurrencyAmount(amount);
+
+  if (value > 0) {
+    return "text-emerald-700";
+  }
+
+  if (value < 0) {
+    return "text-red-700";
+  }
+
+  return "text-primary";
+}

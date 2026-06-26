@@ -4,6 +4,7 @@ import axios from "axios";
 import { EventBudgetBreakdown } from "../components/EventBudgetBreakdown";
 import { ExpenseCategoryChart } from "../components/ExpenseCategoryChart";
 import { FinanceEntryList } from "../components/FinanceEntryList";
+import { FinanceSummaryCard } from "../components/FinanceSummaryCard";
 import { LogFinanceEntryForm } from "../components/LogFinanceEntryForm";
 import { RoleBadge } from "../components/RoleBadge";
 import { useAuth } from "../context/useAuth";
@@ -17,7 +18,6 @@ import {
   type FinanceExpenseCategorySummary,
   type FinanceSummaryResponse,
 } from "../lib/finance-api";
-import { formatCurrency, parseCurrencyAmount } from "../lib/format-currency";
 import { isRoleAtLeast } from "../lib/roles";
 import {
   formatSemesterLabel,
@@ -43,20 +43,6 @@ type ExpenseCategoryState =
       totalExpense: string;
     }
   | { status: "error"; message: string };
-
-function balanceToneClass(amount: string): string {
-  const value = parseCurrencyAmount(amount);
-
-  if (value > 0) {
-    return "text-emerald-700";
-  }
-
-  if (value < 0) {
-    return "text-red-700";
-  }
-
-  return "text-primary";
-}
 
 export function FinancePage() {
   const { member } = useAuth();
@@ -345,159 +331,14 @@ export function FinancePage() {
         errorMessage={budgetState.status === "error" ? budgetState.message : null}
       />
 
-      {canViewTreasury && summaryState.status === "loading" && (
-        <div className="rounded-lg border border-gray-200 bg-white p-10 text-center text-gray-500">
-          Loading finance summary...
-        </div>
-      )}
-
-      {canViewTreasury && summaryState.status === "error" && (
-        <div
-          role="alert"
-          className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-800"
-        >
-          {summaryState.message}
-        </div>
-      )}
-
-      {canViewTreasury && summaryState.status === "ready" && (
-        <>
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            <section className="rounded-lg border border-gray-200 bg-white p-6 xl:col-span-1">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-                Running balance
-              </h2>
-              <p
-                data-testid="finance-running-balance"
-                className={`mt-3 text-4xl font-bold ${balanceToneClass(summaryState.summary.balance)}`}
-              >
-                {formatCurrency(summaryState.summary.balance)}
-              </p>
-              <p className="mt-2 text-sm text-gray-500">
-                Net position across logged entries
-              </p>
-            </section>
-
-            <section className="rounded-lg border border-emerald-200 bg-emerald-50 p-6">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-emerald-800">
-                Total income
-              </h2>
-              <p
-                data-testid="finance-total-income"
-                className="mt-3 text-4xl font-bold text-emerald-800"
-              >
-                {formatCurrency(summaryState.summary.total_income)}
-              </p>
-            </section>
-
-            <section className="rounded-lg border border-red-200 bg-red-50 p-6">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-red-800">
-                Total expense
-              </h2>
-              <p
-                data-testid="finance-total-expense"
-                className="mt-3 text-4xl font-bold text-red-800"
-              >
-                {formatCurrency(summaryState.summary.total_expense)}
-              </p>
-            </section>
-
-            <section className="rounded-lg border border-gray-200 bg-white p-6">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-                Net balance
-              </h2>
-              <p
-                data-testid="finance-net-balance"
-                className={`mt-3 text-4xl font-bold ${balanceToneClass(summaryState.summary.balance)}`}
-              >
-                {formatCurrency(summaryState.summary.balance)}
-              </p>
-              <p className="mt-2 text-sm text-gray-500">
-                Income minus expenses
-              </p>
-            </section>
-          </div>
-
-          <section className="rounded-lg border border-gray-200 bg-white p-6">
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-semibold text-primary">
-                  Transaction breakdown
-                </h2>
-                <p className="mt-1 text-sm text-gray-500">
-                  {summaryState.summary.entry_count} entries in this view
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
-                <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold">Category</th>
-                    <th className="px-4 py-3 font-semibold">Income</th>
-                    <th className="px-4 py-3 font-semibold">Expense</th>
-                    <th className="px-4 py-3 font-semibold">Balance</th>
-                    <th className="px-4 py-3 font-semibold">Entries</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  <tr>
-                    <td className="px-4 py-3 font-medium text-primary">
-                      Pre-event / general
-                    </td>
-                    <td className="px-4 py-3 text-emerald-700">
-                      {formatCurrency(summaryState.summary.pre_event.income)}
-                    </td>
-                    <td className="px-4 py-3 text-red-700">
-                      {formatCurrency(summaryState.summary.pre_event.expense)}
-                    </td>
-                    <td
-                      className={`px-4 py-3 font-medium ${balanceToneClass(summaryState.summary.pre_event.balance)}`}
-                    >
-                      {formatCurrency(summaryState.summary.pre_event.balance)}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {summaryState.summary.pre_event.entry_count}
-                    </td>
-                  </tr>
-                  {summaryState.summary.events.map((eventSummary) => (
-                    <tr key={eventSummary.event_id}>
-                      <td className="px-4 py-3 font-medium text-primary">
-                        {eventSummary.event_name}
-                      </td>
-                      <td className="px-4 py-3 text-emerald-700">
-                        {formatCurrency(eventSummary.income)}
-                      </td>
-                      <td className="px-4 py-3 text-red-700">
-                        {formatCurrency(eventSummary.expense)}
-                      </td>
-                      <td
-                        className={`px-4 py-3 font-medium ${balanceToneClass(eventSummary.balance)}`}
-                      >
-                        {formatCurrency(eventSummary.balance)}
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">
-                        {eventSummary.entry_count}
-                      </td>
-                    </tr>
-                  ))}
-                  {summaryState.summary.events.length === 0 &&
-                    summaryState.summary.pre_event.entry_count === 0 && (
-                      <tr>
-                        <td
-                          colSpan={5}
-                          className="px-4 py-8 text-center text-gray-500"
-                        >
-                          No finance entries yet for this period.
-                        </td>
-                      </tr>
-                    )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        </>
+      {canViewTreasury && (
+        <FinanceSummaryCard
+          isLoading={summaryState.status === "loading"}
+          errorMessage={
+            summaryState.status === "error" ? summaryState.message : null
+          }
+          summary={summaryState.status === "ready" ? summaryState.summary : null}
+        />
       )}
     </div>
   );
