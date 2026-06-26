@@ -18,6 +18,10 @@ backend/alembic/versions/*.pyc
 # Editor backups
 *.save
 
+# Celery beat runtime files
+backend/celerybeat-schedule
+backend/celerybeat-schedule-*
+
 # Node / frontend
 node_modules/
 frontend/dist/
