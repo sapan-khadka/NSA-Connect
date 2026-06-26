@@ -11,6 +11,7 @@ from app.models.preptask import (
     checklist_items_from_group,
 )
 from app.models.reminder import PrepTaskReminder, ReminderType
+from app.models.volunteer import VolunteerSignup, VolunteerSlot
 
 __all__ = [
     "Base",
@@ -29,5 +30,7 @@ __all__ = [
     "PrepTaskGroupItem",
     "PrepTaskReminder",
     "ReminderType",
+    "VolunteerSignup",
+    "VolunteerSlot",
     "checklist_items_from_group",
 ]

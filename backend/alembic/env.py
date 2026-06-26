@@ -12,6 +12,7 @@ import app.models.event  # noqa: F401
 import app.models.finance_entry  # noqa: F401
 import app.models.member  # noqa: F401
 import app.models.preptask  # noqa: F401
+import app.models.volunteer  # noqa: F401
 
 config = context.config
 

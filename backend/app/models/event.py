@@ -44,6 +44,12 @@ class Event(Base):
         back_populates="event",
         cascade="all, delete-orphan",
     )
+    volunteer_slots = relationship(
+        "VolunteerSlot",
+        back_populates="event",
+        cascade="all, delete-orphan",
+        order_by="VolunteerSlot.created_at",
+    )
 
     @property
     def is_upcoming(self) -> bool:
