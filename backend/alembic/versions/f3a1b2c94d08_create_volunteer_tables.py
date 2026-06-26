@@ -1,7 +1,7 @@
 """create volunteer slots and signups tables
 
 Revision ID: f3a1b2c94d08
-Revises: e1a4c9f82b07
+Revises: b4c2d8e71f05
 Create Date: 2026-06-17 12:00:00.000000
 
 """
