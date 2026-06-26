@@ -54,6 +54,16 @@ class Settings(BaseSettings):
         description="Cloudinary folder for uploaded finance receipts",
     )
 
+    AI_ENABLED: bool = False
+    ANTHROPIC_API_KEY: str = Field(
+        default="",
+        description="Anthropic API key for AI features",
+    )
+    ANTHROPIC_MODEL: str = Field(
+        default="claude-sonnet-4-20250514",
+        description="Default Anthropic model for app-wide AI calls",
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

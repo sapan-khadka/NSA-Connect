@@ -27,3 +27,4 @@ sendgrid==6.12.5
 celery[redis]==5.5.3
 redis==5.2.1
 cloudinary==1.44.2
+anthropic==0.112.0

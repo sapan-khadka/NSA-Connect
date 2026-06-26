@@ -26,6 +26,7 @@ def block_external_integrations():
 
     with (
         patch("app.integrations.sendgrid_client.SendGridAPIClient") as sendgrid_client,
+        patch("app.integrations.anthropic_client.Anthropic") as anthropic_client,
         patch("celery.app.task.Task.delay") as celery_delay,
         patch("celery.app.task.Task.apply_async") as celery_apply_async,
         patch("app.services.email_service.settings.EMAIL_ENABLED", False),
@@ -33,6 +34,7 @@ def block_external_integrations():
         patch("app.core.config.settings.CLOUDINARY_CLOUD_NAME", "test-cloud"),
         patch("app.core.config.settings.CLOUDINARY_API_KEY", "test-key"),
         patch("app.core.config.settings.CLOUDINARY_API_SECRET", "test-secret"),
+        patch("app.core.config.settings.AI_ENABLED", False),
     ):
         sendgrid_client.return_value.send.return_value = sendgrid_response
         from app.integrations.cloudinary_client import CloudinaryUploadResult
@@ -46,6 +48,7 @@ def block_external_integrations():
         )
         yield {
             "sendgrid_client": sendgrid_client,
+            "anthropic_client": anthropic_client,
             "celery_delay": celery_delay,
             "celery_apply_async": celery_apply_async,
             "cloudinary_upload_receipt": cloudinary_upload_receipt,
