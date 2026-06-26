@@ -73,3 +73,19 @@ class VolunteerSignupResponse(BaseModel):
             spots_remaining=slot.spots_remaining,
             is_full=slot.is_full,
         )
+
+
+class MemberVolunteerSignupResponse(BaseModel):
+    id: int
+    slot_id: int
+    task_name: str
+    event_id: int
+    event_name: str
+    event_starts_at: datetime
+    signed_up_at: datetime
+    is_done: bool
+
+
+class MemberVolunteerSignupListResponse(BaseModel):
+    signups: list[MemberVolunteerSignupResponse]
+    total: int

@@ -19,6 +19,7 @@ describe("AppLayout navigation", () => {
 
     expect(screen.queryByRole("link", { name: "Finance" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Members" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "My tasks" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
   });
 

@@ -7,6 +7,7 @@ import { BoardTasksPage } from "./pages/BoardTasksPage";
 import { EventsPage } from "./pages/EventsPage";
 import { FinancePage } from "./pages/FinancePage";
 import { GeneralDashboardPage } from "./pages/GeneralDashboardPage";
+import { MyTasksPage } from "./pages/MyTasksPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { MembersPage } from "./pages/MembersPage";
@@ -35,6 +36,14 @@ export const appRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute roles={["general"]}>
             <GeneralDashboardPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "member/tasks",
+        element: (
+          <ProtectedRoute roles={["general"]}>
+            <MyTasksPage />
           </ProtectedRoute>
         ),
       },

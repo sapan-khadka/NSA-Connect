@@ -5,7 +5,10 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.models.event import Event
 from app.models.volunteer import VolunteerSignup, VolunteerSlot
-from app.schemas.volunteer import VolunteerSlotCreateRequest
+from app.schemas.volunteer import (
+    MemberVolunteerSignupResponse,
+    VolunteerSlotCreateRequest,
+)
 from app.services.event_service import EventNotFoundError
 
 
@@ -92,3 +95,39 @@ def signup_for_volunteer_slot(
     slot = _get_slot_with_signups(db, slot_id)
     assert slot is not None
     return signup, slot
+
+
+def list_volunteer_signups_for_member(
+    db: Session,
+    member_id: int,
+) -> list[MemberVolunteerSignupResponse]:
+    rows = db.execute(
+        select(VolunteerSignup, VolunteerSlot, Event)
+        .join(VolunteerSlot, VolunteerSignup.slot_id == VolunteerSlot.id)
+        .join(Event, VolunteerSlot.event_id == Event.id)
+        .where(VolunteerSignup.member_id == member_id)
+        .order_by(Event.starts_at.desc()),
+    ).all()
+
+    now = datetime.now(UTC)
+    return [
+        MemberVolunteerSignupResponse(
+            id=signup.id,
+            slot_id=signup.slot_id,
+            task_name=slot.title,
+            event_id=event.id,
+            event_name=event.title,
+            event_starts_at=event.starts_at,
+            signed_up_at=signup.created_at,
+            is_done=_event_has_passed(event.starts_at, now),
+        )
+        for signup, slot, event in rows
+    ]
+
+
+def _event_has_passed(starts_at: datetime, now: datetime) -> bool:
+    if starts_at.tzinfo is None:
+        starts_at = starts_at.replace(tzinfo=UTC)
+    else:
+        starts_at = starts_at.astimezone(UTC)
+    return starts_at < now

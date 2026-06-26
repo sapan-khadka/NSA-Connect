@@ -25,6 +25,10 @@ vi.mock("../lib/events-api", () => ({
   fetchEvent: vi.fn(),
 }));
 
+vi.mock("../lib/volunteer-api", () => ({
+  fetchMyVolunteerSignups: vi.fn().mockResolvedValue({ signups: [], total: 0 }),
+}));
+
 describe("protected route redirects", () => {
   afterEach(() => {
     cleanup();
@@ -168,5 +172,32 @@ describe("protected route redirects", () => {
       expect(router.state.location.pathname).toBe("/member");
     });
     expect(screen.queryByText("Prep task kanban")).not.toBeInTheDocument();
+  });
+
+  it("allows general members to view /member/tasks", async () => {
+    renderWithRouter(undefined, {
+      initialEntries: ["/member/tasks"],
+      auth: {
+        member: createMockMember("general"),
+        isAuthenticated: true,
+      },
+    });
+
+    expect(await screen.findByText("Your volunteer signups")).toBeInTheDocument();
+  });
+
+  it("redirects board members from /member/tasks to /board", async () => {
+    const { router } = renderWithRouter(undefined, {
+      initialEntries: ["/member/tasks"],
+      auth: {
+        member: createMockMember("board"),
+        isAuthenticated: true,
+      },
+    });
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/board");
+    });
+    expect(screen.queryByText("Your volunteer signups")).not.toBeInTheDocument();
   });
 });

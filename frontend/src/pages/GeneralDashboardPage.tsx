@@ -70,6 +70,11 @@ export function GeneralDashboardPage() {
                 Browse events and RSVP
               </Link>
             </li>
+            <li>
+              <Link to="/member/tasks" className="font-medium text-accent hover:text-accent-hover">
+                My volunteer tasks
+              </Link>
+            </li>
           </ul>
         </section>
       </div>
