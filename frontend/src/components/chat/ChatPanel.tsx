@@ -136,10 +136,25 @@ export function ChatPanel() {
         controller.signal,
       );
     } catch (caughtError) {
-      setError(getApiErrorMessage(caughtError));
-      setMessages((current) =>
-        current.filter((message) => message.id !== assistantMessageId),
-      );
+      const wasAborted =
+        controller.signal.aborted ||
+        (caughtError instanceof DOMException &&
+          caughtError.name === "AbortError");
+
+      if (wasAborted) {
+        setMessages((current) =>
+          current.filter(
+            (message) =>
+              message.id !== assistantMessageId ||
+              message.content.trim().length > 0,
+          ),
+        );
+      } else {
+        setError(getApiErrorMessage(caughtError));
+        setMessages((current) =>
+          current.filter((message) => message.id !== assistantMessageId),
+        );
+      }
     } finally {
       setIsStreaming(false);
       setStatusLabel(null);
@@ -152,6 +167,10 @@ export function ChatPanel() {
         ),
       );
     }
+  }
+
+  function handleStop() {
+    abortRef.current?.abort();
   }
 
   const showTypingIndicator =
@@ -204,13 +223,23 @@ export function ChatPanel() {
             disabled={isStreaming}
             className="min-h-[3rem] flex-1 resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-primary outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:bg-gray-100"
           />
-          <button
-            type="submit"
-            disabled={isStreaming || draft.trim().length === 0}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 sm:self-end"
-          >
-            {isStreaming ? "Sending…" : "Send"}
-          </button>
+          {isStreaming ? (
+            <button
+              type="button"
+              onClick={handleStop}
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-primary transition hover:border-accent hover:bg-accent/5 sm:self-end"
+            >
+              Stop
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={draft.trim().length === 0}
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 sm:self-end"
+            >
+              Send
+            </button>
+          )}
         </div>
       </form>
     </section>

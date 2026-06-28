@@ -34,7 +34,16 @@ export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
         {message.statusLabel && !message.content ? (
           <p className="text-gray-500">{message.statusLabel}</p>
         ) : (
-          <p className="whitespace-pre-wrap">{message.content || " "}</p>
+          <p className="whitespace-pre-wrap">
+            {message.content || " "}
+            {!isUser && message.isStreaming ? (
+              <span
+                aria-hidden="true"
+                data-testid="streaming-cursor"
+                className="ml-0.5 inline-block h-[1.05em] w-[2px] translate-y-[0.15em] animate-pulse bg-current align-baseline"
+              />
+            ) : null}
+          </p>
         )}
 
         {!isUser && message.constitutionSources && message.constitutionSources.length > 0 ? (
