@@ -91,6 +91,12 @@ class Settings(BaseSettings):
             "Default number of constitution chunks returned for semantic search"
         ),
     )
+    AI_CHAT_RAG_CHUNK_LIMIT: int = Field(
+        default=5,
+        ge=1,
+        le=10,
+        description="Constitution chunks injected into AI chat RAG context",
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",

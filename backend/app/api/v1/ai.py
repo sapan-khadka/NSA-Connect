@@ -1,8 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
-from app.core.dependencies import require_board
+from app.core.database import get_db
+from app.core.dependencies import get_current_member, require_board
 from app.models.member import Member
 from app.schemas.ai import (
+    ChatRequest,
+    ChatResponse,
     DraftAnnouncementEmailRequest,
     DraftAnnouncementEmailResponse,
     GenerateChecklistRequest,
@@ -14,6 +18,7 @@ from app.services.ai_announcement_service import (
     AIAnnouncementDraftError,
     draft_event_announcement_email,
 )
+from app.services.ai_chat_service import AIChatError, chat_with_nsa_assistant
 from app.services.ai_checklist_service import (
     AIChecklistGenerationError,
     AIDisabledError,
@@ -103,6 +108,34 @@ def summarize_minutes_endpoint(
             detail="AI features are disabled",
         ) from None
     except AIMinutesSummaryError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from None
+
+
+@router.post(
+    "/chat",
+    response_model=ChatResponse,
+    status_code=status.HTTP_200_OK,
+)
+def chat_endpoint(
+    data: ChatRequest,
+    db: Session = Depends(get_db),
+    current_member: Member = Depends(get_current_member),
+) -> ChatResponse:
+    try:
+        return chat_with_nsa_assistant(
+            db,
+            member=current_member,
+            data=data,
+        )
+    except AIDisabledError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI features are disabled",
+        ) from None
+    except AIChatError as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=str(exc),

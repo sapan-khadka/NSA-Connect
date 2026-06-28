@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -121,3 +122,42 @@ class SummarizeMinutesResponse(BaseModel):
         default_factory=list,
         max_length=50,
     )
+
+
+class ChatHistoryMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=4000)
+
+
+class ChatRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=4000)
+    history: list[ChatHistoryMessage] = Field(default_factory=list, max_length=20)
+
+    @field_validator("message", mode="before")
+    @classmethod
+    def strip_message(cls, value: str) -> str:
+        if isinstance(value, str):
+            value = value.strip()
+        if not value:
+            raise ValueError("Must not be empty")
+        return value
+
+
+class ChatConstitutionSource(BaseModel):
+    chunk_id: int = Field(ge=1)
+    section: str | None = None
+    chunk_index: int = Field(ge=0)
+    similarity_score: float = Field(ge=0.0, le=1.0)
+    excerpt: str = Field(min_length=1)
+
+
+class ChatToolCallRecord(BaseModel):
+    tool_name: str
+    input: dict
+    output: str
+
+
+class ChatResponse(BaseModel):
+    reply: str = Field(min_length=1, max_length=10000)
+    constitution_sources: list[ChatConstitutionSource] = Field(default_factory=list)
+    tool_calls: list[ChatToolCallRecord] = Field(default_factory=list)

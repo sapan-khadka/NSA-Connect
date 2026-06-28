@@ -79,6 +79,15 @@ def block_external_integrations():
 
 
 @pytest.fixture
+def mock_claude_chat_api():
+    """Mock Claude for chat — no network, no API cost."""
+    from tests.helpers.anthropic_mocks import mock_claude_chat_api as _mock_api
+
+    with _mock_api() as mock_client:
+        yield mock_client
+
+
+@pytest.fixture
 def mock_claude_checklist_api():
     """Mock Claude for checklist generation — no network, no API cost."""
     from tests.helpers.anthropic_mocks import mock_claude_checklist_api as _mock_api

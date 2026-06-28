@@ -11,6 +11,8 @@ ANNOUNCEMENT_SETTINGS_PATCH = "app.services.ai_announcement_service.get_settings
 ANNOUNCEMENT_CLIENT_PATCH = "app.services.ai_announcement_service.get_anthropic_client"
 MINUTES_SETTINGS_PATCH = "app.services.ai_minutes_service.get_settings"
 MINUTES_CLIENT_PATCH = "app.services.ai_minutes_service.get_anthropic_client"
+CHAT_SETTINGS_PATCH = "app.services.ai_chat_service.get_settings"
+CHAT_CLIENT_PATCH = "app.services.ai_chat_service.get_anthropic_client"
 ANTHROPIC_CLASS_PATCH = "app.integrations.anthropic_client.Anthropic"
 DEFAULT_MODEL = "claude-sonnet-4-20250514"
 
@@ -103,6 +105,40 @@ def build_mock_anthropic_client(payload: dict) -> MagicMock:
     return mock_client
 
 
+def build_mock_anthropic_text_response(
+    text: str,
+    *,
+    stop_reason: str = "end_turn",
+) -> MagicMock:
+    return MagicMock(
+        stop_reason=stop_reason,
+        content=[MagicMock(type="text", text=text)],
+    )
+
+
+def build_mock_anthropic_tool_use_response(
+    *,
+    tool_name: str,
+    tool_input: dict,
+    tool_use_id: str = "toolu_test_01",
+) -> MagicMock:
+    tool_block = MagicMock()
+    tool_block.type = "tool_use"
+    tool_block.id = tool_use_id
+    tool_block.name = tool_name
+    tool_block.input = tool_input
+    return MagicMock(
+        stop_reason="tool_use",
+        content=[tool_block],
+    )
+
+
+def build_mock_anthropic_chat_client(responses: list[MagicMock]) -> MagicMock:
+    mock_client = MagicMock(name="anthropic_chat_client")
+    mock_client.messages.create.side_effect = responses
+    return mock_client
+
+
 @contextmanager
 def mock_claude_json_api(
     *,
@@ -165,4 +201,27 @@ def mock_claude_minutes_api(
         payload=payload or SAMPLE_MINUTES_PAYLOAD,
         ai_enabled=ai_enabled,
     ) as mock_client:
+        yield mock_client
+
+
+@contextmanager
+def mock_claude_chat_api(
+    *,
+    responses: list[MagicMock] | None = None,
+    ai_enabled: bool = True,
+) -> Iterator[MagicMock]:
+    default_responses = [
+        build_mock_anthropic_text_response(
+            "Based on the constitution and live data, here is your answer.",
+        )
+    ]
+    mock_client = build_mock_anthropic_chat_client(responses or default_responses)
+    with (
+        patch(CHAT_SETTINGS_PATCH) as mock_settings,
+        patch(CHAT_CLIENT_PATCH, return_value=mock_client),
+    ):
+        mock_settings.return_value.AI_ENABLED = ai_enabled
+        mock_settings.return_value.ANTHROPIC_MODEL = DEFAULT_MODEL
+        mock_settings.return_value.ANTHROPIC_API_KEY = "sk-ant-test-key"
+        mock_settings.return_value.AI_CHAT_RAG_CHUNK_LIMIT = 5
         yield mock_client
