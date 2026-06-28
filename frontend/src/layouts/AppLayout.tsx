@@ -46,6 +46,11 @@ export function AppLayout() {
             {isAuthenticated && (
               <>
                 <li>
+                  <NavLink to="/assistant" className={navLinkClass}>
+                    Assistant
+                  </NavLink>
+                </li>
+                <li>
                   <NavLink to="/profile" className={navLinkClass}>
                     Profile
                   </NavLink>

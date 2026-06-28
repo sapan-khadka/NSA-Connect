@@ -4,6 +4,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppLayout } from "./layouts/AppLayout";
 import { BoardDashboardPage } from "./pages/BoardDashboardPage";
 import { BoardTasksPage } from "./pages/BoardTasksPage";
+import { AiAssistantPage } from "./pages/AiAssistantPage";
 import { EventsPage } from "./pages/EventsPage";
 import { FinancePage } from "./pages/FinancePage";
 import { GeneralDashboardPage } from "./pages/GeneralDashboardPage";
@@ -28,6 +29,14 @@ export const appRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute>
             <ProfilePage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "assistant",
+        element: (
+          <ProtectedRoute>
+            <AiAssistantPage />
           </ProtectedRoute>
         ),
       },

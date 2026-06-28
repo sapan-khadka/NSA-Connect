@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -18,7 +19,11 @@ from app.services.ai_announcement_service import (
     AIAnnouncementDraftError,
     draft_event_announcement_email,
 )
-from app.services.ai_chat_service import AIChatError, chat_with_nsa_assistant
+from app.services.ai_chat_service import (
+    AIChatError,
+    chat_with_nsa_assistant,
+    stream_chat_with_nsa_assistant,
+)
 from app.services.ai_checklist_service import (
     AIChecklistGenerationError,
     AIDisabledError,
@@ -112,6 +117,40 @@ def summarize_minutes_endpoint(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=str(exc),
         ) from None
+
+
+@router.post("/chat/stream")
+def chat_stream_endpoint(
+    data: ChatRequest,
+    db: Session = Depends(get_db),
+    current_member: Member = Depends(get_current_member),
+) -> StreamingResponse:
+    try:
+        event_stream = stream_chat_with_nsa_assistant(
+            db,
+            member=current_member,
+            data=data,
+        )
+    except AIDisabledError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI features are disabled",
+        ) from None
+    except AIChatError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from None
+
+    return StreamingResponse(
+        event_stream,
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.post(
