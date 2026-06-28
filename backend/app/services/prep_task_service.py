@@ -7,13 +7,13 @@ from app.models.event import Event
 from app.models.member import Member, MemberRole, MemberStatus
 from app.models.preptask import (
     PrepTask,
-    PrepTaskChecklistItem,
     PrepTaskGroup,
     checklist_items_from_group,
+    checklist_items_from_labels,
 )
 from app.schemas.preptask import (
-    PrepTaskCreateRequest,
     PrepTaskChecklistItemUpdateRequest,
+    PrepTaskCreateRequest,
     PrepTaskUpdateRequest,
 )
 from app.services.event_service import EventNotFoundError
@@ -54,6 +54,17 @@ class PrepTaskChecklistItemNotFoundError(Exception):
     pass
 
 
+def _get_or_create_group(db: Session, group_name: str) -> PrepTaskGroup:
+    group = db.scalar(
+        select(PrepTaskGroup).where(PrepTaskGroup.group_name == group_name),
+    )
+    if group is None:
+        group = PrepTaskGroup(group_name=group_name)
+        db.add(group)
+        db.flush()
+    return group
+
+
 def create_prep_task_for_event(
     db: Session,
     event_id: int,
@@ -63,25 +74,30 @@ def create_prep_task_for_event(
     if event is None:
         raise EventNotFoundError
 
-    group = db.scalar(
-        select(PrepTaskGroup)
-        .where(PrepTaskGroup.group_name == data.group_name)
-        .options(selectinload(PrepTaskGroup.items)),
-    )
-    if group is None:
-        raise PrepTaskGroupNotFoundError
-
     _validate_due_date(data.due_date, event.starts_at)
 
     assignee_id = data.assignee_id
     _validate_assignee(db, assignee_id)
+
+    if data.checklist_items:
+        group = _get_or_create_group(db, data.group_name)
+        checklist_items = checklist_items_from_labels(data.checklist_items)
+    else:
+        group = db.scalar(
+            select(PrepTaskGroup)
+            .where(PrepTaskGroup.group_name == data.group_name)
+            .options(selectinload(PrepTaskGroup.items)),
+        )
+        if group is None:
+            raise PrepTaskGroupNotFoundError
+        checklist_items = checklist_items_from_group(group)
 
     prep_task = PrepTask(
         event_id=event_id,
         group_id=group.id,
         due_date=data.due_date,
         assignee_id=assignee_id,
-        checklist_items=checklist_items_from_group(group),
+        checklist_items=checklist_items,
     )
     db.add(prep_task)
     db.commit()

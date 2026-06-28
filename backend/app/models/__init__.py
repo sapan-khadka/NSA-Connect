@@ -1,4 +1,5 @@
 from app.models.base import Base
+from app.models.constitutional_chunk import ConstitutionalChunk
 from app.models.event import Event, EventType
 from app.models.event_rsvp import EventRsvp
 from app.models.finance_entry import FinanceCategory, FinanceEntry, FinanceEntryType
@@ -15,6 +16,7 @@ from app.models.volunteer import VolunteerSignup, VolunteerSlot
 
 __all__ = [
     "Base",
+    "ConstitutionalChunk",
     "Event",
     "EventRsvp",
     "EventType",

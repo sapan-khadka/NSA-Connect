@@ -21,12 +21,16 @@ BAD_DOMAIN_EMAIL = "sapan@gmail.com"
 
 @pytest.fixture(autouse=True)
 def block_external_integrations():
-    """Never hit Redis, Celery brokers, or SendGrid during tests."""
+    """Never hit Redis, Celery brokers, SendGrid, or Anthropic during tests."""
     sendgrid_response = MagicMock(status_code=202, body="accepted")
+    anthropic_sdk_client = MagicMock(name="anthropic_sdk_client")
+    anthropic_sdk_client.messages.create.side_effect = AssertionError(
+        "Real Anthropic API must not be called in tests; use mock_claude_checklist_api",
+    )
 
     with (
         patch("app.integrations.sendgrid_client.SendGridAPIClient") as sendgrid_client,
-        patch("app.integrations.anthropic_client.Anthropic") as anthropic_client,
+        patch("anthropic.Anthropic", return_value=anthropic_sdk_client) as anthropic_client,
         patch("celery.app.task.Task.delay") as celery_delay,
         patch("celery.app.task.Task.apply_async") as celery_apply_async,
         patch("app.services.email_service.settings.EMAIL_ENABLED", False),
@@ -49,10 +53,38 @@ def block_external_integrations():
         yield {
             "sendgrid_client": sendgrid_client,
             "anthropic_client": anthropic_client,
+            "anthropic_sdk_client": anthropic_sdk_client,
             "celery_delay": celery_delay,
             "celery_apply_async": celery_apply_async,
             "cloudinary_upload_receipt": cloudinary_upload_receipt,
         }
+
+
+@pytest.fixture
+def mock_claude_checklist_api():
+    """Mock Claude for checklist generation — no network, no API cost."""
+    from tests.helpers.anthropic_mocks import mock_claude_checklist_api as _mock_api
+
+    with _mock_api() as mock_client:
+        yield mock_client
+
+
+@pytest.fixture
+def mock_claude_announcement_api():
+    """Mock Claude for announcement drafts — no network, no API cost."""
+    from tests.helpers.anthropic_mocks import mock_claude_announcement_api as _mock_api
+
+    with _mock_api() as mock_client:
+        yield mock_client
+
+
+@pytest.fixture
+def mock_claude_minutes_api():
+    """Mock Claude for minutes summaries — no network, no API cost."""
+    from tests.helpers.anthropic_mocks import mock_claude_minutes_api as _mock_api
+
+    with _mock_api() as mock_client:
+        yield mock_client
 
 
 def register_payload(

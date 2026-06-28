@@ -1,6 +1,11 @@
 import { useState, type FormEvent } from "react";
 
 import { getApiErrorMessage } from "../lib/auth-api";
+import {
+  countChecklistTasks,
+  generateEventChecklist,
+  type ChecklistCategory,
+} from "../lib/ai-api";
 import { EVENT_TYPE_LABELS, EVENT_TYPES } from "../lib/event-types";
 import {
   buildCreateEventPayload,
@@ -10,7 +15,13 @@ import {
   validateCreateEventField,
   validateCreateEventForm,
 } from "../lib/event-form";
-import { createEvent, type EventResponse } from "../lib/events-api";
+import {
+  addPrepTaskToEvent,
+  createEvent,
+  type EventResponse,
+} from "../lib/events-api";
+import { buildPrepTaskCreates } from "../lib/prep-task-create";
+import { DraftPrepChecklist } from "./DraftPrepChecklist";
 
 type CreateEventFormProps = {
   onCreated: (event: EventResponse) => void;
@@ -26,6 +37,9 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
   const [fieldErrors, setFieldErrors] = useState<CreateEventFormErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingChecklist, setIsGeneratingChecklist] = useState(false);
+  const [checklistError, setChecklistError] = useState<string | null>(null);
+  const [draftChecklist, setDraftChecklist] = useState<ChecklistCategory[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
 
   function updateField<K extends keyof CreateEventFormValues>(
@@ -45,6 +59,35 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
     }));
   }
 
+  function clearDraftChecklist() {
+    setDraftChecklist([]);
+    setChecklistError(null);
+  }
+
+  async function handleGenerateChecklist() {
+    const nameError = validateCreateEventField("name", values.name, values);
+    if (nameError) {
+      setFieldErrors((current) => ({ ...current, name: nameError }));
+      return;
+    }
+
+    setIsGeneratingChecklist(true);
+    setChecklistError(null);
+    setServerError(null);
+
+    try {
+      const response = await generateEventChecklist({
+        event_name: values.name.trim(),
+        event_type: values.event_type,
+      });
+      setDraftChecklist(response.categories);
+    } catch (error) {
+      setChecklistError(getApiErrorMessage(error));
+    } finally {
+      setIsGeneratingChecklist(false);
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -60,7 +103,21 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
 
     try {
       const created = await createEvent(buildCreateEventPayload(values));
+
+      if (draftChecklist.length > 0) {
+        const prepTasks = buildPrepTaskCreates(
+          draftChecklist,
+          values.event_date,
+          values.event_time,
+        );
+        await Promise.all(
+          prepTasks.map((prepTask) => addPrepTaskToEvent(created.id, prepTask)),
+        );
+      }
+
       setValues(initialCreateEventValues);
+      setDraftChecklist([]);
+      setChecklistError(null);
       setIsExpanded(false);
       onCreated(created);
     } catch (error) {
@@ -69,6 +126,9 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
       setIsSubmitting(false);
     }
   }
+
+  const canGenerateChecklist = values.name.trim().length > 0;
+  const draftTaskCount = countChecklistTasks(draftChecklist);
 
   return (
     <section className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6">
@@ -152,7 +212,10 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
                 id="event-type"
                 value={values.event_type}
                 onChange={(event) =>
-                  updateField("event_type", event.target.value as CreateEventFormValues["event_type"])
+                  updateField(
+                    "event_type",
+                    event.target.value as CreateEventFormValues["event_type"],
+                  )
                 }
                 onBlur={() => validateField("event_type")}
                 className={inputClassName}
@@ -232,13 +295,65 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
             </div>
           </div>
 
-          <div className="flex justify-end">
+          <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-primary">Prep checklist</h3>
+                <p className="mt-1 text-sm text-gray-600">
+                  Generate 10–15 AI-suggested tasks from the event name and type.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  void handleGenerateChecklist();
+                }}
+                disabled={!canGenerateChecklist || isGeneratingChecklist || isSubmitting}
+                className="rounded-md border border-accent bg-white px-3 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accent/5 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isGeneratingChecklist ? "Generating…" : "Generate prep checklist"}
+              </button>
+            </div>
+
+            {checklistError ? (
+              <p
+                role="alert"
+                className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+              >
+                {checklistError}
+              </p>
+            ) : null}
+
+            {draftChecklist.length > 0 ? (
+              <div className="mt-4">
+                <DraftPrepChecklist
+                  categories={draftChecklist}
+                  onClear={clearDraftChecklist}
+                />
+              </div>
+            ) : null}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {draftTaskCount > 0 ? (
+              <p className="text-sm text-gray-600">
+                Ready to create event with {draftTaskCount} prep tasks.
+              </p>
+            ) : (
+              <span />
+            )}
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isGeneratingChecklist}
               className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting ? "Creating…" : "Create event"}
+              {isSubmitting
+                ? draftTaskCount > 0
+                  ? "Creating event and tasks…"
+                  : "Creating…"
+                : draftTaskCount > 0
+                  ? "Create event with prep tasks"
+                  : "Create event"}
             </button>
           </div>
         </form>

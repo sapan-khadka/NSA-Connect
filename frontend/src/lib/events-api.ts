@@ -68,6 +68,24 @@ export async function createEvent(
   return response.data;
 }
 
+export type CreatePrepTaskRequest = {
+  group_name: string;
+  due_date: string;
+  assignee_id?: number | null;
+  checklist_items?: string[];
+};
+
+export async function addPrepTaskToEvent(
+  eventId: number,
+  data: CreatePrepTaskRequest,
+): Promise<PrepTaskResponse> {
+  const response = await api.post<PrepTaskResponse>(
+    `/v1/events/${eventId}/tasks`,
+    data,
+  );
+  return response.data;
+}
+
 export async function fetchEvent(eventId: number): Promise<EventDetailResponse> {
   const response = await api.get<EventDetailResponse>(`/v1/events/${eventId}`);
   return response.data;

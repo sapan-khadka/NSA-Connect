@@ -86,3 +86,10 @@ def checklist_items_from_group(group: PrepTaskGroup) -> list[PrepTaskChecklistIt
         PrepTaskChecklistItem(label=item.label, sort_order=item.sort_order)
         for item in group.items
     ]
+
+
+def checklist_items_from_labels(labels: list[str]) -> list[PrepTaskChecklistItem]:
+    return [
+        PrepTaskChecklistItem(label=label, sort_order=index)
+        for index, label in enumerate(labels)
+    ]

@@ -6,11 +6,21 @@ import { CreateEventForm } from "./CreateEventForm";
 
 vi.mock("../lib/events-api", () => ({
   createEvent: vi.fn(),
+  addPrepTaskToEvent: vi.fn(),
 }));
 
-import { createEvent } from "../lib/events-api";
+vi.mock("../lib/ai-api", () => ({
+  generateEventChecklist: vi.fn(),
+  countChecklistTasks: (categories: { tasks: string[] }[]) =>
+    categories.reduce((total, category) => total + category.tasks.length, 0),
+}));
+
+import { generateEventChecklist } from "../lib/ai-api";
+import { addPrepTaskToEvent, createEvent } from "../lib/events-api";
 
 const mockedCreateEvent = vi.mocked(createEvent);
+const mockedAddPrepTaskToEvent = vi.mocked(addPrepTaskToEvent);
+const mockedGenerateEventChecklist = vi.mocked(generateEventChecklist);
 
 describe("CreateEventForm", () => {
   afterEach(() => {
@@ -71,6 +81,81 @@ describe("CreateEventForm", () => {
       );
     });
 
+    expect(onCreated).toHaveBeenCalled();
+    expect(mockedAddPrepTaskToEvent).not.toHaveBeenCalled();
+  });
+
+  it("generates and attaches prep tasks when creating an event", async () => {
+    const user = userEvent.setup();
+    const onCreated = vi.fn();
+
+    mockedGenerateEventChecklist.mockResolvedValue({
+      categories: [
+        {
+          category: "Setup",
+          tasks: ["Reserve room", "Test AV", "Print sign-in sheet"],
+        },
+        {
+          category: "Food & Beverage",
+          tasks: ["Order catering", "Confirm dietary restrictions"],
+        },
+      ],
+    });
+    mockedCreateEvent.mockResolvedValue({
+      id: 12,
+      name: "Dashain Celebration",
+      starts_at: "2030-06-01T18:00:00+00:00",
+      event_type: "cultural",
+      description: "Annual cultural night.",
+      budget: "250.00",
+      created_by_id: 2,
+      rsvp_count: 0,
+      current_member_has_rsvped: false,
+    });
+    mockedAddPrepTaskToEvent.mockResolvedValue({
+      id: 1,
+      group_name: "Setup",
+      due_date: "2030-05-20T12:00:00+00:00",
+      assignee_id: null,
+      is_overdue: false,
+      is_complete: false,
+      checklist_items: [],
+    });
+
+    render(<CreateEventForm onCreated={onCreated} />);
+
+    await user.click(screen.getByRole("button", { name: "New event" }));
+    await user.type(screen.getByLabelText("Event name"), "Dashain Celebration");
+    await user.type(screen.getByLabelText("Description"), "Annual cultural night.");
+    await user.selectOptions(screen.getByLabelText("Event type"), "cultural");
+    await user.type(screen.getByLabelText("Date"), "2030-06-01");
+    await user.clear(screen.getByLabelText("Start time"));
+    await user.type(screen.getByLabelText("Start time"), "18:00");
+    await user.click(
+      screen.getByRole("button", { name: "Generate prep checklist" }),
+    );
+
+    expect(await screen.findByText(/5 tasks across 2 categories/)).toBeInTheDocument();
+    expect(mockedGenerateEventChecklist).toHaveBeenCalledWith({
+      event_name: "Dashain Celebration",
+      event_type: "cultural",
+    });
+
+    await user.click(
+      screen.getByRole("button", { name: "Create event with prep tasks" }),
+    );
+
+    await waitFor(() => {
+      expect(mockedCreateEvent).toHaveBeenCalled();
+    });
+    expect(mockedAddPrepTaskToEvent).toHaveBeenCalledTimes(2);
+    expect(mockedAddPrepTaskToEvent).toHaveBeenCalledWith(
+      12,
+      expect.objectContaining({
+        group_name: "Setup",
+        checklist_items: ["Reserve room", "Test AV", "Print sign-in sheet"],
+      }),
+    );
     expect(onCreated).toHaveBeenCalled();
   });
 });

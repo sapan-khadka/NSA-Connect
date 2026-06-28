@@ -20,7 +20,7 @@ def test_get_anthropic_client_returns_singleton(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test-key")
     get_settings.cache_clear()
 
-    with patch("app.integrations.anthropic_client.Anthropic") as mock_anthropic:
+    with patch("anthropic.Anthropic") as mock_anthropic:
         first = get_anthropic_client()
         second = get_anthropic_client()
 

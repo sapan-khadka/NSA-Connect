@@ -1,8 +1,10 @@
 from functools import lru_cache
-
-from anthropic import Anthropic
+from typing import TYPE_CHECKING
 
 from app.core.config import get_settings
+
+if TYPE_CHECKING:
+    from anthropic import Anthropic
 
 
 class AnthropicNotConfiguredError(RuntimeError):
@@ -10,7 +12,9 @@ class AnthropicNotConfiguredError(RuntimeError):
 
 
 @lru_cache
-def get_anthropic_client() -> Anthropic:
+def get_anthropic_client() -> "Anthropic":
+    from anthropic import Anthropic
+
     settings = get_settings()
     if not settings.ANTHROPIC_API_KEY:
         raise AnthropicNotConfiguredError(

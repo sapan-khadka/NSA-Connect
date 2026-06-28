@@ -11,6 +11,13 @@ class PrepTaskCreateRequest(BaseModel):
     group_name: str = Field(min_length=1, max_length=255)
     due_date: datetime
     assignee_id: int | None = None
+    checklist_items: list[str] | None = Field(
+        default=None,
+        max_length=20,
+        description=(
+            "Optional custom checklist labels; uses group template when omitted"
+        ),
+    )
 
     @field_validator("group_name", mode="before")
     @classmethod
@@ -20,6 +27,25 @@ class PrepTaskCreateRequest(BaseModel):
         if not value:
             raise ValueError("Must not be empty")
         return value
+
+    @field_validator("checklist_items", mode="before")
+    @classmethod
+    def strip_checklist_items(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+
+        cleaned: list[str] = []
+        for item in value:
+            if not isinstance(item, str):
+                continue
+            label = item.strip()
+            if label:
+                cleaned.append(label)
+
+        if not cleaned:
+            raise ValueError("checklist_items must include at least one task")
+
+        return cleaned
 
     @field_validator("due_date")
     @classmethod

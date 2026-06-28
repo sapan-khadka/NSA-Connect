@@ -9,16 +9,32 @@ export function HomePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/health")
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 5000);
+
+    fetch("/health", { signal: controller.signal })
       .then(async (res) => {
         if (!res.ok) {
-          throw new Error("Not Found");
+          throw new Error(`HTTP ${res.status}`);
         }
 
         return res.json() as Promise<HealthResponse>;
       })
       .then((data) => setHealth(data))
-      .catch((err: Error) => setError(err.message ?? "Request failed"));
+      .catch((err: Error) => {
+        if (err.name === "AbortError") {
+          setError("Unavailable (timeout — is the backend running?)");
+          return;
+        }
+
+        setError(err.message ?? "Request failed");
+      })
+      .finally(() => window.clearTimeout(timeoutId));
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
   }, []);
 
   return (

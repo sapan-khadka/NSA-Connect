@@ -237,3 +237,30 @@ def test_add_prep_task_prep_tasks_alias_still_works(
 
     assert response.status_code == 201
     assert response.json()["group_name"] == "Setup"
+
+
+def test_board_member_can_add_prep_task_with_custom_checklist_items(
+    client,
+    board_member_headers,
+):
+    event_id = _create_event(client, board_member_headers).json()["id"]
+
+    response = client.post(
+        f"/api/v1/events/{event_id}/tasks",
+        json=_prep_task_payload(
+            group_name="Marketing & Outreach",
+            checklist_items=[
+                "Design Instagram flyer",
+                "Post RSVP link to group chat",
+            ],
+        ),
+        headers=board_member_headers,
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["group_name"] == "Marketing & Outreach"
+    assert [item["label"] for item in body["checklist_items"]] == [
+        "Design Instagram flyer",
+        "Post RSVP link to group chat",
+    ]
