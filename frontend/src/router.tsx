@@ -5,12 +5,14 @@ import { AppLayout } from "./layouts/AppLayout";
 import { BoardDashboardPage } from "./pages/BoardDashboardPage";
 import { BoardTasksPage } from "./pages/BoardTasksPage";
 import { AiAssistantPage } from "./pages/AiAssistantPage";
+import { AnnouncementEmailPage } from "./pages/AnnouncementEmailPage";
 import { EventsPage } from "./pages/EventsPage";
 import { FinancePage } from "./pages/FinancePage";
 import { GeneralDashboardPage } from "./pages/GeneralDashboardPage";
 import { MyTasksPage } from "./pages/MyTasksPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
+import { MeetingMinutesPage } from "./pages/MeetingMinutesPage";
 import { MembersPage } from "./pages/MembersPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProfilePage } from "./pages/ProfilePage";
@@ -69,6 +71,22 @@ export const appRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute minRole="board">
             <BoardTasksPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "board/meeting-minutes",
+        element: (
+          <ProtectedRoute minRole="board">
+            <MeetingMinutesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "board/announcement-email",
+        element: (
+          <ProtectedRoute minRole="board">
+            <AnnouncementEmailPage />
           </ProtectedRoute>
         ),
       },

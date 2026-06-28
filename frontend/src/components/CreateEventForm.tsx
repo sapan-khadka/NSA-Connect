@@ -311,7 +311,7 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
                 disabled={!canGenerateChecklist || isGeneratingChecklist || isSubmitting}
                 className="rounded-md border border-accent bg-white px-3 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accent/5 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isGeneratingChecklist ? "Generating…" : "Generate prep checklist"}
+                {isGeneratingChecklist ? "Generating…" : "Generate Checklist"}
               </button>
             </div>
 

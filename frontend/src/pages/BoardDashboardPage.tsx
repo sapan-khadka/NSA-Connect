@@ -76,6 +76,28 @@ export function BoardDashboardPage() {
           </li>
           <li>
             <Link
+              to="/board/meeting-minutes"
+              className="block rounded-md border border-gray-200 px-4 py-3 transition-colors hover:border-accent hover:bg-accent/5"
+            >
+              <p className="font-medium text-primary">Meeting minutes</p>
+              <p className="mt-1 text-sm text-gray-500">
+                Summarize raw notes into decisions and action items.
+              </p>
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/board/announcement-email"
+              className="block rounded-md border border-gray-200 px-4 py-3 transition-colors hover:border-accent hover:bg-accent/5"
+            >
+              <p className="font-medium text-primary">Announcement email</p>
+              <p className="mt-1 text-sm text-gray-500">
+                Generate a formatted member email from an event name.
+              </p>
+            </Link>
+          </li>
+          <li>
+            <Link
               to="/members?tab=pending"
               className="block rounded-md border border-gray-200 px-4 py-3 transition-colors hover:border-accent hover:bg-accent/5"
             >

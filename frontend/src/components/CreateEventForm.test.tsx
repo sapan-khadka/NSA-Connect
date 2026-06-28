@@ -132,7 +132,7 @@ describe("CreateEventForm", () => {
     await user.clear(screen.getByLabelText("Start time"));
     await user.type(screen.getByLabelText("Start time"), "18:00");
     await user.click(
-      screen.getByRole("button", { name: "Generate prep checklist" }),
+      screen.getByRole("button", { name: "Generate Checklist" }),
     );
 
     expect(await screen.findByText(/5 tasks across 2 categories/)).toBeInTheDocument();

@@ -21,6 +21,8 @@ export function AppLayout() {
   const showMemberDirectory = member ? canViewMemberDirectory(member.role) : false;
   const showFinance = member ? canAccessFinance(member.role) : false;
   const showBoardTasks = showMemberDirectory;
+  const showMeetingMinutes = showMemberDirectory;
+  const showAnnouncementEmail = showMemberDirectory;
   const showMyTasks = member?.role === "general";
   const dashboardPath = member ? getDashboardPath(member.role) : "/member";
   const isWidePage = location.pathname === "/board/tasks";
@@ -80,6 +82,20 @@ export function AppLayout() {
               <li>
                 <NavLink to="/board/tasks" className={navLinkClass}>
                   Tasks
+                </NavLink>
+              </li>
+            )}
+            {showMeetingMinutes && (
+              <li>
+                <NavLink to="/board/meeting-minutes" className={navLinkClass}>
+                  Minutes
+                </NavLink>
+              </li>
+            )}
+            {showAnnouncementEmail && (
+              <li>
+                <NavLink to="/board/announcement-email" className={navLinkClass}>
+                  Announce
                 </NavLink>
               </li>
             )}
