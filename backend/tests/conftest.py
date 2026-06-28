@@ -21,16 +21,31 @@ BAD_DOMAIN_EMAIL = "sapan@gmail.com"
 
 @pytest.fixture(autouse=True)
 def block_external_integrations():
-    """Never hit Redis, Celery brokers, SendGrid, or Anthropic during tests."""
+    """Never hit Redis, Celery brokers, SendGrid, Anthropic, or OpenAI during tests."""
     sendgrid_response = MagicMock(status_code=202, body="accepted")
     anthropic_sdk_client = MagicMock(name="anthropic_sdk_client")
     anthropic_sdk_client.messages.create.side_effect = AssertionError(
         "Real Anthropic API must not be called in tests; use mock_claude_checklist_api",
     )
+    openai_sdk_client = MagicMock(name="openai_sdk_client")
+
+    def fake_embeddings_create(**kwargs):
+        inputs = kwargs["input"]
+        if isinstance(inputs, str):
+            inputs = [inputs]
+        data = []
+        for index, text in enumerate(inputs):
+            seed = hash(text)
+            vector = [float((seed + offset) % 1000) / 1000.0 for offset in range(1536)]
+            data.append(MagicMock(embedding=vector, index=index))
+        return MagicMock(data=data)
+
+    openai_sdk_client.embeddings.create.side_effect = fake_embeddings_create
 
     with (
         patch("app.integrations.sendgrid_client.SendGridAPIClient") as sendgrid_client,
         patch("anthropic.Anthropic", return_value=anthropic_sdk_client) as anthropic_client,
+        patch("openai.OpenAI", return_value=openai_sdk_client) as openai_client,
         patch("celery.app.task.Task.delay") as celery_delay,
         patch("celery.app.task.Task.apply_async") as celery_apply_async,
         patch("app.services.email_service.settings.EMAIL_ENABLED", False),
@@ -39,6 +54,7 @@ def block_external_integrations():
         patch("app.core.config.settings.CLOUDINARY_API_KEY", "test-key"),
         patch("app.core.config.settings.CLOUDINARY_API_SECRET", "test-secret"),
         patch("app.core.config.settings.AI_ENABLED", False),
+        patch("app.core.config.settings.OPENAI_API_KEY", "test-openai-key"),
     ):
         sendgrid_client.return_value.send.return_value = sendgrid_response
         from app.integrations.cloudinary_client import CloudinaryUploadResult
@@ -54,6 +70,8 @@ def block_external_integrations():
             "sendgrid_client": sendgrid_client,
             "anthropic_client": anthropic_client,
             "anthropic_sdk_client": anthropic_sdk_client,
+            "openai_client": openai_client,
+            "openai_sdk_client": openai_sdk_client,
             "celery_delay": celery_delay,
             "celery_apply_async": celery_apply_async,
             "cloudinary_upload_receipt": cloudinary_upload_receipt,

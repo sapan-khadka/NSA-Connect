@@ -64,6 +64,34 @@ class Settings(BaseSettings):
         description="Default Anthropic model for app-wide AI calls",
     )
 
+    CONSTITUTION_CHUNK_SIZE_TOKENS: int = Field(
+        default=800,
+        ge=1,
+        description="Target token count per constitution chunk for retrieval",
+    )
+    CONSTITUTION_CHUNK_OVERLAP_TOKENS: int = Field(
+        default=200,
+        ge=0,
+        description="Token overlap between adjacent constitution chunks",
+    )
+
+    OPENAI_API_KEY: str = Field(
+        default="",
+        description="OpenAI API key for constitution embedding generation",
+    )
+    EMBEDDING_MODEL: str = Field(
+        default="text-embedding-3-small",
+        description="OpenAI embedding model for pgvector storage",
+    )
+    CONSTITUTION_SEARCH_DEFAULT_LIMIT: int = Field(
+        default=5,
+        ge=1,
+        le=20,
+        description=(
+            "Default number of constitution chunks returned for semantic search"
+        ),
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
