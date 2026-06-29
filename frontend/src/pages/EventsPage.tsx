@@ -8,6 +8,7 @@ import { toLocalIsoDate } from "../lib/calendar";
 import { formatMonthQuery } from "../lib/calendar-events";
 import {
   cancelEventRsvp,
+  deleteEvent,
   fetchEvent,
   fetchEvents,
   rsvpToEvent,
@@ -46,11 +47,13 @@ export function EventsPage() {
   const [togglingItemId, setTogglingItemId] = useState<number | null>(null);
   const [assigningTaskId, setAssigningTaskId] = useState<number | null>(null);
   const [rsvpLoading, setRsvpLoading] = useState(false);
+  const [deletingEvent, setDeletingEvent] = useState(false);
   const [assignableMembers, setAssignableMembers] = useState<MemberResponse[]>(
     [],
   );
 
   const canAssignTasks = member ? isRoleAtLeast(member.role, "board") : false;
+  const canDeleteEvent = canAssignTasks;
 
   useEffect(() => {
     let cancelled = false;
@@ -405,6 +408,29 @@ export function EventsPage() {
     }
   }, []);
 
+  const handleDeleteEvent = useCallback(
+    async (eventId: number) => {
+      setDeletingEvent(true);
+      setError(null);
+
+      try {
+        await deleteEvent(eventId);
+        setEvents((current) => current.filter((event) => event.id !== eventId));
+        setEventDetail((current) =>
+          current && current.id === eventId ? null : current,
+        );
+        setSelectedEventId((current) =>
+          current === eventId ? null : current,
+        );
+      } catch {
+        setError("Could not delete this event. Please try again.");
+      } finally {
+        setDeletingEvent(false);
+      }
+    },
+    [],
+  );
+
   return (
     <div className="space-y-6">
       <section>
@@ -458,6 +484,11 @@ export function EventsPage() {
           }}
           onCancelRsvp={() => {
             void handleCancelRsvp();
+          }}
+          canDeleteEvent={canDeleteEvent}
+          deletingEvent={deletingEvent}
+          onDeleteEvent={(eventId) => {
+            void handleDeleteEvent(eventId);
           }}
         />
       </div>

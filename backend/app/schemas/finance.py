@@ -46,6 +46,42 @@ class FinanceEntryCreateRequest(BaseModel):
         return value
 
 
+class FinanceEntryUpdateRequest(BaseModel):
+    entry_type: FinanceEntryType | None = None
+    category: FinanceCategory | None = None
+    amount: Decimal | None = Field(default=None, gt=Decimal("0"), le=MAX_FINANCE_AMOUNT)
+    description: str | None = Field(default=None, max_length=5000)
+    receipt_url: str | None = Field(default=None, max_length=2048)
+    event_id: int | None = None
+
+    @field_validator("description", mode="before")
+    @classmethod
+    def normalize_description(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            return value.strip()
+        return value
+
+    @field_validator("receipt_url", mode="before")
+    @classmethod
+    def normalize_receipt_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            value = value.strip()
+        return value or None
+
+    @field_validator("amount")
+    @classmethod
+    def amount_must_have_two_decimal_places(cls, value: Decimal | None) -> Decimal | None:
+        if value is None:
+            return None
+        if value != value.quantize(Decimal("0.01")):
+            raise ValueError("Amount must have at most two decimal places")
+        return value
+
+
 class FinanceEntryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

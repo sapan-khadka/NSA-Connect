@@ -64,8 +64,8 @@ describe("CreateEventForm", () => {
     await user.type(screen.getByLabelText("Event name"), "Spring Social");
     await user.type(screen.getByLabelText("Description"), "Food and games.");
     await user.selectOptions(screen.getByLabelText("Event type"), "social");
-    await user.clear(screen.getByLabelText("Budget (USD)"));
-    await user.type(screen.getByLabelText("Budget (USD)"), "125.5");
+    await user.clear(screen.getByLabelText(/Budget \(USD\)/));
+    await user.type(screen.getByLabelText(/Budget \(USD\)/), "125.5");
     await user.type(screen.getByLabelText("Date"), "2030-06-15");
     await user.type(screen.getByLabelText("Start time"), "18:00");
     await user.click(screen.getByRole("button", { name: "Create event" }));

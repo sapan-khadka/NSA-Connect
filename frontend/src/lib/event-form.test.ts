@@ -25,7 +25,43 @@ describe("event form", () => {
     expect(errors.name).toBeTruthy();
     expect(errors.description).toBeTruthy();
     expect(errors.event_date).toBeTruthy();
-    expect(errors.budget).toBeTruthy();
+  });
+
+  it("treats budget as optional and defaults an empty value to 0.00", () => {
+    const errors = validateCreateEventForm({
+      name: "Spring Social",
+      description: "Food and games.",
+      event_type: "social",
+      event_date: "2030-06-15",
+      event_time: "18:00",
+      budget: "",
+    });
+
+    expect(errors.budget).toBeUndefined();
+
+    const payload = buildCreateEventPayload({
+      name: "Spring Social",
+      description: "Food and games.",
+      event_type: "social",
+      event_date: "2030-06-15",
+      event_time: "18:00",
+      budget: "",
+    });
+
+    expect(payload.budget).toBe("0.00");
+  });
+
+  it("still rejects a malformed budget when one is provided", () => {
+    expect(
+      validateCreateEventForm({
+        name: "Spring Social",
+        description: "Food and games.",
+        event_type: "social",
+        event_date: "2030-06-15",
+        event_time: "18:00",
+        budget: "12.999",
+      }).budget,
+    ).toBeTruthy();
   });
 
   it("builds API payload with trimmed values and formatted budget", () => {

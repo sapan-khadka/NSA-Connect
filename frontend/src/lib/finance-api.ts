@@ -135,6 +135,30 @@ export async function createFinanceEntry(
   return response.data;
 }
 
+export type UpdateFinanceEntryRequest = {
+  entry_type?: FinanceEntryType;
+  category?: string;
+  amount?: string;
+  description?: string;
+  receipt_url?: string | null;
+  event_id?: number | null;
+};
+
+export async function updateFinanceEntry(
+  entryId: number,
+  data: UpdateFinanceEntryRequest,
+): Promise<FinanceEntryResponse> {
+  const response = await api.patch<FinanceEntryResponse>(
+    `/v1/finance/${entryId}`,
+    data,
+  );
+  return response.data;
+}
+
+export async function deleteFinanceEntry(entryId: number): Promise<void> {
+  await api.delete(`/v1/finance/${entryId}`);
+}
+
 export async function uploadFinanceReceipt(
   file: File,
 ): Promise<ReceiptUploadResponse> {

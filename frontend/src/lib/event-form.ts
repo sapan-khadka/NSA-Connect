@@ -22,7 +22,7 @@ export const initialCreateEventValues: CreateEventFormValues = {
   event_type: "cultural",
   event_date: "",
   event_time: "18:00",
-  budget: "0.00",
+  budget: "",
 };
 
 /** Build a timezone-aware ISO string from local date and time inputs. */
@@ -98,7 +98,7 @@ export function validateCreateEventField(
       return null;
     case "budget": {
       if (!value.trim()) {
-        return "Budget is required";
+        return null;
       }
       if (!/^\d+(\.\d{1,2})?$/.test(value.trim())) {
         return "Budget must be a number with up to 2 decimal places";
@@ -133,6 +133,9 @@ export function validateCreateEventForm(
 }
 
 export function formatBudgetForSubmit(value: string): string {
+  if (!value.trim()) {
+    return "0.00";
+  }
   return Number(value).toFixed(2);
 }
 

@@ -125,6 +125,77 @@ describe("EventDayPanel", () => {
     expect(screen.getByText("3 members going")).toBeInTheDocument();
   });
 
+  it("hides the delete button when the member cannot manage events", () => {
+    render(
+      <EventDayPanel
+        selectedDate="2030-06-15"
+        dayEvents={[dayEvent]}
+        selectedEventId={1}
+        onSelectEvent={vi.fn()}
+        eventDetail={eventDetail}
+        detailLoading={false}
+        detailError={null}
+        {...panelProps}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Delete event" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("calls onDeleteEvent after confirmation when allowed", async () => {
+    const user = userEvent.setup();
+    const onDeleteEvent = vi.fn();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    render(
+      <EventDayPanel
+        selectedDate="2030-06-15"
+        dayEvents={[dayEvent]}
+        selectedEventId={1}
+        onSelectEvent={vi.fn()}
+        eventDetail={eventDetail}
+        detailLoading={false}
+        detailError={null}
+        canDeleteEvent
+        onDeleteEvent={onDeleteEvent}
+        {...panelProps}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Delete event" }));
+    expect(onDeleteEvent).toHaveBeenCalledWith(1);
+
+    vi.restoreAllMocks();
+  });
+
+  it("does not delete when confirmation is cancelled", async () => {
+    const user = userEvent.setup();
+    const onDeleteEvent = vi.fn();
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    render(
+      <EventDayPanel
+        selectedDate="2030-06-15"
+        dayEvents={[dayEvent]}
+        selectedEventId={1}
+        onSelectEvent={vi.fn()}
+        eventDetail={eventDetail}
+        detailLoading={false}
+        detailError={null}
+        canDeleteEvent
+        onDeleteEvent={onDeleteEvent}
+        {...panelProps}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Delete event" }));
+    expect(onDeleteEvent).not.toHaveBeenCalled();
+
+    vi.restoreAllMocks();
+  });
+
   it("switches events when multiple occur on the same day", async () => {
     const user = userEvent.setup();
     const onSelectEvent = vi.fn();

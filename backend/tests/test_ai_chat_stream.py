@@ -80,6 +80,27 @@ def test_chat_stream_emits_tokens_metadata_and_done(
     assert "event: done" in body
 
 
+def test_chat_stream_emits_error_event_when_ai_disabled(
+    client,
+    general_member_headers,
+):
+    disabled_settings = _chat_settings_mock()
+    disabled_settings.AI_ENABLED = False
+
+    with patch(CHAT_SETTINGS_PATCH, return_value=disabled_settings):
+        with client.stream(
+            "POST",
+            "/api/v1/ai/chat/stream",
+            headers=general_member_headers,
+            json={"message": "Anything?"},
+        ) as response:
+            assert response.status_code == 200
+            body = "".join(response.iter_text())
+
+    assert "event: error" in body
+    assert "AI features are disabled" in body
+
+
 def test_chat_stream_handles_tool_use_before_final_tokens(
     client,
     general_member_headers,

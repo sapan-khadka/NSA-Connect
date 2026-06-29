@@ -302,7 +302,12 @@ export function FinancePage() {
             eventOptions={eventOptions}
             onCreated={handleFinanceEntryCreated}
           />
-          <FinanceEntryList semester={semester} refreshKey={refreshKey} />
+          <FinanceEntryList
+            semester={semester}
+            refreshKey={refreshKey}
+            canManage={canViewTreasury}
+            onChanged={() => setRefreshKey((current) => current + 1)}
+          />
         </>
       )}
 

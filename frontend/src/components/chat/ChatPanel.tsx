@@ -131,6 +131,13 @@ export function ChatPanel() {
           },
           onError: (message) => {
             setError(message);
+            setMessages((current) =>
+              current.filter(
+                (entry) =>
+                  entry.id !== assistantMessageId ||
+                  entry.content.trim().length > 0,
+              ),
+            );
           },
         },
         controller.signal,

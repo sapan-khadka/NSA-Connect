@@ -1,9 +1,10 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import extract, func, select
+from sqlalchemy import extract, func, select, update
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.event import Event, EventType
+from app.models.finance_entry import FinanceEntry
 from app.schemas.event import EventCreateRequest
 
 
@@ -29,6 +30,29 @@ def create_event(
     db.commit()
     db.refresh(event)
     return event
+
+
+def delete_event(db: Session, event_id: int) -> None:
+    event = db.get(Event, event_id)
+    if event is None:
+        raise EventNotFoundError
+
+    # Preserve financial records: unlink any finance entries from the event
+    # rather than deleting them, so treasury history stays intact.
+    db.execute(
+        update(FinanceEntry)
+        .where(FinanceEntry.event_id == event_id)
+        .values(event_id=None),
+    )
+
+    # Prep tasks are not cascade-deleted via the Event relationship, so remove
+    # them explicitly (their checklist items cascade through the ORM). RSVPs and
+    # volunteer slots cascade automatically when the event is deleted.
+    for task in list(event.prep_tasks):
+        db.delete(task)
+
+    db.delete(event)
+    db.commit()
 
 
 def list_events(

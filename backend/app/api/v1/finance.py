@@ -11,6 +11,7 @@ from app.schemas.finance import (
     FinanceEntryCreateRequest,
     FinanceEntryListResponse,
     FinanceEntryResponse,
+    FinanceEntryUpdateRequest,
     FinanceEventBudgetListResponse,
     FinanceExpenseCategoryListResponse,
     FinanceSummaryResponse,
@@ -18,11 +19,14 @@ from app.schemas.finance import (
 )
 from app.services.event_service import EventNotFoundError
 from app.services.finance_service import (
+    FinanceEntryNotFoundError,
     create_finance_entry,
+    delete_finance_entry,
     get_event_budget_breakdown,
     get_expense_by_category,
     get_finance_summary,
     list_finance_entries,
+    update_finance_entry,
 )
 from app.services.receipt_upload_service import (
     ReceiptUploadUnavailableError,
@@ -165,3 +169,43 @@ def create_finance_entry_endpoint(
         ) from None
 
     return FinanceEntryResponse.from_entry(entry)
+
+
+@router.patch("/{entry_id}", response_model=FinanceEntryResponse)
+def update_finance_entry_endpoint(
+    entry_id: int,
+    data: FinanceEntryUpdateRequest,
+    db: Session = Depends(get_db),
+    _: Member = Depends(require_treasurer),
+):
+    try:
+        entry = update_finance_entry(db, entry_id, data)
+    except FinanceEntryNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Finance entry not found",
+        ) from None
+    except EventNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        ) from None
+
+    return FinanceEntryResponse.from_entry(entry)
+
+
+@router.delete("/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_finance_entry_endpoint(
+    entry_id: int,
+    db: Session = Depends(get_db),
+    _: Member = Depends(require_treasurer),
+):
+    try:
+        delete_finance_entry(db, entry_id)
+    except FinanceEntryNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Finance entry not found",
+        ) from None
+
+    return None

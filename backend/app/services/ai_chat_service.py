@@ -231,6 +231,27 @@ def stream_chat_with_nsa_assistant(
     member: Member,
     data: ChatRequest,
 ) -> Iterator[str]:
+    """Stream a chat response as SSE.
+
+    Known failures are surfaced to the client as an ``error`` event rather than
+    raised, because the response headers are already sent once streaming begins
+    and a raised exception would otherwise drop the connection with no signal,
+    leaving the UI stuck on a typing indicator.
+    """
+    try:
+        yield from _stream_chat_impl(db, member=member, data=data)
+    except AIDisabledError:
+        yield _format_sse("error", {"detail": "AI features are disabled"})
+    except AIChatError as exc:
+        yield _format_sse("error", {"detail": str(exc)})
+
+
+def _stream_chat_impl(
+    db: Session,
+    *,
+    member: Member,
+    data: ChatRequest,
+) -> Iterator[str]:
     settings = get_settings()
     if not settings.AI_ENABLED:
         raise AIDisabledError

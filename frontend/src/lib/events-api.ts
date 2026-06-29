@@ -91,6 +91,10 @@ export async function fetchEvent(eventId: number): Promise<EventDetailResponse> 
   return response.data;
 }
 
+export async function deleteEvent(eventId: number): Promise<void> {
+  await api.delete(`/v1/events/${eventId}`);
+}
+
 export async function rsvpToEvent(
   eventId: number,
 ): Promise<EventRsvpStatusResponse> {

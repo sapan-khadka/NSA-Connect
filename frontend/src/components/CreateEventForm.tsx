@@ -236,7 +236,8 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
                 htmlFor="event-budget"
                 className="block text-sm font-medium text-primary"
               >
-                Budget (USD)
+                Budget (USD){" "}
+                <span className="font-normal text-gray-500">(optional)</span>
               </label>
               <input
                 id="event-budget"
@@ -244,6 +245,7 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
                 min="0"
                 step="0.01"
                 inputMode="decimal"
+                placeholder="0.00"
                 value={values.budget}
                 onChange={(event) => updateField("budget", event.target.value)}
                 onBlur={() => validateField("budget")}

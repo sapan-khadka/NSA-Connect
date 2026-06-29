@@ -42,27 +42,32 @@ export function ProfilePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!member) {
-      return;
-    }
-
-    const currentMember = member;
-    setIsLoading(true);
-    setServerError(null);
+    let cancelled = false;
 
     fetchMyProfile()
       .then((profile) => {
+        if (cancelled) {
+          return;
+        }
         updateMember(profile);
         setValues(memberToFormValues(profile));
       })
       .catch((error) => {
+        if (cancelled) {
+          return;
+        }
         setServerError(getApiErrorMessage(error));
-        setValues(memberToFormValues(currentMember));
       })
       .finally(() => {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       });
-  }, [member, updateMember]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [updateMember]);
 
   if (!member || !values) {
     return null;

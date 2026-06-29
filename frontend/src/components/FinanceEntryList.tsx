@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-import { formatFinanceCategory } from "../lib/finance-categories";
 import {
+  FINANCE_CATEGORY_LABELS,
+  formatFinanceCategory,
+} from "../lib/finance-categories";
+import {
+  deleteFinanceEntry,
   fetchFinanceEntries,
+  updateFinanceEntry,
   type FinanceEntryResponse,
+  type FinanceEntryType,
 } from "../lib/finance-api";
 import { formatCurrency } from "../lib/format-currency";
 import { formatEventDateTime } from "../lib/format-datetime";
@@ -12,12 +18,35 @@ import { formatEventDateTime } from "../lib/format-datetime";
 type FinanceEntryListProps = {
   semester: string;
   refreshKey: number;
+  canManage?: boolean;
+  onChanged?: () => void;
 };
 
-export function FinanceEntryList({ semester, refreshKey }: FinanceEntryListProps) {
+type EditDraft = {
+  entry_type: FinanceEntryType;
+  category: string;
+  amount: string;
+  description: string;
+};
+
+const CATEGORY_OPTIONS = Object.keys(FINANCE_CATEGORY_LABELS);
+
+const editInputClassName =
+  "w-full rounded-md border border-gray-300 px-2 py-1 text-sm text-primary focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
+
+export function FinanceEntryList({
+  semester,
+  refreshKey,
+  canManage = false,
+  onChanged,
+}: FinanceEntryListProps) {
   const [entries, setEntries] = useState<FinanceEntryResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [draft, setDraft] = useState<EditDraft | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,6 +93,89 @@ export function FinanceEntryList({ semester, refreshKey }: FinanceEntryListProps
     };
   }, [semester, refreshKey]);
 
+  function startEdit(entry: FinanceEntryResponse) {
+    setActionError(null);
+    setEditingId(entry.id);
+    setDraft({
+      entry_type: entry.entry_type,
+      category: entry.category,
+      amount: entry.amount,
+      description: entry.description,
+    });
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setDraft(null);
+    setActionError(null);
+  }
+
+  function getApiErrorDetail(error: unknown, fallback: string): string {
+    if (axios.isAxiosError(error)) {
+      const detail = error.response?.data?.detail;
+      if (typeof detail === "string") {
+        return detail;
+      }
+    }
+    return fallback;
+  }
+
+  async function saveEdit(entryId: number) {
+    if (!draft) {
+      return;
+    }
+
+    const trimmedAmount = draft.amount.trim();
+    if (!/^\d+(\.\d{1,2})?$/.test(trimmedAmount) || Number(trimmedAmount) <= 0) {
+      setActionError("Enter a valid amount greater than 0 (max two decimals).");
+      return;
+    }
+
+    setBusyId(entryId);
+    setActionError(null);
+
+    try {
+      const updated = await updateFinanceEntry(entryId, {
+        entry_type: draft.entry_type,
+        category: draft.category,
+        amount: trimmedAmount,
+        description: draft.description.trim(),
+      });
+      setEntries((current) =>
+        current.map((entry) => (entry.id === entryId ? updated : entry)),
+      );
+      cancelEdit();
+      onChanged?.();
+    } catch (error) {
+      setActionError(getApiErrorDetail(error, "Unable to update entry."));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleDelete(entry: FinanceEntryResponse) {
+    const label = `${entry.entry_type} of ${formatCurrency(entry.amount)}`;
+    if (!window.confirm(`Delete this ${label}? This cannot be undone.`)) {
+      return;
+    }
+
+    setBusyId(entry.id);
+    setActionError(null);
+
+    try {
+      await deleteFinanceEntry(entry.id);
+      setEntries((current) => current.filter((item) => item.id !== entry.id));
+      if (editingId === entry.id) {
+        cancelEdit();
+      }
+      onChanged?.();
+    } catch (error) {
+      setActionError(getApiErrorDetail(error, "Unable to delete entry."));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="rounded-lg border border-gray-200 bg-white p-10 text-center text-gray-500">
@@ -83,6 +195,8 @@ export function FinanceEntryList({ semester, refreshKey }: FinanceEntryListProps
     );
   }
 
+  const columnCount = canManage ? 7 : 6;
+
   return (
     <section className="rounded-lg border border-gray-200 bg-white p-6">
       <div>
@@ -91,6 +205,15 @@ export function FinanceEntryList({ semester, refreshKey }: FinanceEntryListProps
           Latest logged income and expense entries for the selected semester.
         </p>
       </div>
+
+      {actionError ? (
+        <p
+          role="alert"
+          className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+        >
+          {actionError}
+        </p>
+      ) : null}
 
       <div className="mt-6 overflow-x-auto">
         <table
@@ -105,49 +228,170 @@ export function FinanceEntryList({ semester, refreshKey }: FinanceEntryListProps
               <th className="px-4 py-3 font-semibold">Amount</th>
               <th className="px-4 py-3 font-semibold">Description</th>
               <th className="px-4 py-3 font-semibold">Receipt</th>
+              {canManage ? (
+                <th className="px-4 py-3 font-semibold">Actions</th>
+              ) : null}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {entries.map((entry) => (
-              <tr key={entry.id}>
-                <td className="px-4 py-3 text-gray-600">
-                  {formatEventDateTime(entry.created_at)}
-                </td>
-                <td className="px-4 py-3 capitalize text-primary">{entry.entry_type}</td>
-                <td className="px-4 py-3 text-gray-700">
-                  {formatFinanceCategory(entry.category)}
-                </td>
-                <td
-                  className={`px-4 py-3 font-medium ${
-                    entry.entry_type === "income"
-                      ? "text-emerald-700"
-                      : "text-red-700"
-                  }`}
-                >
-                  {formatCurrency(entry.amount)}
-                </td>
-                <td className="px-4 py-3 text-gray-700">
-                  {entry.description || "—"}
-                </td>
-                <td className="px-4 py-3">
-                  {entry.receipt_url ? (
-                    <a
-                      href={entry.receipt_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-accent hover:underline"
-                    >
-                      View
-                    </a>
-                  ) : (
-                    <span className="text-gray-400">—</span>
-                  )}
-                </td>
-              </tr>
-            ))}
+            {entries.map((entry) => {
+              const isEditing = canManage && editingId === entry.id && draft;
+              const isBusy = busyId === entry.id;
+
+              if (isEditing) {
+                return (
+                  <tr key={entry.id} className="bg-accent/5">
+                    <td className="px-4 py-3 text-gray-600">
+                      {formatEventDateTime(entry.created_at)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <select
+                        aria-label="Edit type"
+                        value={draft.entry_type}
+                        onChange={(event) =>
+                          setDraft({
+                            ...draft,
+                            entry_type: event.target.value as FinanceEntryType,
+                          })
+                        }
+                        className={editInputClassName}
+                      >
+                        <option value="income">income</option>
+                        <option value="expense">expense</option>
+                      </select>
+                    </td>
+                    <td className="px-4 py-3">
+                      <select
+                        aria-label="Edit category"
+                        value={draft.category}
+                        onChange={(event) =>
+                          setDraft({ ...draft, category: event.target.value })
+                        }
+                        className={editInputClassName}
+                      >
+                        {CATEGORY_OPTIONS.map((category) => (
+                          <option key={category} value={category}>
+                            {formatFinanceCategory(category)}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-4 py-3">
+                      <input
+                        aria-label="Edit amount"
+                        type="text"
+                        inputMode="decimal"
+                        value={draft.amount}
+                        onChange={(event) =>
+                          setDraft({ ...draft, amount: event.target.value })
+                        }
+                        className={editInputClassName}
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <input
+                        aria-label="Edit description"
+                        type="text"
+                        value={draft.description}
+                        onChange={(event) =>
+                          setDraft({ ...draft, description: event.target.value })
+                        }
+                        className={editInputClassName}
+                      />
+                    </td>
+                    <td className="px-4 py-3 text-gray-400">—</td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void saveEdit(entry.id)}
+                          disabled={isBusy}
+                          className="rounded-md bg-accent px-3 py-1 text-xs font-medium text-white transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {isBusy ? "Saving…" : "Save"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelEdit}
+                          disabled={isBusy}
+                          className="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-60"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              }
+
+              return (
+                <tr key={entry.id}>
+                  <td className="px-4 py-3 text-gray-600">
+                    {formatEventDateTime(entry.created_at)}
+                  </td>
+                  <td className="px-4 py-3 capitalize text-primary">
+                    {entry.entry_type}
+                  </td>
+                  <td className="px-4 py-3 text-gray-700">
+                    {formatFinanceCategory(entry.category)}
+                  </td>
+                  <td
+                    className={`px-4 py-3 font-medium ${
+                      entry.entry_type === "income"
+                        ? "text-emerald-700"
+                        : "text-red-700"
+                    }`}
+                  >
+                    {formatCurrency(entry.amount)}
+                  </td>
+                  <td className="px-4 py-3 text-gray-700">
+                    {entry.description || "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    {entry.receipt_url ? (
+                      <a
+                        href={entry.receipt_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-accent hover:underline"
+                      >
+                        View
+                      </a>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
+                  </td>
+                  {canManage ? (
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => startEdit(entry)}
+                          disabled={isBusy || editingId !== null}
+                          className="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-primary transition hover:border-accent hover:bg-accent/5 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleDelete(entry)}
+                          disabled={isBusy || editingId !== null}
+                          className="rounded-md border border-red-200 px-3 py-1 text-xs font-medium text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {isBusy ? "…" : "Delete"}
+                        </button>
+                      </div>
+                    </td>
+                  ) : null}
+                </tr>
+              );
+            })}
             {entries.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                <td
+                  colSpan={columnCount}
+                  className="px-4 py-8 text-center text-gray-500"
+                >
                   No transactions logged for this period.
                 </td>
               </tr>

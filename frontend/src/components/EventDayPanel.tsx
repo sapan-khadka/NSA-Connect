@@ -34,6 +34,9 @@ type EventDayPanelProps = {
   rsvpLoading: boolean;
   onRsvp: () => void;
   onCancelRsvp: () => void;
+  canDeleteEvent?: boolean;
+  deletingEvent?: boolean;
+  onDeleteEvent?: (eventId: number) => void;
 };
 
 export function EventDayPanel({
@@ -54,6 +57,9 @@ export function EventDayPanel({
   rsvpLoading,
   onRsvp,
   onCancelRsvp,
+  canDeleteEvent = false,
+  deletingEvent = false,
+  onDeleteEvent,
 }: EventDayPanelProps) {
   const eventProgress = eventDetail
     ? calcPrepProgress(eventDetail.prep_tasks)
@@ -136,6 +142,25 @@ export function EventDayPanel({
                     <p className="mt-3 text-sm leading-relaxed text-gray-700">
                       {eventDetail.description}
                     </p>
+
+                    {canDeleteEvent && onDeleteEvent ? (
+                      <button
+                        type="button"
+                        disabled={deletingEvent}
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Delete "${eventDetail.name}"? This removes the event and its RSVPs and prep tasks. This cannot be undone.`,
+                            )
+                          ) {
+                            onDeleteEvent(eventDetail.id);
+                          }
+                        }}
+                        className="mt-4 rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {deletingEvent ? "Deleting…" : "Delete event"}
+                      </button>
+                    ) : null}
                   </div>
 
                   <EventRsvpButton

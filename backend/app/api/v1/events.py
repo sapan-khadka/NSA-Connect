@@ -17,6 +17,7 @@ from app.schemas.volunteer import VolunteerSlotCreateRequest, VolunteerSlotRespo
 from app.services.event_service import (
     EventNotFoundError,
     create_event,
+    delete_event,
     get_event_with_prep_tasks,
     list_events,
 )
@@ -256,3 +257,20 @@ def create_event_endpoint(
         created_by_id=current_member.id,
     )
     return _build_event_response(db, event, member_id=current_member.id)
+
+
+@router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_event_endpoint(
+    event_id: int,
+    _: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    try:
+        delete_event(db, event_id)
+    except EventNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        ) from None
+
+    return None

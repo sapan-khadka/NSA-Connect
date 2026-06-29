@@ -9,6 +9,7 @@ from app.models.finance_entry import FinanceCategory, FinanceEntry, FinanceEntry
 from app.models.member import Member
 from app.schemas.finance import (
     FinanceEntryCreateRequest,
+    FinanceEntryUpdateRequest,
     FinanceEventBudgetSummary,
     FinanceEventSummary,
     FinanceExpenseCategoryListResponse,
@@ -17,6 +18,10 @@ from app.schemas.finance import (
     FinanceSummaryResponse,
 )
 from app.services.event_service import EventNotFoundError
+
+
+class FinanceEntryNotFoundError(Exception):
+    pass
 
 
 def _semester_filters(semester: str | None) -> list:
@@ -227,6 +232,37 @@ def create_finance_entry(
     db.commit()
     db.refresh(entry)
     return entry
+
+
+def update_finance_entry(
+    db: Session,
+    entry_id: int,
+    data: FinanceEntryUpdateRequest,
+) -> FinanceEntry:
+    entry = db.get(FinanceEntry, entry_id)
+    if entry is None:
+        raise FinanceEntryNotFoundError
+
+    updates = data.model_dump(exclude_unset=True)
+
+    if updates.get("event_id") is not None and db.get(Event, updates["event_id"]) is None:
+        raise EventNotFoundError
+
+    for field, value in updates.items():
+        setattr(entry, field, value)
+
+    db.commit()
+    db.refresh(entry)
+    return entry
+
+
+def delete_finance_entry(db: Session, entry_id: int) -> None:
+    entry = db.get(FinanceEntry, entry_id)
+    if entry is None:
+        raise FinanceEntryNotFoundError
+
+    db.delete(entry)
+    db.commit()
 
 
 def list_finance_entries(
