@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { MyEventTasks } from "../components/MyEventTasks";
 import { useAuth } from "../context/useAuth";
 import { formatEventDateTime } from "../lib/format-datetime";
 import {
@@ -154,6 +155,8 @@ export function MyTasksPage() {
           See what you have signed up for and which events are already complete.
         </p>
       </section>
+
+      <MyEventTasks />
 
       {loadState.status === "loading" ? (
         <div className="rounded-lg border border-gray-200 bg-white p-10 text-center text-gray-500">

@@ -23,6 +23,7 @@ const pendingMember: MemberResponse = {
   graduation_year: 2027,
   role: "general",
   status: "pending",
+  position: "member",
 };
 
 function renderBoardDashboard() {
@@ -38,6 +39,7 @@ function renderBoardDashboard() {
           graduation_year: 2028,
           role: "board",
           status: "approved",
+          position: "member",
         },
         isAuthenticated: true,
       }}

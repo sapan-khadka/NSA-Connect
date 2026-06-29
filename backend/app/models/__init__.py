@@ -2,6 +2,7 @@ from app.models.base import Base
 from app.models.constitutional_chunk import ConstitutionalChunk
 from app.models.event import Event, EventType
 from app.models.event_rsvp import EventRsvp
+from app.models.event_task import EventTask, EventTaskStatus
 from app.models.finance_entry import FinanceCategory, FinanceEntry, FinanceEntryType
 from app.models.member import Member, MemberRole, MemberStatus
 from app.models.preptask import (
@@ -19,6 +20,8 @@ __all__ = [
     "ConstitutionalChunk",
     "Event",
     "EventRsvp",
+    "EventTask",
+    "EventTaskStatus",
     "EventType",
     "FinanceCategory",
     "FinanceEntry",

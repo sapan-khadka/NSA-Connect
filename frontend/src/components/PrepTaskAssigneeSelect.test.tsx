@@ -15,6 +15,7 @@ const members: MemberResponse[] = [
     graduation_year: 2028,
     role: "board",
     status: "approved",
+    position: "member",
   },
 ];
 

@@ -1,6 +1,6 @@
 import { isAxiosError } from "axios";
 
-import type { MemberRole } from "./roles";
+import type { MemberPosition, MemberRole } from "./roles";
 
 import api from "./api";
 import { normalizeSemoEmail, normalizeStudentId } from "./validation";
@@ -43,6 +43,7 @@ export type MemberResponse = {
   graduation_year: number;
   role: MemberRole;
   status: string;
+  position: MemberPosition;
 };
 
 export async function fetchCurrentMember(): Promise<MemberResponse> {

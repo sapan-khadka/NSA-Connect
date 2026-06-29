@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import decode_access_token
-from app.models.member import Member, MemberRole
+from app.models.member import Member, MemberPosition, MemberRole
 
 security = HTTPBearer()
 
@@ -71,3 +71,33 @@ def _require_role(minimum_role: MemberRole):
 require_board = _require_role(MemberRole.BOARD)
 require_treasurer = _require_role(MemberRole.TREASURER)
 require_president = _require_role(MemberRole.PRESIDENT)
+
+
+def require_task_manager(
+    current_member: Member = Depends(get_current_member),
+) -> Member:
+    """Allow President (by role) or Vice President / Event Manager (by position)."""
+    if current_member.role == MemberRole.PRESIDENT or current_member.position in {
+        MemberPosition.VICE_PRESIDENT,
+        MemberPosition.EVENT_MANAGER,
+    }:
+        return current_member
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Requires president, vice president, or event manager",
+    )
+
+
+def require_task_oversight(
+    current_member: Member = Depends(get_current_member),
+) -> Member:
+    """Allow President (by role) or Vice President (by position)."""
+    if (
+        current_member.role == MemberRole.PRESIDENT
+        or current_member.position == MemberPosition.VICE_PRESIDENT
+    ):
+        return current_member
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Requires president or vice president",
+    )

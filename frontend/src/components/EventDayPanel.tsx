@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { EventRsvpButton } from "./EventRsvpButton";
 import { PrepProgressBar } from "./PrepProgressBar";
 import { PrepTaskChecklist } from "./PrepTaskChecklist";
@@ -37,6 +39,7 @@ type EventDayPanelProps = {
   canDeleteEvent?: boolean;
   deletingEvent?: boolean;
   onDeleteEvent?: (eventId: number) => void;
+  renderEventTasks?: (eventId: number) => ReactNode;
 };
 
 export function EventDayPanel({
@@ -60,6 +63,7 @@ export function EventDayPanel({
   canDeleteEvent = false,
   deletingEvent = false,
   onDeleteEvent,
+  renderEventTasks,
 }: EventDayPanelProps) {
   const eventProgress = eventDetail
     ? calcPrepProgress(eventDetail.prep_tasks)
@@ -202,6 +206,8 @@ export function EventDayPanel({
                       </div>
                     )}
                   </section>
+
+                  {renderEventTasks ? renderEventTasks(eventDetail.id) : null}
                 </div>
               ) : null}
             </>

@@ -81,6 +81,7 @@ function renderFinancePage(role: MemberRole = "treasurer") {
           graduation_year: 2028,
           role,
           status: "approved",
+          position: "member",
         },
         isAuthenticated: true,
       }}

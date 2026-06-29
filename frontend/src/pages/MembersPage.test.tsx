@@ -14,6 +14,7 @@ vi.mock("../lib/members-api", () => ({
   approveMember: vi.fn(),
   rejectMember: vi.fn(),
   updateMemberRole: vi.fn(),
+  updateMemberPosition: vi.fn(),
 }));
 
 const directoryMember: MemberResponse = {
@@ -25,6 +26,7 @@ const directoryMember: MemberResponse = {
   graduation_year: 2028,
   role: "board",
   status: "approved",
+  position: "member",
 };
 
 const pendingMember: MemberResponse = {
@@ -36,6 +38,7 @@ const pendingMember: MemberResponse = {
   graduation_year: 2027,
   role: "general",
   status: "pending",
+  position: "member",
 };
 
 function mockDirectoryResponse(members: MemberResponse[] = [directoryMember]) {
@@ -65,6 +68,7 @@ function renderMembersPage(
     <MockAuthProvider
       value={{
         member: {
+          position: "member",
           ...authMember,
           id: 1,
           full_name: "Board User",
@@ -290,7 +294,7 @@ describe("MembersPage", () => {
     expect(
       screen.queryByLabelText("Change role for President User"),
     ).not.toBeInTheDocument();
-    expect(screen.getByText("President")).toBeInTheDocument();
+    expect(screen.getByText("President", { selector: "span" })).toBeInTheDocument();
   });
 
   it("lists pending members from the approval queue", async () => {

@@ -17,6 +17,7 @@ import { MembersPage } from "./pages/MembersPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { RegisterPage } from "./pages/RegisterPage";
+import { TaskOversightPage } from "./pages/TaskOversightPage";
 
 export const appRoutes: RouteObject[] = [
   {
@@ -71,6 +72,14 @@ export const appRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute minRole="board">
             <BoardTasksPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "board/task-oversight",
+        element: (
+          <ProtectedRoute minRole="board">
+            <TaskOversightPage />
           </ProtectedRoute>
         ),
       },

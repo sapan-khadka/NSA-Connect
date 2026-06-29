@@ -6,6 +6,7 @@ import { useLogout } from "../context/useLogout";
 import {
   canAccessFinance,
   canViewMemberDirectory,
+  canViewTaskOversight,
   getDashboardPath,
 } from "../lib/roles";
 
@@ -23,6 +24,9 @@ export function AppLayout() {
   const showBoardTasks = showMemberDirectory;
   const showMeetingMinutes = showMemberDirectory;
   const showAnnouncementEmail = showMemberDirectory;
+  const showTaskOversight = member
+    ? canViewTaskOversight(member.role, member.position)
+    : false;
   const showMyTasks = member?.role === "general";
   const dashboardPath = member ? getDashboardPath(member.role) : "/member";
   const isWidePage = location.pathname === "/board/tasks";
@@ -82,6 +86,13 @@ export function AppLayout() {
               <li>
                 <NavLink to="/board/tasks" className={navLinkClass}>
                   Tasks
+                </NavLink>
+              </li>
+            )}
+            {showTaskOversight && (
+              <li>
+                <NavLink to="/board/task-oversight" className={navLinkClass}>
+                  Oversight
                 </NavLink>
               </li>
             )}

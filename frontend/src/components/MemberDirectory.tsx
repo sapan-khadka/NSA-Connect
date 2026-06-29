@@ -4,12 +4,19 @@ import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/auth-api";
 import { useAuth } from "../context/useAuth";
 import { memberMatchesSearch } from "../lib/member-search";
-import { fetchMembers, updateMemberRole } from "../lib/members-api";
+import {
+  fetchMembers,
+  updateMemberPosition,
+  updateMemberRole,
+} from "../lib/members-api";
 import {
   canPresidentPromoteMember,
+  formatPositionLabel,
+  type MemberPosition,
   type PromotableBoardRole,
 } from "../lib/roles";
 
+import { PositionSelect } from "./PositionSelect";
 import { RoleBadge } from "./RoleBadge";
 import { RolePromotionSelect } from "./RolePromotionSelect";
 import { StatusBadge } from "./StatusBadge";
@@ -29,6 +36,9 @@ export function MemberDirectory() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatingMemberId, setUpdatingMemberId] = useState<number | null>(null);
+  const [updatingPositionId, setUpdatingPositionId] = useState<number | null>(
+    null,
+  );
 
   const isPresident = currentMember?.role === "president";
 
@@ -103,6 +113,27 @@ export function MemberDirectory() {
     }
   }
 
+  async function handlePositionChange(
+    memberId: number,
+    position: MemberPosition,
+  ) {
+    setUpdatingPositionId(memberId);
+    setError(null);
+
+    try {
+      const updatedMember = await updateMemberPosition(memberId, position);
+      setMembers((current) =>
+        current.map((member) =>
+          member.id === memberId ? updatedMember : member,
+        ),
+      );
+    } catch (updateError) {
+      setError(getApiErrorMessage(updateError));
+    } finally {
+      setUpdatingPositionId(null);
+    }
+  }
+
   return (
     <section className="rounded-lg border border-gray-200 bg-white">
       <div className="border-b border-gray-200 px-6 py-4">
@@ -160,6 +191,9 @@ export function MemberDirectory() {
                 Role
               </th>
               <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-gray-500">
+                Position
+              </th>
+              <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-gray-500">
                 Status
               </th>
             </tr>
@@ -167,13 +201,13 @@ export function MemberDirectory() {
           <tbody className="divide-y divide-gray-200 bg-white">
             {isLoading ? (
               <tr>
-                <td colSpan={7} className="px-6 py-8 text-gray-500">
+                <td colSpan={8} className="px-6 py-8 text-gray-500">
                   Loading members...
                 </td>
               </tr>
             ) : visibleMembers.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-6 py-8 text-gray-500">
+                <td colSpan={8} className="px-6 py-8 text-gray-500">
                   {isSearching
                     ? "No members match your search."
                     : "No members found."}
@@ -202,6 +236,19 @@ export function MemberDirectory() {
                       />
                     ) : (
                       <RoleBadge role={member.role} />
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    {isPresident ? (
+                      <PositionSelect
+                        member={member}
+                        isUpdating={updatingPositionId === member.id}
+                        onPositionChange={handlePositionChange}
+                      />
+                    ) : (
+                      <span className="text-gray-600">
+                        {formatPositionLabel(member.position)}
+                      </span>
                     )}
                   </td>
                   <td className="px-6 py-4">

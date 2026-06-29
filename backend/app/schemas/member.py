@@ -3,10 +3,10 @@ from typing import TYPE_CHECKING, Any
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.core.validators import SemoEmailStr, StudentIdStr
-from app.models.member import MemberRole, MemberStatus
+from app.models.member import MemberPosition, MemberRole, MemberStatus
 
 if TYPE_CHECKING:
     from app.models.member import Member
@@ -73,6 +73,10 @@ class MemberBoardRoleUpdateRequest(BaseModel):
     role: Literal[MemberRole.BOARD, MemberRole.GENERAL]
 
 
+class MemberPositionUpdateRequest(BaseModel):
+    position: MemberPosition
+
+
 class MemberStatusUpdateRequest(BaseModel):
     status: MemberStatus
 
@@ -97,8 +101,14 @@ class MemberResponse(BaseModel):
     graduation_year: int
     role: MemberRole
     status: MemberStatus
+    position: MemberPosition = MemberPosition.MEMBER
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("position", mode="before")
+    @classmethod
+    def default_missing_position(cls, value: Any) -> Any:
+        return value if value is not None else MemberPosition.MEMBER
 
     @model_validator(mode="before")
     @classmethod
@@ -122,6 +132,7 @@ class MemberResponse(BaseModel):
             graduation_year=member.graduation_year,
             role=member.role,
             status=member.status,
+            position=member.position or MemberPosition.MEMBER,
         )
 
     def public_fields(self) -> set[str]:

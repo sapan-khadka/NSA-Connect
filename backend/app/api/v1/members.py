@@ -9,6 +9,7 @@ from app.models.member import Member, MemberStatus
 from app.schemas.member import (
     MemberBoardRoleUpdateRequest,
     MemberListResponse,
+    MemberPositionUpdateRequest,
     MemberProfileUpdateRequest,
     MemberResponse,
     PaginatedMemberListResponse,
@@ -26,6 +27,7 @@ from app.services.member_service import (
     list_assignable_board_members,
     reject_member,
     update_member_board_role,
+    update_member_position,
     update_member_profile,
 )
 
@@ -166,6 +168,29 @@ def update_member_role_endpoint(
 
     try:
         member = update_member_board_role(db, member_id, data.role)
+    except MemberNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Member not found",
+        ) from None
+    except InvalidMemberRoleError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from None
+
+    return MemberResponse.from_member(member)
+
+
+@router.patch("/{member_id}/position", response_model=MemberResponse)
+def update_member_position_endpoint(
+    member_id: int,
+    data: MemberPositionUpdateRequest,
+    _: Member = Depends(require_president),
+    db: Session = Depends(get_db),
+):
+    try:
+        member = update_member_position(db, member_id, data.position)
     except MemberNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

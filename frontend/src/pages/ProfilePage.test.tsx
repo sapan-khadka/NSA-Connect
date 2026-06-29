@@ -21,6 +21,7 @@ const mockMember = {
   graduation_year: 2028,
   role: "general" as const,
   status: "approved",
+  position: "member" as const,
 };
 
 function renderProfilePage() {

@@ -2,7 +2,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password, verify_password
-from app.models.member import Member, MemberRole, MemberStatus
+from app.models.member import Member, MemberPosition, MemberRole, MemberStatus
 from app.schemas.member import MemberCreateRequest, MemberProfileUpdateRequest
 
 
@@ -171,6 +171,24 @@ def update_member_board_role(db: Session, member_id: int, role: MemberRole) -> M
         raise InvalidMemberRoleError("Only board members can be demoted to general")
 
     member.role = role
+    db.commit()
+    db.refresh(member)
+    return member
+
+
+def update_member_position(
+    db: Session,
+    member_id: int,
+    position: MemberPosition,
+) -> Member:
+    member = get_member_by_id(db, member_id)
+
+    if not member.is_approved:
+        raise InvalidMemberRoleError(
+            "Only approved members can have their position updated",
+        )
+
+    member.position = position
     db.commit()
     db.refresh(member)
     return member

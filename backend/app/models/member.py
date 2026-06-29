@@ -26,6 +26,17 @@ class MemberStatus(StrEnum):
     REJECTED = "rejected"
 
 
+class MemberPosition(StrEnum):
+    PRESIDENT = "president"
+    VICE_PRESIDENT = "vice_president"
+    SECRETARY = "secretary"
+    TREASURER = "treasurer"
+    EVENT_MANAGER = "event_manager"
+    PUBLIC_RELATIONS_OFFICER = "public_relations_officer"
+    NEW_STUDENT_REPRESENTATIVE = "new_student_representative"
+    MEMBER = "member"
+
+
 _ROLE_LEVELS: dict[MemberRole, int] = {
     MemberRole.GENERAL: 1,
     MemberRole.BOARD: 2,
@@ -55,6 +66,15 @@ class Member(Base):
             values_callable=lambda statuses: [s.value for s in statuses],
         ),
         default=MemberStatus.PENDING,
+        nullable=False,
+    )
+    position = Column(
+        SqlEnum(
+            MemberPosition,
+            values_callable=lambda positions: [p.value for p in positions],
+        ),
+        default=MemberPosition.MEMBER,
+        server_default=MemberPosition.MEMBER.value,
         nullable=False,
     )
 

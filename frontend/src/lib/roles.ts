@@ -65,6 +65,58 @@ export function getRoleBadgeClassName(
   ].join(" ");
 }
 
+export const MEMBER_POSITIONS = [
+  "president",
+  "vice_president",
+  "secretary",
+  "treasurer",
+  "event_manager",
+  "public_relations_officer",
+  "new_student_representative",
+  "member",
+] as const;
+
+export type MemberPosition = (typeof MEMBER_POSITIONS)[number];
+
+export function isMemberPosition(value: string): value is MemberPosition {
+  return MEMBER_POSITIONS.includes(value as MemberPosition);
+}
+
+const POSITION_LABELS: Record<MemberPosition, string> = {
+  president: "President",
+  vice_president: "Vice President",
+  secretary: "Secretary",
+  treasurer: "Treasurer",
+  event_manager: "Event Manager",
+  public_relations_officer: "Public Relations Officer",
+  new_student_representative: "New Student Representative",
+  member: "Member",
+};
+
+export function formatPositionLabel(position: MemberPosition): string {
+  return POSITION_LABELS[position] ?? position;
+}
+
+/** Matches require_task_manager: President (role) or VP / Event Manager (position). */
+export function canManageEventTasks(
+  role: MemberRole,
+  position: MemberPosition,
+): boolean {
+  return (
+    role === "president" ||
+    position === "vice_president" ||
+    position === "event_manager"
+  );
+}
+
+/** Matches require_task_oversight: President (role) or VP (position). */
+export function canViewTaskOversight(
+  role: MemberRole,
+  position: MemberPosition,
+): boolean {
+  return role === "president" || position === "vice_president";
+}
+
 export const PROMOTABLE_BOARD_ROLES = ["general", "board"] as const;
 
 export type PromotableBoardRole = (typeof PROMOTABLE_BOARD_ROLES)[number];

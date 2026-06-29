@@ -1,5 +1,6 @@
 import api from "./api";
 import type { MemberResponse } from "./auth-api";
+import type { MemberPosition } from "./roles";
 
 export type PendingMembersResponse = {
   members: MemberResponse[];
@@ -88,6 +89,17 @@ export async function updateMemberRole(
   const response = await api.patch<MemberResponse>(
     `/v1/members/${memberId}/role`,
     data,
+  );
+  return response.data;
+}
+
+export async function updateMemberPosition(
+  memberId: number,
+  position: MemberPosition,
+): Promise<MemberResponse> {
+  const response = await api.patch<MemberResponse>(
+    `/v1/members/${memberId}/position`,
+    { position },
   );
   return response.data;
 }

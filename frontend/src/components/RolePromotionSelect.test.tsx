@@ -15,6 +15,7 @@ const generalMember: MemberResponse = {
   graduation_year: 2028,
   role: "general",
   status: "approved",
+  position: "member",
 };
 
 describe("RolePromotionSelect", () => {

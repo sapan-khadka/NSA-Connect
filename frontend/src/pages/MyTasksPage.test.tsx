@@ -9,6 +9,12 @@ vi.mock("../lib/volunteer-api", () => ({
   fetchMyVolunteerSignups: vi.fn(),
 }));
 
+vi.mock("../lib/event-tasks-api", () => ({
+  fetchMyEventTasks: vi.fn(() => Promise.resolve({ tasks: [], total: 0 })),
+  updateEventTask: vi.fn(),
+  uploadTaskPhoto: vi.fn(),
+}));
+
 const mockSignups = {
   signups: [
     {
@@ -57,6 +63,7 @@ describe("MyTasksPage", () => {
             graduation_year: 2028,
             role: "general",
             status: "approved",
+            position: "member",
           },
           isAuthenticated: true,
         }}
@@ -89,6 +96,7 @@ describe("MyTasksPage", () => {
             graduation_year: 2028,
             role: "general",
             status: "approved",
+            position: "member",
           },
           isAuthenticated: true,
         }}

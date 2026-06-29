@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { CreateEventForm } from "../components/CreateEventForm";
 import { EventDayPanel } from "../components/EventDayPanel";
+import { EventTaskManager } from "../components/EventTaskManager";
 import { MonthlyCalendarGrid } from "../components/MonthlyCalendarGrid";
 import { useAuth } from "../context/useAuth";
 import { toLocalIsoDate } from "../lib/calendar";
@@ -22,7 +23,7 @@ import {
   applyChecklistToggle,
   replacePrepTaskInList,
 } from "../lib/prep-progress";
-import { isRoleAtLeast } from "../lib/roles";
+import { canManageEventTasks, isRoleAtLeast } from "../lib/roles";
 import {
   updatePrepTaskAssignee,
   updatePrepTaskChecklistItem,
@@ -54,6 +55,9 @@ export function EventsPage() {
 
   const canAssignTasks = member ? isRoleAtLeast(member.role, "board") : false;
   const canDeleteEvent = canAssignTasks;
+  const canManageTasks = member
+    ? canManageEventTasks(member.role, member.position)
+    : false;
 
   useEffect(() => {
     let cancelled = false;
@@ -490,6 +494,18 @@ export function EventsPage() {
           onDeleteEvent={(eventId) => {
             void handleDeleteEvent(eventId);
           }}
+          renderEventTasks={
+            canAssignTasks
+              ? (eventId) => (
+                  <EventTaskManager
+                    key={eventId}
+                    eventId={eventId}
+                    canManage={canManageTasks}
+                    assignableMembers={assignableMembers}
+                  />
+                )
+              : undefined
+          }
         />
       </div>
     </div>

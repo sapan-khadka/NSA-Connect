@@ -31,6 +31,7 @@ export function createMockMember(
     graduation_year: 2028,
     role,
     status: "approved",
+    position: "member",
     ...overrides,
   };
 }
