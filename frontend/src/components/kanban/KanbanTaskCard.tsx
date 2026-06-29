@@ -7,7 +7,7 @@ import {
   toKanbanTaskId,
   type KanbanTask,
 } from "../../lib/kanban-status";
-import { isOverdueIncompleteTask } from "../../lib/prep-progress";
+import { isOverdueIncompleteChecklistTask } from "../../lib/task-progress";
 import {
   getKanbanProgressTone,
   getTaskProgressPercent,
@@ -36,7 +36,7 @@ export function KanbanTaskCard({ task, isDragging = false }: KanbanTaskCardProps
   };
 
   const percent = getTaskProgressPercent(task);
-  const showOverdue = isOverdueIncompleteTask(task);
+  const showOverdue = isOverdueIncompleteChecklistTask(task);
   const progressTone = getKanbanProgressTone(showOverdue, task.is_complete);
 
   return (
@@ -61,16 +61,18 @@ export function KanbanTaskCard({ task, isDragging = false }: KanbanTaskCardProps
             {task.eventName}
           </p>
           <h3 className="mt-1 line-clamp-2 text-sm font-semibold leading-snug text-primary">
-            {task.group_name}
+            {task.group_name ?? task.title}
           </h3>
         </div>
         <KanbanProgressRingWithLabel percent={percent} tone={progressTone} />
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-        <span className="rounded-full bg-primary/5 px-2.5 py-1 font-medium text-primary/80">
-          Due {formatEventDateTime(task.due_date)}
-        </span>
+        {task.due_date ? (
+          <span className="rounded-full bg-primary/5 px-2.5 py-1 font-medium text-primary/80">
+            Due {formatEventDateTime(task.due_date)}
+          </span>
+        ) : null}
         {showOverdue ? (
           <span className="rounded-full bg-red-100 px-2.5 py-1 font-semibold text-red-700">
             Overdue

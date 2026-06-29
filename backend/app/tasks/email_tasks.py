@@ -17,7 +17,7 @@ def send_welcome_email_task(email: str, full_name: str) -> None:
 
 @celery_app.task(name="email.send_prep_task_due_soon")
 def send_prep_task_due_soon_email_task(
-    prep_task_id: int,
+    event_task_id: int,
     assignee_id: int,
     email: str,
     full_name: str,
@@ -39,7 +39,7 @@ def send_prep_task_due_soon_email_task(
     try:
         record_due_soon_reminder(
             db,
-            prep_task_id=prep_task_id,
+            event_task_id=event_task_id,
             assignee_id=assignee_id,
             recipient_email=email,
         )

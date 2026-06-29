@@ -1,22 +1,36 @@
 import api from "./api";
 import type { MemberPosition } from "./roles";
 
+export type EventTaskKind = "simple" | "checklist";
+
 export type EventTaskStatus = "todo" | "in_progress" | "done";
+
+export type EventTaskChecklistItemResponse = {
+  id: number;
+  label: string;
+  is_completed: boolean;
+  sort_order: number;
+};
 
 export type EventTaskResponse = {
   id: number;
   event_id: number;
   event_name: string;
+  task_kind: EventTaskKind;
   title: string;
+  group_name: string | null;
   description: string;
   assignee_id: number | null;
   assignee_name: string | null;
   status: EventTaskStatus;
   due_date: string | null;
+  is_overdue: boolean;
+  is_complete: boolean;
+  checklist_items: EventTaskChecklistItemResponse[];
   completion_note: string | null;
   completion_photo_url: string | null;
   completed_at: string | null;
-  created_by_id: number;
+  created_by_id: number | null;
   created_at: string;
 };
 
@@ -38,6 +52,7 @@ export type UpdateEventTaskRequest = {
   assignee_id?: number | null;
   due_date?: string | null;
   status?: EventTaskStatus;
+  is_complete?: boolean;
   completion_note?: string | null;
   completion_photo_url?: string | null;
 };
@@ -104,6 +119,18 @@ export async function updateEventTask(
   const response = await api.patch<EventTaskResponse>(
     `/v1/event-tasks/${taskId}`,
     data,
+  );
+  return response.data;
+}
+
+export async function updateEventTaskChecklistItem(
+  taskId: number,
+  itemId: number,
+  isCompleted: boolean,
+): Promise<EventTaskResponse> {
+  const response = await api.patch<EventTaskResponse>(
+    `/v1/event-tasks/${taskId}/checklist-items/${itemId}`,
+    { is_completed: isCompleted },
   );
   return response.data;
 }

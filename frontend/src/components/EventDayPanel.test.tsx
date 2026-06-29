@@ -5,6 +5,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { EventDayPanel } from "./EventDayPanel";
 import type { EventDetailResponse, EventResponse } from "../lib/events-api";
 
+vi.mock("../lib/event-tasks-api", () => ({
+  fetchEventTasks: vi.fn(),
+  createEventTask: vi.fn(),
+  updateEventTask: vi.fn(),
+  updateEventTaskChecklistItem: vi.fn(),
+  deleteEventTask: vi.fn(),
+}));
+
 const dayEvent: EventResponse = {
   id: 1,
   name: "Dashain Celebration",
@@ -46,13 +54,11 @@ const eventDetail: EventDetailResponse = {
 };
 
 const panelProps = {
-  canToggleChecklist: () => true,
-  canAssignTasks: false,
+  member: null,
+  canManageSimple: false,
+  canAssignChecklist: false,
   assignableMembers: [] as import("../lib/auth-api").MemberResponse[],
-  togglingItemId: null,
-  assigningTaskId: null,
-  onToggleChecklistItem: vi.fn(),
-  onAssignTask: vi.fn(),
+  taskRefreshKey: 1,
   rsvpLoading: false,
   onRsvp: vi.fn(),
   onCancelRsvp: vi.fn(),
@@ -78,11 +84,11 @@ describe("EventDayPanel", () => {
     );
 
     expect(
-      screen.getByText(/Click a calendar day to view events and prep checklists/i),
+      screen.getByText(/Click a calendar day to view events and tasks/i),
     ).toBeInTheDocument();
   });
 
-  it("shows event details, progress bar, and prep checklist items", () => {
+  it("shows event details, progress bar, and checklist items", () => {
     render(
       <EventDayPanel
         selectedDate="2030-06-15"
@@ -97,7 +103,9 @@ describe("EventDayPanel", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Dashain Celebration" })).toBeInTheDocument();
-    expect(screen.getByRole("progressbar", { name: "Prep progress" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("progressbar", { name: "Overall task progress" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "Task progress" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "RSVP" })).toBeInTheDocument();
     expect(screen.getByText("Order catering")).toBeInTheDocument();

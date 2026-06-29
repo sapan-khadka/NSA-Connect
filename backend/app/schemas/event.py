@@ -8,8 +8,8 @@ from app.models.event import EventType
 
 if TYPE_CHECKING:
     from app.models.event import Event
-    from app.models.preptask import PrepTask
 
+from app.models.event_task import EventTaskKind
 from app.schemas.preptask import PrepTaskResponse
 
 MAX_EVENT_BUDGET = Decimal("999999.99")
@@ -118,7 +118,8 @@ class EventDetailResponse(EventResponse):
         return cls(
             **base.model_dump(),
             prep_tasks=[
-                PrepTaskResponse.from_prep_task(prep_task)
-                for prep_task in event.prep_tasks
+                PrepTaskResponse.from_event_task(task)
+                for task in event.event_tasks
+                if task.task_kind == EventTaskKind.CHECKLIST
             ],
         )

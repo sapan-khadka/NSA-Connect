@@ -1,12 +1,11 @@
 import type { MemberResponse } from "../lib/auth-api";
+import type { EventTaskResponse } from "../lib/event-tasks-api";
 import type { PrepTaskResponse } from "../lib/events-api";
-import { formatEventDateTime } from "../lib/format-datetime";
-import { calcTaskProgress, isOverdueIncompleteTask } from "../lib/prep-progress";
-import { PrepProgressBar } from "./PrepProgressBar";
-import { PrepTaskAssigneeSelect } from "./PrepTaskAssigneeSelect";
+import { prepTaskToEventTask } from "../lib/task-adapters";
+import { ChecklistTaskCard } from "./ChecklistTaskCard";
 
 type PrepTaskChecklistProps = {
-  task: PrepTaskResponse;
+  task: PrepTaskResponse | EventTaskResponse;
   canToggle: boolean;
   canAssign: boolean;
   assignableMembers: MemberResponse[];
@@ -14,134 +13,22 @@ type PrepTaskChecklistProps = {
   assigningTaskId?: number | null;
   onToggleItem: (taskId: number, itemId: number, isCompleted: boolean) => void;
   onAssign: (taskId: number, assigneeId: number | null) => void;
+  eventId?: number;
+  eventName?: string;
 };
-
-function getAssigneeLabel(
-  assigneeId: number | null,
-  assignableMembers: MemberResponse[],
-): string | null {
-  if (assigneeId === null) {
-    return null;
-  }
-
-  return assignableMembers.find((member) => member.id === assigneeId)?.full_name ?? null;
-}
 
 export function PrepTaskChecklist({
   task,
-  canToggle,
-  canAssign,
-  assignableMembers,
-  togglingItemId = null,
-  assigningTaskId = null,
-  onToggleItem,
-  onAssign,
+  eventId = 0,
+  eventName = "",
+  ...props
 }: PrepTaskChecklistProps) {
-  const sortedItems = [...task.checklist_items].sort(
-    (a, b) => a.sort_order - b.sort_order,
-  );
-  const taskProgress = calcTaskProgress(task);
-  const assigneeLabel = getAssigneeLabel(task.assignee_id, assignableMembers);
-  const showOverdue = isOverdueIncompleteTask(task);
+  const normalized =
+    "task_kind" in task
+      ? task
+      : prepTaskToEventTask(task, { id: eventId, name: eventName });
 
-  return (
-    <article
-      className={[
-        "rounded-md border p-3",
-        showOverdue ? "border-red-300 bg-red-50" : "border-gray-200",
-      ].join(" ")}
-    >
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <h4 className="font-medium text-primary">{task.group_name}</h4>
-        <div className="flex flex-wrap gap-2 text-xs">
-          {task.is_complete ? (
-            <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-800">
-              Complete
-            </span>
-          ) : null}
-          {showOverdue ? (
-            <span className="rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-800">
-              Overdue
-            </span>
-          ) : null}
-        </div>
-      </div>
-
-      <p
-        className={[
-          "mt-1 text-xs",
-          showOverdue ? "font-medium text-red-700" : "text-gray-500",
-        ].join(" ")}
-      >
-        Due {formatEventDateTime(task.due_date)}
-        {!canAssign && assigneeLabel ? ` · ${assigneeLabel}` : null}
-      </p>
-
-      {canAssign ? (
-        <PrepTaskAssigneeSelect
-          assigneeId={task.assignee_id}
-          assignableMembers={assignableMembers}
-          disabled={assigningTaskId === task.id}
-          onAssign={(assigneeId) => onAssign(task.id, assigneeId)}
-        />
-      ) : null}
-
-      {sortedItems.length > 0 ? (
-        <div className="mt-3">
-          <PrepProgressBar
-            progress={taskProgress}
-            label="Task progress"
-            variant={showOverdue ? "danger" : "default"}
-          />
-        </div>
-      ) : null}
-
-      {sortedItems.length === 0 ? (
-        <p className="mt-3 text-sm text-gray-500">No checklist items yet.</p>
-      ) : (
-        <ul className="mt-3 space-y-2">
-          {sortedItems.map((item) => {
-            const isPending = togglingItemId === item.id;
-
-            return (
-              <li key={item.id} className="flex items-start gap-2 text-sm">
-                <button
-                  type="button"
-                  aria-label={`${item.is_completed ? "Uncheck" : "Check"} ${item.label}`}
-                  aria-pressed={item.is_completed}
-                  disabled={!canToggle || isPending}
-                  onClick={() =>
-                    onToggleItem(task.id, item.id, !item.is_completed)
-                  }
-                  className={[
-                    "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px] font-bold transition-colors",
-                    item.is_completed
-                      ? "border-emerald-500 bg-emerald-500 text-white"
-                      : "border-gray-300 bg-white text-transparent",
-                    canToggle && !isPending
-                      ? "cursor-pointer hover:border-emerald-400"
-                      : "cursor-default",
-                    isPending ? "opacity-60" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                >
-                  ✓
-                </button>
-                <span
-                  className={
-                    item.is_completed
-                      ? "text-gray-500 line-through"
-                      : "text-primary"
-                  }
-                >
-                  {item.label}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </article>
-  );
+  return <ChecklistTaskCard task={normalized} {...props} />;
 }
+
+export { ChecklistTaskCard };

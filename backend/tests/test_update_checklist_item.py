@@ -144,11 +144,10 @@ def test_assignee_can_toggle_checklist_item(
     client,
     db_session,
     board_member_headers,
-    general_member_headers,
 ):
     from app.models.member import Member
 
-    assignee = db_session.query(Member).filter_by(email="sapan@semo.edu").one()
+    assignee = db_session.query(Member).filter_by(email="board@semo.edu").one()
     task = _create_event_with_task(
         client,
         board_member_headers,
@@ -160,7 +159,7 @@ def test_assignee_can_toggle_checklist_item(
     response = client.patch(
         f"/api/v1/tasks/{task['id']}/checklist-items/{item_id}",
         json={"is_completed": True},
-        headers=general_member_headers,
+        headers=board_member_headers,
     )
 
     assert response.status_code == 200

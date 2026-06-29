@@ -32,12 +32,17 @@ function makeTask(overrides: Partial<EventTaskResponse> = {}): EventTaskResponse
     id: 7,
     event_id: 10,
     event_name: "Dashain",
+    task_kind: "simple",
     title: "Decorate hall",
+    group_name: null,
     description: "",
     assignee_id: 1,
     assignee_name: "Test User",
     status: "todo",
     due_date: null,
+    is_overdue: false,
+    is_complete: false,
+    checklist_items: [],
     completion_note: null,
     completion_photo_url: null,
     completed_at: null,
@@ -60,7 +65,7 @@ describe("MyEventTasks", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText("No event tasks assigned to you."),
+        screen.getByText("No tasks assigned to you."),
       ).toBeInTheDocument(),
     );
   });

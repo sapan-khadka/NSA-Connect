@@ -9,13 +9,13 @@ from app.schemas.preptask import (
     PrepTaskResponse,
     PrepTaskUpdateRequest,
 )
-from app.services.prep_task_service import (
-    InvalidAssigneeError,
-    PrepTaskChecklistItemNotFoundError,
-    PrepTaskForbiddenError,
-    PrepTaskNotFoundError,
-    update_prep_task,
-    update_prep_task_checklist_item,
+from app.services.event_task_service import (
+    EventTaskChecklistItemNotFoundError,
+    EventTaskForbiddenError,
+    EventTaskNotFoundError,
+    InvalidEventTaskAssigneeError,
+    update_event_task,
+    update_event_task_checklist_item,
 )
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -28,25 +28,32 @@ def update_prep_task_endpoint(
     current_member: Member = Depends(get_current_member),
     db: Session = Depends(get_db),
 ):
+    from app.schemas.event_task import EventTaskUpdateRequest
+
     try:
-        prep_task = update_prep_task(db, task_id, data, current_member)
-    except PrepTaskNotFoundError:
+        task = update_event_task(
+            db,
+            task_id,
+            EventTaskUpdateRequest(**data.model_dump(exclude_unset=True)),
+            current_member,
+        )
+    except EventTaskNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Prep task not found",
         ) from None
-    except PrepTaskForbiddenError:
+    except EventTaskForbiddenError:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not allowed to update this prep task",
         ) from None
-    except InvalidAssigneeError:
+    except InvalidEventTaskAssigneeError:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Assignee must be an approved board member",
         ) from None
 
-    return PrepTaskResponse.from_prep_task(prep_task)
+    return PrepTaskResponse.from_event_task(task)
 
 
 @router.patch(
@@ -61,27 +68,27 @@ def update_prep_task_checklist_item_endpoint(
     db: Session = Depends(get_db),
 ):
     try:
-        prep_task = update_prep_task_checklist_item(
+        task = update_event_task_checklist_item(
             db,
             task_id,
             item_id,
-            data,
-            current_member,
+            is_completed=data.is_completed,
+            current_member=current_member,
         )
-    except PrepTaskNotFoundError:
+    except EventTaskNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Prep task not found",
         ) from None
-    except PrepTaskChecklistItemNotFoundError:
+    except EventTaskChecklistItemNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Checklist item not found",
         ) from None
-    except PrepTaskForbiddenError:
+    except EventTaskForbiddenError:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not allowed to update this prep task",
         ) from None
 
-    return PrepTaskResponse.from_prep_task(prep_task)
+    return PrepTaskResponse.from_event_task(task)

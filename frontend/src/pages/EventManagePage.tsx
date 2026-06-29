@@ -266,11 +266,15 @@ export function EventManagePage() {
         </section>
       ) : null}
 
-      {canViewBoard ? (
+      {canViewBoard && event ? (
         <EventTaskManager
           eventId={numericEventId}
-          canManage={canManageTasks}
+          eventName={event.name}
+          member={member}
+          canManageSimple={canManageTasks}
+          canAssignChecklist={canViewBoard}
           assignableMembers={assignableMembers}
+          refreshKey={refreshKey}
         />
       ) : null}
 

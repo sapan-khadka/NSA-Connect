@@ -34,11 +34,6 @@ class Event(Base):
     location = Column(String(255), nullable=True)
     budget = Column(Numeric(10, 2), nullable=False)
     created_by_id = Column(Integer, ForeignKey("members.id"), nullable=False)
-    prep_tasks = relationship(
-        "PrepTask",
-        back_populates="event",
-        order_by="PrepTask.due_date",
-    )
     rsvps = relationship(
         "EventRsvp",
         back_populates="event",

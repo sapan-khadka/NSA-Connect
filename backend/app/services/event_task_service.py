@@ -5,9 +5,19 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.event import Event
-from app.models.event_task import EventTask, EventTaskStatus
-from app.models.member import Member, MemberRole, MemberStatus
+from app.models.event_task import (
+    EventTask,
+    EventTaskChecklistItem,
+    EventTaskKind,
+    EventTaskStatus,
+    checklist_items_from_group,
+    checklist_items_from_labels,
+    sync_checklist_status,
+)
+from app.models.member import Member, MemberPosition, MemberRole, MemberStatus
+from app.models.preptask import PrepTaskGroup
 from app.schemas.event_task import (
+    ChecklistEventTaskCreateRequest,
     EventTaskCreateRequest,
     EventTaskUpdateRequest,
     TaskOverviewMember,
@@ -17,7 +27,6 @@ from app.services.event_service import EventNotFoundError
 
 BOARD_ROLES = (MemberRole.BOARD, MemberRole.TREASURER, MemberRole.PRESIDENT)
 
-# Fields that only a board member (not a plain assignee) may modify.
 MANAGER_ONLY_FIELDS = frozenset({"title", "description", "assignee_id", "due_date"})
 
 
@@ -33,6 +42,25 @@ class InvalidEventTaskAssigneeError(Exception):
     """Assignee must be an approved board member or higher."""
 
 
+class PrepTaskGroupNotFoundError(Exception):
+    pass
+
+
+class InvalidPrepTaskDueDateError(Exception):
+    pass
+
+
+class EventTaskChecklistItemNotFoundError(Exception):
+    pass
+
+
+def is_task_manager(member: Member) -> bool:
+    return member.role == MemberRole.PRESIDENT or member.position in {
+        MemberPosition.VICE_PRESIDENT,
+        MemberPosition.EVENT_MANAGER,
+    }
+
+
 def _validate_assignee(db: Session, assignee_id: int | None) -> None:
     if assignee_id is None:
         return
@@ -43,6 +71,35 @@ def _validate_assignee(db: Session, assignee_id: int | None) -> None:
         raise InvalidEventTaskAssigneeError
 
 
+def _as_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
+
+
+def _validate_checklist_due_date(due_date: datetime, event_starts_at: datetime) -> None:
+    due_date = _as_utc(due_date)
+    event_starts_at = _as_utc(event_starts_at)
+    now = datetime.now(UTC)
+    if due_date <= now:
+        raise InvalidPrepTaskDueDateError("Task due date must be in the future")
+    if due_date >= event_starts_at:
+        raise InvalidPrepTaskDueDateError(
+            "Task due date must be before the event starts",
+        )
+
+
+def _get_or_create_group(db: Session, group_name: str) -> PrepTaskGroup:
+    group = db.scalar(
+        select(PrepTaskGroup).where(PrepTaskGroup.group_name == group_name),
+    )
+    if group is None:
+        group = PrepTaskGroup(group_name=group_name)
+        db.add(group)
+        db.flush()
+    return group
+
+
 def _load_task(db: Session, task_id: int) -> EventTask | None:
     return db.scalar(
         select(EventTask)
@@ -50,11 +107,29 @@ def _load_task(db: Session, task_id: int) -> EventTask | None:
         .options(
             selectinload(EventTask.event),
             selectinload(EventTask.assignee),
+            selectinload(EventTask.group),
+            selectinload(EventTask.checklist_items),
         ),
     )
 
 
-def create_event_task(
+def _load_tasks_for_event(db: Session, event_id: int) -> list[EventTask]:
+    return list(
+        db.scalars(
+            select(EventTask)
+            .where(EventTask.event_id == event_id)
+            .options(
+                selectinload(EventTask.event),
+                selectinload(EventTask.assignee),
+                selectinload(EventTask.group),
+                selectinload(EventTask.checklist_items),
+            )
+            .order_by(EventTask.due_date.asc().nullslast(), EventTask.created_at.asc()),
+        ).all(),
+    )
+
+
+def create_simple_event_task(
     db: Session,
     event_id: int,
     data: EventTaskCreateRequest,
@@ -68,6 +143,7 @@ def create_event_task(
 
     task = EventTask(
         event_id=event_id,
+        task_kind=EventTaskKind.SIMPLE,
         title=data.title,
         description=data.description,
         assignee_id=data.assignee_id,
@@ -83,21 +159,66 @@ def create_event_task(
     return reloaded
 
 
+def create_checklist_event_task(
+    db: Session,
+    event_id: int,
+    data: ChecklistEventTaskCreateRequest,
+    *,
+    created_by: Member | None = None,
+) -> EventTask:
+    event = db.get(Event, event_id)
+    if event is None:
+        raise EventNotFoundError
+
+    _validate_checklist_due_date(data.due_date, event.starts_at)
+    _validate_assignee(db, data.assignee_id)
+
+    if data.checklist_items:
+        group = _get_or_create_group(db, data.group_name)
+        checklist_items = checklist_items_from_labels(data.checklist_items)
+    else:
+        group = db.scalar(
+            select(PrepTaskGroup)
+            .where(PrepTaskGroup.group_name == data.group_name)
+            .options(selectinload(PrepTaskGroup.items)),
+        )
+        if group is None:
+            raise PrepTaskGroupNotFoundError
+        checklist_items = checklist_items_from_group(group)
+
+    task = EventTask(
+        event_id=event_id,
+        task_kind=EventTaskKind.CHECKLIST,
+        title=data.group_name,
+        description="",
+        group_id=group.id,
+        assignee_id=data.assignee_id,
+        due_date=data.due_date,
+        status=EventTaskStatus.TODO,
+        checklist_items=checklist_items,
+        created_by_id=created_by.id if created_by is not None else None,
+    )
+    sync_checklist_status(task)
+    db.add(task)
+    db.commit()
+
+    reloaded = _load_task(db, task.id)
+    assert reloaded is not None
+    return reloaded
+
+
 def list_event_tasks_for_event(db: Session, event_id: int) -> list[EventTask]:
     if db.get(Event, event_id) is None:
         raise EventNotFoundError
+    return _load_tasks_for_event(db, event_id)
 
-    return list(
-        db.scalars(
-            select(EventTask)
-            .where(EventTask.event_id == event_id)
-            .options(
-                selectinload(EventTask.event),
-                selectinload(EventTask.assignee),
-            )
-            .order_by(EventTask.created_at.asc(), EventTask.id.asc()),
-        ).all(),
-    )
+
+def list_checklist_tasks_for_event(db: Session, event_id: int) -> list[EventTask]:
+    return [
+        task
+        for task in list_event_tasks_for_event(db, event_id)
+        if task.task_kind == EventTaskKind.CHECKLIST
+    ]
 
 
 def list_my_event_tasks(db: Session, member_id: int) -> list[EventTask]:
@@ -108,6 +229,8 @@ def list_my_event_tasks(db: Session, member_id: int) -> list[EventTask]:
             .options(
                 selectinload(EventTask.event),
                 selectinload(EventTask.assignee),
+                selectinload(EventTask.group),
+                selectinload(EventTask.checklist_items),
             )
             .order_by(EventTask.created_at.desc(), EventTask.id.desc()),
         ).all(),
@@ -142,7 +265,13 @@ def update_event_task(
         if field in updates:
             setattr(task, field, updates[field])
 
-    if "status" in updates:
+    if "is_complete" in updates and task.task_kind == EventTaskKind.CHECKLIST:
+        completed = updates["is_complete"]
+        for item in task.checklist_items:
+            item.is_completed = completed
+        sync_checklist_status(task)
+
+    if "status" in updates and task.task_kind == EventTaskKind.SIMPLE:
         new_status = updates["status"]
         task.status = new_status
         if new_status == EventTaskStatus.DONE:
@@ -150,6 +279,42 @@ def update_event_task(
         else:
             task.completed_at = None
 
+    db.commit()
+
+    reloaded = _load_task(db, task_id)
+    assert reloaded is not None
+    return reloaded
+
+
+def update_event_task_checklist_item(
+    db: Session,
+    task_id: int,
+    item_id: int,
+    *,
+    is_completed: bool,
+    current_member: Member,
+) -> EventTask:
+    task = _load_task(db, task_id)
+    if task is None:
+        raise EventTaskNotFoundError
+
+    if task.task_kind != EventTaskKind.CHECKLIST:
+        raise EventTaskNotFoundError
+
+    is_board = current_member.has_role_at_least(MemberRole.BOARD)
+    is_assignee = task.assignee_id == current_member.id
+    if not (is_board or is_assignee):
+        raise EventTaskForbiddenError
+
+    checklist_item = next(
+        (item for item in task.checklist_items if item.id == item_id),
+        None,
+    )
+    if checklist_item is None:
+        raise EventTaskChecklistItemNotFoundError
+
+    checklist_item.is_completed = is_completed
+    sync_checklist_status(task)
     db.commit()
 
     reloaded = _load_task(db, task_id)
@@ -172,6 +337,8 @@ def get_task_overview(db: Session) -> TaskOverviewResponse:
             .options(
                 selectinload(EventTask.event),
                 selectinload(EventTask.assignee),
+                selectinload(EventTask.group),
+                selectinload(EventTask.checklist_items),
             )
             .order_by(EventTask.created_at.desc(), EventTask.id.desc()),
         ).all(),
@@ -196,7 +363,9 @@ def get_task_overview(db: Session) -> TaskOverviewResponse:
     ]
 
     total_tasks = len(tasks)
-    completed_tasks = sum(1 for task in tasks if task.status == EventTaskStatus.DONE)
+    completed_tasks = sum(
+        1 for task in tasks if task.status == EventTaskStatus.DONE
+    )
 
     return TaskOverviewResponse(
         members=members,

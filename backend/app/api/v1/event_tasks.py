@@ -10,6 +10,7 @@ from app.core.dependencies import (
 )
 from app.models.member import Member
 from app.schemas.event_task import (
+    EventTaskChecklistItemUpdateRequest,
     EventTaskCreateRequest,
     EventTaskListResponse,
     EventTaskResponse,
@@ -19,15 +20,17 @@ from app.schemas.event_task import (
 )
 from app.services.event_service import EventNotFoundError
 from app.services.event_task_service import (
+    EventTaskChecklistItemNotFoundError,
     EventTaskForbiddenError,
     EventTaskNotFoundError,
     InvalidEventTaskAssigneeError,
-    create_event_task,
+    create_simple_event_task,
     delete_event_task,
     get_task_overview,
     list_event_tasks_for_event,
     list_my_event_tasks,
     update_event_task,
+    update_event_task_checklist_item,
 )
 from app.services.receipt_upload_service import (
     ReceiptUploadUnavailableError,
@@ -50,7 +53,7 @@ def create_event_task_endpoint(
     db: Session = Depends(get_db),
 ):
     try:
-        task = create_event_task(db, event_id, data, created_by=current_member)
+        task = create_simple_event_task(db, event_id, data, created_by=current_member)
     except EventNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -161,6 +164,44 @@ def update_event_task_endpoint(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Assignee must be an approved board member",
+        ) from None
+
+    return EventTaskResponse.from_task(task)
+
+
+@router.patch(
+    "/event-tasks/{task_id}/checklist-items/{item_id}",
+    response_model=EventTaskResponse,
+)
+def update_event_task_checklist_item_endpoint(
+    task_id: int,
+    item_id: int,
+    data: EventTaskChecklistItemUpdateRequest,
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    try:
+        task = update_event_task_checklist_item(
+            db,
+            task_id,
+            item_id,
+            is_completed=data.is_completed,
+            current_member=current_member,
+        )
+    except EventTaskNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found",
+        ) from None
+    except EventTaskChecklistItemNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Checklist item not found",
+        ) from None
+    except EventTaskForbiddenError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You cannot modify this task",
         ) from None
 
     return EventTaskResponse.from_task(task)

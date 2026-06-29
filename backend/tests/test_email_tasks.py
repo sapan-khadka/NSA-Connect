@@ -17,7 +17,7 @@ def test_send_prep_task_due_soon_email_task_records_reminder_after_send(
     db = mock_session_local.return_value
 
     send_prep_task_due_soon_email_task(
-        prep_task_id=10,
+        event_task_id=10,
         assignee_id=5,
         email="board@semo.edu",
         full_name="Board Member",
@@ -35,7 +35,7 @@ def test_send_prep_task_due_soon_email_task_records_reminder_after_send(
     )
     mock_record.assert_called_once_with(
         db,
-        prep_task_id=10,
+        event_task_id=10,
         assignee_id=5,
         recipient_email="board@semo.edu",
     )
@@ -53,7 +53,7 @@ def test_send_prep_task_due_soon_email_task_skips_record_when_send_fails(
     mock_send.return_value = False
 
     send_prep_task_due_soon_email_task(
-        prep_task_id=10,
+        event_task_id=10,
         assignee_id=5,
         email="board@semo.edu",
         full_name="Board Member",

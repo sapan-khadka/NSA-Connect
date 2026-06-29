@@ -3,7 +3,13 @@ import { Link } from "react-router-dom";
 
 import { BoardTaskKanban } from "../components/kanban/BoardTaskKanban";
 import { useAuth } from "../context/useAuth";
-import { fetchEvent, fetchEvents, type PrepTaskResponse } from "../lib/events-api";
+import { fetchEvents } from "../lib/events-api";
+import {
+  fetchEventTasks,
+  updateEventTask,
+  updateEventTaskChecklistItem,
+  type EventTaskResponse,
+} from "../lib/event-tasks-api";
 import {
   applyKanbanMoveLocally,
   getKanbanColumn,
@@ -11,11 +17,7 @@ import {
   type KanbanColumnId,
   type KanbanTask,
 } from "../lib/kanban-status";
-import { calcPrepProgress } from "../lib/prep-progress";
-import {
-  updatePrepTaskChecklistItem,
-  updatePrepTaskCompletion,
-} from "../lib/tasks-api";
+import { calcEventTasksProgress } from "../lib/task-progress";
 
 type LoadState =
   | { status: "loading" }
@@ -23,7 +25,7 @@ type LoadState =
   | { status: "error"; message: string };
 
 function buildKanbanTask(
-  task: PrepTaskResponse,
+  task: EventTaskResponse,
   event: { id: number; name: string; starts_at: string },
 ): KanbanTask {
   return {
@@ -54,15 +56,16 @@ export function BoardTasksPage() {
         )
         .slice(0, 8);
 
-      const details = await Promise.all(
-        upcomingEvents.map((event) => fetchEvent(event.id)),
+      const taskGroups = await Promise.all(
+        upcomingEvents.map(async (event) => {
+          const response = await fetchEventTasks(event.id);
+          return response.tasks
+            .filter((task) => task.task_kind === "checklist")
+            .map((task) => buildKanbanTask(task, event));
+        }),
       );
 
-      const tasks = details.flatMap((event) =>
-        event.prep_tasks.map((task) => buildKanbanTask(task, event)),
-      );
-
-      setLoadState({ status: "ready", tasks });
+      setLoadState({ status: "ready", tasks: taskGroups.flat() });
     } catch {
       setLoadState({
         status: "error",
@@ -105,8 +108,8 @@ export function BoardTasksPage() {
     try {
       const updatedTask =
         action.type === "bulk_complete"
-          ? await updatePrepTaskCompletion(taskId, action.value)
-          : await updatePrepTaskChecklistItem(
+          ? await updateEventTask(taskId, { is_complete: action.value })
+          : await updateEventTaskChecklistItem(
               taskId,
               action.itemId,
               action.value,
@@ -137,7 +140,7 @@ export function BoardTasksPage() {
   }
 
   const tasks = loadState.status === "ready" ? loadState.tasks : [];
-  const progress = calcPrepProgress(tasks);
+  const progress = calcEventTasksProgress(tasks);
   const columnCounts = {
     todo: tasks.filter((task) => getKanbanColumn(task) === "todo").length,
     in_progress: tasks.filter(
@@ -157,12 +160,10 @@ export function BoardTasksPage() {
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent/90">
               Board command center
             </p>
-            <h1 className="mt-3 text-4xl font-bold tracking-tight">
-              Prep task kanban
-            </h1>
+            <h1 className="mt-3 text-4xl font-bold tracking-tight">Task board</h1>
             <p className="mt-3 text-base text-white/75">
-              Drag tasks across To do, In progress, and Done to keep every
-              event checklist moving.
+              Drag checklist tasks across To do, In progress, and Done to keep
+              every event on track.
             </p>
           </div>
 
@@ -190,7 +191,7 @@ export function BoardTasksPage() {
 
         <div className="relative mt-8">
           <div className="mb-2 flex items-center justify-between text-sm text-white/70">
-            <span>Overall prep progress</span>
+            <span>Overall checklist progress</span>
             <span className="font-semibold text-white">{progress.percent}%</span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-white/10">
@@ -228,15 +229,15 @@ export function BoardTasksPage() {
 
       {loadState.status === "ready" && tasks.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-16 text-center shadow-sm">
-          <p className="text-lg font-semibold text-primary">No prep tasks yet</p>
+          <p className="text-lg font-semibold text-primary">No checklist tasks yet</p>
           <p className="mt-2 text-gray-500">
-            Add prep tasks to upcoming events to populate this board.
+            Add checklist tasks to upcoming events to populate this board.
           </p>
           <Link
-            to="/events"
+            to="/events/upcoming"
             className="mt-6 inline-flex rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
           >
-            Open events calendar
+            View upcoming events
           </Link>
         </div>
       ) : null}

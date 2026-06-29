@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { CreateEventForm } from "../components/CreateEventForm";
 import { EventDayPanel } from "../components/EventDayPanel";
-import { EventTaskManager } from "../components/EventTaskManager";
 import { MonthlyCalendarGrid } from "../components/MonthlyCalendarGrid";
 import { useAuth } from "../context/useAuth";
 import { toLocalIsoDate } from "../lib/calendar";
@@ -19,15 +18,7 @@ import {
 } from "../lib/events-api";
 import { applyRsvpStatus } from "../lib/event-rsvp";
 import { fetchAssignableMembers } from "../lib/members-api";
-import {
-  applyChecklistToggle,
-  replacePrepTaskInList,
-} from "../lib/prep-progress";
 import { canManageEventTasks, isRoleAtLeast } from "../lib/roles";
-import {
-  updatePrepTaskAssignee,
-  updatePrepTaskChecklistItem,
-} from "../lib/tasks-api";
 import type { MemberResponse } from "../lib/auth-api";
 
 export function EventsPage() {
@@ -45,8 +36,7 @@ export function EventsPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
-  const [togglingItemId, setTogglingItemId] = useState<number | null>(null);
-  const [assigningTaskId, setAssigningTaskId] = useState<number | null>(null);
+  const [taskRefreshKey, setTaskRefreshKey] = useState(0);
   const [rsvpLoading, setRsvpLoading] = useState(false);
   const [deletingEvent, setDeletingEvent] = useState(false);
   const [assignableMembers, setAssignableMembers] = useState<MemberResponse[]>(
@@ -166,6 +156,7 @@ export function EventsPage() {
         const detail = await fetchEvent(eventId);
         if (!cancelled) {
           setEventDetail(detail);
+          setTaskRefreshKey((current) => current + 1);
         }
       } catch {
         if (!cancelled) {
@@ -186,107 +177,13 @@ export function EventsPage() {
     };
   }, [selectedEventId]);
 
-  const canToggleChecklist = useCallback(
-    (task: PrepTaskResponse) => {
-      if (!member) {
-        return false;
-      }
-
-      const isBoard = isRoleAtLeast(member.role, "board");
-      const isAssignee = task.assignee_id === member.id;
-      return isBoard || isAssignee;
+  const handleChecklistTasksChange = useCallback(
+    (tasks: PrepTaskResponse[]) => {
+      setEventDetail((current) =>
+        current ? { ...current, prep_tasks: tasks } : current,
+      );
     },
-    [member],
-  );
-
-  const handleToggleChecklistItem = useCallback(
-    async (taskId: number, itemId: number, isCompleted: boolean) => {
-      if (!eventDetail) {
-        return;
-      }
-
-      const snapshot = eventDetail;
-      const task = eventDetail.prep_tasks.find((entry) => entry.id === taskId);
-      if (!task || !canToggleChecklist(task)) {
-        return;
-      }
-
-      setTogglingItemId(itemId);
-      setEventDetail({
-        ...eventDetail,
-        prep_tasks: replacePrepTaskInList(
-          eventDetail.prep_tasks,
-          applyChecklistToggle(task, itemId, isCompleted),
-        ),
-      });
-
-      try {
-        const updatedTask = await updatePrepTaskChecklistItem(
-          taskId,
-          itemId,
-          isCompleted,
-        );
-        setEventDetail((current) =>
-          current
-            ? {
-                ...current,
-                prep_tasks: replacePrepTaskInList(
-                  current.prep_tasks,
-                  updatedTask,
-                ),
-              }
-            : current,
-        );
-      } catch {
-        setEventDetail(snapshot);
-      } finally {
-        setTogglingItemId(null);
-      }
-    },
-    [canToggleChecklist, eventDetail],
-  );
-
-  const handleAssignTask = useCallback(
-    async (taskId: number, assigneeId: number | null) => {
-      if (!eventDetail || !canAssignTasks) {
-        return;
-      }
-
-      const snapshot = eventDetail;
-      const task = eventDetail.prep_tasks.find((entry) => entry.id === taskId);
-      if (!task) {
-        return;
-      }
-
-      setAssigningTaskId(taskId);
-      setEventDetail({
-        ...eventDetail,
-        prep_tasks: replacePrepTaskInList(eventDetail.prep_tasks, {
-          ...task,
-          assignee_id: assigneeId,
-        }),
-      });
-
-      try {
-        const updatedTask = await updatePrepTaskAssignee(taskId, assigneeId);
-        setEventDetail((current) =>
-          current
-            ? {
-                ...current,
-                prep_tasks: replacePrepTaskInList(
-                  current.prep_tasks,
-                  updatedTask,
-                ),
-              }
-            : current,
-        );
-      } catch {
-        setEventDetail(snapshot);
-      } finally {
-        setAssigningTaskId(null);
-      }
-    },
-    [canAssignTasks, eventDetail],
+    [],
   );
 
   const applyRsvpToState = useCallback(
@@ -440,7 +337,7 @@ export function EventsPage() {
       <section>
         <h1 className="text-3xl font-bold text-primary">Events</h1>
         <p className="mt-2 max-w-2xl text-gray-600">
-          Browse NSA events by month, RSVP to attend, and track prep progress.
+          Browse NSA events by month, RSVP to attend, and track event tasks.
         </p>
       </section>
 
@@ -471,17 +368,12 @@ export function EventsPage() {
           eventDetail={eventDetail}
           detailLoading={detailLoading}
           detailError={detailError}
-          canToggleChecklist={canToggleChecklist}
-          canAssignTasks={canAssignTasks}
+          member={member}
+          canManageSimple={canManageTasks}
+          canAssignChecklist={canAssignTasks}
           assignableMembers={assignableMembers}
-          togglingItemId={togglingItemId}
-          assigningTaskId={assigningTaskId}
-          onToggleChecklistItem={(taskId, itemId, isCompleted) => {
-            void handleToggleChecklistItem(taskId, itemId, isCompleted);
-          }}
-          onAssignTask={(taskId, assigneeId) => {
-            void handleAssignTask(taskId, assigneeId);
-          }}
+          taskRefreshKey={taskRefreshKey}
+          onChecklistTasksChange={handleChecklistTasksChange}
           rsvpLoading={rsvpLoading}
           onRsvp={() => {
             void handleRsvp();
@@ -494,18 +386,6 @@ export function EventsPage() {
           onDeleteEvent={(eventId) => {
             void handleDeleteEvent(eventId);
           }}
-          renderEventTasks={
-            canAssignTasks
-              ? (eventId) => (
-                  <EventTaskManager
-                    key={eventId}
-                    eventId={eventId}
-                    canManage={canManageTasks}
-                    assignableMembers={assignableMembers}
-                  />
-                )
-              : undefined
-          }
         />
       </div>
     </div>

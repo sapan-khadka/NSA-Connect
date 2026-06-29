@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from app.models.preptask import PrepTask, PrepTaskChecklistItem, PrepTaskGroup
+from tests.helpers.task_fixtures import seed_checklist_event_task
 from conftest import auth_header, create_board_member, register_member, set_member_approved
 
 
@@ -34,21 +34,13 @@ def _seed_prep_task(
     label: str,
     due_date: datetime,
 ):
-    group = PrepTaskGroup(group_name=group_name)
-    db_session.add(group)
-    db_session.flush()
-
-    prep_task = PrepTask(
+    seed_checklist_event_task(
+        db_session,
         event_id=event_id,
-        group_id=group.id,
+        group_name=group_name,
+        label=label,
         due_date=due_date,
-        assignee_id=None,
-        checklist_items=[
-            PrepTaskChecklistItem(label=label, sort_order=0, is_completed=False),
-        ],
     )
-    db_session.add(prep_task)
-    db_session.commit()
 
 
 def test_get_event_requires_authentication(client, board_member_headers):

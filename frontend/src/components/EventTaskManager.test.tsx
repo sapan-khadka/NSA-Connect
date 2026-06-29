@@ -15,6 +15,7 @@ vi.mock("../lib/event-tasks-api", async () => {
     createEventTask: vi.fn(),
     updateEventTask: vi.fn(),
     deleteEventTask: vi.fn(),
+    updateEventTaskChecklistItem: vi.fn(),
   };
 });
 
@@ -31,17 +32,34 @@ const mockedCreate = vi.mocked(createEventTask);
 const mockedUpdate = vi.mocked(updateEventTask);
 const mockedDelete = vi.mocked(deleteEventTask);
 
+const boardMember: MemberResponse = {
+  id: 1,
+  full_name: "Board User",
+  email: "board@semo.edu",
+  student_id: "87654321",
+  major: "Admin",
+  graduation_year: 2028,
+  role: "board",
+  status: "approved",
+  position: "member",
+};
+
 function makeTask(overrides: Partial<EventTaskResponse> = {}): EventTaskResponse {
   return {
     id: 1,
     event_id: 10,
     event_name: "Dashain",
+    task_kind: "simple",
     title: "Book the venue",
+    group_name: null,
     description: "Reserve the hall",
     assignee_id: 2,
     assignee_name: "Board Member",
     status: "todo",
     due_date: null,
+    is_overdue: false,
+    is_complete: false,
+    checklist_items: [],
     completion_note: null,
     completion_photo_url: null,
     completed_at: null,
@@ -65,6 +83,20 @@ const assignableMembers: MemberResponse[] = [
   },
 ];
 
+function renderManager(overrides: Partial<Parameters<typeof EventTaskManager>[0]> = {}) {
+  return render(
+    <EventTaskManager
+      eventId={10}
+      eventName="Dashain"
+      member={boardMember}
+      canManageSimple={false}
+      canAssignChecklist={false}
+      assignableMembers={assignableMembers}
+      {...overrides}
+    />,
+  );
+}
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -74,13 +106,7 @@ describe("EventTaskManager", () => {
   it("renders existing tasks with assignee and status", async () => {
     mockedFetch.mockResolvedValue({ tasks: [makeTask()], total: 1 });
 
-    render(
-      <EventTaskManager
-        eventId={10}
-        canManage={false}
-        assignableMembers={assignableMembers}
-      />,
-    );
+    renderManager();
 
     await waitFor(() =>
       expect(screen.getByText("Book the venue")).toBeInTheDocument(),
@@ -96,17 +122,11 @@ describe("EventTaskManager", () => {
     mockedFetch.mockResolvedValue({ tasks: [], total: 0 });
     mockedCreate.mockResolvedValue(makeTask({ title: "Print flyers" }));
 
-    render(
-      <EventTaskManager
-        eventId={10}
-        canManage
-        assignableMembers={assignableMembers}
-      />,
-    );
+    renderManager({ canManageSimple: true });
 
     await waitFor(() => expect(mockedFetch).toHaveBeenCalled());
 
-    await user.type(screen.getByLabelText("Task"), "Print flyers");
+    await user.type(screen.getByLabelText("Title"), "Print flyers");
     await user.selectOptions(screen.getByLabelText("Assign to"), "2");
     await user.click(screen.getByRole("button", { name: "Add task" }));
 
@@ -123,13 +143,7 @@ describe("EventTaskManager", () => {
     mockedFetch.mockResolvedValue({ tasks: [makeTask()], total: 1 });
     mockedUpdate.mockResolvedValue(makeTask({ status: "done" }));
 
-    render(
-      <EventTaskManager
-        eventId={10}
-        canManage
-        assignableMembers={assignableMembers}
-      />,
-    );
+    renderManager({ canManageSimple: true });
 
     await waitFor(() =>
       expect(screen.getByText("Book the venue")).toBeInTheDocument(),
@@ -148,13 +162,7 @@ describe("EventTaskManager", () => {
     mockedFetch.mockResolvedValue({ tasks: [makeTask()], total: 1 });
     mockedDelete.mockResolvedValue();
 
-    render(
-      <EventTaskManager
-        eventId={10}
-        canManage
-        assignableMembers={assignableMembers}
-      />,
-    );
+    renderManager({ canManageSimple: true });
 
     await waitFor(() =>
       expect(screen.getByText("Book the venue")).toBeInTheDocument(),

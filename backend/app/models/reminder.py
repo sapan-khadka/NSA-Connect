@@ -15,15 +15,15 @@ class PrepTaskReminder(Base):
     __tablename__ = "prep_task_reminders"
     __table_args__ = (
         UniqueConstraint(
-            "prep_task_id",
+            "event_task_id",
             "reminder_type",
             "assignee_id",
-            name="uq_prep_task_reminders_task_type_assignee",
+            name="uq_event_task_reminders_task_type_assignee",
         ),
     )
 
     id = Column(Integer, primary_key=True, index=True)
-    prep_task_id = Column(Integer, ForeignKey("prep_tasks.id"), nullable=False)
+    event_task_id = Column(Integer, ForeignKey("event_tasks.id"), nullable=False)
     assignee_id = Column(Integer, ForeignKey("members.id"), nullable=False)
     reminder_type = Column(
         SqlEnum(

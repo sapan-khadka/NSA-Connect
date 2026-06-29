@@ -4,6 +4,7 @@ from sqlalchemy import extract, func, select, update
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.event import Event, EventType
+from app.models.event_task import EventTask
 from app.models.finance_entry import FinanceEntry
 from app.schemas.event import EventCreateRequest
 
@@ -45,12 +46,8 @@ def delete_event(db: Session, event_id: int) -> None:
         .values(event_id=None),
     )
 
-    # Prep tasks are not cascade-deleted via the Event relationship, so remove
-    # them explicitly (their checklist items cascade through the ORM). RSVPs and
-    # volunteer slots cascade automatically when the event is deleted.
-    for task in list(event.prep_tasks):
-        db.delete(task)
-
+    # Finance entries are unlinked above. RSVPs, volunteer slots, and event tasks
+    # cascade automatically when the event is deleted.
     db.delete(event)
     db.commit()
 
@@ -98,20 +95,23 @@ def list_upcoming_events(
     return list(events), total
 
 
-def get_event_with_prep_tasks(db: Session, event_id: int) -> Event:
-    from app.models.preptask import PrepTask
-
+def get_event_with_tasks(db: Session, event_id: int) -> Event:
     event = db.scalar(
         select(Event)
         .where(Event.id == event_id)
         .options(
-            selectinload(Event.prep_tasks).selectinload(PrepTask.checklist_items),
-            selectinload(Event.prep_tasks).selectinload(PrepTask.group),
+            selectinload(Event.event_tasks).selectinload(EventTask.checklist_items),
+            selectinload(Event.event_tasks).selectinload(EventTask.group),
         ),
     )
     if event is None:
         raise EventNotFoundError
     return event
+
+
+def get_event_with_prep_tasks(db: Session, event_id: int) -> Event:
+    """Backward-compatible loader for checklist event tasks."""
+    return get_event_with_tasks(db, event_id)
 
 
 def _parse_month(month: str) -> tuple[int, int]:

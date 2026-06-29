@@ -22,11 +22,11 @@ from app.services.event_service import (
     list_events,
     list_upcoming_events,
 )
-from app.services.prep_task_service import (
-    InvalidAssigneeError,
+from app.services.event_task_service import (
+    InvalidEventTaskAssigneeError,
     InvalidPrepTaskDueDateError,
     PrepTaskGroupNotFoundError,
-    create_prep_task_for_event,
+    create_checklist_event_task,
 )
 from app.services.rsvp_service import (
     AlreadyRsvpedError,
@@ -207,11 +207,16 @@ def cancel_event_rsvp_endpoint(
 def add_prep_task_endpoint(
     event_id: int,
     data: PrepTaskCreateRequest,
-    _: Member = Depends(require_board),
+    current_member: Member = Depends(require_board),
     db: Session = Depends(get_db),
 ):
     try:
-        prep_task = create_prep_task_for_event(db, event_id, data)
+        task = create_checklist_event_task(
+            db,
+            event_id,
+            data,
+            created_by=current_member,
+        )
     except EventNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -222,7 +227,7 @@ def add_prep_task_endpoint(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Prep task group not found",
         ) from None
-    except InvalidAssigneeError:
+    except InvalidEventTaskAssigneeError:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Assignee must be an approved board member",
@@ -233,7 +238,7 @@ def add_prep_task_endpoint(
             detail=str(exc),
         ) from None
 
-    return PrepTaskResponse.from_prep_task(prep_task)
+    return PrepTaskResponse.from_event_task(task)
 
 
 @router.post(

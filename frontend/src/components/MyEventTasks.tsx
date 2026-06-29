@@ -1,14 +1,20 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 
+import { ChecklistTaskCard } from "../components/ChecklistTaskCard";
 import { getApiErrorMessage } from "../lib/auth-api";
 import {
   fetchMyEventTasks,
   updateEventTask,
+  updateEventTaskChecklistItem,
   uploadTaskPhoto,
   type EventTaskResponse,
   type EventTaskStatus,
 } from "../lib/event-tasks-api";
 import { formatEventDateTime } from "../lib/format-datetime";
+import {
+  applyChecklistItemToggle,
+  replaceEventTaskInList,
+} from "../lib/task-progress";
 
 const STATUS_LABELS: Record<EventTaskStatus, string> = {
   todo: "To do",
@@ -18,12 +24,12 @@ const STATUS_LABELS: Record<EventTaskStatus, string> = {
 
 const STATUS_ORDER: EventTaskStatus[] = ["todo", "in_progress", "done"];
 
-type MyEventTaskCardProps = {
+type MySimpleTaskCardProps = {
   task: EventTaskResponse;
   onUpdated: (task: EventTaskResponse) => void;
 };
 
-function MyEventTaskCard({ task, onUpdated }: MyEventTaskCardProps) {
+function MySimpleTaskCard({ task, onUpdated }: MySimpleTaskCardProps) {
   const [note, setNote] = useState(task.completion_note ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -177,6 +183,7 @@ export function MyEventTasks() {
   const [tasks, setTasks] = useState<EventTaskResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [togglingItemId, setTogglingItemId] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -208,19 +215,49 @@ export function MyEventTasks() {
   }, []);
 
   function handleUpdated(updated: EventTaskResponse) {
+    setTasks((current) => replaceEventTaskInList(current, updated));
+  }
+
+  async function handleToggleChecklistItem(
+    taskId: number,
+    itemId: number,
+    isCompleted: boolean,
+  ) {
+    const task = tasks.find((entry) => entry.id === taskId);
+    if (!task) {
+      return;
+    }
+
+    const snapshot = tasks;
+    setTogglingItemId(itemId);
     setTasks((current) =>
-      current.map((task) => (task.id === updated.id ? updated : task)),
+      replaceEventTaskInList(
+        current,
+        applyChecklistItemToggle(task, itemId, isCompleted),
+      ),
     );
+
+    try {
+      const updated = await updateEventTaskChecklistItem(
+        taskId,
+        itemId,
+        isCompleted,
+      );
+      handleUpdated(updated);
+    } catch {
+      setTasks(snapshot);
+    } finally {
+      setTogglingItemId(null);
+    }
   }
 
   return (
     <section className="rounded-lg border border-gray-200 bg-white p-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-primary">Event tasks</h2>
+          <h2 className="text-lg font-semibold text-primary">My tasks</h2>
           <p className="mt-1 text-sm text-gray-500">
-            Tasks assigned to you. Update status and add a note or photo when
-            done.
+            Assigned checklist and action items. Update progress as you work.
           </p>
         </div>
         <span className="rounded-full bg-accent/10 px-3 py-1 text-sm font-semibold text-accent">
@@ -234,17 +271,33 @@ export function MyEventTasks() {
         <p className="mt-6 text-sm text-red-600">{error}</p>
       ) : tasks.length === 0 ? (
         <p className="mt-6 rounded-md border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-500">
-          No event tasks assigned to you.
+          No tasks assigned to you.
         </p>
       ) : (
         <ul className="mt-6 space-y-3">
-          {tasks.map((task) => (
-            <MyEventTaskCard
-              key={task.id}
-              task={task}
-              onUpdated={handleUpdated}
-            />
-          ))}
+          {tasks.map((task) =>
+            task.task_kind === "checklist" ? (
+              <li key={task.id}>
+                <ChecklistTaskCard
+                  task={task}
+                  canToggle
+                  canAssign={false}
+                  assignableMembers={[]}
+                  togglingItemId={togglingItemId}
+                  onToggleItem={(taskId, itemId, isCompleted) => {
+                    void handleToggleChecklistItem(taskId, itemId, isCompleted);
+                  }}
+                  onAssign={() => undefined}
+                />
+              </li>
+            ) : (
+              <MySimpleTaskCard
+                key={task.id}
+                task={task}
+                onUpdated={handleUpdated}
+              />
+            ),
+          )}
         </ul>
       )}
     </section>

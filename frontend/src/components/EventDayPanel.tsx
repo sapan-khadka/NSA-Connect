@@ -1,10 +1,7 @@
-import type { ReactNode } from "react";
-
 import { EventRsvpButton } from "./EventRsvpButton";
-import { PrepProgressBar } from "./PrepProgressBar";
-import { PrepTaskChecklist } from "./PrepTaskChecklist";
+import { EventTaskManager } from "./EventTaskManager";
 import type { MemberResponse } from "../lib/auth-api";
-import type { EventDetailResponse, EventResponse, PrepTaskResponse } from "../lib/events-api";
+import type { EventDetailResponse, EventResponse } from "../lib/events-api";
 import { EVENT_TYPE_BADGE_CLASS, EVENT_TYPE_LABELS } from "../lib/event-types";
 import {
   formatCurrency,
@@ -12,7 +9,6 @@ import {
   formatIsoDateLabel,
 } from "../lib/format-datetime";
 import { isEventUpcoming } from "../lib/event-rsvp";
-import { calcPrepProgress } from "../lib/prep-progress";
 
 type EventDayPanelProps = {
   selectedDate: string | null;
@@ -22,24 +18,18 @@ type EventDayPanelProps = {
   eventDetail: EventDetailResponse | null;
   detailLoading: boolean;
   detailError: string | null;
-  canToggleChecklist: (task: PrepTaskResponse) => boolean;
-  canAssignTasks: boolean;
+  member: MemberResponse | null;
+  canManageSimple: boolean;
+  canAssignChecklist: boolean;
   assignableMembers: MemberResponse[];
-  togglingItemId: number | null;
-  assigningTaskId: number | null;
-  onToggleChecklistItem: (
-    taskId: number,
-    itemId: number,
-    isCompleted: boolean,
-  ) => void;
-  onAssignTask: (taskId: number, assigneeId: number | null) => void;
+  taskRefreshKey: number;
+  onChecklistTasksChange?: (tasks: EventDetailResponse["prep_tasks"]) => void;
   rsvpLoading: boolean;
   onRsvp: () => void;
   onCancelRsvp: () => void;
   canDeleteEvent?: boolean;
   deletingEvent?: boolean;
   onDeleteEvent?: (eventId: number) => void;
-  renderEventTasks?: (eventId: number) => ReactNode;
 };
 
 export function EventDayPanel({
@@ -50,25 +40,19 @@ export function EventDayPanel({
   eventDetail,
   detailLoading,
   detailError,
-  canToggleChecklist,
-  canAssignTasks,
+  member,
+  canManageSimple,
+  canAssignChecklist,
   assignableMembers,
-  togglingItemId,
-  assigningTaskId,
-  onToggleChecklistItem,
-  onAssignTask,
+  taskRefreshKey,
+  onChecklistTasksChange,
   rsvpLoading,
   onRsvp,
   onCancelRsvp,
   canDeleteEvent = false,
   deletingEvent = false,
   onDeleteEvent,
-  renderEventTasks,
 }: EventDayPanelProps) {
-  const eventProgress = eventDetail
-    ? calcPrepProgress(eventDetail.prep_tasks)
-    : { completed: 0, total: 0, percent: 0 };
-
   return (
     <aside
       aria-label="Event details"
@@ -76,7 +60,7 @@ export function EventDayPanel({
     >
       {!selectedDate ? (
         <p className="text-sm text-gray-600">
-          Click a calendar day to view events and prep checklists.
+          Click a calendar day to view events and tasks.
         </p>
       ) : (
         <>
@@ -154,7 +138,7 @@ export function EventDayPanel({
                         onClick={() => {
                           if (
                             window.confirm(
-                              `Delete "${eventDetail.name}"? This removes the event and its RSVPs and prep tasks. This cannot be undone.`,
+                              `Delete "${eventDetail.name}"? This removes the event and its RSVPs and tasks. This cannot be undone.`,
                             )
                           ) {
                             onDeleteEvent(eventDetail.id);
@@ -176,38 +160,18 @@ export function EventDayPanel({
                     onCancelRsvp={onCancelRsvp}
                   />
 
-                  {eventDetail.prep_tasks.length > 0 ? (
-                    <PrepProgressBar progress={eventProgress} />
-                  ) : null}
-
-                  <section>
-                    <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-                      Prep tasks
-                    </h4>
-                    {eventDetail.prep_tasks.length === 0 ? (
-                      <p className="mt-2 text-sm text-gray-600">
-                        No prep tasks for this event yet.
-                      </p>
-                    ) : (
-                      <div className="mt-3 space-y-3">
-                        {eventDetail.prep_tasks.map((task) => (
-                          <PrepTaskChecklist
-                            key={task.id}
-                            task={task}
-                            canToggle={canToggleChecklist(task)}
-                            canAssign={canAssignTasks}
-                            assignableMembers={assignableMembers}
-                            togglingItemId={togglingItemId}
-                            assigningTaskId={assigningTaskId}
-                            onToggleItem={onToggleChecklistItem}
-                            onAssign={onAssignTask}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </section>
-
-                  {renderEventTasks ? renderEventTasks(eventDetail.id) : null}
+                  <EventTaskManager
+                    key={`${eventDetail.id}-${taskRefreshKey}`}
+                    eventId={eventDetail.id}
+                    eventName={eventDetail.name}
+                    member={member}
+                    canManageSimple={canManageSimple}
+                    canAssignChecklist={canAssignChecklist}
+                    assignableMembers={assignableMembers}
+                    fallbackChecklistTasks={eventDetail.prep_tasks}
+                    onFallbackTasksChange={onChecklistTasksChange}
+                    refreshKey={taskRefreshKey}
+                  />
                 </div>
               ) : null}
             </>

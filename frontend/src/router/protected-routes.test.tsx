@@ -156,7 +156,7 @@ describe("protected route redirects", () => {
       },
     });
 
-    expect(await screen.findByText("Prep task kanban")).toBeInTheDocument();
+    expect(await screen.findByText("Task board")).toBeInTheDocument();
   });
 
   it("redirects general members from /board/tasks to /member", async () => {
@@ -171,7 +171,7 @@ describe("protected route redirects", () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/member");
     });
-    expect(screen.queryByText("Prep task kanban")).not.toBeInTheDocument();
+    expect(screen.queryByText("Task board")).not.toBeInTheDocument();
   });
 
   it("allows general members to view /member/tasks", async () => {

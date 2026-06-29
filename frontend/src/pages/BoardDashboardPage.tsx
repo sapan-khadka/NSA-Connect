@@ -68,9 +68,9 @@ export function BoardDashboardPage() {
               to="/board/tasks"
               className="block rounded-md border border-accent/30 bg-gradient-to-br from-accent/10 to-white px-4 py-3 transition-all hover:border-accent hover:shadow-md"
             >
-              <p className="font-medium text-primary">Prep task kanban</p>
+              <p className="font-medium text-primary">Task board</p>
               <p className="mt-1 text-sm text-gray-500">
-                Drag tasks across To do, In progress, and Done.
+                Drag checklist tasks across To do, In progress, and Done.
               </p>
             </Link>
           </li>

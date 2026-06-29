@@ -1,5 +1,5 @@
-import type { PrepTaskResponse } from "./events-api";
-import { calcTaskProgress } from "./prep-progress";
+import type { EventTaskResponse } from "./event-tasks-api";
+import { calcChecklistTaskProgress } from "./task-progress";
 
 export type KanbanColumnId = "todo" | "in_progress" | "done";
 
@@ -9,7 +9,7 @@ export const KANBAN_COLUMN_IDS: KanbanColumnId[] = [
   "done",
 ];
 
-export type KanbanTask = PrepTaskResponse & {
+export type KanbanTask = EventTaskResponse & {
   eventId: number;
   eventName: string;
   eventStartsAt: string;
@@ -19,8 +19,8 @@ export type KanbanColumnMoveAction =
   | { type: "bulk_complete"; value: boolean }
   | { type: "toggle_item"; itemId: number; value: boolean };
 
-export function getKanbanColumn(task: PrepTaskResponse): KanbanColumnId {
-  if (task.is_complete) {
+export function getKanbanColumn(task: EventTaskResponse): KanbanColumnId {
+  if (task.is_complete || task.status === "done") {
     return "done";
   }
 
@@ -52,7 +52,7 @@ export function groupTasksByKanbanColumn(
 }
 
 export function getKanbanMoveAction(
-  task: PrepTaskResponse,
+  task: EventTaskResponse,
   targetColumn: KanbanColumnId,
 ): KanbanColumnMoveAction | null {
   const currentColumn = getKanbanColumn(task);
@@ -119,6 +119,7 @@ export function applyKanbanMoveLocally(
       ...task,
       checklist_items,
       is_complete: action.value && checklist_items.length > 0,
+      status: action.value ? "done" : "todo",
     };
   }
 
@@ -135,11 +136,16 @@ export function applyKanbanMoveLocally(
     ...task,
     checklist_items,
     is_complete,
+    status: is_complete
+      ? "done"
+      : checklist_items.some((item) => item.is_completed)
+        ? "in_progress"
+        : "todo",
   };
 }
 
-export function getKanbanTaskProgressLabel(task: PrepTaskResponse): string {
-  const { completed, total, percent } = calcTaskProgress(task);
+export function getKanbanTaskProgressLabel(task: EventTaskResponse): string {
+  const { completed, total, percent } = calcChecklistTaskProgress(task);
   if (total === 0) {
     return "No checklist";
   }

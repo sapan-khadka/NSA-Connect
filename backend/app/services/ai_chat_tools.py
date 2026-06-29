@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 
 from app.models.event import Event, EventType
 from app.models.member import Member, MemberRole, MemberStatus
-from app.services.event_service import EventNotFoundError, get_event_with_prep_tasks
+from app.services.event_service import EventNotFoundError, get_event_with_tasks
+from app.models.event_task import EventTaskKind
 from app.services.finance_service import get_finance_summary
 
 
@@ -244,15 +245,18 @@ def _get_event_prep_tasks(
 ) -> str:
     _require_role(member, MemberRole.BOARD)
     event_id = int(tool_input["event_id"])
-    event = get_event_with_prep_tasks(db, event_id)
+    event = get_event_with_tasks(db, event_id)
+    checklist_tasks = [
+        task for task in event.event_tasks if task.task_kind == EventTaskKind.CHECKLIST
+    ]
 
     return _tool_result(
         [
             {
                 "id": task.id,
-                "group_name": task.group.group_name if task.group else None,
+                "group_name": task.title,
                 "due_date": task.due_date,
-                "completed": task.is_complete,
+                "completed": task.is_checklist_complete,
                 "assignee_id": task.assignee_id,
                 "checklist_items": [
                     {
@@ -262,7 +266,7 @@ def _get_event_prep_tasks(
                     for item in task.checklist_items
                 ],
             }
-            for task in event.prep_tasks
+            for task in checklist_tasks
         ]
     )
 

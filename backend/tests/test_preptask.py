@@ -1,19 +1,19 @@
 from datetime import UTC, datetime
 
-from app.models.preptask import (
-    PrepTask,
-    PrepTaskChecklistItem,
-    PrepTaskGroup,
-    PrepTaskGroupItem,
+from app.models.event_task import (
+    EventTask,
+    EventTaskChecklistItem,
+    EventTaskKind,
     checklist_items_from_group,
+    sync_checklist_status,
 )
+from app.models.preptask import PrepTaskGroup, PrepTaskGroupItem
 
 
-def test_prep_task_table_names():
-    assert PrepTask.__tablename__ == "prep_tasks"
+def test_group_table_names():
     assert PrepTaskGroup.__tablename__ == "prep_task_groups"
     assert PrepTaskGroupItem.__tablename__ == "prep_task_group_items"
-    assert PrepTaskChecklistItem.__tablename__ == "prep_task_checklist_items"
+    assert EventTaskChecklistItem.__tablename__ == "event_task_checklist_items"
 
 
 def test_checklist_items_from_group():
@@ -33,31 +33,36 @@ def test_checklist_items_from_group():
     assert all(not item.is_completed for item in checklist)
 
 
-def test_prep_task_completion_and_overdue():
+def test_checklist_event_task_completion_and_overdue():
     due_future = datetime(2026, 12, 1, tzinfo=UTC)
     due_past = datetime(2020, 1, 1, tzinfo=UTC)
 
-    incomplete_task = PrepTask(
+    incomplete_task = EventTask(
         event_id=1,
-        group_id=1,
+        task_kind=EventTaskKind.CHECKLIST,
+        title="Setup",
         due_date=due_future,
         assignee_id=2,
         checklist_items=[
-            PrepTaskChecklistItem(label="Task A", sort_order=0, is_completed=True),
-            PrepTaskChecklistItem(label="Task B", sort_order=1, is_completed=False),
+            EventTaskChecklistItem(label="Task A", sort_order=0, is_completed=True),
+            EventTaskChecklistItem(label="Task B", sort_order=1, is_completed=False),
         ],
     )
-    complete_task = PrepTask(
+    sync_checklist_status(incomplete_task)
+
+    complete_task = EventTask(
         event_id=1,
-        group_id=1,
+        task_kind=EventTaskKind.CHECKLIST,
+        title="Cleanup",
         due_date=due_past,
         assignee_id=2,
         checklist_items=[
-            PrepTaskChecklistItem(label="Task A", sort_order=0, is_completed=True),
+            EventTaskChecklistItem(label="Task A", sort_order=0, is_completed=True),
         ],
     )
+    sync_checklist_status(complete_task)
 
-    assert incomplete_task.is_complete is False
+    assert incomplete_task.is_checklist_complete is False
     assert incomplete_task.is_overdue is False
-    assert complete_task.is_complete is True
+    assert complete_task.is_checklist_complete is True
     assert complete_task.is_overdue is True
