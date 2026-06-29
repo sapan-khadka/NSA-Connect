@@ -1,12 +1,11 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
 
-import { RoleBadge } from "../components/RoleBadge";
-import { StatusBadge } from "../components/StatusBadge";
+import { ChangePasswordForm } from "../components/ChangePasswordForm";
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage } from "../lib/auth-api";
 import { fetchMyProfile, updateMyProfile } from "../lib/members-api";
-import { getDashboardPath } from "../lib/roles";
+import { RoleBadge } from "../components/RoleBadge";
+import { StatusBadge } from "../components/StatusBadge";
 import {
   SEMO_EMAIL_DOMAIN,
   getGraduationYearOptions,
@@ -137,19 +136,17 @@ export function ProfilePage() {
     <div className="space-y-8">
       <section className="rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-8">
         <p className="text-sm font-semibold uppercase tracking-wide text-accent">
-          My profile
+          Account settings
         </p>
         <h1 className="mt-2 text-3xl font-bold text-primary">{member.full_name}</h1>
         <p className="mt-3 max-w-2xl text-gray-600">
-          View and update your contact information. Student ID and role are
-          managed by NSA board.
+          Manage your contact information, password, and membership details in
+          one place.
         </p>
-        <Link
-          to={getDashboardPath(member.role)}
-          className="mt-4 inline-block text-sm font-medium text-accent hover:text-accent-hover"
-        >
-          Back to dashboard
-        </Link>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <RoleBadge role={member.role} size="md" />
+          <StatusBadge status={member.status} />
+        </div>
       </section>
 
       {serverError && (
@@ -170,8 +167,6 @@ export function ProfilePage() {
       >
         <div className="flex flex-wrap items-center gap-3 border-b border-gray-200 pb-4">
           <h2 className="text-lg font-semibold text-primary">Contact info</h2>
-          <RoleBadge role={member.role} size="md" />
-          <StatusBadge status={member.status} />
         </div>
 
         {isLoading ? (
@@ -285,6 +280,8 @@ export function ProfilePage() {
           </button>
         </div>
       </form>
+
+      <ChangePasswordForm />
     </div>
   );
 }

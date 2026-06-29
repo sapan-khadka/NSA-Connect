@@ -1,6 +1,12 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 
-import { RoleBadge } from "../components/RoleBadge";
+import {
+  AccountMenu,
+  NavDropdown,
+  NavDivider,
+  PrimaryNavLink,
+} from "../components/AppNav";
+import { AppLogo } from "../components/AppLogo";
 import { useAuth } from "../context/useAuth";
 import { useLogout } from "../context/useLogout";
 import {
@@ -10,10 +16,13 @@ import {
   getDashboardPath,
 } from "../lib/roles";
 
-const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-  isActive
-    ? "text-accent font-medium"
-    : "text-gray-600 hover:text-primary transition-colors";
+const guestLinkClass = ({ isActive }: { isActive: boolean }) =>
+  [
+    "inline-block rounded-md px-2.5 py-1.5 transition-colors",
+    isActive
+      ? "bg-accent/10 font-medium text-accent"
+      : "text-gray-600 hover:bg-gray-50 hover:text-primary",
+  ].join(" ");
 
 export function AppLayout() {
   const { isAuthenticated, member } = useAuth();
@@ -29,131 +38,88 @@ export function AppLayout() {
     : false;
   const showMyTasks = member?.role === "general";
   const dashboardPath = member ? getDashboardPath(member.role) : "/member";
-  const isWidePage = location.pathname === "/board/tasks";
+  const isWidePage =
+    location.pathname === "/board/tasks" || location.pathname.startsWith("/events");
+
+  const workItems = [
+    { label: "Upcoming hub", to: "/events/upcoming" },
+    ...(showMyTasks ? [{ label: "My tasks", to: "/member/tasks" }] : []),
+    ...(showBoardTasks ? [{ label: "Task board", to: "/board/tasks" }] : []),
+    ...(showTaskOversight
+      ? [{ label: "Task oversight", to: "/board/task-oversight" }]
+      : []),
+  ];
+
+  const adminItems = [
+    ...(showMemberDirectory ? [{ label: "Members", to: "/members" }] : []),
+    ...(showFinance ? [{ label: "Finance", to: "/finance" }] : []),
+    ...(showMeetingMinutes
+      ? [{ label: "Meeting minutes", to: "/board/meeting-minutes" }]
+      : []),
+    ...(showAnnouncementEmail
+      ? [{ label: "Announcement email", to: "/board/announcement-email" }]
+      : []),
+  ];
+
+  const workActive =
+    location.pathname.startsWith("/events/upcoming") ||
+    location.pathname === "/member/tasks" ||
+    location.pathname === "/board/tasks" ||
+    location.pathname === "/board/task-oversight";
+
+  const adminActive =
+    location.pathname.startsWith("/members") ||
+    location.pathname.startsWith("/finance") ||
+    location.pathname === "/board/meeting-minutes" ||
+    location.pathname === "/board/announcement-email";
 
   return (
     <div className="min-h-screen bg-white">
-      <header className="border-b border-gray-200">
-        <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <NavLink to="/" className="text-lg font-bold text-primary">
-            NSA Connect
-          </NavLink>
-          <ul className="flex items-center gap-6 text-sm">
-            <li>
-              <NavLink to="/" end className={navLinkClass}>
-                Home
-              </NavLink>
-            </li>
-            <li>
-              <NavLink to="/events" className={navLinkClass}>
-                Events
-              </NavLink>
-            </li>
-            <li>
-              <NavLink to="/events/upcoming" className={navLinkClass}>
-                Upcoming
-              </NavLink>
-            </li>
-            {isAuthenticated && (
-              <>
-                <li>
-                  <NavLink to="/assistant" className={navLinkClass}>
-                    Assistant
-                  </NavLink>
-                </li>
-                <li>
-                  <NavLink to="/profile" className={navLinkClass}>
-                    Profile
-                  </NavLink>
-                </li>
-                <li>
-                  <NavLink to={dashboardPath} className={navLinkClass}>
-                    Dashboard
-                  </NavLink>
-                </li>
-              </>
-            )}
-            {showMemberDirectory && (
+      <header className="border-b border-gray-200 bg-white">
+        <nav className="mx-auto flex w-full max-w-7xl items-center gap-4 px-6 py-3 lg:gap-6">
+          <AppLogo asLink showTagline={false} />
+
+          {isAuthenticated ? (
+            <div className="flex min-w-0 flex-1 items-center justify-between gap-4">
+              <ul className="flex min-w-0 flex-wrap items-center gap-1 text-sm">
+                <PrimaryNavLink to="/" end>
+                  Home
+                </PrimaryNavLink>
+                <PrimaryNavLink to="/events">Events</PrimaryNavLink>
+                <PrimaryNavLink to="/assistant">Assistant</PrimaryNavLink>
+                <PrimaryNavLink to={dashboardPath}>Dashboard</PrimaryNavLink>
+                <NavDivider />
+                <NavDropdown label="Work" items={workItems} isActive={workActive} />
+                {adminItems.length > 0 ? (
+                  <NavDropdown label="Admin" items={adminItems} isActive={adminActive} />
+                ) : null}
+              </ul>
+
+              {member ? (
+                <AccountMenu fullName={member.full_name} onLogout={logout} />
+              ) : null}
+            </div>
+          ) : (
+            <ul className="ml-auto flex items-center gap-1 text-sm">
               <li>
-                <NavLink to="/members" className={navLinkClass}>
-                  Members
-                </NavLink>
-              </li>
-            )}
-            {showMyTasks && (
-              <li>
-                <NavLink to="/member/tasks" className={navLinkClass}>
-                  My tasks
-                </NavLink>
-              </li>
-            )}
-            {showBoardTasks && (
-              <li>
-                <NavLink to="/board/tasks" className={navLinkClass}>
-                  Tasks
-                </NavLink>
-              </li>
-            )}
-            {showTaskOversight && (
-              <li>
-                <NavLink to="/board/task-oversight" className={navLinkClass}>
-                  Oversight
-                </NavLink>
-              </li>
-            )}
-            {showMeetingMinutes && (
-              <li>
-                <NavLink to="/board/meeting-minutes" className={navLinkClass}>
-                  Minutes
-                </NavLink>
-              </li>
-            )}
-            {showAnnouncementEmail && (
-              <li>
-                <NavLink to="/board/announcement-email" className={navLinkClass}>
-                  Announce
-                </NavLink>
-              </li>
-            )}
-            {showFinance && (
-              <li>
-                <NavLink to="/finance" className={navLinkClass}>
-                  Finance
-                </NavLink>
-              </li>
-            )}
-            {isAuthenticated ? (
-              <>
-                {member && (
-                  <li aria-label="Your role">
-                    <RoleBadge role={member.role} />
-                  </li>
-                )}
-                <li>
-                  <button
-                    type="button"
-                    onClick={logout}
-                    className="text-gray-600 transition-colors hover:text-primary"
-                  >
-                    Logout
-                  </button>
-                </li>
-              </>
-            ) : (
-              <li>
-                <NavLink to="/login" className={navLinkClass}>
+                <NavLink to="/login" className={guestLinkClass}>
                   Login
                 </NavLink>
               </li>
-            )}
-          </ul>
+              <li>
+                <NavLink to="/register" className={guestLinkClass}>
+                  Register
+                </NavLink>
+              </li>
+            </ul>
+          )}
         </nav>
       </header>
 
       <main
         className={[
-          "mx-auto px-6 py-12",
-          isWidePage ? "max-w-7xl" : "max-w-5xl",
+          "mx-auto w-full px-6 py-10",
+          isWidePage ? "max-w-7xl" : "max-w-6xl",
         ].join(" ")}
       >
         <Outlet />

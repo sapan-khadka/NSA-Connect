@@ -9,6 +9,7 @@ from app.models.member import Member, MemberStatus
 from app.schemas.member import (
     MemberBoardRoleUpdateRequest,
     MemberListResponse,
+    MemberPasswordChangeRequest,
     MemberPositionUpdateRequest,
     MemberProfileUpdateRequest,
     MemberResponse,
@@ -18,9 +19,11 @@ from app.tasks.email_tasks import send_welcome_email_task
 from app.services.member_service import (
     InvalidMemberRoleError,
     InvalidMemberStatusError,
+    InvalidCurrentPasswordError,
     MemberAlreadyExistsError,
     MemberNotFoundError,
     approve_member,
+    change_member_password,
     get_member_by_id,
     list_members_by_status,
     list_members_paginated,
@@ -78,6 +81,26 @@ def update_my_profile(
         ) from None
 
     return MemberResponse.from_member(member)
+
+
+@router.post("/me/password", status_code=status.HTTP_204_NO_CONTENT)
+def change_my_password(
+    data: MemberPasswordChangeRequest,
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    try:
+        change_member_password(
+            db,
+            current_member.id,
+            current_password=data.current_password,
+            new_password=data.new_password,
+        )
+    except InvalidCurrentPasswordError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect",
+        ) from None
 
 
 @router.get("/assignees", response_model=MemberListResponse)

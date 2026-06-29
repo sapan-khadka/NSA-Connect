@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Nepalese Students Association">
+  <circle cx="256" cy="256" r="248" fill="#003893"/>
+  <circle cx="256" cy="256" r="214" fill="#c8102e"/>
+  <path
+    fill="#ffffff"
+    d="M96 340 L176 220 L236 290 L316 170 L416 340 Z"
+  />
+  <path
+    fill="#ffffff"
+    opacity="0.92"
+    d="M136 340 L196 250 L246 300 L306 210 L376 340 Z"
+  />
+  <circle cx="330" cy="188" r="34" fill="#ffffff"/>
+  <path
+    fill="#003893"
+    d="M330 162 a26 26 0 1 1 0 52 a20 20 0 1 0 0-40 a6 6 0 1 1 0-12 Z"
+  />
+  <text
+    x="256"
+    y="412"
+    text-anchor="middle"
+    fill="#ffffff"
+    font-family="system-ui, -apple-system, Segoe UI, sans-serif"
+    font-size="72"
+    font-weight="700"
+    letter-spacing="4"
+  >
+    NSA
+  </text>
+</svg>

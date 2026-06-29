@@ -34,6 +34,10 @@ class InvalidMemberRoleError(Exception):
     pass
 
 
+class InvalidCurrentPasswordError(Exception):
+    pass
+
+
 def create_member(db: Session, data: MemberCreateRequest) -> Member:
     existing = db.scalar(select(Member).where(Member.email == data.email))
     if existing:
@@ -219,3 +223,19 @@ def update_member_profile(
     db.commit()
     db.refresh(member)
     return member
+
+
+def change_member_password(
+    db: Session,
+    member_id: int,
+    *,
+    current_password: str,
+    new_password: str,
+) -> None:
+    member = get_member_by_id(db, member_id)
+
+    if not verify_password(current_password, member.hashed_password):
+        raise InvalidCurrentPasswordError
+
+    member.hashed_password = hash_password(new_password)
+    db.commit()

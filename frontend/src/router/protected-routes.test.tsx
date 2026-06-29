@@ -46,6 +46,18 @@ describe("protected route redirects", () => {
     expect(screen.getByRole("heading", { name: "Login" })).toBeInTheDocument();
   });
 
+  it("sends unauthenticated users from /events to /login", async () => {
+    const { router } = renderWithRouter(undefined, {
+      initialEntries: ["/events"],
+      auth: { member: null, isAuthenticated: false },
+    });
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/login");
+    });
+    expect(screen.getByRole("heading", { name: "Login" })).toBeInTheDocument();
+  });
+
   it("allows general members to view /member", async () => {
     renderWithRouter(undefined, {
       initialEntries: ["/member"],

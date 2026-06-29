@@ -78,6 +78,15 @@ export async function updateMyProfile(
   return response.data;
 }
 
+export type ChangePasswordRequest = {
+  current_password: string;
+  new_password: string;
+};
+
+export async function changeMyPassword(data: ChangePasswordRequest): Promise<void> {
+  await api.post("/v1/members/me/password", data);
+}
+
 export type UpdateMemberRoleRequest = {
   role: "general" | "board";
 };

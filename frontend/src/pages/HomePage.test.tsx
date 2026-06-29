@@ -75,9 +75,7 @@ afterEach(() => {
 });
 
 describe("HomePage", () => {
-  it("shows a public landing page with login and upcoming events", async () => {
-    mockedUpcoming.mockResolvedValue({ events: [sampleEvent], total: 1 });
-
+  it("shows a public landing page with login and registration only", () => {
     render(
       <MemoryRouter>
         <MockAuthProvider value={{ member: null, isAuthenticated: false, token: null }}>
@@ -86,12 +84,23 @@ describe("HomePage", () => {
       </MemoryRouter>,
     );
 
+    expect(
+      screen.getByRole("img", {
+        name: "Nepalese Students Association at SEMO",
+      }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "NSA Connect" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Log in" })).toHaveAttribute(
       "href",
       "/login",
     );
-    expect(await screen.findByText("Dashain Celebration")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Create account" })).toHaveAttribute(
+      "href",
+      "/register",
+    );
+    expect(screen.queryByText("Upcoming events")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Browse events" })).not.toBeInTheDocument();
+    expect(mockedUpcoming).not.toHaveBeenCalled();
   });
 
   it("shows a personalized member hub with tasks and alerts", async () => {

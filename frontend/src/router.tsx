@@ -117,8 +117,22 @@ export const appRoutes: RouteObject[] = [
           </ProtectedRoute>
         ),
       },
-      { path: "events", element: <EventsPage /> },
-      { path: "events/upcoming", element: <UpcomingEventsPage /> },
+      {
+        path: "events",
+        element: (
+          <ProtectedRoute>
+            <EventsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "events/upcoming",
+        element: (
+          <ProtectedRoute>
+            <UpcomingEventsPage />
+          </ProtectedRoute>
+        ),
+      },
       {
         path: "events/:eventId/manage",
         element: (

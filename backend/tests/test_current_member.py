@@ -154,3 +154,91 @@ def test_members_me_rejects_unapproved_member(client, db_session):
 
     assert response.status_code == 403
     assert response.json()["detail"] == "Member account is not approved"
+
+
+def test_members_me_password_changes_password(client, db_session):
+    _register(client)
+    _approve_member(db_session)
+    login = _login(client)
+    token = login.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.post(
+        "/api/v1/members/me/password",
+        headers=headers,
+        json={
+            "current_password": "securepass123",
+            "new_password": "brandnewpass",
+        },
+    )
+
+    assert response.status_code == 204
+
+    old_login = _login(client)
+    assert old_login.status_code == 401
+
+    new_login = _login(client, password="brandnewpass")
+    assert new_login.status_code == 200
+
+
+def test_members_me_password_rejects_wrong_current_password(client, db_session):
+    _register(client)
+    _approve_member(db_session)
+    login = _login(client)
+    token = login.json()["access_token"]
+
+    response = client.post(
+        "/api/v1/members/me/password",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "current_password": "wrongpassword",
+            "new_password": "brandnewpass",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Current password is incorrect"
+
+
+def test_members_me_password_changes_password(client, db_session):
+    _register(client)
+    _approve_member(db_session)
+    login = _login(client)
+    token = login.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.post(
+        "/api/v1/members/me/password",
+        headers=headers,
+        json={
+            "current_password": "securepass123",
+            "new_password": "brandnewpass",
+        },
+    )
+
+    assert response.status_code == 204
+
+    old_login = _login(client)
+    assert old_login.status_code == 401
+
+    new_login = _login(client, password="brandnewpass")
+    assert new_login.status_code == 200
+
+
+def test_members_me_password_rejects_wrong_current_password(client, db_session):
+    _register(client)
+    _approve_member(db_session)
+    login = _login(client)
+    token = login.json()["access_token"]
+
+    response = client.post(
+        "/api/v1/members/me/password",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "current_password": "wrongpassword",
+            "new_password": "brandnewpass",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Current password is incorrect"

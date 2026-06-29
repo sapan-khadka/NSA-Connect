@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { EventRsvpButton } from "../components/EventRsvpButton";
-import { RoleBadge } from "../components/RoleBadge";
+import { HomeHeroBrand } from "../components/AppLogo";
 import { useAuth } from "../context/useAuth";
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/auth-api";
@@ -129,134 +129,32 @@ function buildQuickLinks(member: MemberResponse): QuickLink[] {
 }
 
 function PublicHomeView() {
-  const [events, setEvents] = useState<EventResponse[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await fetchUpcomingEvents({ limit: 3 });
-        if (!cancelled) {
-          setEvents(response.events);
-        }
-      } catch (caught) {
-        if (!cancelled) {
-          setError(getApiErrorMessage(caught));
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   return (
-    <div className="space-y-8">
-      <section className="rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-8 text-center md:text-left">
-        <p className="text-sm font-semibold uppercase tracking-wide text-accent">
-          Nepalese Students&apos; Association
-        </p>
-        <h1 className="mt-2 text-3xl font-bold text-primary md:text-4xl">
-          NSA Connect
-        </h1>
-        <p className="mx-auto mt-3 max-w-2xl text-gray-600 md:mx-0">
-          Stay connected with campus events, volunteer opportunities, and your
-          NSA community at Southeast Missouri State University.
-        </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-3 md:justify-start">
-          <Link
-            to="/login"
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-hover"
-          >
-            Log in
-          </Link>
-          <Link
-            to="/register"
-            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-primary transition hover:border-accent hover:bg-accent/5"
-          >
-            Create account
-          </Link>
-          <Link
-            to="/events"
-            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-primary transition hover:border-accent hover:bg-accent/5"
-          >
-            Browse events
-          </Link>
-        </div>
-      </section>
-
-      <section className="rounded-lg border border-gray-200 bg-white p-6">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-primary">Upcoming events</h2>
-            <p className="mt-1 text-sm text-gray-500">
-              See what&apos;s coming up on the NSA calendar.
-            </p>
-          </div>
-          <Link
-            to="/events"
-            className="text-sm font-medium text-accent hover:text-accent-hover"
-          >
-            Full calendar →
-          </Link>
-        </div>
-
-        {isLoading ? (
-          <p className="mt-6 text-sm text-gray-500">Loading upcoming events…</p>
-        ) : null}
-
-        {error ? (
-          <p className="mt-6 text-sm text-red-600" role="alert">
-            {error}
-          </p>
-        ) : null}
-
-        {!isLoading && !error && events.length === 0 ? (
-          <p className="mt-6 rounded-md border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-500">
-            No upcoming events scheduled yet. Check back soon.
-          </p>
-        ) : null}
-
-        {!isLoading && !error && events.length > 0 ? (
-          <ul className="mt-6 space-y-3">
-            {events.map((event) => (
-              <li
-                key={event.id}
-                className="rounded-md border border-gray-200 px-4 py-3"
+    <div className="mx-auto max-w-3xl">
+      <section className="rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-8 md:p-10">
+        <HomeHeroBrand
+          eyebrow="Nepalese Students' Association · SEMO"
+          title="NSA Connect"
+          description="Log in or create an account with your @semo.edu email to access events, tasks, and member tools."
+          align="center"
+          actions={
+            <>
+              <Link
+                to="/login"
+                className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-hover"
               >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="font-medium text-primary">{event.name}</p>
-                    <p className="mt-1 text-sm text-gray-600">
-                      {formatEventDateTime(event.starts_at)}
-                    </p>
-                  </div>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${EVENT_TYPE_BADGE_CLASS[event.event_type]}`}
-                  >
-                    {EVENT_TYPE_LABELS[event.event_type]}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : null}
+                Log in
+              </Link>
+              <Link
+                to="/register"
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-primary transition hover:border-accent hover:bg-accent/5"
+              >
+                Create account
+              </Link>
+            </>
+          }
+        />
       </section>
-
-      {import.meta.env.DEV ? <DevHealthCheck /> : null}
     </div>
   );
 }
@@ -434,21 +332,16 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
   return (
     <div className="space-y-8">
       <section className="rounded-xl border border-accent/20 bg-gradient-to-br from-accent/5 to-white p-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-accent">
-              Home
-            </p>
-            <h1 className="mt-2 text-3xl font-bold text-primary">
-              Welcome back, {member.full_name}
-            </h1>
-            <p className="mt-3 max-w-2xl text-gray-600">
-              Your daily check-in for NSA events, assigned work, and quick
-              navigation across the app.
-            </p>
-          </div>
-          <RoleBadge role={member.role} size="md" />
-        </div>
+        <p className="text-sm font-semibold uppercase tracking-wide text-accent">
+          Home
+        </p>
+        <h1 className="mt-2 text-3xl font-bold text-primary">
+          Welcome back, {member.full_name}
+        </h1>
+        <p className="mt-3 max-w-2xl text-gray-600">
+          Your daily check-in for NSA events, assigned work, and quick
+          navigation across the app.
+        </p>
       </section>
 
       {alerts.length > 0 ? (
