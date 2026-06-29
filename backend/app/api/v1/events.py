@@ -20,6 +20,7 @@ from app.services.event_service import (
     delete_event,
     get_event_with_prep_tasks,
     list_events,
+    list_upcoming_events,
 )
 from app.services.prep_task_service import (
     InvalidAssigneeError,
@@ -85,6 +86,22 @@ def list_events_endpoint(
     db: Session = Depends(get_db),
 ):
     events, total = list_events(db, month=month, event_type=event_type)
+    return EventListResponse(
+        events=[
+            _build_event_response(db, event, member_id=current_member.id)
+            for event in events
+        ],
+        total=total,
+    )
+
+
+@router.get("/upcoming", response_model=EventListResponse)
+def list_upcoming_events_endpoint(
+    limit: int = Query(default=50, ge=1, le=100),
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    events, total = list_upcoming_events(db, limit=limit)
     return EventListResponse(
         events=[
             _build_event_response(db, event, member_id=current_member.id)

@@ -116,6 +116,34 @@ def get_event_budget_breakdown(
     return breakdown
 
 
+def get_event_budget_for_event(db: Session, event_id: int) -> FinanceEventBudgetSummary:
+    event = db.get(Event, event_id)
+    if event is None:
+        raise EventNotFoundError
+
+    row = db.execute(
+        select(
+            _income_sum(),
+            _expense_sum(),
+            func.count(FinanceEntry.id),
+        ).where(FinanceEntry.event_id == event.id),
+    ).one()
+    actual_income = Decimal(row[0])
+    actual_expense = Decimal(row[1])
+    planned_budget = Decimal(event.budget)
+
+    return FinanceEventBudgetSummary(
+        event_id=event.id,
+        event_name=event.title,
+        planned_budget=planned_budget,
+        actual_expense=actual_expense,
+        actual_income=actual_income,
+        budget_remaining=planned_budget - actual_expense,
+        over_budget=actual_expense > planned_budget,
+        entry_count=row[2],
+    )
+
+
 def get_expense_by_category(
     db: Session,
     *,

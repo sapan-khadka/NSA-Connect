@@ -2,7 +2,10 @@ import { cleanup, render, screen, waitFor, within } from "@testing-library/react
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { FinanceEntryResponse } from "../lib/finance-api";
+import type {
+  FinanceChangeRequestResponse,
+  FinanceEntryResponse,
+} from "../lib/finance-api";
 
 vi.mock("../lib/finance-api", async () => {
   const actual = await vi.importActual<typeof import("../lib/finance-api")>(
@@ -42,6 +45,28 @@ function makeEntry(overrides: Partial<FinanceEntryResponse> = {}): FinanceEntryR
   };
 }
 
+function makeChangeRequest(
+  overrides: Partial<FinanceChangeRequestResponse> = {},
+): FinanceChangeRequestResponse {
+  return {
+    id: 10,
+    entry_id: 1,
+    action: "update",
+    status: "pending",
+    payload: null,
+    requested_by_id: 1,
+    requested_by_name: "Treasurer",
+    reviewed_by_id: null,
+    review_note: null,
+    created_at: "2026-03-18T12:00:00Z",
+    reviewed_at: null,
+    entry_type: "expense",
+    entry_amount: "65.00",
+    entry_description: "Snacks",
+    ...overrides,
+  };
+}
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -62,12 +87,10 @@ describe("FinanceEntryList management", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("edits an entry inline and saves", async () => {
+  it("submits an edit for approval instead of applying immediately", async () => {
     const user = userEvent.setup();
     mockedFetch.mockResolvedValue({ entries: [makeEntry()], total: 1 });
-    mockedUpdate.mockResolvedValue(
-      makeEntry({ amount: "80.00", description: "Updated snacks" }),
-    );
+    mockedUpdate.mockResolvedValue(makeChangeRequest({ action: "update" }));
     const onChanged = vi.fn();
 
     render(
@@ -98,9 +121,10 @@ describe("FinanceEntryList management", () => {
       }),
     );
     expect(onChanged).toHaveBeenCalled();
-    await waitFor(() =>
-      expect(screen.getByText("Updated snacks")).toBeInTheDocument(),
-    );
+    expect(
+      await screen.findByText(/submitted for approval/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Snacks")).toBeInTheDocument();
   });
 
   it("validates the amount before saving", async () => {
@@ -123,10 +147,10 @@ describe("FinanceEntryList management", () => {
     expect(mockedUpdate).not.toHaveBeenCalled();
   });
 
-  it("deletes an entry after confirmation", async () => {
+  it("submits a delete request for approval", async () => {
     const user = userEvent.setup();
     mockedFetch.mockResolvedValue({ entries: [makeEntry()], total: 1 });
-    mockedDelete.mockResolvedValue(undefined);
+    mockedDelete.mockResolvedValue(makeChangeRequest({ action: "delete" }));
     const onChanged = vi.fn();
     vi.spyOn(window, "confirm").mockReturnValue(true);
 
@@ -146,9 +170,10 @@ describe("FinanceEntryList management", () => {
 
     await waitFor(() => expect(mockedDelete).toHaveBeenCalledWith(1));
     expect(onChanged).toHaveBeenCalled();
-    await waitFor(() =>
-      expect(screen.queryByText("Snacks")).not.toBeInTheDocument(),
-    );
+    expect(
+      await screen.findByText(/delete request submitted for approval/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Snacks")).toBeInTheDocument();
   });
 
   it("does not delete when confirmation is cancelled", async () => {

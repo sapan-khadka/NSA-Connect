@@ -4,6 +4,7 @@ import axios from "axios";
 import { EventBudgetBreakdown } from "../components/EventBudgetBreakdown";
 import { ExpenseCategoryChart } from "../components/ExpenseCategoryChart";
 import { FinanceEntryList } from "../components/FinanceEntryList";
+import { FinancePendingApprovals } from "../components/FinancePendingApprovals";
 import { FinanceSummaryCard } from "../components/FinanceSummaryCard";
 import { LogFinanceEntryForm } from "../components/LogFinanceEntryForm";
 import { RoleBadge } from "../components/RoleBadge";
@@ -298,6 +299,10 @@ export function FinancePage() {
 
       {canViewTreasury && (
         <>
+          <FinancePendingApprovals
+            refreshKey={refreshKey}
+            onChanged={() => setRefreshKey((current) => current + 1)}
+          />
           <LogFinanceEntryForm
             eventOptions={eventOptions}
             onCreated={handleFinanceEntryCreated}

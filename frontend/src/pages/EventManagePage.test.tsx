@@ -1,0 +1,168 @@
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { MockAuthProvider } from "../test/test-utils";
+import { EventManagePage } from "./EventManagePage";
+
+vi.mock("../components/EventTaskManager", () => ({
+  EventTaskManager: () => <div data-testid="event-task-manager">Tasks</div>,
+}));
+
+vi.mock("../components/FinanceEntryList", () => ({
+  FinanceEntryList: () => (
+    <div data-testid="finance-entry-list">Transactions</div>
+  ),
+}));
+
+vi.mock("../lib/events-api", () => ({
+  fetchEvent: vi.fn(),
+}));
+
+vi.mock("../lib/event-tasks-api", () => ({
+  fetchEventTasks: vi.fn(),
+}));
+
+vi.mock("../lib/finance-api", () => ({
+  fetchEventBudgetForEvent: vi.fn(),
+}));
+
+vi.mock("../lib/members-api", () => ({
+  fetchAssignableMembers: vi.fn(),
+}));
+
+const mockEvent = {
+  id: 1,
+  name: "Dashain Celebration",
+  starts_at: "2030-06-01T18:00:00+00:00",
+  event_type: "cultural" as const,
+  description: "Annual cultural celebration.",
+  budget: "500.00",
+  created_by_id: 1,
+  rsvp_count: 12,
+  current_member_has_rsvped: false,
+  prep_tasks: [],
+};
+
+function renderPage(role: "board" | "treasurer" = "board") {
+  return render(
+    <MockAuthProvider
+      value={{
+        member: {
+          id: 1,
+          full_name: "Board User",
+          email: "board@semo.edu",
+          student_id: "11223344",
+          major: "CS",
+          graduation_year: 2027,
+          role,
+          status: "approved",
+          position: "member",
+        },
+        isAuthenticated: true,
+      }}
+    >
+      <MemoryRouter initialEntries={["/events/1/manage"]}>
+        <Routes>
+          <Route path="/events/:eventId/manage" element={<EventManagePage />} />
+        </Routes>
+      </MemoryRouter>
+    </MockAuthProvider>,
+  );
+}
+
+describe("EventManagePage", () => {
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it("shows event details, task completion, and budget for board", async () => {
+    const { fetchEvent } = await import("../lib/events-api");
+    const { fetchEventTasks } = await import("../lib/event-tasks-api");
+    const { fetchEventBudgetForEvent } = await import("../lib/finance-api");
+
+    vi.mocked(fetchEvent).mockResolvedValue(mockEvent);
+    vi.mocked(fetchEventTasks).mockResolvedValue({
+      tasks: [
+        {
+          id: 1,
+          event_id: 1,
+          event_name: "Dashain Celebration",
+          title: "Setup",
+          description: "",
+          status: "done",
+          assignee_id: 2,
+          assignee_name: "Alex",
+          due_date: null,
+          completion_note: null,
+          completion_photo_url: null,
+          completed_at: "2030-05-02T12:00:00Z",
+          created_by_id: 1,
+          created_at: "2030-05-01T12:00:00Z",
+        },
+        {
+          id: 2,
+          event_id: 1,
+          event_name: "Dashain Celebration",
+          title: "Cleanup",
+          description: "",
+          status: "in_progress",
+          assignee_id: 3,
+          assignee_name: "Sam",
+          due_date: null,
+          completion_note: null,
+          completion_photo_url: null,
+          completed_at: null,
+          created_by_id: 1,
+          created_at: "2030-05-01T12:00:00Z",
+        },
+      ],
+      total: 2,
+    });
+    vi.mocked(fetchEventBudgetForEvent).mockResolvedValue({
+      event_id: 1,
+      event_name: "Dashain Celebration",
+      planned_budget: "500.00",
+      actual_expense: "120.00",
+      actual_income: "80.00",
+      budget_remaining: "380.00",
+      over_budget: false,
+      entry_count: 2,
+    });
+
+    renderPage("board");
+
+    expect(await screen.findByText("Dashain Celebration")).toBeInTheDocument();
+    expect(screen.getByText("Task completion")).toBeInTheDocument();
+    expect(screen.getByText("1/2 done (50%)")).toBeInTheDocument();
+    expect(screen.getByText("Event budget")).toBeInTheDocument();
+    expect(screen.getByTestId("event-task-manager")).toBeInTheDocument();
+    expect(screen.queryByTestId("finance-entry-list")).not.toBeInTheDocument();
+  });
+
+  it("shows finance entries for treasurer", async () => {
+    const { fetchEvent } = await import("../lib/events-api");
+    const { fetchEventTasks } = await import("../lib/event-tasks-api");
+    const { fetchEventBudgetForEvent } = await import("../lib/finance-api");
+
+    vi.mocked(fetchEvent).mockResolvedValue(mockEvent);
+    vi.mocked(fetchEventTasks).mockResolvedValue({ tasks: [], total: 0 });
+    vi.mocked(fetchEventBudgetForEvent).mockResolvedValue({
+      event_id: 1,
+      event_name: "Dashain Celebration",
+      planned_budget: "500.00",
+      actual_expense: "0.00",
+      actual_income: "0.00",
+      budget_remaining: "500.00",
+      over_budget: false,
+      entry_count: 0,
+    });
+
+    renderPage("treasurer");
+
+    await waitFor(() =>
+      expect(screen.getByTestId("finance-entry-list")).toBeInTheDocument(),
+    );
+  });
+});

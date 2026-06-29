@@ -53,6 +53,15 @@ export async function fetchEvents(params?: {
   return response.data;
 }
 
+export async function fetchUpcomingEvents(params?: {
+  limit?: number;
+}): Promise<EventListResponse> {
+  const response = await api.get<EventListResponse>("/v1/events/upcoming", {
+    params,
+  });
+  return response.data;
+}
+
 export type CreateEventRequest = {
   name: string;
   starts_at: string;

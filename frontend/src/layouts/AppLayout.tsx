@@ -49,6 +49,11 @@ export function AppLayout() {
                 Events
               </NavLink>
             </li>
+            <li>
+              <NavLink to="/events/upcoming" className={navLinkClass}>
+                Upcoming
+              </NavLink>
+            </li>
             {isAuthenticated && (
               <>
                 <li>

@@ -6,8 +6,10 @@ import { BoardDashboardPage } from "./pages/BoardDashboardPage";
 import { BoardTasksPage } from "./pages/BoardTasksPage";
 import { AiAssistantPage } from "./pages/AiAssistantPage";
 import { AnnouncementEmailPage } from "./pages/AnnouncementEmailPage";
+import { EventManagePage } from "./pages/EventManagePage";
 import { EventsPage } from "./pages/EventsPage";
 import { FinancePage } from "./pages/FinancePage";
+import { UpcomingEventsPage } from "./pages/UpcomingEventsPage";
 import { GeneralDashboardPage } from "./pages/GeneralDashboardPage";
 import { MyTasksPage } from "./pages/MyTasksPage";
 import { HomePage } from "./pages/HomePage";
@@ -116,6 +118,15 @@ export const appRoutes: RouteObject[] = [
         ),
       },
       { path: "events", element: <EventsPage /> },
+      { path: "events/upcoming", element: <UpcomingEventsPage /> },
+      {
+        path: "events/:eventId/manage",
+        element: (
+          <ProtectedRoute minRole="board">
+            <EventManagePage />
+          </ProtectedRoute>
+        ),
+      },
       { path: "*", element: <NotFoundPage /> },
     ],
   },

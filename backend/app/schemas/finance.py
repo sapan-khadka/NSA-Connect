@@ -173,3 +173,57 @@ class ReceiptUploadResponse(BaseModel):
     bytes: int
     format: str | None
     resource_type: str
+
+
+class FinanceChangeRequestResponse(BaseModel):
+    id: int
+    entry_id: int
+    action: str
+    status: str
+    payload: dict | None
+    requested_by_id: int
+    requested_by_name: str
+    reviewed_by_id: int | None
+    review_note: str | None
+    created_at: datetime
+    reviewed_at: datetime | None
+    entry_type: FinanceEntryType | None = None
+    entry_amount: Decimal | None = None
+    entry_description: str | None = None
+
+    @classmethod
+    def from_request(cls, request: "FinanceChangeRequest") -> "FinanceChangeRequestResponse":
+        from app.models.finance_change_request import FinanceChangeRequest
+
+        payload = None
+        if request.payload:
+            import json
+
+            payload = json.loads(request.payload)
+
+        entry = request.entry
+        return cls(
+            id=request.id,
+            entry_id=request.entry_id,
+            action=request.action.value,
+            status=request.status.value,
+            payload=payload,
+            requested_by_id=request.requested_by_id,
+            requested_by_name=request.requested_by.full_name if request.requested_by else "",
+            reviewed_by_id=request.reviewed_by_id,
+            review_note=request.review_note,
+            created_at=request.created_at,
+            reviewed_at=request.reviewed_at,
+            entry_type=entry.entry_type if entry else None,
+            entry_amount=entry.amount if entry else None,
+            entry_description=entry.description if entry else None,
+        )
+
+
+class FinanceChangeRequestListResponse(BaseModel):
+    requests: list[FinanceChangeRequestResponse]
+    total: int
+
+
+class FinanceChangeRejectRequest(BaseModel):
+    review_note: str | None = Field(default=None, max_length=5000)

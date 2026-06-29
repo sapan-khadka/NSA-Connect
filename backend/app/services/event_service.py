@@ -82,6 +82,22 @@ def list_events(
     return list(events), total
 
 
+def list_upcoming_events(
+    db: Session,
+    *,
+    limit: int = 50,
+) -> tuple[list[Event], int]:
+    now = datetime.now(UTC)
+    query = select(Event).where(Event.starts_at >= now)
+    count_query = select(func.count()).select_from(Event).where(Event.starts_at >= now)
+
+    total = db.scalar(count_query) or 0
+    events = db.scalars(
+        query.order_by(Event.starts_at.asc()).limit(limit),
+    ).all()
+    return list(events), total
+
+
 def get_event_with_prep_tasks(db: Session, event_id: int) -> Event:
     from app.models.preptask import PrepTask
 

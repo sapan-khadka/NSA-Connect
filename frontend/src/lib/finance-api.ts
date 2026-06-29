@@ -147,16 +147,79 @@ export type UpdateFinanceEntryRequest = {
 export async function updateFinanceEntry(
   entryId: number,
   data: UpdateFinanceEntryRequest,
-): Promise<FinanceEntryResponse> {
-  const response = await api.patch<FinanceEntryResponse>(
+): Promise<FinanceChangeRequestResponse> {
+  const response = await api.patch<FinanceChangeRequestResponse>(
     `/v1/finance/${entryId}`,
     data,
   );
   return response.data;
 }
 
-export async function deleteFinanceEntry(entryId: number): Promise<void> {
-  await api.delete(`/v1/finance/${entryId}`);
+export async function deleteFinanceEntry(
+  entryId: number,
+): Promise<FinanceChangeRequestResponse> {
+  const response = await api.delete<FinanceChangeRequestResponse>(
+    `/v1/finance/${entryId}`,
+  );
+  return response.data;
+}
+
+export type FinanceChangeRequestResponse = {
+  id: number;
+  entry_id: number;
+  action: "update" | "delete";
+  status: "pending" | "approved" | "rejected";
+  payload: UpdateFinanceEntryRequest | null;
+  requested_by_id: number;
+  requested_by_name: string;
+  reviewed_by_id: number | null;
+  review_note: string | null;
+  created_at: string;
+  reviewed_at: string | null;
+  entry_type: FinanceEntryType | null;
+  entry_amount: string | null;
+  entry_description: string | null;
+};
+
+export type FinanceChangeRequestListResponse = {
+  requests: FinanceChangeRequestResponse[];
+  total: number;
+};
+
+export async function fetchPendingFinanceChangeRequests(): Promise<FinanceChangeRequestListResponse> {
+  const response = await api.get<FinanceChangeRequestListResponse>(
+    "/v1/finance/change-requests/pending",
+  );
+  return response.data;
+}
+
+export async function approveFinanceChangeRequest(
+  requestId: number,
+): Promise<FinanceChangeRequestResponse> {
+  const response = await api.post<FinanceChangeRequestResponse>(
+    `/v1/finance/change-requests/${requestId}/approve`,
+  );
+  return response.data;
+}
+
+export async function rejectFinanceChangeRequest(
+  requestId: number,
+  reviewNote?: string,
+): Promise<FinanceChangeRequestResponse> {
+  const response = await api.post<FinanceChangeRequestResponse>(
+    `/v1/finance/change-requests/${requestId}/reject`,
+    { review_note: reviewNote ?? null },
+  );
+  return response.data;
+}
+
+export async function fetchEventBudgetForEvent(
+  eventId: number,
+): Promise<FinanceEventBudgetSummary> {
+  const response = await api.get<FinanceEventBudgetSummary>(
+    `/v1/finance/events/${eventId}/budget`,
+  );
+  return response.data;
 }
 
 export async function uploadFinanceReceipt(

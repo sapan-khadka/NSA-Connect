@@ -19,6 +19,7 @@ type FinanceEntryListProps = {
   semester: string;
   refreshKey: number;
   canManage?: boolean;
+  eventId?: number;
   onChanged?: () => void;
 };
 
@@ -38,6 +39,7 @@ export function FinanceEntryList({
   semester,
   refreshKey,
   canManage = false,
+  eventId,
   onChanged,
 }: FinanceEntryListProps) {
   const [entries, setEntries] = useState<FinanceEntryResponse[]>([]);
@@ -46,6 +48,7 @@ export function FinanceEntryList({
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<EditDraft | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -56,9 +59,10 @@ export function FinanceEntryList({
       setErrorMessage(null);
 
       try {
-        const response = await fetchFinanceEntries(
-          semester === "all" ? undefined : { semester },
-        );
+        const response = await fetchFinanceEntries({
+          ...(semester === "all" ? {} : { semester }),
+          ...(eventId ? { event_id: eventId } : {}),
+        });
 
         if (!cancelled) {
           setEntries(response.entries);
@@ -91,7 +95,7 @@ export function FinanceEntryList({
     return () => {
       cancelled = true;
     };
-  }, [semester, refreshKey]);
+  }, [semester, refreshKey, eventId]);
 
   function startEdit(entry: FinanceEntryResponse) {
     setActionError(null);
@@ -133,18 +137,19 @@ export function FinanceEntryList({
 
     setBusyId(entryId);
     setActionError(null);
+    setActionNotice(null);
 
     try {
-      const updated = await updateFinanceEntry(entryId, {
+      await updateFinanceEntry(entryId, {
         entry_type: draft.entry_type,
         category: draft.category,
         amount: trimmedAmount,
         description: draft.description.trim(),
       });
-      setEntries((current) =>
-        current.map((entry) => (entry.id === entryId ? updated : entry)),
-      );
       cancelEdit();
+      setActionNotice(
+        "Change submitted for approval. The entry will update once the president or treasurer approves it.",
+      );
       onChanged?.();
     } catch (error) {
       setActionError(getApiErrorDetail(error, "Unable to update entry."));
@@ -155,19 +160,26 @@ export function FinanceEntryList({
 
   async function handleDelete(entry: FinanceEntryResponse) {
     const label = `${entry.entry_type} of ${formatCurrency(entry.amount)}`;
-    if (!window.confirm(`Delete this ${label}? This cannot be undone.`)) {
+    if (
+      !window.confirm(
+        `Request deletion of this ${label}? It will be removed after approval.`,
+      )
+    ) {
       return;
     }
 
     setBusyId(entry.id);
     setActionError(null);
+    setActionNotice(null);
 
     try {
       await deleteFinanceEntry(entry.id);
-      setEntries((current) => current.filter((item) => item.id !== entry.id));
       if (editingId === entry.id) {
         cancelEdit();
       }
+      setActionNotice(
+        "Delete request submitted for approval. The entry will be removed once approved.",
+      );
       onChanged?.();
     } catch (error) {
       setActionError(getApiErrorDetail(error, "Unable to delete entry."));
@@ -212,6 +224,12 @@ export function FinanceEntryList({
           className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
         >
           {actionError}
+        </p>
+      ) : null}
+
+      {actionNotice ? (
+        <p className="mt-4 rounded-md border border-accent/20 bg-accent/5 px-3 py-2 text-sm text-primary">
+          {actionNotice}
         </p>
       ) : null}
 
