@@ -78,6 +78,35 @@ export const MEMBER_POSITIONS = [
 
 export type MemberPosition = (typeof MEMBER_POSITIONS)[number];
 
+export const EXCLUSIVE_MEMBER_POSITIONS = MEMBER_POSITIONS.filter(
+  (position) => position !== "member",
+);
+
+export function isExclusiveMemberPosition(
+  position: MemberPosition,
+): position is Exclude<MemberPosition, "member"> {
+  return position !== "member";
+}
+
+export function buildPositionHolders(
+  members: { id: number; full_name: string; position: MemberPosition }[],
+): Partial<Record<MemberPosition, { id: number; full_name: string }>> {
+  const holders: Partial<
+    Record<MemberPosition, { id: number; full_name: string }>
+  > = {};
+
+  for (const member of members) {
+    if (isExclusiveMemberPosition(member.position)) {
+      holders[member.position] = {
+        id: member.id,
+        full_name: member.full_name,
+      };
+    }
+  }
+
+  return holders;
+}
+
 export function isMemberPosition(value: string): value is MemberPosition {
   return MEMBER_POSITIONS.includes(value as MemberPosition);
 }

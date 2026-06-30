@@ -1,22 +1,46 @@
 import type { MemberResponse } from "../lib/auth-api";
 import {
   formatPositionLabel,
+  isExclusiveMemberPosition,
   MEMBER_POSITIONS,
   type MemberPosition,
 } from "../lib/roles";
 
+type PositionHolder = { id: number; full_name: string };
+
 type PositionSelectProps = {
   member: MemberResponse;
   isUpdating?: boolean;
+  positionHolders?: Partial<Record<MemberPosition, PositionHolder>>;
   onPositionChange: (
     memberId: number,
     position: MemberPosition,
   ) => void | Promise<void>;
 };
 
+function formatPositionOptionLabel(
+  position: MemberPosition,
+  member: MemberResponse,
+  positionHolders?: Partial<Record<MemberPosition, PositionHolder>>,
+): string {
+  const label = formatPositionLabel(position);
+  const holder = positionHolders?.[position];
+
+  if (
+    holder &&
+    holder.id !== member.id &&
+    isExclusiveMemberPosition(position)
+  ) {
+    return `${label} (${holder.full_name})`;
+  }
+
+  return label;
+}
+
 export function PositionSelect({
   member,
   isUpdating = false,
+  positionHolders,
   onPositionChange,
 }: PositionSelectProps) {
   return (
@@ -36,7 +60,7 @@ export function PositionSelect({
       >
         {MEMBER_POSITIONS.map((position) => (
           <option key={position} value={position}>
-            {formatPositionLabel(position)}
+            {formatPositionOptionLabel(position, member, positionHolders)}
           </option>
         ))}
       </select>

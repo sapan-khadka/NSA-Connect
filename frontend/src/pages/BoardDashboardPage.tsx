@@ -65,7 +65,7 @@ export function BoardDashboardPage() {
         <ul className="mt-4 grid gap-3 md:grid-cols-2">
           <li>
             <Link
-              to="/board/tasks"
+              to="/tasks"
               className="block rounded-md border border-accent/30 bg-gradient-to-br from-accent/10 to-white px-4 py-3 transition-all hover:border-accent hover:shadow-md"
             >
               <p className="font-medium text-primary">Task board</p>

@@ -28,6 +28,25 @@ describe("PositionSelect", () => {
     expect(onPositionChange).toHaveBeenCalledWith(4, "event_manager");
   });
 
+  it("shows who currently holds an exclusive position", () => {
+    const member = createMockMember("board", { id: 4, position: "member" });
+    const positionHolders = {
+      event_manager: { id: 9, full_name: "Alex Rivera" },
+    };
+
+    render(
+      <PositionSelect
+        member={member}
+        positionHolders={positionHolders}
+        onPositionChange={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("option", { name: "Event Manager (Alex Rivera)" }),
+    ).toBeInTheDocument();
+  });
+
   it("is disabled for members who are not approved", () => {
     const member = createMockMember("general", {
       id: 5,

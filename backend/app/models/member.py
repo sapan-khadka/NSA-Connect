@@ -37,6 +37,11 @@ class MemberPosition(StrEnum):
     MEMBER = "member"
 
 
+EXCLUSIVE_MEMBER_POSITIONS = frozenset(
+    position for position in MemberPosition if position != MemberPosition.MEMBER
+)
+
+
 _ROLE_LEVELS: dict[MemberRole, int] = {
     MemberRole.GENERAL: 1,
     MemberRole.BOARD: 2,

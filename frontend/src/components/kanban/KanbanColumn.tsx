@@ -16,7 +16,7 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
   {
     id: "todo",
     title: "To do",
-    subtitle: "Ready to start",
+    subtitle: "Assigned to you",
     headerClass: "from-slate-700 to-slate-900",
     surfaceClass: "from-slate-50/90 to-white/70",
     glowClass: "bg-slate-400/20",
@@ -24,7 +24,7 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
   {
     id: "in_progress",
     title: "In progress",
-    subtitle: "Checklist underway",
+    subtitle: "Work underway",
     headerClass: "from-amber-500 to-orange-600",
     surfaceClass: "from-amber-50/90 to-white/70",
     glowClass: "bg-amber-400/25",
@@ -32,7 +32,7 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
   {
     id: "done",
     title: "Done",
-    subtitle: "Fully complete",
+    subtitle: "Completed with notes or photos",
     headerClass: "from-emerald-500 to-teal-600",
     surfaceClass: "from-emerald-50/90 to-white/70",
     glowClass: "bg-emerald-400/25",
@@ -43,9 +43,15 @@ type KanbanColumnProps = {
   column: KanbanColumnConfig;
   tasks: KanbanTask[];
   activeTaskId: number | null;
+  onOpenTask?: (taskId: number) => void;
 };
 
-export function KanbanColumn({ column, tasks, activeTaskId }: KanbanColumnProps) {
+export function KanbanColumn({
+  column,
+  tasks,
+  activeTaskId,
+  onOpenTask,
+}: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
   });
@@ -100,6 +106,7 @@ export function KanbanColumn({ column, tasks, activeTaskId }: KanbanColumnProps)
               key={task.id}
               task={task}
               isDragging={activeTaskId === task.id}
+              onOpenTask={onOpenTask}
             />
           ))
         )}

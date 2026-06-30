@@ -1,4 +1,4 @@
-import { createBrowserRouter, type RouteObject } from "react-router-dom";
+import { createBrowserRouter, Navigate, type RouteObject } from "react-router-dom";
 
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppLayout } from "./layouts/AppLayout";
@@ -70,12 +70,16 @@ export const appRoutes: RouteObject[] = [
         ),
       },
       {
-        path: "board/tasks",
+        path: "tasks",
         element: (
-          <ProtectedRoute minRole="board">
+          <ProtectedRoute>
             <BoardTasksPage />
           </ProtectedRoute>
         ),
+      },
+      {
+        path: "board/tasks",
+        element: <Navigate to="/tasks" replace />,
       },
       {
         path: "board/task-oversight",

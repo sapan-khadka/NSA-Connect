@@ -70,3 +70,48 @@ def test_set_position_rejects_invalid_value(client, president_headers, board_mem
         headers=president_headers,
     )
     assert response.status_code == 422
+
+
+def test_assigning_exclusive_position_demotes_previous_holder(
+    client,
+    president_headers,
+    db_session,
+):
+    from app.models.member import MemberPosition
+
+    first = create_board_member(db_session, email="first@semo.edu")
+    first.student_id = "33333333"
+    db_session.commit()
+    db_session.refresh(first)
+
+    second = create_board_member(db_session, email="second@semo.edu")
+    second.student_id = "44444444"
+    db_session.commit()
+    db_session.refresh(second)
+
+    first_response = client.patch(
+        f"/api/v1/members/{first.id}/position",
+        json={"position": "secretary"},
+        headers=president_headers,
+    )
+    assert first_response.status_code == 200
+    assert first_response.json()["position"] == "secretary"
+
+    second_response = client.patch(
+        f"/api/v1/members/{second.id}/position",
+        json={"position": "secretary"},
+        headers=president_headers,
+    )
+    assert second_response.status_code == 200
+    assert second_response.json()["position"] == "secretary"
+
+    first_after = client.get(
+        f"/api/v1/members/{first.id}",
+        headers=president_headers,
+    )
+    assert first_after.json()["position"] == "member"
+
+    db_session.refresh(first)
+    db_session.refresh(second)
+    assert first.position == MemberPosition.MEMBER
+    assert second.position == MemberPosition.SECRETARY

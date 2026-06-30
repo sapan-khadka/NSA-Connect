@@ -37,7 +37,7 @@ const baseTask: KanbanTask = {
 };
 
 describe("getKanbanColumn", () => {
-  it("maps tasks to todo, in progress, and done", () => {
+  it("maps checklist tasks to todo, in progress, and done", () => {
     expect(getKanbanColumn(baseTask)).toBe("todo");
 
     const inProgress = applyKanbanMoveLocally(baseTask, {
@@ -52,6 +52,37 @@ describe("getKanbanColumn", () => {
       value: true,
     });
     expect(getKanbanColumn(done)).toBe("done");
+  });
+});
+
+describe("simple task kanban", () => {
+  const simpleTask: KanbanTask = {
+    ...baseTask,
+    id: 2,
+    task_kind: "simple",
+    title: "Book venue",
+    group_name: null,
+    checklist_items: [],
+    status: "todo",
+  };
+
+  it("uses task status for simple tasks", () => {
+    expect(getKanbanColumn(simpleTask)).toBe("todo");
+    expect(
+      getKanbanColumn(
+        applyKanbanMoveLocally(simpleTask, {
+          type: "set_status",
+          status: "in_progress",
+        }),
+      ),
+    ).toBe("in_progress");
+  });
+
+  it("moves simple tasks by updating status", () => {
+    expect(getKanbanMoveAction(simpleTask, "done")).toEqual({
+      type: "set_status",
+      status: "done",
+    });
   });
 });
 

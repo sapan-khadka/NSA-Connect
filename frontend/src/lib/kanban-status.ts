@@ -1,4 +1,4 @@
-import type { EventTaskResponse } from "./event-tasks-api";
+import type { EventTaskResponse, EventTaskStatus } from "./event-tasks-api";
 import { calcChecklistTaskProgress } from "./task-progress";
 
 export type KanbanColumnId = "todo" | "in_progress" | "done";
@@ -17,9 +17,30 @@ export type KanbanTask = EventTaskResponse & {
 
 export type KanbanColumnMoveAction =
   | { type: "bulk_complete"; value: boolean }
-  | { type: "toggle_item"; itemId: number; value: boolean };
+  | { type: "toggle_item"; itemId: number; value: boolean }
+  | { type: "set_status"; status: EventTaskStatus };
+
+const STATUS_TO_COLUMN: Record<EventTaskStatus, KanbanColumnId> = {
+  todo: "todo",
+  in_progress: "in_progress",
+  done: "done",
+};
+
+const COLUMN_TO_STATUS: Record<KanbanColumnId, EventTaskStatus> = {
+  todo: "todo",
+  in_progress: "in_progress",
+  done: "done",
+};
+
+export function isSimpleKanbanTask(task: EventTaskResponse): boolean {
+  return task.task_kind === "simple";
+}
 
 export function getKanbanColumn(task: EventTaskResponse): KanbanColumnId {
+  if (isSimpleKanbanTask(task)) {
+    return STATUS_TO_COLUMN[task.status] ?? "todo";
+  }
+
   if (task.is_complete || task.status === "done") {
     return "done";
   }
@@ -58,6 +79,14 @@ export function getKanbanMoveAction(
   const currentColumn = getKanbanColumn(task);
   if (currentColumn === targetColumn) {
     return null;
+  }
+
+  if (isSimpleKanbanTask(task)) {
+    const nextStatus = COLUMN_TO_STATUS[targetColumn];
+    if (task.status === nextStatus) {
+      return null;
+    }
+    return { type: "set_status", status: nextStatus };
   }
 
   if (targetColumn === "done") {
@@ -109,6 +138,14 @@ export function applyKanbanMoveLocally(
   task: KanbanTask,
   action: KanbanColumnMoveAction,
 ): KanbanTask {
+  if (action.type === "set_status") {
+    return {
+      ...task,
+      status: action.status,
+      is_complete: action.status === "done",
+    };
+  }
+
   if (action.type === "bulk_complete") {
     const checklist_items = task.checklist_items.map((item) => ({
       ...item,
@@ -145,11 +182,30 @@ export function applyKanbanMoveLocally(
 }
 
 export function getKanbanTaskProgressLabel(task: EventTaskResponse): string {
+  if (isSimpleKanbanTask(task)) {
+    if (task.status === "done") {
+      return "Completed";
+    }
+    if (task.status === "in_progress") {
+      return "In progress";
+    }
+    return "Assigned to you";
+  }
+
   const { completed, total, percent } = calcChecklistTaskProgress(task);
   if (total === 0) {
     return "No checklist";
   }
   return `${completed}/${total} · ${percent}%`;
+}
+
+export function toKanbanTask(task: EventTaskResponse): KanbanTask {
+  return {
+    ...task,
+    eventId: task.event_id,
+    eventName: task.event_name,
+    eventStartsAt: task.due_date ?? task.created_at,
+  };
 }
 
 export function parseKanbanTaskId(id: string | number): number | null {

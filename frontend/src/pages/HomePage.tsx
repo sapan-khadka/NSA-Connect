@@ -96,7 +96,7 @@ function buildQuickLinks(member: MemberResponse): QuickLink[] {
       {
         title: "Task board",
         description: "Drag checklist tasks across To do, In progress, and Done.",
-        to: "/board/tasks",
+        to: "/tasks",
       },
     );
   }

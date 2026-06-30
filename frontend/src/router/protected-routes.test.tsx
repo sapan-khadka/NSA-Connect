@@ -20,6 +20,12 @@ vi.mock("../lib/finance-api", () => ({
   fetchExpenseByCategory: vi.fn().mockResolvedValue({ categories: [], total_expense: "0.00" }),
 }));
 
+vi.mock("../lib/event-tasks-api", () => ({
+  fetchMyEventTasks: vi.fn().mockResolvedValue({ tasks: [], total: 0 }),
+  updateEventTask: vi.fn(),
+  updateEventTaskChecklistItem: vi.fn(),
+}));
+
 vi.mock("../lib/events-api", () => ({
   fetchEvents: vi.fn().mockResolvedValue({ events: [], total: 0 }),
   fetchEvent: vi.fn(),
@@ -159,8 +165,20 @@ describe("protected route redirects", () => {
     expect(screen.queryByText("Event budget tracking")).not.toBeInTheDocument();
   });
 
-  it("allows board members to view /board/tasks kanban", async () => {
+  it("allows any approved member to view /tasks", async () => {
     renderWithRouter(undefined, {
+      initialEntries: ["/tasks"],
+      auth: {
+        member: createMockMember("general"),
+        isAuthenticated: true,
+      },
+    });
+
+    expect(await screen.findByRole("heading", { name: "Task board" })).toBeInTheDocument();
+  });
+
+  it("redirects /board/tasks to /tasks", async () => {
+    const { router } = renderWithRouter(undefined, {
       initialEntries: ["/board/tasks"],
       auth: {
         member: createMockMember("board"),
@@ -168,22 +186,10 @@ describe("protected route redirects", () => {
       },
     });
 
-    expect(await screen.findByText("Task board")).toBeInTheDocument();
-  });
-
-  it("redirects general members from /board/tasks to /member", async () => {
-    const { router } = renderWithRouter(undefined, {
-      initialEntries: ["/board/tasks"],
-      auth: {
-        member: createMockMember("general"),
-        isAuthenticated: true,
-      },
-    });
-
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/member");
+      expect(router.state.location.pathname).toBe("/tasks");
     });
-    expect(screen.queryByText("Task board")).not.toBeInTheDocument();
+    expect(await screen.findByText("Task board")).toBeInTheDocument();
   });
 
   it("allows general members to view /member/tasks", async () => {

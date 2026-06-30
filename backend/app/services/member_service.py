@@ -2,7 +2,13 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password, verify_password
-from app.models.member import Member, MemberPosition, MemberRole, MemberStatus
+from app.models.member import (
+    EXCLUSIVE_MEMBER_POSITIONS,
+    Member,
+    MemberPosition,
+    MemberRole,
+    MemberStatus,
+)
 from app.schemas.member import MemberCreateRequest, MemberProfileUpdateRequest
 
 
@@ -180,6 +186,24 @@ def update_member_board_role(db: Session, member_id: int, role: MemberRole) -> M
     return member
 
 
+def _clear_exclusive_position_holder(
+    db: Session,
+    position: MemberPosition,
+    except_member_id: int,
+) -> None:
+    if position not in EXCLUSIVE_MEMBER_POSITIONS:
+        return
+
+    previous_holder = db.scalar(
+        select(Member).where(
+            Member.position == position,
+            Member.id != except_member_id,
+        ),
+    )
+    if previous_holder is not None:
+        previous_holder.position = MemberPosition.MEMBER
+
+
 def update_member_position(
     db: Session,
     member_id: int,
@@ -192,9 +216,12 @@ def update_member_position(
             "Only approved members can have their position updated",
         )
 
-    member.position = position
-    db.commit()
-    db.refresh(member)
+    if position != member.position:
+        _clear_exclusive_position_holder(db, position, member_id)
+        member.position = position
+        db.commit()
+        db.refresh(member)
+
     return member
 
 

@@ -4,10 +4,10 @@ import { CSS } from "@dnd-kit/utilities";
 import { formatEventDateTime } from "../../lib/format-datetime";
 import {
   getKanbanTaskProgressLabel,
+  isSimpleKanbanTask,
   toKanbanTaskId,
   type KanbanTask,
 } from "../../lib/kanban-status";
-import { isOverdueIncompleteChecklistTask } from "../../lib/task-progress";
 import {
   getKanbanProgressTone,
   getTaskProgressPercent,
@@ -17,9 +17,14 @@ import {
 type KanbanTaskCardProps = {
   task: KanbanTask;
   isDragging?: boolean;
+  onOpenTask?: (taskId: number) => void;
 };
 
-export function KanbanTaskCard({ task, isDragging = false }: KanbanTaskCardProps) {
+export function KanbanTaskCard({
+  task,
+  isDragging = false,
+  onOpenTask,
+}: KanbanTaskCardProps) {
   const {
     attributes,
     listeners,
@@ -36,7 +41,10 @@ export function KanbanTaskCard({ task, isDragging = false }: KanbanTaskCardProps
   };
 
   const percent = getTaskProgressPercent(task);
-  const showOverdue = isOverdueIncompleteChecklistTask(task);
+  const showOverdue =
+    task.is_overdue &&
+    !task.is_complete &&
+    (!isSimpleKanbanTask(task) || task.status !== "done");
   const progressTone = getKanbanProgressTone(showOverdue, task.is_complete);
 
   return (
@@ -61,8 +69,13 @@ export function KanbanTaskCard({ task, isDragging = false }: KanbanTaskCardProps
             {task.eventName}
           </p>
           <h3 className="mt-1 line-clamp-2 text-sm font-semibold leading-snug text-primary">
-            {task.group_name ?? task.title}
+            {isSimpleKanbanTask(task) ? task.title : (task.group_name ?? task.title)}
           </h3>
+          {isSimpleKanbanTask(task) && task.description ? (
+            <p className="mt-1 line-clamp-2 text-xs text-gray-500">
+              {task.description}
+            </p>
+          ) : null}
         </div>
         <KanbanProgressRingWithLabel percent={percent} tone={progressTone} />
       </div>
@@ -88,6 +101,23 @@ export function KanbanTaskCard({ task, isDragging = false }: KanbanTaskCardProps
       <p className="mt-3 text-xs text-gray-500">
         {getKanbanTaskProgressLabel(task)}
       </p>
+
+      {task.completion_note ? (
+        <p className="mt-2 line-clamp-2 rounded-md bg-gray-50 px-2 py-1 text-xs text-gray-600">
+          Note: {task.completion_note}
+        </p>
+      ) : null}
+
+      {onOpenTask ? (
+        <button
+          type="button"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={() => onOpenTask(task.id)}
+          className="mt-3 w-full rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-primary transition hover:border-accent hover:bg-accent/5"
+        >
+          Open details
+        </button>
+      ) : null}
 
       <div className="mt-3 h-1 overflow-hidden rounded-full bg-gray-100">
         <div

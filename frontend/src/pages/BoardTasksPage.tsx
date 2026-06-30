@@ -1,38 +1,37 @@
-import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { BoardTaskKanban } from "../components/kanban/BoardTaskKanban";
+import { KanbanTaskDetailPanel } from "../components/kanban/KanbanTaskDetailPanel";
 import { useAuth } from "../context/useAuth";
-import { fetchEvents } from "../lib/events-api";
 import {
-  fetchEventTasks,
+  fetchMyEventTasks,
   updateEventTask,
   updateEventTaskChecklistItem,
-  type EventTaskResponse,
 } from "../lib/event-tasks-api";
 import {
   applyKanbanMoveLocally,
   getKanbanColumn,
   getKanbanMoveAction,
+  toKanbanTask,
   type KanbanColumnId,
   type KanbanTask,
 } from "../lib/kanban-status";
-import { calcEventTasksProgress } from "../lib/task-progress";
 
 type LoadState =
   | { status: "loading" }
   | { status: "ready"; tasks: KanbanTask[] }
   | { status: "error"; message: string };
 
-function buildKanbanTask(
-  task: EventTaskResponse,
-  event: { id: number; name: string; starts_at: string },
-): KanbanTask {
+function calcPersonalProgress(tasks: KanbanTask[]) {
+  if (tasks.length === 0) {
+    return { percent: 0, done: 0, total: 0 };
+  }
+
+  const done = tasks.filter((task) => getKanbanColumn(task) === "done").length;
   return {
-    ...task,
-    eventId: event.id,
-    eventName: event.name,
-    eventStartsAt: event.starts_at,
+    done,
+    total: tasks.length,
+    percent: Math.round((done / tasks.length) * 100),
   };
 }
 
@@ -40,36 +39,22 @@ export function BoardTasksPage() {
   const { member } = useAuth();
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
   const [movingTaskId, setMovingTaskId] = useState<number | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [moveError, setMoveError] = useState<string | null>(null);
 
   const loadTasks = useCallback(async () => {
     setLoadState({ status: "loading" });
 
     try {
-      const { events } = await fetchEvents();
-      const upcomingEvents = events
-        .filter((event) => new Date(event.starts_at) >= new Date())
-        .sort(
-          (left, right) =>
-            new Date(left.starts_at).getTime() -
-            new Date(right.starts_at).getTime(),
-        )
-        .slice(0, 8);
-
-      const taskGroups = await Promise.all(
-        upcomingEvents.map(async (event) => {
-          const response = await fetchEventTasks(event.id);
-          return response.tasks
-            .filter((task) => task.task_kind === "checklist")
-            .map((task) => buildKanbanTask(task, event));
-        }),
-      );
-
-      setLoadState({ status: "ready", tasks: taskGroups.flat() });
+      const response = await fetchMyEventTasks();
+      setLoadState({
+        status: "ready",
+        tasks: response.tasks.map((task) => toKanbanTask(task)),
+      });
     } catch {
       setLoadState({
         status: "error",
-        message: "Unable to load board tasks.",
+        message: "Unable to load your assigned tasks.",
       });
     }
   }, []);
@@ -77,6 +62,21 @@ export function BoardTasksPage() {
   useEffect(() => {
     void loadTasks();
   }, [loadTasks]);
+
+  function replaceTask(updated: KanbanTask) {
+    setLoadState((current) => {
+      if (current.status !== "ready") {
+        return current;
+      }
+
+      return {
+        status: "ready",
+        tasks: current.tasks.map((entry) =>
+          entry.id === updated.id ? updated : entry,
+        ),
+      };
+    });
+  }
 
   async function handleMoveTask(taskId: number, targetColumn: KanbanColumnId) {
     if (loadState.status !== "ready") {
@@ -107,26 +107,21 @@ export function BoardTasksPage() {
 
     try {
       const updatedTask =
-        action.type === "bulk_complete"
-          ? await updateEventTask(taskId, { is_complete: action.value })
-          : await updateEventTaskChecklistItem(
-              taskId,
-              action.itemId,
-              action.value,
-            );
+        action.type === "set_status"
+          ? await updateEventTask(taskId, { status: action.status })
+          : action.type === "bulk_complete"
+            ? await updateEventTask(taskId, { is_complete: action.value })
+            : await updateEventTaskChecklistItem(
+                taskId,
+                action.itemId,
+                action.value,
+              );
 
-      setLoadState({
-        status: "ready",
-        tasks: previousTasks.map((entry) =>
-          entry.id === taskId
-            ? buildKanbanTask(updatedTask, {
-                id: task.eventId,
-                name: task.eventName,
-                starts_at: task.eventStartsAt,
-              })
-            : entry,
-        ),
-      });
+      replaceTask(toKanbanTask(updatedTask));
+
+      if (targetColumn === "done") {
+        setSelectedTaskId(taskId);
+      }
     } catch {
       setMoveError("Unable to update task. Changes were reverted.");
       setLoadState({ status: "ready", tasks: previousTasks });
@@ -135,12 +130,13 @@ export function BoardTasksPage() {
     }
   }
 
-  if (!member) {
-    return null;
-  }
-
   const tasks = loadState.status === "ready" ? loadState.tasks : [];
-  const progress = calcEventTasksProgress(tasks);
+  const progress = useMemo(() => calcPersonalProgress(tasks), [tasks]);
+  const selectedTask =
+    selectedTaskId !== null
+      ? tasks.find((task) => task.id === selectedTaskId) ?? null
+      : null;
+
   const columnCounts = {
     todo: tasks.filter((task) => getKanbanColumn(task) === "todo").length,
     in_progress: tasks.filter(
@@ -148,6 +144,10 @@ export function BoardTasksPage() {
     ).length,
     done: tasks.filter((task) => getKanbanColumn(task) === "done").length,
   };
+
+  if (!member) {
+    return null;
+  }
 
   return (
     <div className="space-y-8">
@@ -158,12 +158,12 @@ export function BoardTasksPage() {
         <div className="relative flex flex-wrap items-end justify-between gap-6">
           <div className="max-w-2xl">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent/90">
-              Board command center
+              My work
             </p>
             <h1 className="mt-3 text-4xl font-bold tracking-tight">Task board</h1>
             <p className="mt-3 text-base text-white/75">
-              Drag checklist tasks across To do, In progress, and Done to keep
-              every event on track.
+              Tasks assigned to you — drag between To do, In progress, and Done.
+              Open a card to add a completion note or photo.
             </p>
           </div>
 
@@ -191,7 +191,9 @@ export function BoardTasksPage() {
 
         <div className="relative mt-8">
           <div className="mb-2 flex items-center justify-between text-sm text-white/70">
-            <span>Overall checklist progress</span>
+            <span>
+              {progress.done} of {progress.total} assigned tasks complete
+            </span>
             <span className="font-semibold text-white">{progress.percent}%</span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-white/10">
@@ -214,7 +216,7 @@ export function BoardTasksPage() {
 
       {loadState.status === "loading" ? (
         <div className="rounded-2xl border border-gray-200 bg-white p-16 text-center text-gray-500 shadow-sm">
-          Loading board tasks...
+          Loading your tasks…
         </div>
       ) : null}
 
@@ -229,16 +231,13 @@ export function BoardTasksPage() {
 
       {loadState.status === "ready" && tasks.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-16 text-center shadow-sm">
-          <p className="text-lg font-semibold text-primary">No checklist tasks yet</p>
-          <p className="mt-2 text-gray-500">
-            Add checklist tasks to upcoming events to populate this board.
+          <p className="text-lg font-semibold text-primary">
+            No tasks assigned to you yet
           </p>
-          <Link
-            to="/events/upcoming"
-            className="mt-6 inline-flex rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
-          >
-            View upcoming events
-          </Link>
+          <p className="mt-2 text-gray-500">
+            When a task manager assigns you work — for example the treasurer or
+            event manager — it will show up here automatically.
+          </p>
         </div>
       ) : null}
 
@@ -249,6 +248,15 @@ export function BoardTasksPage() {
             void handleMoveTask(taskId, targetColumn);
           }}
           movingTaskId={movingTaskId}
+          onOpenTask={setSelectedTaskId}
+        />
+      ) : null}
+
+      {selectedTask ? (
+        <KanbanTaskDetailPanel
+          task={selectedTask}
+          onClose={() => setSelectedTaskId(null)}
+          onUpdated={(updated) => replaceTask(toKanbanTask(updated))}
         />
       ) : null}
     </div>

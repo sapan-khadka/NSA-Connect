@@ -10,6 +10,7 @@ import {
   updateMemberRole,
 } from "../lib/members-api";
 import {
+  buildPositionHolders,
   canPresidentPromoteMember,
   formatPositionLabel,
   type MemberPosition,
@@ -86,6 +87,11 @@ export function MemberDirectory() {
     [debouncedSearch, isSearching, members],
   );
 
+  const positionHolders = useMemo(
+    () => buildPositionHolders(members),
+    [members],
+  );
+
   const resultSummary = isSearching
     ? `${visibleMembers.length} match${visibleMembers.length === 1 ? "" : "es"}`
     : `${total} member${total === 1 ? "" : "s"} total`;
@@ -123,9 +129,19 @@ export function MemberDirectory() {
     try {
       const updatedMember = await updateMemberPosition(memberId, position);
       setMembers((current) =>
-        current.map((member) =>
-          member.id === memberId ? updatedMember : member,
-        ),
+        current.map((member) => {
+          if (member.id === memberId) {
+            return updatedMember;
+          }
+          if (
+            position !== "member" &&
+            member.position === position &&
+            member.id !== memberId
+          ) {
+            return { ...member, position: "member" };
+          }
+          return member;
+        }),
       );
     } catch (updateError) {
       setError(getApiErrorMessage(updateError));
@@ -242,6 +258,7 @@ export function MemberDirectory() {
                     {isPresident ? (
                       <PositionSelect
                         member={member}
+                        positionHolders={positionHolders}
                         isUpdating={updatingPositionId === member.id}
                         onPositionChange={handlePositionChange}
                       />

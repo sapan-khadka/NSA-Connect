@@ -79,8 +79,20 @@ export function getKanbanProgressTone(
 }
 
 export function getTaskProgressPercent(task: {
+  task_kind?: "simple" | "checklist";
+  status?: "todo" | "in_progress" | "done";
   checklist_items: { is_completed: boolean }[];
 }): number {
+  if (task.task_kind === "simple") {
+    if (task.status === "done") {
+      return 100;
+    }
+    if (task.status === "in_progress") {
+      return 50;
+    }
+    return 0;
+  }
+
   const total = task.checklist_items.length;
   if (total === 0) {
     return 0;

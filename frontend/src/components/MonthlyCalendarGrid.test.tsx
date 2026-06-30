@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -39,7 +39,7 @@ describe("MonthlyCalendarGrid", () => {
     expect(onMonthChange).toHaveBeenCalledWith(2030, 6);
   });
 
-  it("renders type-coloured dots and legend", () => {
+  it("renders type-coloured day cells and legend", () => {
     render(
       <MonthlyCalendarGrid
         year={2030}
@@ -66,9 +66,7 @@ describe("MonthlyCalendarGrid", () => {
     const dayCell = screen.getByRole("button", {
       name: "2030-06-15, Cultural, Meeting",
     });
-    const dots = within(dayCell).getAllByText("", { selector: "span.rounded-full" });
-    expect(dots.some((dot) => dot.className.includes("bg-red-500"))).toBe(true);
-    expect(dots.some((dot) => dot.className.includes("bg-amber-500"))).toBe(true);
+    expect(dayCell.className).toContain("bg-red-500/20");
   });
 
   it("selects a date when clicked", async () => {

@@ -11,9 +11,10 @@ import {
 import { groupEventTypesByDate } from "../lib/calendar-events";
 import type { CalendarEventInput } from "../lib/calendar-events";
 import {
-  EVENT_TYPE_DOT_CLASS,
+  EVENT_TYPE_DAY_CLASS,
   EVENT_TYPE_LABELS,
   EVENT_TYPES,
+  getCalendarDayCellClass,
 } from "../lib/event-types";
 
 type MonthlyCalendarGridProps = {
@@ -101,7 +102,7 @@ export function MonthlyCalendarGrid({
           <li key={eventType} className="flex items-center gap-1.5">
             <span
               aria-hidden="true"
-              className={`h-2 w-2 rounded-full ${EVENT_TYPE_DOT_CLASS[eventType]}`}
+              className={`h-3 w-5 rounded-sm border border-black/5 ${EVENT_TYPE_DAY_CLASS[eventType]}`}
             />
             {EVENT_TYPE_LABELS[eventType]}
           </li>
@@ -135,30 +136,18 @@ export function MonthlyCalendarGrid({
               aria-pressed={isSelected}
               onClick={() => onSelectDate?.(cell.isoDate)}
               className={[
-                "relative flex min-h-16 flex-col items-center bg-white px-1 py-2 text-sm transition-colors sm:min-h-20",
+                "relative flex min-h-16 flex-col items-center justify-center px-1 py-2 text-sm transition-colors sm:min-h-20",
                 cell.isCurrentMonth ? "text-primary" : "text-gray-400",
-                isSelected
-                  ? "bg-accent/10 ring-2 ring-inset ring-accent"
-                  : "hover:bg-accent/5",
+                getCalendarDayCellClass(dayEventTypes, {
+                  isSelected,
+                  isCurrentMonth: cell.isCurrentMonth,
+                }),
                 cellIsToday && !isSelected ? "font-bold text-accent" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
             >
               <span>{cell.day}</span>
-              {dayEventTypes.length > 0 ? (
-                <span
-                  aria-hidden="true"
-                  className="mt-auto flex flex-wrap justify-center gap-0.5"
-                >
-                  {dayEventTypes.map((eventType) => (
-                    <span
-                      key={eventType}
-                      className={`h-1.5 w-1.5 rounded-full ${EVENT_TYPE_DOT_CLASS[eventType]}`}
-                    />
-                  ))}
-                </span>
-              ) : null}
             </button>
           );
         })}

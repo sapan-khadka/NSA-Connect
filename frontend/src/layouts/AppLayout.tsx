@@ -30,7 +30,6 @@ export function AppLayout() {
   const location = useLocation();
   const showMemberDirectory = member ? canViewMemberDirectory(member.role) : false;
   const showFinance = member ? canAccessFinance(member.role) : false;
-  const showBoardTasks = showMemberDirectory;
   const showMeetingMinutes = showMemberDirectory;
   const showAnnouncementEmail = showMemberDirectory;
   const showTaskOversight = member
@@ -39,12 +38,14 @@ export function AppLayout() {
   const showMyTasks = member?.role === "general";
   const dashboardPath = member ? getDashboardPath(member.role) : "/member";
   const isWidePage =
-    location.pathname === "/board/tasks" || location.pathname.startsWith("/events");
+    location.pathname === "/tasks" ||
+    location.pathname === "/board/tasks" ||
+    location.pathname.startsWith("/events");
 
   const workItems = [
+    { label: "Task board", to: "/tasks" },
     { label: "Upcoming hub", to: "/events/upcoming" },
-    ...(showMyTasks ? [{ label: "My tasks", to: "/member/tasks" }] : []),
-    ...(showBoardTasks ? [{ label: "Task board", to: "/board/tasks" }] : []),
+    ...(showMyTasks ? [{ label: "Volunteer signups", to: "/member/tasks" }] : []),
     ...(showTaskOversight
       ? [{ label: "Task oversight", to: "/board/task-oversight" }]
       : []),
@@ -62,9 +63,9 @@ export function AppLayout() {
   ];
 
   const workActive =
+    location.pathname === "/tasks" ||
     location.pathname.startsWith("/events/upcoming") ||
     location.pathname === "/member/tasks" ||
-    location.pathname === "/board/tasks" ||
     location.pathname === "/board/task-oversight";
 
   const adminActive =
