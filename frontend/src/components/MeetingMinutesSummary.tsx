@@ -2,7 +2,8 @@ import type { SummarizeMinutesResponse } from "../lib/ai-api";
 
 type MeetingMinutesSummaryProps = {
   result: SummarizeMinutesResponse;
-  onClear: () => void;
+  title?: string;
+  onClear?: () => void;
 };
 
 function formatMeta(value: string | null): string {
@@ -11,6 +12,7 @@ function formatMeta(value: string | null): string {
 
 export function MeetingMinutesSummary({
   result,
+  title = "Official minutes",
   onClear,
 }: MeetingMinutesSummaryProps) {
   const summaryParagraphs = result.summary
@@ -20,24 +22,26 @@ export function MeetingMinutesSummary({
 
   return (
     <section
-      aria-label="Meeting minutes summary"
+      aria-label="Official meeting minutes"
       className="rounded-lg border border-accent/20 bg-accent/5 p-4 sm:p-6"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-primary">Summary</h2>
+          <h2 className="text-lg font-semibold text-primary">{title}</h2>
           <p className="mt-1 text-sm text-gray-600">
             {result.key_decisions.length} decisions · {result.action_items.length}{" "}
             action items
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onClear}
-          className="text-sm font-medium text-gray-600 underline-offset-2 hover:text-primary hover:underline"
-        >
-          Clear results
-        </button>
+        {onClear ? (
+          <button
+            type="button"
+            onClick={onClear}
+            className="text-sm font-medium text-gray-600 underline-offset-2 hover:text-primary hover:underline"
+          >
+            Clear results
+          </button>
+        ) : null}
       </div>
 
       <div className="mt-5 space-y-6">

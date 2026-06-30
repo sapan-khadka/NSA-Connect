@@ -38,12 +38,12 @@ export function MeetingStatusChips({ meeting }: MeetingStatusChipsProps) {
 
   if (meeting.has_summary) {
     chips.push({
-      label: "Minutes summarized",
+      label: "Minutes published",
       className: "border-teal-200 bg-teal-50 text-teal-800",
     });
   } else if (meeting.has_minutes) {
     chips.push({
-      label: "Notes saved",
+      label: "Draft saved",
       className: "border-indigo-200 bg-indigo-50 text-indigo-800",
     });
   } else if (meeting.is_past) {

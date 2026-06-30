@@ -66,7 +66,7 @@ describe("BoardMeetingsPage", () => {
     expect(screen.getByText("April Board Meeting")).toBeInTheDocument();
     expect(screen.getByText("March Board Meeting")).toBeInTheDocument();
     expect(screen.getByText("Attendance recorded")).toBeInTheDocument();
-    expect(screen.getByText("Minutes summarized")).toBeInTheDocument();
+    expect(screen.getByText("Minutes published")).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "View meeting" })).toHaveLength(2);
   });
 });
