@@ -1,5 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { EventDayPanel } from "./EventDayPanel";
@@ -243,6 +244,48 @@ describe("EventDayPanel", () => {
     );
 
     expect(screen.queryByText(/Budget/i)).not.toBeInTheDocument();
+  });
+
+  it("wraps tasks in a collapsible section for general members", () => {
+    render(
+      <EventDayPanel
+        selectedDate="2030-06-15"
+        dayEvents={[dayEvent]}
+        selectedEventId={1}
+        onSelectEvent={vi.fn()}
+        eventDetail={eventDetail}
+        detailLoading={false}
+        detailError={null}
+        {...panelProps}
+        member={createMockMember("general")}
+      />,
+    );
+
+    const details = screen.getByText("Tasks & volunteer").closest("details");
+    expect(details).toBeInTheDocument();
+    expect(details).not.toHaveAttribute("open");
+  });
+
+  it("shows a meeting management link for board members", () => {
+    render(
+      <MemoryRouter>
+        <EventDayPanel
+          selectedDate="2030-06-15"
+          dayEvents={[dayEvent]}
+          selectedEventId={1}
+          onSelectEvent={vi.fn()}
+          eventDetail={{ ...eventDetail, event_type: "meeting" }}
+          detailLoading={false}
+          detailError={null}
+          {...panelProps}
+          member={createMockMember("board")}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(
+      screen.getByRole("link", { name: "View meeting record →" }),
+    ).toHaveAttribute("href", "/events/meetings/1");
   });
 
   it("shows budget for board members", () => {

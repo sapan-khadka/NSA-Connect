@@ -67,7 +67,7 @@ describe("ProtectedRoute", () => {
     expect(screen.getByText("Member dashboard content")).toBeInTheDocument();
   });
 
-  it("redirects general members away from board-only routes", async () => {
+  it("redirects general members away from board-only routes to home", async () => {
     render(
       <MemoryRouter initialEntries={["/board"]}>
         <MockAuthProvider
@@ -85,17 +85,17 @@ describe("ProtectedRoute", () => {
                 </ProtectedRoute>
               }
             />
-            <Route path="/member" element={<div>Member dashboard page</div>} />
+            <Route path="/" element={<div>Home page</div>} />
           </Routes>
         </MockAuthProvider>
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("Member dashboard page")).toBeInTheDocument();
+    expect(await screen.findByText("Home page")).toBeInTheDocument();
     expect(screen.queryByText("Board dashboard content")).not.toBeInTheDocument();
   });
 
-  it("redirects board members away from general-only routes", async () => {
+  it("redirects board members away from general-only routes to home", async () => {
     render(
       <MemoryRouter initialEntries={["/member"]}>
         <MockAuthProvider
@@ -113,12 +113,13 @@ describe("ProtectedRoute", () => {
                 </ProtectedRoute>
               }
             />
-            <Route path="/board" element={<div>Board dashboard page</div>} />
+            <Route path="/" element={<div>Home page</div>} />
           </Routes>
         </MockAuthProvider>
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("Board dashboard page")).toBeInTheDocument();
+    expect(await screen.findByText("Home page")).toBeInTheDocument();
+    expect(screen.queryByText("Member dashboard content")).not.toBeInTheDocument();
   });
 });

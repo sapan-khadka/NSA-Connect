@@ -1,4 +1,4 @@
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -9,9 +9,9 @@ describe("AppLayout navigation", () => {
     cleanup();
   });
 
-  it("does not show Finance and Members links for general members", () => {
+  it("does not show Finance, Members, or Dashboard links for general members", () => {
     renderWithRouter(undefined, {
-      initialEntries: ["/member"],
+      initialEntries: ["/"],
       auth: {
         member: createMockMember("general"),
         isAuthenticated: true,
@@ -20,9 +20,13 @@ describe("AppLayout navigation", () => {
 
     expect(screen.queryByRole("link", { name: "Finance" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Members" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Events" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Dashboard" })).not.toBeInTheDocument();
+    const headerNav = within(screen.getByRole("banner"));
+    expect(headerNav.getByRole("link", { name: "Events" })).toHaveAttribute(
+      "href",
+      "/events/calendar",
+    );
     expect(screen.getByTestId("prayer-flag-stripe")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
   });
 
   it("shows only Login and Register for unauthenticated users", () => {
@@ -41,7 +45,7 @@ describe("AppLayout navigation", () => {
 
   it("shows grouped primary navigation and account menu for board members", () => {
     renderWithRouter(undefined, {
-      initialEntries: ["/board"],
+      initialEntries: ["/"],
       auth: {
         member: createMockMember("board"),
         isAuthenticated: true,
@@ -49,13 +53,16 @@ describe("AppLayout navigation", () => {
     });
 
     expect(screen.getByRole("link", { name: "Home" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Events" })).toBeInTheDocument();
+    const headerNav = within(screen.getByRole("banner"));
+    expect(headerNav.getByRole("link", { name: "Events" })).toHaveAttribute(
+      "href",
+      "/events/calendar",
+    );
     expect(screen.getByRole("link", { name: "Assistant" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Events" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Dashboard" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Admin/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Account menu for Test User" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Profile" })).not.toBeInTheDocument();
+    expect(headerNav.queryByRole("link", { name: "Profile" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Logout" })).not.toBeInTheDocument();
   });
 

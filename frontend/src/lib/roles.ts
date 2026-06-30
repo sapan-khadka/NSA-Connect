@@ -22,8 +22,8 @@ export function isRoleAtLeast(role: MemberRole, required: MemberRole): boolean {
   return ROLE_LEVELS[role] >= ROLE_LEVELS[required];
 }
 
-export function getDashboardPath(role: MemberRole): string {
-  return isRoleAtLeast(role, "board") ? "/board" : "/member";
+export function getDashboardPath(_role: MemberRole): string {
+  return "/";
 }
 
 /** Matches GET /v1/finance/event-budgets and the /finance route (board+). */
@@ -185,6 +185,18 @@ export function canViewTaskOversight(
   position: MemberPosition,
 ): boolean {
   return role === "president" || position === "vice_president";
+}
+
+/** Secretary, VP, or President can record meeting attendance and minutes. */
+export function canManageMeetingRecords(
+  role: MemberRole,
+  position: MemberPosition,
+): boolean {
+  return (
+    role === "president" ||
+    position === "secretary" ||
+    position === "vice_president"
+  );
 }
 
 export const PROMOTABLE_BOARD_ROLES = ["general", "board"] as const;

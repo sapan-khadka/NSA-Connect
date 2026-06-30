@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 import { EventRsvpButton } from "./EventRsvpButton";
 import { EventTaskManager } from "./EventTaskManager";
 import type { MemberResponse } from "../lib/auth-api";
@@ -57,6 +59,8 @@ export function EventDayPanel({
   const canViewBudget = member
     ? isRoleAtLeast(member.role, "board")
     : false;
+  const showTasksExpanded =
+    canManageSimple || canAssignChecklist || member?.role !== "general";
 
   return (
     <aside
@@ -167,18 +171,51 @@ export function EventDayPanel({
                     onCancelRsvp={onCancelRsvp}
                   />
 
-                  <EventTaskManager
-                    key={`${eventDetail.id}-${taskRefreshKey}`}
-                    eventId={eventDetail.id}
-                    eventName={eventDetail.name}
-                    member={member}
-                    canManageSimple={canManageSimple}
-                    canAssignChecklist={canAssignChecklist}
-                    assignableMembers={assignableMembers}
-                    fallbackChecklistTasks={eventDetail.prep_tasks}
-                    onFallbackTasksChange={onChecklistTasksChange}
-                    refreshKey={taskRefreshKey}
-                  />
+                  {eventDetail.event_type === "meeting" &&
+                  member &&
+                  isRoleAtLeast(member.role, "board") ? (
+                    <Link
+                      to={`/events/meetings/${eventDetail.id}`}
+                      className="inline-flex text-sm font-medium text-accent hover:text-accent-hover"
+                    >
+                      View meeting record →
+                    </Link>
+                  ) : null}
+
+                  {showTasksExpanded ? (
+                    <EventTaskManager
+                      key={`${eventDetail.id}-${taskRefreshKey}`}
+                      eventId={eventDetail.id}
+                      eventName={eventDetail.name}
+                      member={member}
+                      canManageSimple={canManageSimple}
+                      canAssignChecklist={canAssignChecklist}
+                      assignableMembers={assignableMembers}
+                      fallbackChecklistTasks={eventDetail.prep_tasks}
+                      onFallbackTasksChange={onChecklistTasksChange}
+                      refreshKey={taskRefreshKey}
+                    />
+                  ) : (
+                    <details className="rounded-lg border border-slate-200 bg-surface-muted/40 p-3">
+                      <summary className="cursor-pointer text-sm font-medium text-primary">
+                        Tasks & volunteer
+                      </summary>
+                      <div className="mt-3">
+                        <EventTaskManager
+                          key={`${eventDetail.id}-${taskRefreshKey}`}
+                          eventId={eventDetail.id}
+                          eventName={eventDetail.name}
+                          member={member}
+                          canManageSimple={canManageSimple}
+                          canAssignChecklist={canAssignChecklist}
+                          assignableMembers={assignableMembers}
+                          fallbackChecklistTasks={eventDetail.prep_tasks}
+                          onFallbackTasksChange={onChecklistTasksChange}
+                          refreshKey={taskRefreshKey}
+                        />
+                      </div>
+                    </details>
+                  )}
                 </div>
               ) : null}
             </>

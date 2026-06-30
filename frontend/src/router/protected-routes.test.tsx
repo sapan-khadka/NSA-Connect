@@ -18,6 +18,7 @@ vi.mock("../lib/finance-api", () => ({
   }),
   fetchEventBudgetBreakdown: vi.fn().mockResolvedValue({ events: [], total: 0 }),
   fetchExpenseByCategory: vi.fn().mockResolvedValue({ categories: [], total_expense: "0.00" }),
+  fetchPendingFinanceChangeRequests: vi.fn().mockResolvedValue({ requests: [], total: 0 }),
 }));
 
 vi.mock("../lib/event-tasks-api", () => ({
@@ -29,6 +30,7 @@ vi.mock("../lib/event-tasks-api", () => ({
 vi.mock("../lib/events-api", () => ({
   fetchEvents: vi.fn().mockResolvedValue({ events: [], total: 0 }),
   fetchEvent: vi.fn(),
+  fetchUpcomingEvents: vi.fn().mockResolvedValue({ events: [], total: 0 }),
 }));
 
 vi.mock("../lib/volunteer-api", () => ({
@@ -40,16 +42,16 @@ describe("protected route redirects", () => {
     cleanup();
   });
 
-  it("sends unauthenticated users from /board to /login", async () => {
+  it("redirects unauthenticated legacy /board URLs to public home", async () => {
     const { router } = renderWithRouter(undefined, {
       initialEntries: ["/board"],
       auth: { member: null, isAuthenticated: false },
     });
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/login");
+      expect(router.state.location.pathname).toBe("/");
     });
-    expect(screen.getByRole("heading", { name: "Login" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "NSA Connect" })).toBeInTheDocument();
   });
 
   it("sends unauthenticated users from /events to /login", async () => {
@@ -64,8 +66,8 @@ describe("protected route redirects", () => {
     expect(screen.getByRole("heading", { name: "Login" })).toBeInTheDocument();
   });
 
-  it("allows general members to view /member", async () => {
-    renderWithRouter(undefined, {
+  it("redirects legacy /member URLs to home", async () => {
+    const { router } = renderWithRouter(undefined, {
       initialEntries: ["/member"],
       auth: {
         member: createMockMember("general"),
@@ -73,29 +75,36 @@ describe("protected route redirects", () => {
       },
     });
 
-    expect(screen.getAllByText("Member Dashboard").length).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/");
+    });
+    expect(
+      await screen.findByRole("heading", { name: /Welcome back, Test User/ }),
+    ).toBeInTheDocument();
   });
 
-  it("redirects general members from /board to /member", async () => {
+  it("redirects legacy /board URLs to home", async () => {
     const { router } = renderWithRouter(undefined, {
       initialEntries: ["/board"],
       auth: {
-        member: createMockMember("general"),
+        member: createMockMember("board"),
         isAuthenticated: true,
       },
     });
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/member");
+      expect(router.state.location.pathname).toBe("/");
     });
-    expect(screen.getAllByText("Member Dashboard").length).toBeGreaterThan(0);
+    expect(
+      await screen.findByRole("heading", { name: /Welcome back, Test User/ }),
+    ).toBeInTheDocument();
   });
 
-  it("allows board members to view /board and loads pending approvals", async () => {
+  it("loads pending approvals on home for board members", async () => {
     const { fetchPendingMembers } = await import("../lib/members-api");
 
     renderWithRouter(undefined, {
-      initialEntries: ["/board"],
+      initialEntries: ["/"],
       auth: {
         member: createMockMember("board"),
         isAuthenticated: true,
@@ -103,24 +112,11 @@ describe("protected route redirects", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getAllByText("Board Dashboard").length).toBeGreaterThan(0);
+      expect(fetchPendingMembers).toHaveBeenCalled();
     });
-    expect(fetchPendingMembers).toHaveBeenCalled();
-  });
-
-  it("redirects board members from /member to /board", async () => {
-    const { router } = renderWithRouter(undefined, {
-      initialEntries: ["/member"],
-      auth: {
-        member: createMockMember("board"),
-        isAuthenticated: true,
-      },
-    });
-
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/board");
-    });
-    expect(screen.getAllByText("Board Dashboard").length).toBeGreaterThan(0);
+    expect(
+      await screen.findByText("3 member signups waiting for approval"),
+    ).toBeInTheDocument();
   });
 
   it("blocks general members from /members", async () => {
@@ -133,7 +129,7 @@ describe("protected route redirects", () => {
     });
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/member");
+      expect(router.state.location.pathname).toBe("/");
     });
     expect(screen.queryByText("Member directory")).not.toBeInTheDocument();
   });
@@ -150,7 +146,7 @@ describe("protected route redirects", () => {
     expect(await screen.findByText("Event budget tracking")).toBeInTheDocument();
   });
 
-  it("redirects general members from /finance to /member", async () => {
+  it("redirects general members from /finance to home", async () => {
     const { router } = renderWithRouter(undefined, {
       initialEntries: ["/finance"],
       auth: {
@@ -160,7 +156,7 @@ describe("protected route redirects", () => {
     });
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/member");
+      expect(router.state.location.pathname).toBe("/");
     });
     expect(screen.queryByText("Event budget tracking")).not.toBeInTheDocument();
   });
@@ -214,7 +210,7 @@ describe("protected route redirects", () => {
     expect(await screen.findByText("No volunteer tasks yet")).toBeInTheDocument();
   });
 
-  it("redirects board members from /member/tasks to /board", async () => {
+  it("redirects board members from /member/tasks to home via volunteer guard", async () => {
     const { router } = renderWithRouter(undefined, {
       initialEntries: ["/member/tasks"],
       auth: {
@@ -224,8 +220,8 @@ describe("protected route redirects", () => {
     });
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/board");
+      expect(router.state.location.pathname).toBe("/");
     });
-    expect(screen.queryByText("Your volunteer signups")).not.toBeInTheDocument();
+    expect(screen.queryByText("No volunteer tasks yet")).not.toBeInTheDocument();
   });
 });

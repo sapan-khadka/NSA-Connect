@@ -37,6 +37,16 @@ vi.mock("../lib/members-api", async () => {
   };
 });
 
+vi.mock("../lib/meetings-api", async () => {
+  const actual = await vi.importActual<typeof import("../lib/meetings-api")>(
+    "../lib/meetings-api",
+  );
+  return {
+    ...actual,
+    fetchMeetings: vi.fn(),
+  };
+});
+
 vi.mock("../lib/finance-api", async () => {
   const actual = await vi.importActual<typeof import("../lib/finance-api")>(
     "../lib/finance-api",
@@ -51,11 +61,13 @@ import { fetchMyEventTasks } from "../lib/event-tasks-api";
 import { fetchUpcomingEvents } from "../lib/events-api";
 import { fetchPendingFinanceChangeRequests } from "../lib/finance-api";
 import { fetchPendingMembers } from "../lib/members-api";
+import { fetchMeetings } from "../lib/meetings-api";
 
 const mockedUpcoming = vi.mocked(fetchUpcomingEvents);
 const mockedMyTasks = vi.mocked(fetchMyEventTasks);
 const mockedPendingMembers = vi.mocked(fetchPendingMembers);
 const mockedFinancePending = vi.mocked(fetchPendingFinanceChangeRequests);
+const mockedMeetings = vi.mocked(fetchMeetings);
 
 const sampleEvent = createMockEventResponse({
   id: 5,
@@ -127,6 +139,26 @@ describe("HomePage", () => {
     });
     mockedPendingMembers.mockResolvedValue({ members: [], total: 2 });
     mockedFinancePending.mockResolvedValue({ requests: [], total: 0 });
+    mockedMeetings.mockResolvedValue({
+      meetings: [
+        {
+          event_id: 9,
+          event_name: "March Board Meeting",
+          starts_at: "2030-05-01T18:00:00+00:00",
+          is_past: true,
+          agenda: "Budget review",
+          has_attendance: true,
+          has_minutes: true,
+          has_summary: false,
+          present_count: 5,
+          absent_count: 1,
+          excused_count: 0,
+          unmarked_count: 0,
+          minutes_updated_at: "2030-05-01T20:00:00+00:00",
+        },
+      ],
+      total: 1,
+    });
 
     render(
       <MemoryRouter>
@@ -151,7 +183,12 @@ describe("HomePage", () => {
     expect(
       screen.getByText("1 assigned task overdue"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Quick links")).toBeInTheDocument();
+    expect(screen.getByText("More for your role")).toBeInTheDocument();
+    expect(screen.getByText("March Board Meeting")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /View meeting/i })).toHaveAttribute(
+      "href",
+      "/events/meetings/9",
+    );
     expect(screen.getByRole("link", { name: /My tasks/i })).toHaveAttribute(
       "href",
       "/events/tasks",
@@ -180,8 +217,10 @@ describe("HomePage", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByText("Your work")).toBeInTheDocument(),
+      expect(screen.getByText("Assigned work")).toBeInTheDocument(),
     );
+
+    expect(mockedMeetings).not.toHaveBeenCalled();
 
     expect(screen.queryByLabelText("Needs attention")).not.toBeInTheDocument();
   });

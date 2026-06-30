@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 
 import { MeetingMinutesSummary } from "../components/MeetingMinutesSummary";
 import { getApiErrorMessage } from "../lib/auth-api";
@@ -54,8 +55,16 @@ export function MeetingMinutesPage() {
       <header>
         <h1 className="text-3xl font-bold text-primary">Meeting Minutes</h1>
         <p className="mt-2 max-w-2xl text-gray-600">
-          Paste raw board meeting notes and get a structured summary with key
-          decisions and action items.
+          Board meeting notes and attendance are recorded on each meeting event.
+          Create a meeting on the{" "}
+          <Link to="/events/calendar" className="font-medium text-accent hover:underline">
+            events calendar
+          </Link>
+          , then open it to take attendance and save minutes.
+        </p>
+        <p className="mt-2 max-w-2xl text-sm text-gray-500">
+          You can still use this page to draft a one-off AI summary from pasted
+          notes.
         </p>
       </header>
 

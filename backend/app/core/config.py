@@ -27,6 +27,10 @@ class Settings(BaseSettings):
 
     EMAIL_ENABLED: bool = False
     EMAIL_FROM: str = "NSA Connect <noreply@semo.edu>"
+    FRONTEND_URL: str = Field(
+        default="http://localhost:5173",
+        description="Public URL of the NSA Connect web app for links in emails",
+    )
     SENDGRID_API_KEY: str = Field(
         default="",
         description="SendGrid API key for transactional email",

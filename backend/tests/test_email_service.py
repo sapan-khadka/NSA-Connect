@@ -4,10 +4,13 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 from app.services.email_service import (
+    MEETING_MINUTES_READY_SUBJECT,
     WELCOME_EMAIL_SUBJECT,
+    build_meeting_record_notification_email_body,
     build_prep_task_due_soon_email_body,
     build_volunteer_task_assigned_email_body,
     build_welcome_email_body,
+    send_meeting_record_notification_email,
     send_prep_task_due_soon_email,
     send_volunteer_task_assigned_email,
     send_welcome_email,
@@ -188,3 +191,40 @@ def test_send_volunteer_task_assigned_email_skips_when_disabled(caplog):
 
     assert "Volunteer task assigned email (disabled)" in caplog.text
     assert "test@semo.edu" in caplog.text
+
+
+def test_build_meeting_record_notification_email_body_includes_meeting_link():
+    meeting_starts_at = datetime(2030, 5, 1, 18, 0, tzinfo=UTC)
+    body = build_meeting_record_notification_email_body(
+        full_name="Board Member",
+        meeting_title="March Board Meeting",
+        notification_kind="summary",
+        recorded_by_name="Board Secretary",
+        meeting_starts_at=meeting_starts_at,
+        meeting_url="http://localhost:5173/events/meetings/3",
+    )
+
+    assert "Hi Board Member," in body
+    assert "March Board Meeting" in body
+    assert "Board Secretary" in body
+    assert "http://localhost:5173/events/meetings/3" in body
+
+
+def test_send_meeting_record_notification_email_skips_when_disabled(caplog):
+    meeting_starts_at = datetime(2030, 5, 1, 18, 0, tzinfo=UTC)
+
+    with caplog.at_level(logging.INFO):
+        send_meeting_record_notification_email(
+            email="board@semo.edu",
+            full_name="Board Member",
+            meeting_title="March Board Meeting",
+            notification_kind="summary",
+            recorded_by_name="Board Secretary",
+            meeting_starts_at=meeting_starts_at,
+            meeting_url="http://localhost:5173/events/meetings/3",
+        )
+
+    assert "Meeting record notification (disabled)" in caplog.text
+    assert MEETING_MINUTES_READY_SUBJECT.format(
+        meeting_title="March Board Meeting",
+    ) in caplog.text

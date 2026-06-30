@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { MemberDirectory } from "../components/MemberDirectory";
+import { PageHeader } from "../components/PageHeader";
 import { PendingApprovals } from "../components/PendingApprovals";
 
 type MembersTab = "directory" | "pending";
@@ -29,19 +30,14 @@ export function MembersPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <section className="nepali-hero">
-        <p className="text-sm font-semibold uppercase tracking-wide text-accent">
-          Board members
-        </p>
-        <h1 className="mt-2 text-3xl font-bold text-primary">Members</h1>
-        <p className="mt-3 max-w-2xl text-gray-600">
-          Approve new signups with one click, browse the member directory, and
-          manage NSA Connect membership.
-        </p>
-      </section>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Board members"
+        title="Members"
+        description="Approve new signups, browse the directory, and manage membership."
+      />
 
-      <div className="flex gap-2 border-b border-gray-200">
+      <div className="flex gap-2 border-b border-slate-200">
         {(Object.keys(TAB_LABELS) as MembersTab[]).map((tab) => {
           const isActive = activeTab === tab;
 

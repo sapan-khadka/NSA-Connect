@@ -41,7 +41,7 @@ describe("EventsHubLayout", () => {
     cleanup();
   });
 
-  it("shows Calendar and My tasks tabs for all members", async () => {
+  it("shows Calendar and Assigned tasks tabs for general members", async () => {
     renderWithRouter(undefined, {
       initialEntries: ["/events/calendar"],
       auth: {
@@ -54,14 +54,14 @@ describe("EventsHubLayout", () => {
       "href",
       "/events/calendar",
     );
-    expect(screen.getByRole("link", { name: "My tasks" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Assigned tasks" })).toHaveAttribute(
       "href",
       "/events/tasks",
     );
-    expect(screen.getByRole("heading", { name: "Events" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Events" })).not.toBeInTheDocument();
   });
 
-  it("highlights the active tab", async () => {
+  it("shows My tasks tab for board members", async () => {
     renderWithRouter(undefined, {
       initialEntries: ["/events/tasks"],
       auth: {
@@ -71,6 +71,7 @@ describe("EventsHubLayout", () => {
     });
 
     const myTasksTab = await screen.findByRole("link", { name: "My tasks" });
+    expect(myTasksTab).toHaveAttribute("href", "/events/tasks");
     expect(myTasksTab.className).toContain("border-accent");
   });
 
@@ -84,6 +85,10 @@ describe("EventsHubLayout", () => {
     });
 
     expect(await screen.findByRole("link", { name: "Past events" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Board meetings" })).toHaveAttribute(
+      "href",
+      "/events/meetings",
+    );
   });
 
   it("hides Past events for general members", async () => {
@@ -111,7 +116,7 @@ describe("EventsHubLayout", () => {
     expect(await screen.findByRole("link", { name: "Oversight" })).toBeInTheDocument();
   });
 
-  it("shows Volunteer signups only for general members", async () => {
+  it("shows Volunteer tab only for general members", async () => {
     renderWithRouter(undefined, {
       initialEntries: ["/events/calendar"],
       auth: {
@@ -120,12 +125,10 @@ describe("EventsHubLayout", () => {
       },
     });
 
-    expect(
-      await screen.findByRole("link", { name: "Volunteer signups" }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Volunteer" })).toBeInTheDocument();
   });
 
-  it("hides Volunteer signups for board members", async () => {
+  it("hides Volunteer tab for board members", async () => {
     renderWithRouter(undefined, {
       initialEntries: ["/events/calendar"],
       auth: {
@@ -135,9 +138,7 @@ describe("EventsHubLayout", () => {
     });
 
     await screen.findByRole("link", { name: "Calendar" });
-    expect(
-      screen.queryByRole("link", { name: "Volunteer signups" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Volunteer" })).not.toBeInTheDocument();
   });
 
   it("hides the tab bar on event manage pages", async () => {

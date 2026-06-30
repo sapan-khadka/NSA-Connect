@@ -3,6 +3,7 @@ from datetime import datetime
 from app.celery_app import celery_app
 from app.core.database import SessionLocal
 from app.services.email_service import (
+    send_meeting_record_notification_email,
     send_prep_task_due_soon_email,
     send_volunteer_task_assigned_email,
     send_welcome_email,
@@ -61,4 +62,25 @@ def send_volunteer_task_assigned_email_task(
         task_name=task_name,
         event_title=event_title,
         event_starts_at=datetime.fromisoformat(event_starts_at_iso),
+    )
+
+
+@celery_app.task(name="email.send_meeting_record_notification")
+def send_meeting_record_notification_email_task(
+    email: str,
+    full_name: str,
+    meeting_title: str,
+    notification_kind: str,
+    recorded_by_name: str,
+    meeting_starts_at_iso: str,
+    meeting_url: str,
+) -> None:
+    send_meeting_record_notification_email(
+        email=email,
+        full_name=full_name,
+        meeting_title=meeting_title,
+        notification_kind=notification_kind,
+        recorded_by_name=recorded_by_name,
+        meeting_starts_at=datetime.fromisoformat(meeting_starts_at_iso),
+        meeting_url=meeting_url,
     )

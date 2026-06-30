@@ -14,7 +14,8 @@ from app.models.finance_change_request import (
     FinanceChangeStatus,
 )
 from app.models.finance_entry import FinanceCategory, FinanceEntry, FinanceEntryType
-from app.models.member import Member, MemberRole, MemberStatus
+from app.models.member import Member, MemberPosition, MemberRole, MemberStatus
+from app.models.meeting import MeetingAttendance, MeetingRecord
 from app.models.preptask import PrepTaskGroup, PrepTaskGroupItem
 from app.models.reminder import PrepTaskReminder, ReminderType
 from app.models.volunteer import VolunteerSignup, VolunteerSlot
@@ -38,6 +39,8 @@ __all__ = [
     "Member",
     "MemberRole",
     "MemberStatus",
+    "MeetingAttendance",
+    "MeetingRecord",
     "PrepTaskGroup",
     "PrepTaskGroupItem",
     "PrepTaskReminder",

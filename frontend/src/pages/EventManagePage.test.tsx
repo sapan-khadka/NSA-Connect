@@ -31,6 +31,12 @@ vi.mock("../lib/members-api", () => ({
   fetchAssignableMembers: vi.fn(),
 }));
 
+vi.mock("../components/MeetingRecordSection", () => ({
+  MeetingRecordSection: () => (
+    <div data-testid="meeting-record-section">Meeting record</div>
+  ),
+}));
+
 const mockEvent = {
   ...createMockEventResponse({
     id: 1,
@@ -146,6 +152,33 @@ describe("EventManagePage", () => {
     expect(screen.getByText("Event budget")).toBeInTheDocument();
     expect(screen.getByTestId("event-task-manager")).toBeInTheDocument();
     expect(screen.queryByTestId("finance-entry-list")).not.toBeInTheDocument();
+  });
+
+  it("shows meeting record tools for meeting events", async () => {
+    const { fetchEvent } = await import("../lib/events-api");
+    const { fetchEventTasks } = await import("../lib/event-tasks-api");
+    const { fetchEventBudgetForEvent } = await import("../lib/finance-api");
+
+    vi.mocked(fetchEvent).mockResolvedValue({
+      ...mockEvent,
+      event_type: "meeting",
+      name: "March Board Meeting",
+    });
+    vi.mocked(fetchEventTasks).mockResolvedValue({ tasks: [], total: 0 });
+    vi.mocked(fetchEventBudgetForEvent).mockResolvedValue({
+      event_id: 1,
+      event_name: "March Board Meeting",
+      planned_budget: "0.00",
+      actual_expense: "0.00",
+      actual_income: "0.00",
+      budget_remaining: "0.00",
+      over_budget: false,
+      entry_count: 0,
+    });
+
+    renderPage("board");
+
+    expect(await screen.findByTestId("meeting-record-section")).toBeInTheDocument();
   });
 
   it("shows finance entries for treasurer", async () => {

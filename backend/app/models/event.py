@@ -51,6 +51,17 @@ class Event(Base):
         cascade="all, delete-orphan",
         order_by="EventTask.created_at",
     )
+    meeting_record = relationship(
+        "MeetingRecord",
+        back_populates="event",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
+    meeting_attendance = relationship(
+        "MeetingAttendance",
+        back_populates="event",
+        cascade="all, delete-orphan",
+    )
 
     @property
     def is_upcoming(self) -> bool:

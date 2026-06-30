@@ -13,7 +13,6 @@ import { useLogout } from "../context/useLogout";
 import {
   canAccessFinance,
   canViewMemberDirectory,
-  getDashboardPath,
 } from "../lib/roles";
 
 const guestLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -32,7 +31,6 @@ export function AppLayout() {
   const showFinance = member ? canAccessFinance(member.role) : false;
   const showMeetingMinutes = showMemberDirectory;
   const showAnnouncementEmail = showMemberDirectory;
-  const dashboardPath = member ? getDashboardPath(member.role) : "/member";
   const isWidePage = location.pathname.startsWith("/events");
 
   const adminItems = [
@@ -64,9 +62,8 @@ export function AppLayout() {
                 <PrimaryNavLink to="/" end>
                   Home
                 </PrimaryNavLink>
-                <PrimaryNavLink to="/events">Events</PrimaryNavLink>
+                <PrimaryNavLink to="/events/calendar">Events</PrimaryNavLink>
                 <PrimaryNavLink to="/assistant">Assistant</PrimaryNavLink>
-                <PrimaryNavLink to={dashboardPath}>Dashboard</PrimaryNavLink>
                 {adminItems.length > 0 ? (
                   <>
                     <NavDivider />
@@ -99,7 +96,7 @@ export function AppLayout() {
 
       <main
         className={[
-          "mx-auto w-full px-6 py-10",
+          "mx-auto w-full px-6 py-8",
           isWidePage ? "max-w-7xl" : "max-w-6xl",
         ].join(" ")}
       >

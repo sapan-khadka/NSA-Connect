@@ -105,7 +105,7 @@ describe("LoginPage", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("redirects approved general members to /member after login", async () => {
+  it("redirects approved general members to home after login", async () => {
     const { loginMember } = await import("../lib/auth-api");
 
     vi.mocked(loginMember).mockResolvedValue({
@@ -133,8 +133,10 @@ describe("LoginPage", () => {
         email: "test@semo.edu",
         password: "securepass123",
       });
-      expect(router.state.location.pathname).toBe("/member");
+      expect(router.state.location.pathname).toBe("/");
     });
-    expect(screen.getAllByText("Member Dashboard").length).toBeGreaterThan(0);
+    expect(
+      await screen.findByRole("heading", { name: /Welcome back, Test User/ }),
+    ).toBeInTheDocument();
   });
 });

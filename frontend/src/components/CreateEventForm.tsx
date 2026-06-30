@@ -185,7 +185,7 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
               htmlFor="event-description"
               className="block text-sm font-medium text-primary"
             >
-              Description
+              {values.event_type === "meeting" ? "Agenda / description" : "Description"}
             </label>
             <textarea
               id="event-description"
@@ -193,6 +193,11 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
               value={values.description}
               onChange={(event) => updateField("description", event.target.value)}
               onBlur={() => validateField("description")}
+              placeholder={
+                values.event_type === "meeting"
+                  ? "Meeting agenda, topics, and prep items…"
+                  : undefined
+              }
               className={inputClassName}
             />
             {fieldErrors.description ? (

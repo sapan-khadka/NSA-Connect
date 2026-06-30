@@ -125,9 +125,33 @@ export function MonthlyCalendarGrid({
         </div>
       </div>
 
+      <details className="mb-4 lg:hidden">
+        <summary className="cursor-pointer text-xs font-medium text-gray-600">
+          Calendar legend
+        </summary>
+        <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-xs text-gray-600">
+          {EVENT_TYPES.map((eventType) => (
+            <li key={eventType} className="flex items-center gap-1.5">
+              <span
+                aria-hidden="true"
+                className={`h-3 w-5 rounded-sm border border-black/5 ${EVENT_TYPE_DAY_CLASS[eventType]}`}
+              />
+              {EVENT_TYPE_LABELS[eventType]}
+            </li>
+          ))}
+          <li className="flex items-center gap-1.5">
+            <span
+              aria-hidden="true"
+              className={`h-3 w-5 rounded-sm border border-black/5 ${FESTIVAL_DAY_CLASS}`}
+            />
+            Nepali festival
+          </li>
+        </ul>
+      </details>
+
       <ul
         aria-label="Event type legend"
-        className="mb-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-gray-600"
+        className="mb-4 hidden flex-wrap gap-x-4 gap-y-2 text-xs text-gray-600 lg:flex"
       >
         {EVENT_TYPES.map((eventType) => (
           <li key={eventType} className="flex items-center gap-1.5">

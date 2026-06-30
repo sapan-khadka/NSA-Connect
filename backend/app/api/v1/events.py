@@ -38,8 +38,10 @@ from app.services.rsvp_service import (
     rsvp_to_event,
 )
 from app.services.volunteer_service import create_volunteer_slot_for_event
+from app.api.v1.event_meetings import router as event_meetings_router
 
 router = APIRouter(prefix="/events", tags=["events"])
+router.include_router(event_meetings_router)
 
 MONTH_QUERY_PATTERN = r"^(19|20)\d{2}-(0[1-9]|1[0-2])$"
 

@@ -28,6 +28,7 @@ export default {
       },
       fontFamily: {
         sans: [
+          "Plus Jakarta Sans",
           "system-ui",
           "-apple-system",
           "Segoe UI",

@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 
 import { EventFinanceCloseoutBanner } from "../components/EventFinanceCloseoutBanner";
 import { EventTaskManager } from "../components/EventTaskManager";
+import { MeetingRecordSection } from "../components/MeetingRecordSection";
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage } from "../lib/auth-api";
 import { fetchEvent, type EventDetailResponse } from "../lib/events-api";
@@ -187,6 +188,10 @@ export function EventManagePage() {
       </section>
 
       <EventFinanceCloseoutBanner event={event} />
+
+      {event.event_type === "meeting" ? (
+        <MeetingRecordSection eventId={numericEventId} eventName={event.name} />
+      ) : null}
 
       {canViewBoard ? (
         <section className="rounded-lg border border-gray-200 bg-white p-6">

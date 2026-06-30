@@ -85,7 +85,7 @@ describe("MonthlyCalendarGrid", () => {
 
     const holiCell = screen.getByRole("button", { name: /2030-03-20, Holi/ });
     expect(holiCell.className).toContain("bg-accent/10");
-    expect(screen.getByText("Nepali festival")).toBeInTheDocument();
+    expect(screen.getAllByText("Nepali festival").length).toBeGreaterThan(0);
   });
 
   it("selects a date when clicked", async () => {

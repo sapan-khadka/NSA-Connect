@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import { EventRsvpButton } from "../components/EventRsvpButton";
 import { CoverBanner } from "../components/CoverBanner";
 import { HomeHeroBrand } from "../components/AppLogo";
+import { HomeProfileCard } from "../components/HomeProfileCard";
+import { HomeShortcutPills } from "../components/HomeShortcutPills";
 import { useAuth } from "../context/useAuth";
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/auth-api";
@@ -23,14 +25,13 @@ import {
   summarizeMyTasks,
 } from "../lib/home-tasks";
 import { fetchPendingMembers } from "../lib/members-api";
+import { fetchMeetings, type MeetingSummary } from "../lib/meetings-api";
 import {
   canAccessFinance,
   canViewMemberDirectory,
   canViewTaskOversight,
-  getDashboardPath,
   isRoleAtLeast,
 } from "../lib/roles";
-import { getSeasonalTheme } from "../lib/seasonal-theme";
 
 type HomeAlert = {
   id: string;
@@ -64,43 +65,14 @@ function QuickLinkCard({ title, description, to, featured = false }: QuickLink) 
 }
 
 function buildQuickLinks(member: MemberResponse): QuickLink[] {
-  const links: QuickLink[] = [
-    {
-      title: "Events calendar",
-      description: "Browse the month, RSVP, and see event details.",
-      to: "/events/calendar",
-      featured: true,
-    },
-    {
-      title: "AI assistant",
-      description: "Ask about events, tasks, and NSA operations.",
-      to: "/assistant",
-    },
-    {
-      title: "Your profile",
-      description: "Update contact info and view your membership details.",
-      to: "/profile",
-    },
-    {
-      title: "Dashboard",
-      description: "Open your role workspace for deeper management tools.",
-      to: getDashboardPath(member.role),
-    },
-  ];
+  const links: QuickLink[] = [];
 
   if (isRoleAtLeast(member.role, "board")) {
-    links.push(
-      {
-        title: "My tasks",
-        description: "Drag checklist tasks across To do, In progress, and Done.",
-        to: "/events/tasks",
-      },
-      {
-        title: "Past events",
-        description: "Review completed events and finance close-out status.",
-        to: "/events/past",
-      },
-    );
+    links.push({
+      title: "Past events",
+      description: "Review completed events and finance close-out status.",
+      to: "/events/past",
+    });
   }
 
   if (canViewMemberDirectory(member.role)) {
@@ -127,12 +99,18 @@ function buildQuickLinks(member: MemberResponse): QuickLink[] {
     });
   }
 
+  if (member.role === "general") {
+    links.push({
+      title: "AI assistant",
+      description: "Ask about events, tasks, and NSA operations.",
+      to: "/assistant",
+    });
+  }
+
   return links;
 }
 
 function PublicHomeView() {
-  const seasonalTheme = getSeasonalTheme();
-
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <CoverBanner />
@@ -141,7 +119,6 @@ function PublicHomeView() {
         title="NSA Connect"
         description="Log in or create an account with your @semo.edu email to access events, tasks, and member tools."
         align="center"
-        heroClass={seasonalTheme.heroClass}
         actions={
           <>
             <Link
@@ -170,6 +147,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
     summarizeMyTasks([]),
   );
   const [alerts, setAlerts] = useState<HomeAlert[]>([]);
+  const [latestMeeting, setLatestMeeting] = useState<MeetingSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [rsvpLoading, setRsvpLoading] = useState(false);
@@ -199,12 +177,17 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
             }))
           : Promise.resolve(null);
 
-        const [upcoming, tasksResult, pendingMembers, financePending] =
+        const meetingsPromise = isRoleAtLeast(member.role, "board")
+          ? fetchMeetings().catch(() => ({ meetings: [], total: 0 }))
+          : Promise.resolve(null);
+
+        const [upcoming, tasksResult, pendingMembers, financePending, meetingsResult] =
           await Promise.all([
             upcomingPromise,
             tasksPromise,
             pendingMembersPromise,
             financePendingPromise,
+            meetingsPromise,
           ]);
 
         if (cancelled) {
@@ -246,6 +229,15 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
         }
 
         setAlerts(nextAlerts);
+
+        if (meetingsResult) {
+          const recordedMeeting = meetingsResult.meetings.find(
+            (meeting) => meeting.has_attendance || meeting.has_minutes,
+          );
+          setLatestMeeting(recordedMeeting ?? meetingsResult.meetings[0] ?? null);
+        } else {
+          setLatestMeeting(null);
+        }
       } catch (caught) {
         if (!cancelled) {
           setLoadError(getApiErrorMessage(caught));
@@ -332,24 +324,20 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
 
   const quickLinks = buildQuickLinks(member);
   const tasksPath = getMyTasksPath(member.role);
-  const seasonalTheme = getSeasonalTheme();
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <CoverBanner />
 
-      <section className={seasonalTheme.heroClass}>
-        <p className="text-sm font-semibold uppercase tracking-wide text-accent">
-          Home
-        </p>
-        <h1 className="mt-2 text-3xl font-bold text-primary">
+      <div>
+        <h1 className="text-2xl font-bold text-primary md:text-3xl">
           Welcome back, {member.full_name}
         </h1>
-        <p className="mt-3 max-w-2xl text-gray-600">
-          Your daily check-in for NSA events, assigned work, and quick
-          navigation across the app.
+        <p className="mt-1 text-sm text-gray-600">
+          Your daily check-in for NSA events and assigned work.
         </p>
-      </section>
+        <HomeShortcutPills member={member} />
+      </div>
 
       {alerts.length > 0 ? (
         <section
@@ -380,6 +368,30 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
         </section>
       ) : null}
 
+      {latestMeeting ? (
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                Board meetings
+              </h2>
+              <p className="mt-1 font-medium text-primary">{latestMeeting.event_name}</p>
+              <p className="mt-1 text-sm text-gray-600">
+                {latestMeeting.has_attendance || latestMeeting.has_minutes
+                  ? "Attendance or minutes are on file for this meeting."
+                  : "Scheduled board meeting — open to view the agenda."}
+              </p>
+            </div>
+            <Link
+              to={`/events/meetings/${latestMeeting.event_id}`}
+              className="text-sm font-semibold text-accent hover:text-accent-hover"
+            >
+              View meeting →
+            </Link>
+          </div>
+        </section>
+      ) : null}
+
       {loadError ? (
         <div
           role="alert"
@@ -390,7 +402,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="rounded-lg border border-gray-200 bg-white p-6">
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold text-primary">Next event</h2>
@@ -399,7 +411,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
               </p>
             </div>
             <Link
-              to="/events"
+              to="/events/calendar"
               className="text-sm font-medium text-accent hover:text-accent-hover"
             >
               Calendar →
@@ -484,10 +496,12 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
           ) : null}
         </section>
 
-        <section className="rounded-lg border border-gray-200 bg-white p-6">
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold text-primary">Your work</h2>
+              <h2 className="text-lg font-semibold text-primary">
+                {member.role === "general" ? "Assigned work" : "Your work"}
+              </h2>
               <p className="mt-1 text-sm text-gray-500">
                 Assigned event tasks and volunteer commitments.
               </p>
@@ -563,70 +577,24 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
         </section>
       </div>
 
-      <section className="rounded-lg border border-gray-200 bg-white p-6">
-        <h2 className="text-lg font-semibold text-primary">Quick links</h2>
-        <p className="mt-1 text-sm text-gray-500">
-          Jump to the parts of NSA Connect you use most.
-        </p>
-        <ul className="mt-4 grid gap-3 md:grid-cols-2">
-          {quickLinks.map((link) => (
-            <li key={link.to + link.title}>
-              <QuickLinkCard {...link} />
-            </li>
-          ))}
-        </ul>
-      </section>
+      <HomeProfileCard member={member} />
 
-      {import.meta.env.DEV ? <DevHealthCheck /> : null}
-    </div>
-  );
-}
-
-function DevHealthCheck() {
-  const [health, setHealth] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 5000);
-
-    fetch("/health", { signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        const data = (await response.json()) as { status: string };
-        if (!controller.signal.aborted) {
-          setHealth(data.status);
-        }
-      })
-      .catch((caught: Error) => {
-        if (controller.signal.aborted) {
-          return;
-        }
-        if (caught.name === "AbortError") {
-          setError("Unavailable (timeout)");
-          return;
-        }
-        setError(caught.message);
-      })
-      .finally(() => window.clearTimeout(timeoutId));
-
-    return () => {
-      controller.abort();
-      window.clearTimeout(timeoutId);
-    };
-  }, []);
-
-  return (
-    <section className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-left text-sm text-gray-500">
-      <p className="font-semibold uppercase tracking-wide">Dev: API status</p>
-      {health ? <p className="mt-1 text-green-700">Backend: {health}</p> : null}
-      {error ? <p className="mt-1 text-red-600">Backend: {error}</p> : null}
-      {!health && !error ? (
-        <p className="mt-1 text-gray-400">Checking backend…</p>
+      {quickLinks.length > 0 ? (
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-primary">More for your role</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Board and leadership tools not shown in the shortcuts above.
+          </p>
+          <ul className="mt-4 grid gap-3 md:grid-cols-2">
+            {quickLinks.map((link) => (
+              <li key={link.to + link.title}>
+                <QuickLinkCard {...link} />
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : null}
-    </section>
+    </div>
   );
 }
 

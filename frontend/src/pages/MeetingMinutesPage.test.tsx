@@ -32,6 +32,10 @@ describe("MeetingMinutesPage", () => {
     await user.click(screen.getByRole("button", { name: "Summarize minutes" }));
 
     expect(await screen.findByText("Meeting notes are required.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "events calendar" })).toHaveAttribute(
+      "href",
+      "/events/calendar",
+    );
     expect(mockedSummarizeMeetingMinutes).not.toHaveBeenCalled();
   });
 
