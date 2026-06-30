@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.lib.event_finance import EventFinanceLockedError, assert_event_finance_editable
 from app.models.finance_change_request import (
     FinanceChangeAction,
     FinanceChangeRequest,
@@ -89,18 +90,29 @@ def submit_update_request(
 
     from app.models.finance_entry import FinanceEntry
 
-    if db.get(FinanceEntry, entry_id) is None:
+    entry = db.get(FinanceEntry, entry_id)
+    if entry is None:
         raise FinanceEntryNotFoundError
+
+    if entry.event_id is not None:
+        from app.models.event import Event
+
+        event = db.get(Event, entry.event_id)
+        if event is not None:
+            assert_event_finance_editable(event)
 
     if _pending_for_entry(db, entry_id):
         raise FinanceChangeConflictError("A pending change request already exists")
 
     updates = data.model_dump(exclude_unset=True)
-    if updates.get("event_id") is not None:
+    target_event_id = updates.get("event_id", entry.event_id)
+    if target_event_id is not None:
         from app.models.event import Event
 
-        if db.get(Event, updates["event_id"]) is None:
+        target_event = db.get(Event, target_event_id)
+        if target_event is None:
             raise EventNotFoundError
+        assert_event_finance_editable(target_event)
 
     request = FinanceChangeRequest(
         entry_id=entry_id,
@@ -124,8 +136,16 @@ def submit_delete_request(
 
     from app.models.finance_entry import FinanceEntry
 
-    if db.get(FinanceEntry, entry_id) is None:
+    entry = db.get(FinanceEntry, entry_id)
+    if entry is None:
         raise FinanceEntryNotFoundError
+
+    if entry.event_id is not None:
+        from app.models.event import Event
+
+        event = db.get(Event, entry.event_id)
+        if event is not None:
+            assert_event_finance_editable(event)
 
     if _pending_for_entry(db, entry_id):
         raise FinanceChangeConflictError("A pending change request already exists")

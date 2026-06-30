@@ -7,12 +7,12 @@ import {
   PrimaryNavLink,
 } from "../components/AppNav";
 import { AppLogo } from "../components/AppLogo";
+import { PrayerFlagStripe } from "../components/NepaliDecor";
 import { useAuth } from "../context/useAuth";
 import { useLogout } from "../context/useLogout";
 import {
   canAccessFinance,
   canViewMemberDirectory,
-  canViewTaskOversight,
   getDashboardPath,
 } from "../lib/roles";
 
@@ -32,24 +32,8 @@ export function AppLayout() {
   const showFinance = member ? canAccessFinance(member.role) : false;
   const showMeetingMinutes = showMemberDirectory;
   const showAnnouncementEmail = showMemberDirectory;
-  const showTaskOversight = member
-    ? canViewTaskOversight(member.role, member.position)
-    : false;
-  const showMyTasks = member?.role === "general";
   const dashboardPath = member ? getDashboardPath(member.role) : "/member";
-  const isWidePage =
-    location.pathname === "/tasks" ||
-    location.pathname === "/board/tasks" ||
-    location.pathname.startsWith("/events");
-
-  const workItems = [
-    { label: "Task board", to: "/tasks" },
-    { label: "Upcoming hub", to: "/events/upcoming" },
-    ...(showMyTasks ? [{ label: "Volunteer signups", to: "/member/tasks" }] : []),
-    ...(showTaskOversight
-      ? [{ label: "Task oversight", to: "/board/task-oversight" }]
-      : []),
-  ];
+  const isWidePage = location.pathname.startsWith("/events");
 
   const adminItems = [
     ...(showMemberDirectory ? [{ label: "Members", to: "/members" }] : []),
@@ -62,12 +46,6 @@ export function AppLayout() {
       : []),
   ];
 
-  const workActive =
-    location.pathname === "/tasks" ||
-    location.pathname.startsWith("/events/upcoming") ||
-    location.pathname === "/member/tasks" ||
-    location.pathname === "/board/task-oversight";
-
   const adminActive =
     location.pathname.startsWith("/members") ||
     location.pathname.startsWith("/finance") ||
@@ -75,7 +53,7 @@ export function AppLayout() {
     location.pathname === "/board/announcement-email";
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-surface">
       <header className="border-b border-gray-200 bg-white">
         <nav className="mx-auto flex w-full max-w-7xl items-center gap-4 px-6 py-3 lg:gap-6">
           <AppLogo asLink showTagline={false} />
@@ -89,10 +67,11 @@ export function AppLayout() {
                 <PrimaryNavLink to="/events">Events</PrimaryNavLink>
                 <PrimaryNavLink to="/assistant">Assistant</PrimaryNavLink>
                 <PrimaryNavLink to={dashboardPath}>Dashboard</PrimaryNavLink>
-                <NavDivider />
-                <NavDropdown label="Work" items={workItems} isActive={workActive} />
                 {adminItems.length > 0 ? (
-                  <NavDropdown label="Admin" items={adminItems} isActive={adminActive} />
+                  <>
+                    <NavDivider />
+                    <NavDropdown label="Admin" items={adminItems} isActive={adminActive} />
+                  </>
                 ) : null}
               </ul>
 
@@ -115,6 +94,7 @@ export function AppLayout() {
             </ul>
           )}
         </nav>
+        <PrayerFlagStripe />
       </header>
 
       <main

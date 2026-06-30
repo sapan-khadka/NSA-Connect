@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CreateEventForm } from "./CreateEventForm";
+import { createMockEventResponse } from "../test/test-utils";
 
 vi.mock("../lib/events-api", () => ({
   createEvent: vi.fn(),
@@ -46,17 +47,17 @@ describe("CreateEventForm", () => {
     const user = userEvent.setup();
     const onCreated = vi.fn();
 
-    mockedCreateEvent.mockResolvedValue({
-      id: 9,
-      name: "Spring Social",
-      starts_at: "2030-06-15T18:00:00+00:00",
-      event_type: "social",
-      description: "Food and games.",
-      budget: "125.50",
-      created_by_id: 2,
-      rsvp_count: 0,
-      current_member_has_rsvped: false,
-    });
+    mockedCreateEvent.mockResolvedValue(
+      createMockEventResponse({
+        id: 9,
+        name: "Spring Social",
+        starts_at: "2030-06-15T18:00:00+00:00",
+        event_type: "social",
+        description: "Food and games.",
+        budget: "125.50",
+        created_by_id: 2,
+      }),
+    );
 
     render(<CreateEventForm onCreated={onCreated} />);
 
@@ -101,17 +102,13 @@ describe("CreateEventForm", () => {
         },
       ],
     });
-    mockedCreateEvent.mockResolvedValue({
-      id: 12,
-      name: "Dashain Celebration",
-      starts_at: "2030-06-01T18:00:00+00:00",
-      event_type: "cultural",
-      description: "Annual cultural night.",
-      budget: "250.00",
-      created_by_id: 2,
-      rsvp_count: 0,
-      current_member_has_rsvped: false,
-    });
+    mockedCreateEvent.mockResolvedValue(
+      createMockEventResponse({
+        id: 12,
+        name: "Dashain Celebration",
+        created_by_id: 2,
+      }),
+    );
     mockedAddPrepTaskToEvent.mockResolvedValue({
       id: 1,
       group_name: "Setup",

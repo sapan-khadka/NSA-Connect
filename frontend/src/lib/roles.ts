@@ -126,6 +126,47 @@ export function formatPositionLabel(position: MemberPosition): string {
   return POSITION_LABELS[position] ?? position;
 }
 
+export const POSITION_BADGE_STYLES: Record<
+  Exclude<MemberPosition, "member">,
+  string
+> = {
+  president: "border-purple-200 bg-purple-50 text-purple-800",
+  vice_president: "border-indigo-200 bg-indigo-50 text-indigo-800",
+  secretary: "border-teal-200 bg-teal-50 text-teal-800",
+  treasurer: "border-blue-200 bg-blue-50 text-blue-800",
+  event_manager: "border-orange-200 bg-orange-50 text-orange-800",
+  public_relations_officer: "border-pink-200 bg-pink-50 text-pink-800",
+  new_student_representative: "border-emerald-200 bg-emerald-50 text-emerald-800",
+};
+
+export function getPositionBadgeClassName(
+  position: Exclude<MemberPosition, "member">,
+  size: RoleBadgeSize = "sm",
+): string {
+  return [
+    "inline-flex rounded-full border font-semibold tracking-wide",
+    ROLE_BADGE_SIZE_STYLES[size],
+    POSITION_BADGE_STYLES[position],
+  ].join(" ");
+}
+
+/** Role badge/access label derived from assigned position (source of truth). */
+export function getMemberDisplayRole(member: {
+  role: MemberRole;
+  position: MemberPosition;
+}): MemberRole {
+  if (member.position === "president") {
+    return "president";
+  }
+  if (member.position === "treasurer") {
+    return "treasurer";
+  }
+  if (member.role === "president" || member.role === "treasurer") {
+    return "board";
+  }
+  return member.role;
+}
+
 /** Matches require_task_manager: President (role) or VP / Event Manager (position). */
 export function canManageEventTasks(
   role: MemberRole,
@@ -155,12 +196,18 @@ export function isPromotableBoardRole(role: string): role is PromotableBoardRole
 }
 
 export function canPresidentPromoteMember(
-  member: { id: number; role: MemberRole; status: string },
+  member: {
+    id: number;
+    role: MemberRole;
+    status: string;
+    position: MemberPosition;
+  },
   currentMemberId: number,
 ): boolean {
   return (
     member.id !== currentMemberId &&
     member.status === "approved" &&
+    !isExclusiveMemberPosition(member.position) &&
     isPromotableBoardRole(member.role)
   );
 }

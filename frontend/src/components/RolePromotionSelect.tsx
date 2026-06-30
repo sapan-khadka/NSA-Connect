@@ -1,10 +1,12 @@
 import type { MemberResponse } from "../lib/auth-api";
 import {
   formatRoleLabel,
+  isExclusiveMemberPosition,
   PROMOTABLE_BOARD_ROLES,
   type PromotableBoardRole,
 } from "../lib/roles";
 
+import { PositionBadge } from "./PositionBadge";
 import { RoleBadge } from "./RoleBadge";
 
 type RolePromotionSelectProps = {
@@ -21,6 +23,10 @@ export function RolePromotionSelect({
   isUpdating = false,
   onRoleChange,
 }: RolePromotionSelectProps) {
+  if (isExclusiveMemberPosition(member.position)) {
+    return <PositionBadge position={member.position} />;
+  }
+
   if (member.role !== "general" && member.role !== "board") {
     return <RoleBadge role={member.role} />;
   }

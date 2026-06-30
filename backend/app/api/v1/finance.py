@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import require_board, require_treasurer
 from app.integrations.cloudinary_client import CloudinaryUploadError
+from app.lib.event_finance import EventFinanceLockedError
 from app.lib.semester import SEMESTER_QUERY_PATTERN
 from app.models.finance_entry import FinanceEntryType
 from app.models.member import Member
@@ -286,6 +287,11 @@ def create_finance_entry_endpoint(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Event not found",
         ) from None
+    except EventFinanceLockedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from None
 
     return FinanceEntryResponse.from_entry(entry)
 
@@ -319,6 +325,11 @@ def update_finance_entry_endpoint(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Event not found",
         ) from None
+    except EventFinanceLockedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from None
 
     return FinanceChangeRequestResponse.from_request(request)
 
@@ -345,6 +356,11 @@ def delete_finance_entry_endpoint(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You cannot submit this change request",
+        ) from None
+    except EventFinanceLockedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
         ) from None
 
     return FinanceChangeRequestResponse.from_request(request)

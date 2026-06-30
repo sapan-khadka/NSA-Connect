@@ -22,12 +22,17 @@ export type EventResponse = {
   id: number;
   name: string;
   starts_at: string;
+  ends_at: string | null;
   event_type: EventType;
   description: string;
   budget: string;
   created_by_id: number;
   rsvp_count: number;
   current_member_has_rsvped: boolean;
+  finance_lock_at: string;
+  is_finance_locked: boolean;
+  is_past: boolean;
+  is_finance_grace_period: boolean;
 };
 
 export type EventDetailResponse = EventResponse & {
@@ -57,6 +62,16 @@ export async function fetchUpcomingEvents(params?: {
   limit?: number;
 }): Promise<EventListResponse> {
   const response = await api.get<EventListResponse>("/v1/events/upcoming", {
+    params,
+  });
+  return response.data;
+}
+
+export async function fetchPastEvents(params?: {
+  limit?: number;
+  offset?: number;
+}): Promise<EventListResponse> {
+  const response = await api.get<EventListResponse>("/v1/events/past", {
     params,
   });
   return response.data;

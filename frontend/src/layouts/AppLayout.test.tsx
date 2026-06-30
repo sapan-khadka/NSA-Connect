@@ -20,7 +20,8 @@ describe("AppLayout navigation", () => {
 
     expect(screen.queryByRole("link", { name: "Finance" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Members" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Work/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Events" })).toBeInTheDocument();
+    expect(screen.getByTestId("prayer-flag-stripe")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
   });
 
@@ -51,7 +52,7 @@ describe("AppLayout navigation", () => {
     expect(screen.getByRole("link", { name: "Events" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Assistant" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Work/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Events" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Admin/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Account menu for Test User" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Profile" })).not.toBeInTheDocument();

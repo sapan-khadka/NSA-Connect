@@ -2,7 +2,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { MockAuthProvider } from "../test/test-utils";
+import { MockAuthProvider, createMockEventResponse } from "../test/test-utils";
 import { EventManagePage } from "./EventManagePage";
 
 vi.mock("../components/EventTaskManager", () => ({
@@ -32,15 +32,12 @@ vi.mock("../lib/members-api", () => ({
 }));
 
 const mockEvent = {
-  id: 1,
-  name: "Dashain Celebration",
-  starts_at: "2030-06-01T18:00:00+00:00",
-  event_type: "cultural" as const,
-  description: "Annual cultural celebration.",
-  budget: "500.00",
-  created_by_id: 1,
-  rsvp_count: 12,
-  current_member_has_rsvped: false,
+  ...createMockEventResponse({
+    id: 1,
+    name: "Dashain Celebration",
+    budget: "500.00",
+    rsvp_count: 12,
+  }),
   prep_tasks: [],
 };
 

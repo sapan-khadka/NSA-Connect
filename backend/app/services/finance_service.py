@@ -3,6 +3,7 @@ from decimal import Decimal
 from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
+from app.lib.event_finance import EventFinanceLockedError, assert_event_finance_editable
 from app.lib.semester import semester_date_range
 from app.models.event import Event
 from app.models.finance_entry import FinanceCategory, FinanceEntry, FinanceEntryType
@@ -238,14 +239,35 @@ def get_finance_summary(
     )
 
 
+def _get_event_or_raise(db: Session, event_id: int) -> Event:
+    event = db.get(Event, event_id)
+    if event is None:
+        raise EventNotFoundError
+    return event
+
+
+def _assert_finance_editable_for_event(db: Session, event_id: int | None) -> None:
+    if event_id is None:
+        return
+    event = _get_event_or_raise(db, event_id)
+    assert_event_finance_editable(event)
+
+
+def _assert_finance_editable_for_entry(db: Session, entry: FinanceEntry) -> None:
+    if entry.event_id is None:
+        return
+    event = _get_event_or_raise(db, entry.event_id)
+    assert_event_finance_editable(event)
+
+
 def create_finance_entry(
     db: Session,
     data: FinanceEntryCreateRequest,
     *,
     created_by: Member,
 ) -> FinanceEntry:
-    if data.event_id is not None and db.get(Event, data.event_id) is None:
-        raise EventNotFoundError
+    if data.event_id is not None:
+        _assert_finance_editable_for_event(db, data.event_id)
 
     entry = FinanceEntry(
         entry_type=data.entry_type,
@@ -271,10 +293,13 @@ def update_finance_entry(
     if entry is None:
         raise FinanceEntryNotFoundError
 
+    _assert_finance_editable_for_entry(db, entry)
+
     updates = data.model_dump(exclude_unset=True)
 
-    if updates.get("event_id") is not None and db.get(Event, updates["event_id"]) is None:
-        raise EventNotFoundError
+    target_event_id = updates.get("event_id", entry.event_id)
+    if target_event_id is not None:
+        _assert_finance_editable_for_event(db, target_event_id)
 
     for field, value in updates.items():
         setattr(entry, field, value)
@@ -288,6 +313,8 @@ def delete_finance_entry(db: Session, entry_id: int) -> None:
     entry = db.get(FinanceEntry, entry_id)
     if entry is None:
         raise FinanceEntryNotFoundError
+
+    _assert_finance_editable_for_entry(db, entry)
 
     db.delete(entry)
     db.commit()

@@ -14,6 +14,7 @@ import {
 import { vi } from "vitest";
 
 import type { MemberResponse } from "../lib/auth-api";
+import type { EventResponse } from "../lib/events-api";
 import type { MemberRole } from "../lib/roles";
 import { AuthContext, type AuthContextValue } from "../context/auth-context";
 import { appRoutes } from "../router";
@@ -32,6 +33,28 @@ export function createMockMember(
     role,
     status: "approved",
     position: "member",
+    ...overrides,
+  };
+}
+
+export function createMockEventResponse(
+  overrides: Partial<EventResponse> = {},
+): EventResponse {
+  return {
+    id: 1,
+    name: "Test Event",
+    starts_at: "2030-06-01T18:00:00+00:00",
+    ends_at: null,
+    event_type: "cultural",
+    description: "Test description",
+    budget: "250.00",
+    created_by_id: 1,
+    rsvp_count: 0,
+    current_member_has_rsvped: false,
+    finance_lock_at: "2030-06-02T18:00:00+00:00",
+    is_finance_locked: false,
+    is_past: false,
+    is_finance_grace_period: false,
     ...overrides,
   };
 }

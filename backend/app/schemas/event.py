@@ -4,6 +4,11 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.lib.event_finance import (
+    get_event_finance_lock_at,
+    is_event_finance_grace_period,
+    is_event_finance_locked,
+)
 from app.models.event import EventType
 
 if TYPE_CHECKING:
@@ -60,12 +65,17 @@ class EventResponse(BaseModel):
     id: int
     name: str
     starts_at: datetime
+    ends_at: datetime | None = None
     event_type: EventType
     description: str
     budget: Decimal
     created_by_id: int
     rsvp_count: int
     current_member_has_rsvped: bool
+    finance_lock_at: datetime
+    is_finance_locked: bool
+    is_past: bool
+    is_finance_grace_period: bool
 
     @classmethod
     def from_event(
@@ -79,12 +89,17 @@ class EventResponse(BaseModel):
             id=event.id,
             name=event.title,
             starts_at=event.starts_at,
+            ends_at=event.ends_at,
             event_type=event.event_type,
             description=event.description,
             budget=Decimal(event.budget),
             created_by_id=event.created_by_id,
             rsvp_count=rsvp_count,
             current_member_has_rsvped=current_member_has_rsvped,
+            finance_lock_at=get_event_finance_lock_at(event),
+            is_finance_locked=is_event_finance_locked(event),
+            is_past=not event.is_upcoming,
+            is_finance_grace_period=is_event_finance_grace_period(event),
         )
 
 

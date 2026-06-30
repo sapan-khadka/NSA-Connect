@@ -54,4 +54,11 @@ class Event(Base):
 
     @property
     def is_upcoming(self) -> bool:
-        return self.starts_at >= datetime.now(self.starts_at.tzinfo)
+        from datetime import UTC
+
+        starts_at = self.starts_at
+        if starts_at.tzinfo is None:
+            starts_at = starts_at.replace(tzinfo=UTC)
+        else:
+            starts_at = starts_at.astimezone(UTC)
+        return starts_at >= datetime.now(UTC)

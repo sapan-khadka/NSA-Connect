@@ -2,7 +2,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { MockAuthProvider } from "../test/test-utils";
+import { MockAuthProvider, createMockEventResponse } from "../test/test-utils";
 import { UpcomingEventsPage } from "./UpcomingEventsPage";
 
 vi.mock("../lib/events-api", () => ({
@@ -11,17 +11,10 @@ vi.mock("../lib/events-api", () => ({
 
 const mockEvents = {
   events: [
-    {
+    createMockEventResponse({
       id: 1,
       name: "Dashain Celebration",
-      starts_at: "2030-06-01T18:00:00+00:00",
-      event_type: "cultural" as const,
-      description: "Annual cultural celebration.",
-      budget: "500.00",
-      created_by_id: 1,
-      rsvp_count: 12,
-      current_member_has_rsvped: false,
-    },
+    }),
   ],
   total: 1,
 };

@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   canAccessFinance,
+  canPresidentPromoteMember,
   canViewMemberDirectory,
   getDashboardPath,
+  getMemberDisplayRole,
   isRoleAtLeast,
 } from "./roles";
 
@@ -21,5 +23,28 @@ describe("role access helpers", () => {
       expect(canViewMemberDirectory(role)).toBe(true);
       expect(getDashboardPath(role)).toBe("/board");
     }
+  });
+
+  it("derives display role from assigned position", () => {
+    expect(
+      getMemberDisplayRole({ role: "board", position: "president" }),
+    ).toBe("president");
+    expect(
+      getMemberDisplayRole({ role: "president", position: "member" }),
+    ).toBe("board");
+  });
+
+  it("blocks role promotion when a leadership position is assigned", () => {
+    expect(
+      canPresidentPromoteMember(
+        {
+          id: 2,
+          role: "board",
+          status: "approved",
+          position: "vice_president",
+        },
+        1,
+      ),
+    ).toBe(false);
   });
 });

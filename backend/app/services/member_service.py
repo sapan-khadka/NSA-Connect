@@ -3,11 +3,13 @@ from sqlalchemy.orm import Session
 
 from app.core.security import hash_password, verify_password
 from app.models.member import (
+    EXCLUSIVE_AUTH_ROLES,
     EXCLUSIVE_MEMBER_POSITIONS,
     Member,
     MemberPosition,
     MemberRole,
     MemberStatus,
+    POSITION_AUTH_ROLES,
 )
 from app.schemas.member import MemberCreateRequest, MemberProfileUpdateRequest
 
@@ -202,6 +204,44 @@ def _clear_exclusive_position_holder(
     )
     if previous_holder is not None:
         previous_holder.position = MemberPosition.MEMBER
+        _sync_auth_role_from_position(previous_holder)
+
+
+def _clear_exclusive_auth_role_holder(
+    db: Session,
+    role: MemberRole,
+    except_member_id: int,
+) -> None:
+    if role not in EXCLUSIVE_AUTH_ROLES:
+        return
+
+    previous_holders = db.scalars(
+        select(Member).where(
+            Member.role == role,
+            Member.id != except_member_id,
+        ),
+    ).all()
+    for previous_holder in previous_holders:
+        previous_holder.role = MemberRole.BOARD
+        if previous_holder.position in POSITION_AUTH_ROLES:
+            previous_holder.position = MemberPosition.MEMBER
+
+
+def _sync_auth_role_from_position(member: Member) -> None:
+    mapped_role = POSITION_AUTH_ROLES.get(member.position)
+    if mapped_role is not None:
+        member.role = mapped_role
+        return
+
+    if member.role in EXCLUSIVE_AUTH_ROLES:
+        member.role = MemberRole.BOARD
+        return
+
+    if (
+        member.role == MemberRole.GENERAL
+        and member.position in EXCLUSIVE_MEMBER_POSITIONS
+    ):
+        member.role = MemberRole.BOARD
 
 
 def update_member_position(
@@ -218,7 +258,11 @@ def update_member_position(
 
     if position != member.position:
         _clear_exclusive_position_holder(db, position, member_id)
+        mapped_role = POSITION_AUTH_ROLES.get(position)
+        if mapped_role is not None:
+            _clear_exclusive_auth_role_holder(db, mapped_role, member_id)
         member.position = position
+        _sync_auth_role_from_position(member)
         db.commit()
         db.refresh(member)
 

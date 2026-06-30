@@ -19,6 +19,7 @@ type FinanceEntryListProps = {
   semester: string;
   refreshKey: number;
   canManage?: boolean;
+  financeLocked?: boolean;
   eventId?: number;
   onChanged?: () => void;
 };
@@ -39,6 +40,7 @@ export function FinanceEntryList({
   semester,
   refreshKey,
   canManage = false,
+  financeLocked = false,
   eventId,
   onChanged,
 }: FinanceEntryListProps) {
@@ -217,6 +219,13 @@ export function FinanceEntryList({
           Latest logged income and expense entries for the selected semester.
         </p>
       </div>
+
+      {financeLocked ? (
+        <p className="mt-4 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+          Event finances are closed. These entries are preserved for accountability
+          and can no longer be edited.
+        </p>
+      ) : null}
 
       {actionError ? (
         <p

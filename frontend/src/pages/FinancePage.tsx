@@ -10,6 +10,7 @@ import { LogFinanceEntryForm } from "../components/LogFinanceEntryForm";
 import { RoleBadge } from "../components/RoleBadge";
 import { useAuth } from "../context/useAuth";
 import { fetchEvents } from "../lib/events-api";
+import { isEventFinanceEditable } from "../lib/event-finance";
 import {
   fetchEventBudgetBreakdown,
   fetchExpenseByCategory,
@@ -78,10 +79,12 @@ export function FinancePage() {
         const response = await fetchEvents();
         if (!cancelled) {
           setEventOptions(
-            response.events.map((event) => ({
-              id: event.id,
-              name: event.name,
-            })),
+            response.events
+              .filter((event) => isEventFinanceEditable(event))
+              .map((event) => ({
+                id: event.id,
+                name: event.name,
+              })),
           );
         }
       } catch {

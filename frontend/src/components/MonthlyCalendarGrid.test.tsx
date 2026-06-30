@@ -66,7 +66,26 @@ describe("MonthlyCalendarGrid", () => {
     const dayCell = screen.getByRole("button", {
       name: "2030-06-15, Cultural, Meeting",
     });
-    expect(dayCell.className).toContain("bg-red-500/20");
+    expect(dayCell.className).toContain("bg-red-600/20");
+  });
+
+  it("shows Bikram Sambat labels for current-month days", () => {
+    render(
+      <MonthlyCalendarGrid year={2030} month={5} onMonthChange={vi.fn()} />,
+    );
+
+    const juneFirst = screen.getByRole("button", { name: /^2030-06-01/ });
+    expect(juneFirst.textContent).toMatch(/\d{1,2} \w+/);
+  });
+
+  it("highlights festival days without NSA events", () => {
+    render(
+      <MonthlyCalendarGrid year={2030} month={2} onMonthChange={vi.fn()} />,
+    );
+
+    const holiCell = screen.getByRole("button", { name: /2030-03-20, Holi/ });
+    expect(holiCell.className).toContain("bg-accent/10");
+    expect(screen.getByText("Nepali festival")).toBeInTheDocument();
   });
 
   it("selects a date when clicked", async () => {

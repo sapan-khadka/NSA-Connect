@@ -115,3 +115,38 @@ def test_assigning_exclusive_position_demotes_previous_holder(
     db_session.refresh(second)
     assert first.position == MemberPosition.MEMBER
     assert second.position == MemberPosition.SECRETARY
+
+
+def test_president_position_syncs_auth_role_and_demotes_previous(
+    client,
+    president_headers,
+    db_session,
+):
+    from app.models.member import MemberPosition, MemberRole
+
+    first = create_board_member(db_session, email="first@semo.edu")
+    first.student_id = "55555555"
+    db_session.commit()
+    db_session.refresh(first)
+
+    second = create_board_member(db_session, email="second@semo.edu")
+    second.student_id = "66666666"
+    second.role = MemberRole.PRESIDENT
+    db_session.commit()
+    db_session.refresh(second)
+
+    response = client.patch(
+        f"/api/v1/members/{first.id}/position",
+        json={"position": "president"},
+        headers=president_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["position"] == "president"
+    assert response.json()["role"] == "president"
+
+    db_session.refresh(first)
+    db_session.refresh(second)
+    assert first.position == MemberPosition.PRESIDENT
+    assert first.role == MemberRole.PRESIDENT
+    assert second.position == MemberPosition.MEMBER
+    assert second.role == MemberRole.BOARD

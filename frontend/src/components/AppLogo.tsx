@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
+import { HimalayanSilhouette } from "./NepaliDecor";
 import nsaLogo from "../assets/nsa-logo.svg";
 
 type AppLogoSize = "sm" | "md" | "lg";
@@ -107,6 +108,8 @@ type HomeHeroBrandProps = {
   description: string;
   actions?: ReactNode;
   align?: "left" | "center";
+  heroClass?: string;
+  showSilhouette?: boolean;
 };
 
 export function HomeHeroBrand({
@@ -115,17 +118,21 @@ export function HomeHeroBrand({
   description,
   actions,
   align = "left",
+  heroClass = "nepali-hero",
+  showSilhouette = false,
 }: HomeHeroBrandProps) {
   const centered = align === "center";
 
   return (
     <div
       className={[
-        "flex flex-col gap-6",
+        "relative flex flex-col gap-6",
+        heroClass,
         centered ? "items-center text-center md:items-start md:text-left" : "",
         !centered ? "md:flex-row md:items-center" : "md:flex-row md:items-center",
       ].join(" ")}
     >
+      {showSilhouette ? <HimalayanSilhouette /> : null}
       <AppLogo size="lg" showWordmark={false} className="shrink-0" />
       <div className={centered ? "md:text-left" : "min-w-0 flex-1"}>
         <p className="text-sm font-semibold uppercase tracking-wide text-accent">

@@ -89,24 +89,12 @@ export function TaskOversightPage() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-8">
-        <p className="text-sm font-semibold uppercase tracking-wide text-accent">
-          Oversight
+      {overview ? (
+        <p className="text-sm font-medium text-primary">
+          {overview.completed_tasks} of {overview.total_tasks} tasks complete (
+          {overallPercent}%)
         </p>
-        <h1 className="mt-2 text-3xl font-bold text-primary">
-          Task oversight dashboard
-        </h1>
-        <p className="mt-3 max-w-2xl text-gray-600">
-          Monitor every board member&apos;s assigned tasks, completion progress,
-          notes, and photos.
-        </p>
-        {overview ? (
-          <p className="mt-4 text-sm font-medium text-primary">
-            {overview.completed_tasks} of {overview.total_tasks} tasks complete (
-            {overallPercent}%)
-          </p>
-        ) : null}
-      </section>
+      ) : null}
 
       {isLoading ? (
         <div className="rounded-lg border border-gray-200 bg-white p-10 text-center text-gray-500">

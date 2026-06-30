@@ -71,7 +71,7 @@ export function GeneralDashboardPage() {
               </Link>
             </li>
             <li>
-              <Link to="/member/tasks" className="font-medium text-accent hover:text-accent-hover">
+              <Link to="/events/volunteer" className="font-medium text-accent hover:text-accent-hover">
                 My volunteer tasks
               </Link>
             </li>

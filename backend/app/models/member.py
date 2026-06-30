@@ -41,6 +41,13 @@ EXCLUSIVE_MEMBER_POSITIONS = frozenset(
     position for position in MemberPosition if position != MemberPosition.MEMBER
 )
 
+POSITION_AUTH_ROLES: dict[MemberPosition, MemberRole] = {
+    MemberPosition.PRESIDENT: MemberRole.PRESIDENT,
+    MemberPosition.TREASURER: MemberRole.TREASURER,
+}
+
+EXCLUSIVE_AUTH_ROLES = frozenset(POSITION_AUTH_ROLES.values())
+
 
 _ROLE_LEVELS: dict[MemberRole, int] = {
     MemberRole.GENERAL: 1,

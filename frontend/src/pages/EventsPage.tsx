@@ -334,13 +334,6 @@ export function EventsPage() {
 
   return (
     <div className="space-y-6">
-      <section>
-        <h1 className="text-3xl font-bold text-primary">Events</h1>
-        <p className="mt-2 max-w-2xl text-gray-600">
-          Browse NSA events by month, RSVP to attend, and track event tasks.
-        </p>
-      </section>
-
       {canAssignTasks ? (
         <CreateEventForm onCreated={(event) => void handleEventCreated(event)} />
       ) : null}

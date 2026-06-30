@@ -6,12 +6,24 @@ export default {
     extend: {
       colors: {
         primary: {
-          DEFAULT: "#1a1a2e",
-          light: "#2d2d44",
+          DEFAULT: "#003893",
+          light: "#1a4db3",
         },
         accent: {
-          DEFAULT: "#e94560",
-          hover: "#d63851",
+          DEFAULT: "#DC143C",
+          hover: "#b81032",
+        },
+        marigold: {
+          DEFAULT: "#F4A024",
+          hover: "#d9890a",
+        },
+        surface: {
+          DEFAULT: "#F1F5FA",
+          muted: "#E8EEF6",
+        },
+        olive: {
+          DEFAULT: "#6B8F71",
+          light: "#EEF3EF",
         },
       },
       fontFamily: {

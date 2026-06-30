@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { EventRsvpButton } from "../components/EventRsvpButton";
+import { CoverBanner } from "../components/CoverBanner";
 import { HomeHeroBrand } from "../components/AppLogo";
 import { useAuth } from "../context/useAuth";
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/auth-api";
 import { fetchMyEventTasks } from "../lib/event-tasks-api";
-import { EVENT_TYPE_BADGE_CLASS, EVENT_TYPE_LABELS } from "../lib/event-types";
+import { EVENT_TYPE_BADGE_CLASS, EVENT_TYPE_LABELS, isCulturalEvent } from "../lib/event-types";
 import {
   cancelEventRsvp,
   fetchUpcomingEvents,
@@ -29,6 +30,7 @@ import {
   getDashboardPath,
   isRoleAtLeast,
 } from "../lib/roles";
+import { getSeasonalTheme } from "../lib/seasonal-theme";
 
 type HomeAlert = {
   id: string;
@@ -49,10 +51,10 @@ function QuickLinkCard({ title, description, to, featured = false }: QuickLink) 
     <Link
       to={to}
       className={[
-        "block rounded-md border px-4 py-3 transition-all",
+        "block rounded-lg border px-4 py-3 transition-all",
         featured
-          ? "border-accent/30 bg-gradient-to-br from-accent/10 to-white hover:border-accent hover:shadow-md"
-          : "border-gray-200 hover:border-accent hover:bg-accent/5",
+          ? "border-l-4 border-l-accent bg-olive-light hover:border-accent hover:shadow-md"
+          : "border-slate-200 hover:border-primary/30 hover:bg-surface-muted",
       ].join(" ")}
     >
       <p className="font-medium text-primary">{title}</p>
@@ -66,7 +68,7 @@ function buildQuickLinks(member: MemberResponse): QuickLink[] {
     {
       title: "Events calendar",
       description: "Browse the month, RSVP, and see event details.",
-      to: "/events",
+      to: "/events/calendar",
       featured: true,
     },
     {
@@ -89,14 +91,14 @@ function buildQuickLinks(member: MemberResponse): QuickLink[] {
   if (isRoleAtLeast(member.role, "board")) {
     links.push(
       {
-        title: "Upcoming events hub",
-        description: "Manage tasks, budgets, and progress per event.",
-        to: "/events/upcoming",
+        title: "My tasks",
+        description: "Drag checklist tasks across To do, In progress, and Done.",
+        to: "/events/tasks",
       },
       {
-        title: "Task board",
-        description: "Drag checklist tasks across To do, In progress, and Done.",
-        to: "/tasks",
+        title: "Past events",
+        description: "Review completed events and finance close-out status.",
+        to: "/events/past",
       },
     );
   }
@@ -113,7 +115,7 @@ function buildQuickLinks(member: MemberResponse): QuickLink[] {
     links.push({
       title: "Task oversight",
       description: "See completion progress across the team.",
-      to: "/board/task-oversight",
+      to: "/events/oversight",
     });
   }
 
@@ -129,32 +131,34 @@ function buildQuickLinks(member: MemberResponse): QuickLink[] {
 }
 
 function PublicHomeView() {
+  const seasonalTheme = getSeasonalTheme();
+
   return (
-    <div className="mx-auto max-w-3xl">
-      <section className="rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-8 md:p-10">
-        <HomeHeroBrand
-          eyebrow="Nepalese Students' Association · SEMO"
-          title="NSA Connect"
-          description="Log in or create an account with your @semo.edu email to access events, tasks, and member tools."
-          align="center"
-          actions={
-            <>
-              <Link
-                to="/login"
-                className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-hover"
-              >
-                Log in
-              </Link>
-              <Link
-                to="/register"
-                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-primary transition hover:border-accent hover:bg-accent/5"
-              >
-                Create account
-              </Link>
-            </>
-          }
-        />
-      </section>
+    <div className="mx-auto max-w-4xl space-y-6">
+      <CoverBanner />
+      <HomeHeroBrand
+        eyebrow="Namaste — welcome to NSA Connect"
+        title="NSA Connect"
+        description="Log in or create an account with your @semo.edu email to access events, tasks, and member tools."
+        align="center"
+        heroClass={seasonalTheme.heroClass}
+        actions={
+          <>
+            <Link
+              to="/login"
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-hover"
+            >
+              Log in
+            </Link>
+            <Link
+              to="/register"
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-primary transition hover:border-accent hover:bg-accent/5"
+            >
+              Create account
+            </Link>
+          </>
+        }
+      />
     </div>
   );
 }
@@ -328,10 +332,13 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
 
   const quickLinks = buildQuickLinks(member);
   const tasksPath = getMyTasksPath(member.role);
+  const seasonalTheme = getSeasonalTheme();
 
   return (
     <div className="space-y-8">
-      <section className="rounded-xl border border-accent/20 bg-gradient-to-br from-accent/5 to-white p-8">
+      <CoverBanner />
+
+      <section className={seasonalTheme.heroClass}>
         <p className="text-sm font-semibold uppercase tracking-wide text-accent">
           Home
         </p>
@@ -405,13 +412,20 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
 
           {!isLoading && !featuredEvent ? (
             <p className="mt-6 rounded-md border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-500">
-              No upcoming events right now.
+              No events yet — check back before the next festival.
             </p>
           ) : null}
 
           {!isLoading && featuredEvent ? (
             <div className="mt-6 space-y-4">
-              <div className="rounded-md border border-gray-200 p-4">
+              <div
+                className={[
+                  "rounded-md border border-gray-200 p-4",
+                  isCulturalEvent(featuredEvent.event_type)
+                    ? "border-t-4 border-t-marigold"
+                    : "",
+                ].join(" ")}
+              >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-lg font-semibold text-primary">

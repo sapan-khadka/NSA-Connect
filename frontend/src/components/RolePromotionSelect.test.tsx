@@ -71,4 +71,18 @@ describe("RolePromotionSelect", () => {
       screen.queryByLabelText("Change role for General Member"),
     ).not.toBeInTheDocument();
   });
+
+  it("shows a position badge for leadership positions", () => {
+    render(
+      <RolePromotionSelect
+        member={{ ...generalMember, role: "board", position: "vice_president" }}
+        onRoleChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Vice President")).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("Change role for General Member"),
+    ).not.toBeInTheDocument();
+  });
 });

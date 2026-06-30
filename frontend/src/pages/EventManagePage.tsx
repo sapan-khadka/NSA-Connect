@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
+import { EventFinanceCloseoutBanner } from "../components/EventFinanceCloseoutBanner";
 import { EventTaskManager } from "../components/EventTaskManager";
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage } from "../lib/auth-api";
@@ -145,8 +146,8 @@ export function EventManagePage() {
   if (error || !event) {
     return (
       <div className="space-y-4">
-        <Link to="/events/upcoming" className="text-sm text-accent hover:underline">
-          ← Back to upcoming events
+        <Link to="/events/calendar" className="text-sm text-accent hover:underline">
+          ← Back to calendar
         </Link>
         <div
           role="alert"
@@ -165,8 +166,8 @@ export function EventManagePage() {
   return (
     <div className="space-y-8">
       <div>
-        <Link to="/events/upcoming" className="text-sm text-accent hover:underline">
-          ← Back to upcoming events
+        <Link to="/events/calendar" className="text-sm text-accent hover:underline">
+          ← Back to calendar
         </Link>
       </div>
 
@@ -184,6 +185,8 @@ export function EventManagePage() {
           {event.description}
         </p>
       </section>
+
+      <EventFinanceCloseoutBanner event={event} />
 
       {canViewBoard ? (
         <section className="rounded-lg border border-gray-200 bg-white p-6">
@@ -283,7 +286,8 @@ export function EventManagePage() {
           semester="all"
           refreshKey={refreshKey}
           eventId={numericEventId}
-          canManage
+          canManage={!event.is_finance_locked}
+          financeLocked={event.is_finance_locked}
           onChanged={() => setRefreshKey((current) => current + 1)}
         />
       ) : null}

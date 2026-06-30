@@ -9,6 +9,7 @@ import {
   formatIsoDateLabel,
 } from "../lib/format-datetime";
 import { isEventUpcoming } from "../lib/event-rsvp";
+import { isRoleAtLeast } from "../lib/roles";
 
 type EventDayPanelProps = {
   selectedDate: string | null;
@@ -53,6 +54,10 @@ export function EventDayPanel({
   deletingEvent = false,
   onDeleteEvent,
 }: EventDayPanelProps) {
+  const canViewBudget = member
+    ? isRoleAtLeast(member.role, "board")
+    : false;
+
   return (
     <aside
       aria-label="Event details"
@@ -124,9 +129,11 @@ export function EventDayPanel({
                     <p className="mt-2 text-sm text-gray-600">
                       {formatEventDateTime(eventDetail.starts_at)}
                     </p>
-                    <p className="mt-1 text-sm text-gray-600">
-                      Budget {formatCurrency(eventDetail.budget)}
-                    </p>
+                    {canViewBudget ? (
+                      <p className="mt-1 text-sm text-gray-600">
+                        Budget {formatCurrency(eventDetail.budget)}
+                      </p>
+                    ) : null}
                     <p className="mt-3 text-sm leading-relaxed text-gray-700">
                       {eventDetail.description}
                     </p>

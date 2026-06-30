@@ -165,8 +165,8 @@ describe("protected route redirects", () => {
     expect(screen.queryByText("Event budget tracking")).not.toBeInTheDocument();
   });
 
-  it("allows any approved member to view /tasks", async () => {
-    renderWithRouter(undefined, {
+  it("redirects /tasks to /events/tasks", async () => {
+    const { router } = renderWithRouter(undefined, {
       initialEntries: ["/tasks"],
       auth: {
         member: createMockMember("general"),
@@ -174,10 +174,15 @@ describe("protected route redirects", () => {
       },
     });
 
-    expect(await screen.findByRole("heading", { name: "Task board" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/events/tasks");
+    });
+    expect(
+      await screen.findByText("No tasks assigned to you yet"),
+    ).toBeInTheDocument();
   });
 
-  it("redirects /board/tasks to /tasks", async () => {
+  it("redirects /board/tasks to /events/tasks", async () => {
     const { router } = renderWithRouter(undefined, {
       initialEntries: ["/board/tasks"],
       auth: {
@@ -187,13 +192,15 @@ describe("protected route redirects", () => {
     });
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/tasks");
+      expect(router.state.location.pathname).toBe("/events/tasks");
     });
-    expect(await screen.findByText("Task board")).toBeInTheDocument();
+    expect(
+      await screen.findByText("No tasks assigned to you yet"),
+    ).toBeInTheDocument();
   });
 
-  it("allows general members to view /member/tasks", async () => {
-    renderWithRouter(undefined, {
+  it("redirects /member/tasks to /events/volunteer for general members", async () => {
+    const { router } = renderWithRouter(undefined, {
       initialEntries: ["/member/tasks"],
       auth: {
         member: createMockMember("general"),
@@ -201,7 +208,10 @@ describe("protected route redirects", () => {
       },
     });
 
-    expect(await screen.findByText("Your volunteer signups")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/events/volunteer");
+    });
+    expect(await screen.findByText("No volunteer tasks yet")).toBeInTheDocument();
   });
 
   it("redirects board members from /member/tasks to /board", async () => {

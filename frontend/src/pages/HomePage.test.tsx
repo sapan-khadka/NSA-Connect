@@ -2,7 +2,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { MockAuthProvider, createMockMember } from "../test/test-utils";
+import { MockAuthProvider, createMockEventResponse, createMockMember } from "../test/test-utils";
 import { HomePage } from "./HomePage";
 
 vi.mock("../lib/events-api", async () => {
@@ -57,17 +57,11 @@ const mockedMyTasks = vi.mocked(fetchMyEventTasks);
 const mockedPendingMembers = vi.mocked(fetchPendingMembers);
 const mockedFinancePending = vi.mocked(fetchPendingFinanceChangeRequests);
 
-const sampleEvent = {
+const sampleEvent = createMockEventResponse({
   id: 5,
   name: "Dashain Celebration",
-  starts_at: "2030-06-01T18:00:00+00:00",
-  event_type: "cultural" as const,
-  description: "Annual cultural celebration",
-  budget: "500.00",
-  created_by_id: 1,
   rsvp_count: 12,
-  current_member_has_rsvped: false,
-};
+});
 
 afterEach(() => {
   cleanup();
@@ -158,6 +152,18 @@ describe("HomePage", () => {
       screen.getByText("1 assigned task overdue"),
     ).toBeInTheDocument();
     expect(screen.getByText("Quick links")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /My tasks/i })).toHaveAttribute(
+      "href",
+      "/events/tasks",
+    );
+    expect(screen.getByRole("link", { name: /Past events/i })).toHaveAttribute(
+      "href",
+      "/events/past",
+    );
+    expect(screen.getByRole("link", { name: /Task oversight/i })).toHaveAttribute(
+      "href",
+      "/events/oversight",
+    );
   });
 
   it("does not show needs-attention alerts when counts are zero", async () => {

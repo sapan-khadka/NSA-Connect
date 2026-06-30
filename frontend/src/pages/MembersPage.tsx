@@ -30,7 +30,7 @@ export function MembersPage() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-xl border border-accent/20 bg-gradient-to-br from-accent/5 to-white p-8">
+      <section className="nepali-hero">
         <p className="text-sm font-semibold uppercase tracking-wide text-accent">
           Board members
         </p>

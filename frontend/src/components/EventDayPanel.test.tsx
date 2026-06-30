@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { EventDayPanel } from "./EventDayPanel";
 import type { EventDetailResponse, EventResponse } from "../lib/events-api";
+import { createMockEventResponse, createMockMember } from "../test/test-utils";
 
 vi.mock("../lib/event-tasks-api", () => ({
   fetchEventTasks: vi.fn(),
@@ -13,17 +14,12 @@ vi.mock("../lib/event-tasks-api", () => ({
   deleteEventTask: vi.fn(),
 }));
 
-const dayEvent: EventResponse = {
+const dayEvent: EventResponse = createMockEventResponse({
   id: 1,
   name: "Dashain Celebration",
   starts_at: "2030-06-15T18:00:00+00:00",
-  event_type: "cultural",
-  description: "Annual cultural night.",
-  budget: "250.00",
   created_by_id: 2,
-  rsvp_count: 0,
-  current_member_has_rsvped: false,
-};
+});
 
 const eventDetail: EventDetailResponse = {
   ...dayEvent,
@@ -229,5 +225,41 @@ describe("EventDayPanel", () => {
 
     await user.click(screen.getByRole("button", { name: "Board Meeting" }));
     expect(onSelectEvent).toHaveBeenCalledWith(2);
+  });
+
+  it("hides budget for general members", () => {
+    render(
+      <EventDayPanel
+        selectedDate="2030-06-15"
+        dayEvents={[dayEvent]}
+        selectedEventId={1}
+        onSelectEvent={vi.fn()}
+        eventDetail={eventDetail}
+        detailLoading={false}
+        detailError={null}
+        {...panelProps}
+        member={createMockMember("general")}
+      />,
+    );
+
+    expect(screen.queryByText(/Budget/i)).not.toBeInTheDocument();
+  });
+
+  it("shows budget for board members", () => {
+    render(
+      <EventDayPanel
+        selectedDate="2030-06-15"
+        dayEvents={[dayEvent]}
+        selectedEventId={1}
+        onSelectEvent={vi.fn()}
+        eventDetail={eventDetail}
+        detailLoading={false}
+        detailError={null}
+        {...panelProps}
+        member={createMockMember("board")}
+      />,
+    );
+
+    expect(screen.getByText(/Budget \$250\.00/)).toBeInTheDocument();
   });
 });

@@ -144,18 +144,6 @@ export function MyTasksPage() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-8">
-        <p className="text-sm font-semibold uppercase tracking-wide text-accent">
-          My tasks
-        </p>
-        <h1 className="mt-2 text-3xl font-bold text-primary">
-          Your volunteer signups
-        </h1>
-        <p className="mt-3 max-w-2xl text-gray-600">
-          See what you have signed up for and which events are already complete.
-        </p>
-      </section>
-
       <MyEventTasks />
 
       {loadState.status === "loading" ? (
@@ -179,10 +167,10 @@ export function MyTasksPage() {
             No volunteer tasks yet
           </p>
           <p className="mt-2 text-gray-500">
-            Browse events and sign up for volunteer slots when they are available.
+            Browse events on the calendar and sign up when volunteer slots open.
           </p>
           <Link
-            to="/events"
+            to="/events/calendar"
             className="mt-6 inline-flex rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
           >
             Browse events

@@ -13,10 +13,12 @@ import {
   buildPositionHolders,
   canPresidentPromoteMember,
   formatPositionLabel,
+  isExclusiveMemberPosition,
   type MemberPosition,
   type PromotableBoardRole,
 } from "../lib/roles";
 
+import { PositionBadge } from "./PositionBadge";
 import { PositionSelect } from "./PositionSelect";
 import { RoleBadge } from "./RoleBadge";
 import { RolePromotionSelect } from "./RolePromotionSelect";
@@ -138,7 +140,26 @@ export function MemberDirectory() {
             member.position === position &&
             member.id !== memberId
           ) {
-            return { ...member, position: "member" };
+            return {
+              ...member,
+              position: "member",
+              role:
+                member.role === "president" || member.role === "treasurer"
+                  ? "board"
+                  : member.role,
+            };
+          }
+          if (
+            (position === "president" || position === "treasurer") &&
+            member.id !== memberId &&
+            (member.position === position ||
+              member.role === position)
+          ) {
+            return {
+              ...member,
+              position: "member",
+              role: "board",
+            };
           }
           return member;
         }),
@@ -159,8 +180,8 @@ export function MemberDirectory() {
             <p className="mt-1 text-sm text-gray-500">{resultSummary}</p>
             {isPresident && (
               <p className="mt-1 text-xs text-gray-500">
-                As president, you can promote general members to board or demote
-                board members to general.
+                Assign a position to set leadership roles. Use the access
+                dropdown only for general and board members without a position.
               </p>
             )}
           </div>
@@ -204,7 +225,7 @@ export function MemberDirectory() {
                 Graduation
               </th>
               <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-gray-500">
-                Role
+                Access
               </th>
               <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-gray-500">
                 Position
@@ -242,9 +263,11 @@ export function MemberDirectory() {
                     {member.graduation_year}
                   </td>
                   <td className="px-6 py-4">
-                    {isPresident &&
-                    currentMember &&
-                    canPresidentPromoteMember(member, currentMember.id) ? (
+                    {isExclusiveMemberPosition(member.position) ? (
+                      <PositionBadge position={member.position} />
+                    ) : isPresident &&
+                      currentMember &&
+                      canPresidentPromoteMember(member, currentMember.id) ? (
                       <RolePromotionSelect
                         member={member}
                         isUpdating={updatingMemberId === member.id}

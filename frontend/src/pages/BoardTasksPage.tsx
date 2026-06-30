@@ -151,52 +151,38 @@ export function BoardTasksPage() {
 
   return (
     <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-2xl border border-primary/10 bg-gradient-to-br from-primary via-[#16213e] to-[#0f3460] p-8 text-white shadow-2xl">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-accent/30 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 left-1/3 h-48 w-48 rounded-full bg-teal-400/20 blur-3xl" />
-
-        <div className="relative flex flex-wrap items-end justify-between gap-6">
-          <div className="max-w-2xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent/90">
-              My work
-            </p>
-            <h1 className="mt-3 text-4xl font-bold tracking-tight">Task board</h1>
-            <p className="mt-3 text-base text-white/75">
-              Tasks assigned to you — drag between To do, In progress, and Done.
-              Open a card to add a completion note or photo.
-            </p>
-          </div>
-
-          <div className="grid min-w-[14rem] grid-cols-3 gap-3 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-md">
+      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <div className="grid min-w-[14rem] grid-cols-3 gap-3">
             <div className="text-center">
-              <p className="text-2xl font-bold">{columnCounts.todo}</p>
-              <p className="text-xs uppercase tracking-wide text-white/70">To do</p>
+              <p className="text-2xl font-bold text-primary">{columnCounts.todo}</p>
+              <p className="text-xs uppercase tracking-wide text-gray-500">To do</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-amber-300">
+              <p className="text-2xl font-bold text-amber-600">
                 {columnCounts.in_progress}
               </p>
-              <p className="text-xs uppercase tracking-wide text-white/70">
+              <p className="text-xs uppercase tracking-wide text-gray-500">
                 Active
               </p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-emerald-300">
+              <p className="text-2xl font-bold text-emerald-600">
                 {columnCounts.done}
               </p>
-              <p className="text-xs uppercase tracking-wide text-white/70">Done</p>
+              <p className="text-xs uppercase tracking-wide text-gray-500">Done</p>
             </div>
           </div>
         </div>
 
-        <div className="relative mt-8">
-          <div className="mb-2 flex items-center justify-between text-sm text-white/70">
+        <div className="mt-6">
+          <div className="mb-2 flex items-center justify-between text-sm text-gray-600">
             <span>
               {progress.done} of {progress.total} assigned tasks complete
             </span>
-            <span className="font-semibold text-white">{progress.percent}%</span>
+            <span className="font-semibold text-primary">{progress.percent}%</span>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-white/10">
+          <div className="h-2 overflow-hidden rounded-full bg-gray-100">
             <div
               className="h-full rounded-full bg-gradient-to-r from-accent via-orange-400 to-emerald-400 transition-all duration-700"
               style={{ width: `${progress.percent}%` }}
