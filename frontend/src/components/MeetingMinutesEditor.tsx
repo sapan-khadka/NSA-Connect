@@ -138,7 +138,7 @@ export function MeetingMinutesEditor({
     <div className="space-y-6">
       <section
         aria-label="Official minutes"
-        className="rounded-xl border border-surface-card bg-white p-6 shadow-sm"
+        className="ds-card p-6"
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -178,7 +178,7 @@ export function MeetingMinutesEditor({
       {canManage ? (
         <section
           aria-label="Secretary draft notes"
-          className="rounded-xl border border-surface-card bg-white p-6 shadow-sm"
+          className="ds-card p-6"
         >
           <div>
             <h2 className="text-lg font-light tracking-subhead text-foreground">
@@ -268,7 +268,7 @@ export function MeetingMinutesEditor({
           ) : null}
         </section>
       ) : hasDraft ? (
-        <details className="rounded-xl border border-surface-card bg-white shadow-sm">
+        <details className="ds-card">
           <summary className="cursor-pointer px-6 py-4 text-sm font-medium text-foreground">
             View secretary&apos;s draft notes
           </summary>

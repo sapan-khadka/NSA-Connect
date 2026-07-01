@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { RsvpStatus } from "../lib/events-api";
 import { formatRsvpStatus, RSVP_STATUS_LABELS } from "../lib/event-rsvp";
@@ -14,13 +14,30 @@ const RSVP_OPTIONS: { value: RsvpStatus; label: string }[] = [
   { value: "not_going", label: RSVP_STATUS_LABELS.not_going },
 ];
 
-const NOT_GOING_MESSAGE = "Aww, we'll miss you. See you next time.";
+const RSVP_CONFIRMATIONS: Record<
+  RsvpStatus,
+  { message: string; className: string }
+> = {
+  going: {
+    message: "Yayyy! Can't wait to see you there.",
+    className: "text-accent",
+  },
+  maybe: {
+    message: "Still deciding? We'd love to see you there.",
+    className: "text-marigold",
+  },
+  not_going: {
+    message: "Aww, we'll miss you. See you next time.",
+    className: "text-label",
+  },
+};
 
 type EventRsvpButtonProps = {
   currentStatus: RsvpStatus | null;
   canRsvp: boolean;
   loading: boolean;
   onStatusChange: (status: RsvpStatus) => void;
+  embedded?: boolean;
 };
 
 function buttonClass(isSelected: boolean): string {
@@ -51,11 +68,22 @@ export function EventRsvpButton({
   canRsvp,
   loading,
   onStatusChange,
+  embedded = false,
 }: EventRsvpButtonProps) {
   const buttonRefs = useRef<Partial<Record<RsvpStatus, HTMLButtonElement>>>({});
-  const showPrompt = canRsvp && currentStatus === null;
+  const [displayStatus, setDisplayStatus] = useState<RsvpStatus | null>(
+    currentStatus,
+  );
+
+  useEffect(() => {
+    setDisplayStatus(currentStatus);
+  }, [currentStatus]);
+
+  const showPrompt = canRsvp && displayStatus === null;
 
   function handleOptionClick(status: RsvpStatus): void {
+    setDisplayStatus(status);
+
     const anchor = buttonRefs.current[status];
     if (anchor) {
       playReaction(status, anchor);
@@ -64,7 +92,7 @@ export function EventRsvpButton({
   }
 
   return (
-    <div className="ds-card p-3">
+    <div className={embedded ? "mt-4 border-t border-gray-100 pt-4" : "ds-card p-3"}>
       <p className="text-sm text-foreground">Your RSVP</p>
 
       {showPrompt ? (
@@ -84,7 +112,7 @@ export function EventRsvpButton({
             className="mt-3 flex gap-2"
           >
             {RSVP_OPTIONS.map((option) => {
-              const isSelected = currentStatus === option.value;
+              const isSelected = displayStatus === option.value;
               return (
                 <div
                   key={option.value}
@@ -108,16 +136,20 @@ export function EventRsvpButton({
             })}
           </div>
 
-          {currentStatus === "not_going" ? (
-            <p className="mt-2 text-sm text-label" role="status">
-              {NOT_GOING_MESSAGE}
+          {displayStatus ? (
+            <p
+              key={displayStatus}
+              role="status"
+              className={`rsvp-confirmation-message mt-2 text-sm ${RSVP_CONFIRMATIONS[displayStatus].className}`}
+            >
+              {RSVP_CONFIRMATIONS[displayStatus].message}
             </p>
           ) : null}
         </>
       ) : (
         <p className="mt-3 text-sm text-label">
-          {currentStatus
-            ? `Your response: ${formatRsvpStatus(currentStatus)}.`
+          {displayStatus
+            ? `Your response: ${formatRsvpStatus(displayStatus)}.`
             : "RSVP is closed for past events."}
         </p>
       )}

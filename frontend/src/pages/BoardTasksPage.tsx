@@ -151,7 +151,7 @@ export function BoardTasksPage() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-2xl bg-surface-card p-6 shadow-sm">
+      <section className="ds-card p-6">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div className="grid min-w-[14rem] grid-cols-3 gap-3">
             <div className="text-center">
@@ -201,7 +201,7 @@ export function BoardTasksPage() {
       ) : null}
 
       {loadState.status === "loading" ? (
-        <div className="rounded-2xl bg-surface-card p-16 text-center text-label shadow-sm">
+        <div className="ds-card p-16 text-center text-label">
           Loading your tasks…
         </div>
       ) : null}
@@ -216,7 +216,7 @@ export function BoardTasksPage() {
       ) : null}
 
       {loadState.status === "ready" && tasks.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-16 text-center shadow-sm">
+        <div className="ds-card border border-dashed border-gray-200 p-16 text-center">
           <p className="text-lg font-light tracking-subhead text-foreground">
             No tasks assigned to you yet
           </p>

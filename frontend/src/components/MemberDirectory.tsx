@@ -172,7 +172,7 @@ export function MemberDirectory() {
   }
 
   return (
-    <section className="rounded-card bg-surface-card">
+    <section className="ds-card">
       <div className="border-b border-gray-200 px-6 py-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>

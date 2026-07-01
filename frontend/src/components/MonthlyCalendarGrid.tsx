@@ -9,7 +9,6 @@ import {
   toLocalIsoDate,
 } from "../lib/calendar";
 import { CalendarCoverHeader } from "./CalendarCoverHeader";
-import { CalendarMonthYearPicker } from "./CalendarMonthYearPicker";
 import {
   CalendarCategoryDots,
   getDayCellSurfaceClass,
@@ -86,20 +85,6 @@ export function MonthlyCalendarGrid({
   const todayIso = toLocalIsoDate(new Date());
   const monthAnimationClass = getMonthEnterAnimationClass(monthEnterDirection);
 
-  function goToMonthYear(nextYear: number, nextMonth: number) {
-    if (nextYear === year && nextMonth === month) {
-      return;
-    }
-
-    if (nextYear > year || (nextYear === year && nextMonth > month)) {
-      setMonthEnterDirection("next");
-    } else {
-      setMonthEnterDirection("prev");
-    }
-
-    onMonthChange(nextYear, nextMonth);
-  }
-
   function goToPreviousMonth() {
     setMonthEnterDirection("prev");
     const next = addMonths(year, month, -1);
@@ -122,16 +107,15 @@ export function MonthlyCalendarGrid({
   return (
     <section
       aria-label={formatMonthYear(year, month)}
-      className="rounded-lg border border-primary/10 bg-white p-3 dark:border-gray-800 dark:bg-gray-950 sm:p-4"
+      className="ds-card p-3 sm:p-4"
     >
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="sr-only">{formatMonthYear(year, month)}</h2>
-
-        <CalendarMonthYearPicker
-          year={year}
-          month={month}
-          onChange={goToMonthYear}
-        />
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+        <p
+          data-testid="calendar-month-label"
+          className="text-base font-medium text-foreground"
+        >
+          {formatMonthYear(year, month)}
+        </p>
 
         <div className="flex items-center gap-1.5">
           <button
@@ -160,6 +144,8 @@ export function MonthlyCalendarGrid({
         </div>
       </div>
 
+      <CalendarCoverHeader />
+
       <details className="mb-2 lg:hidden">
         <summary className="cursor-pointer text-[11px] font-medium text-label dark:text-label">
           Calendar legend
@@ -171,8 +157,6 @@ export function MonthlyCalendarGrid({
         labelled
         className="mb-2 hidden flex-wrap gap-x-3 gap-y-1.5 text-[11px] text-label dark:text-label lg:flex"
       />
-
-      <CalendarCoverHeader year={year} month={month} />
 
       <div
         key={`${year}-${month}`}

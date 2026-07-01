@@ -12,7 +12,7 @@ export function GeneralDashboardPage() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-8">
+      <section className="ds-card p-8">
         <p className="ds-section-label">
           Member Dashboard
         </p>
@@ -26,7 +26,7 @@ export function GeneralDashboardPage() {
       </section>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <section className="rounded-card bg-surface-card p-6">
+        <section className="ds-card p-6">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-lg font-light tracking-subhead text-foreground">Your profile</h2>
             <Link
@@ -62,7 +62,7 @@ export function GeneralDashboardPage() {
           </dl>
         </section>
 
-        <section className="rounded-card bg-surface-card p-6">
+        <section className="ds-card p-6">
           <h2 className="text-lg font-light tracking-subhead text-foreground">Quick links</h2>
           <ul className="mt-4 space-y-3 text-sm">
             <li>

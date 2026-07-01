@@ -3,7 +3,6 @@ import { NavLink, Outlet, useMatch } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import {
   canViewMemberDirectory,
-  canViewTaskOversight,
 } from "../lib/roles";
 
 type EventsTab = {
@@ -25,14 +24,6 @@ function buildEventsTabs(member: NonNullable<ReturnType<typeof useAuth>["member"
   if (canViewMemberDirectory(member.role)) {
     tabs.push({ label: "Board meetings", to: "/events/meetings" });
     tabs.push({ label: "Past events", to: "/events/past" });
-  }
-
-  if (canViewTaskOversight(member.role, member.position)) {
-    tabs.push({ label: "Oversight", to: "/events/oversight" });
-  }
-
-  if (member.role === "general") {
-    tabs.push({ label: "Volunteer", to: "/events/volunteer" });
   }
 
   return tabs;

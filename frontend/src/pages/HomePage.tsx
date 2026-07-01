@@ -76,7 +76,7 @@ function QuickLinkCard({ title, description, to, icon: Icon }: QuickLink) {
   return (
     <Link
       to={to}
-      className="group flex h-full flex-col rounded-card border border-gray-200/70 bg-surface-muted/40 px-4 py-4 transition hover:border-gray-300 hover:bg-surface-card"
+      className="group flex h-full flex-col ds-card ds-card-interactive px-4 py-4"
     >
       <Icon
         className="h-[18px] w-[18px] text-accent transition-colors group-hover:text-primary"
@@ -339,7 +339,19 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
       return;
     }
 
+    const snapshot = featuredEvent;
     setRsvpLoading(true);
+    setFeaturedEvent((current) =>
+      current ? { ...current, current_member_rsvp_status: status } : current,
+    );
+    setNextEvents((current) =>
+      current.map((event) =>
+        event.id === featuredEvent.id
+          ? { ...event, current_member_rsvp_status: status }
+          : event,
+      ),
+    );
+
     try {
       const response = await updateEventRsvp(featuredEvent.id, status);
       setFeaturedEvent((current) =>
@@ -348,6 +360,18 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
       setNextEvents((current) =>
         current.map((event) =>
           event.id === featuredEvent.id ? applyRsvpStatus(event, response) : event,
+        ),
+      );
+    } catch {
+      setFeaturedEvent(snapshot);
+      setNextEvents((current) =>
+        current.map((event) =>
+          event.id === snapshot.id
+            ? {
+                ...event,
+                current_member_rsvp_status: snapshot.current_member_rsvp_status,
+              }
+            : event,
         ),
       );
     } finally {
@@ -378,7 +402,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
           <SectionLabel>Needs attention</SectionLabel>
           <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {alerts.map((alert) => (
-              <li key={alert.id} className="rounded-card bg-surface-muted p-3">
+              <li key={alert.id} className="ds-card-nested p-3">
                 <SectionLabel
                   icon={ALERT_ICONS[alert.id]}
                   iconClassName={
@@ -462,7 +486,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
 
           {!isLoading && featuredEvent ? (
             <div className="mt-6 space-y-4">
-              <div className="rounded-md border border-gray-200 p-4">
+              <div className="ds-card-nested p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <Link
@@ -508,7 +532,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
                     {nextEvents.slice(1).map((event) => (
                       <li
                         key={event.id}
-                        className="rounded-md border border-gray-100 bg-surface-muted px-3 py-2 text-sm"
+                        className="ds-card-nested px-3 py-2 text-sm"
                       >
                         <Link
                           to={eventDetailPath(event.id)}
@@ -576,7 +600,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
               </div>
 
               {tasksSummary.nextTask ? (
-                <div className="rounded-md border border-gray-200 p-4">
+                <div className="ds-card-nested p-4">
                   <SectionLabel icon={ArrowRight}>Up next</SectionLabel>
                   <p className="mt-2 font-medium text-foreground">
                     {getTaskDisplayName(tasksSummary.nextTask)}

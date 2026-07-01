@@ -187,7 +187,7 @@ export function ChatPanel() {
     );
 
   return (
-    <section className="flex h-[min(72vh,720px)] flex-col overflow-hidden rounded-card bg-surface-card shadow-sm">
+    <section className="flex h-[min(72vh,720px)] flex-col overflow-hidden ds-card">
       <div
         ref={scrollRef}
         className="flex-1 space-y-4 overflow-y-auto px-4 py-5 sm:px-6"

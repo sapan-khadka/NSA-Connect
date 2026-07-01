@@ -96,7 +96,7 @@ export function LogFinanceEntryForm({
   }
 
   return (
-    <section className="rounded-card bg-surface-card p-6">
+    <section className="ds-card p-6">
       <div>
         <h2 className="text-lg font-light tracking-subhead text-foreground">Log transaction</h2>
         <p className="mt-1 text-sm text-label">

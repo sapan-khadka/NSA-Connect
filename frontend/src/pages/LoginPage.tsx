@@ -93,12 +93,12 @@ export function LoginPage() {
       <form
         onSubmit={handleSubmit}
         noValidate
-        className="mt-8 space-y-5 rounded-card bg-surface-card p-6"
+        className="mt-8 space-y-5 ds-card p-6"
       >
         {isPendingApproval && (
           <div
             role="status"
-            className="ds-card px-4 py-3 text-sm text-foreground"
+            className="ds-card-nested px-4 py-3 text-sm text-foreground"
           >
             <p className="font-medium">Your account is pending approval</p>
             <p className="mt-1">

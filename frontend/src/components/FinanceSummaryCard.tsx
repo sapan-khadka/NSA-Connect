@@ -40,7 +40,7 @@ function MetricCard({
       : "text-accent";
 
   return (
-    <section className={`rounded-card p-6 xl:col-span-1 ${sectionClass}`}>
+    <section className={`rounded-card p-6 shadow-card xl:col-span-1 ${sectionClass}`}>
       <h2 className={`ds-section-label ${titleClass}`}>
         {title}
       </h2>
@@ -62,7 +62,7 @@ export function FinanceSummaryCard({
 }: FinanceSummaryCardProps) {
   if (isLoading) {
     return (
-      <div className="rounded-card bg-surface-card p-10 text-center text-label">
+      <div className="ds-card p-10 text-center text-label">
         Loading finance summary...
       </div>
     );
@@ -114,7 +114,7 @@ export function FinanceSummaryCard({
         />
       </div>
 
-      <section className="rounded-card bg-surface-card p-6">
+      <section className="ds-card p-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className="text-lg font-light tracking-subhead text-foreground">

@@ -74,7 +74,7 @@ export function MeetingAttendancePanel({
   }
 
   return (
-    <section className="rounded-xl border border-surface-card bg-white p-6 shadow-sm">
+    <section className="ds-card p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-lg font-light tracking-subhead text-foreground">Board attendance</h2>

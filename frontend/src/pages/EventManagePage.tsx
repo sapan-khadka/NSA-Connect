@@ -172,7 +172,7 @@ export function EventManagePage() {
         </Link>
       </div>
 
-      <section className="rounded-card bg-surface-card p-8">
+      <section className="ds-card p-8">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-3xl font-light tracking-headline text-foreground">{event.name}</h1>
           <span
@@ -194,7 +194,7 @@ export function EventManagePage() {
       ) : null}
 
       {canViewBoard ? (
-        <section className="rounded-card bg-surface-card p-6">
+        <section className="ds-card p-6">
           <h2 className="text-lg font-light tracking-subhead text-foreground">Task completion</h2>
           <p className="mt-1 text-sm text-label">
             Progress on assigned tasks for this event only.
@@ -217,7 +217,7 @@ export function EventManagePage() {
       ) : null}
 
       {budget ? (
-        <section className="rounded-card bg-surface-card p-6">
+        <section className="ds-card p-6">
           <h2 className="text-lg font-light tracking-subhead text-foreground">Event budget</h2>
           <p className="mt-1 text-sm text-label">
             Planned budget vs logged income and expenses for this event.

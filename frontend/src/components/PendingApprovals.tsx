@@ -86,7 +86,7 @@ export function PendingApprovals({
   }
 
   return (
-    <section className="rounded-card bg-surface-card">
+    <section className="ds-card">
       <div className="border-b border-gray-200 px-6 py-4">
         <h2 className="text-lg font-light tracking-subhead text-foreground">Approval queue</h2>
         <p className="mt-1 text-sm text-label">

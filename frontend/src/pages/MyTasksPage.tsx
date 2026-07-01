@@ -36,7 +36,7 @@ function TaskList({
   tone,
 }: TaskListProps) {
   return (
-    <section className="rounded-card bg-surface-card p-6">
+    <section className="ds-card p-6">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-light tracking-subhead text-foreground">{title}</h2>
@@ -63,7 +63,7 @@ function TaskList({
           {signups.map((signup) => (
             <li
               key={signup.id}
-              className="rounded-md border border-gray-200 px-4 py-4"
+                className="rounded-md ds-card-nested px-4 py-4"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -147,7 +147,7 @@ export function MyTasksPage() {
       <MyEventTasks />
 
       {loadState.status === "loading" ? (
-        <div className="rounded-card bg-surface-card p-10 text-center text-label">
+        <div className="ds-card p-10 text-center text-label">
           Loading your tasks...
         </div>
       ) : null}

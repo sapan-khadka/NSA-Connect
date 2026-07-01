@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { HimalayanSilhouette } from "./NepaliDecor";
-import nsaLogo from "../assets/nsa-logo.svg";
+import nsaLogo from "../assets/nsa-logo.png";
 
 type AppLogoSize = "sm" | "md" | "lg";
 
@@ -19,19 +19,19 @@ const SIZE_STYLES: Record<
   { image: string; title: string; tagline: string; gap: string }
 > = {
   sm: {
-    image: "h-10 w-10",
+    image: "h-16 w-auto object-contain sm:h-[4.5rem]",
     title: "text-base leading-tight",
     tagline: "text-[10px] leading-tight",
     gap: "gap-2.5",
   },
   md: {
-    image: "h-14 w-14",
+    image: "h-20 w-auto object-contain sm:h-[5.5rem]",
     title: "text-xl leading-tight",
     tagline: "text-xs leading-tight",
     gap: "gap-3",
   },
   lg: {
-    image: "h-20 w-20 md:h-24 md:w-24",
+    image: "h-32 w-auto object-contain md:h-36 lg:h-40",
     title: "text-3xl md:text-4xl leading-tight",
     tagline: "text-sm leading-tight",
     gap: "gap-4",
@@ -58,10 +58,7 @@ export function AppLogo({
       <img
         src={nsaLogo}
         alt="Nepalese Students Association at SEMO"
-        className={[
-          styles.image,
-          "shrink-0 rounded-full object-cover shadow-sm ring-1 ring-black/5",
-        ].join(" ")}
+        className={[styles.image, "shrink-0"].join(" ")}
       />
       {showWordmark ? (
         <div className="min-w-0 text-left">

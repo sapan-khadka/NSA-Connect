@@ -76,7 +76,7 @@ export function AnnouncementEmailPage() {
       <form
         onSubmit={handleSubmit}
         noValidate
-        className="rounded-card bg-surface-card p-4 sm:p-6"
+        className="ds-card p-4 sm:p-6"
       >
         {serverError ? (
           <p
@@ -109,7 +109,7 @@ export function AnnouncementEmailPage() {
             ) : null}
           </div>
 
-          <div className="rounded-card bg-surface-card p-4">
+          <div className="ds-card p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-sm font-semibold text-foreground">Event details</h2>

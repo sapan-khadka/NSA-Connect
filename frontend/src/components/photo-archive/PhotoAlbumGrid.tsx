@@ -17,7 +17,7 @@ export function PhotoAlbumGrid({ albums }: PhotoAlbumGridProps) {
         <li key={album.event_id}>
           <Link
             to={photoAlbumPath(album.event_id)}
-            className="group block overflow-hidden rounded-card border border-kanban-border bg-white transition hover:shadow-sm"
+            className="group block overflow-hidden ds-card ds-card-interactive"
           >
             <div className="aspect-[4/3] overflow-hidden bg-surface-muted">
               {album.cover_thumbnail_url ? (

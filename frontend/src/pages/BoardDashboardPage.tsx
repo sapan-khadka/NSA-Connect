@@ -15,7 +15,7 @@ export function BoardDashboardPage() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-card bg-surface-card p-8">
+      <section className="ds-card p-8">
         <p className="ds-section-label">
           Board Dashboard
         </p>
@@ -29,7 +29,7 @@ export function BoardDashboardPage() {
       </section>
 
       <div className="grid gap-6 md:grid-cols-3">
-        <section className="rounded-card bg-surface-card p-6">
+        <section className="ds-card p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-label">
             Pending approvals
           </h2>
@@ -41,7 +41,7 @@ export function BoardDashboardPage() {
           </p>
         </section>
 
-        <section className="rounded-card bg-surface-card p-6">
+        <section className="ds-card p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-label">
             Your role
           </h2>
@@ -50,7 +50,7 @@ export function BoardDashboardPage() {
           </div>
         </section>
 
-        <section className="rounded-card bg-surface-card p-6">
+        <section className="ds-card p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-label">
             Board tools
           </h2>
@@ -60,13 +60,13 @@ export function BoardDashboardPage() {
 
       <PendingApprovals onCountChange={setPendingCount} showReject={false} />
 
-      <section className="rounded-card bg-surface-card p-6">
+      <section className="ds-card p-6">
         <h2 className="text-lg font-light tracking-subhead text-foreground">Board actions</h2>
         <ul className="mt-4 grid gap-3 md:grid-cols-2">
           <li>
             <Link
               to="/events/tasks"
-              className="block rounded-card bg-surface-card px-4 py-3 transition hover:bg-surface-muted"
+              className="block ds-card-nested ds-card-interactive px-4 py-3"
             >
               <p className="font-medium text-foreground">Task board</p>
               <p className="mt-1 text-sm text-label">
@@ -77,7 +77,7 @@ export function BoardDashboardPage() {
           <li>
             <Link
               to="/board/meeting-minutes"
-              className="block rounded-md border border-gray-200 px-4 py-3 transition-colors hover:border-accent hover:bg-accent/5"
+              className="block ds-card-nested ds-card-interactive px-4 py-3"
             >
               <p className="font-medium text-foreground">Meeting minutes</p>
               <p className="mt-1 text-sm text-label">
@@ -88,7 +88,7 @@ export function BoardDashboardPage() {
           <li>
             <Link
               to="/board/announcement-email"
-              className="block rounded-md border border-gray-200 px-4 py-3 transition-colors hover:border-accent hover:bg-accent/5"
+              className="block ds-card-nested ds-card-interactive px-4 py-3"
             >
               <p className="font-medium text-foreground">Announcement email</p>
               <p className="mt-1 text-sm text-label">
@@ -99,7 +99,7 @@ export function BoardDashboardPage() {
           <li>
             <Link
               to="/members?tab=pending"
-              className="block rounded-md border border-gray-200 px-4 py-3 transition-colors hover:border-accent hover:bg-accent/5"
+              className="block ds-card-nested ds-card-interactive px-4 py-3"
             >
               <p className="font-medium text-foreground">Full approval queue</p>
               <p className="mt-1 text-sm text-label">
@@ -110,7 +110,7 @@ export function BoardDashboardPage() {
           <li>
             <Link
               to="/members"
-              className="block rounded-md border border-gray-200 px-4 py-3 transition-colors hover:border-accent hover:bg-accent/5"
+              className="block ds-card-nested ds-card-interactive px-4 py-3"
             >
               <p className="font-medium text-foreground">Member directory</p>
               <p className="mt-1 text-sm text-label">
@@ -121,7 +121,7 @@ export function BoardDashboardPage() {
           <li>
             <Link
               to="/finance"
-              className="block rounded-md border border-gray-200 px-4 py-3 transition-colors hover:border-accent hover:bg-accent/5"
+              className="block ds-card-nested ds-card-interactive px-4 py-3"
             >
               <p className="font-medium text-foreground">Finance overview</p>
               <p className="mt-1 text-sm text-label">

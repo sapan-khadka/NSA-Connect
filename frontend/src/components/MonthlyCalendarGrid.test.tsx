@@ -15,35 +15,11 @@ describe("MonthlyCalendarGrid", () => {
     );
 
     expect(screen.getByText("Sun")).toBeInTheDocument();
-    expect(screen.getByTestId("calendar-cover-year")).toHaveTextContent("2030");
-    expect(screen.getByTestId("calendar-cover-month")).toHaveTextContent("June");
+    expect(screen.getByTestId("calendar-month-label")).toHaveTextContent(
+      "June 2030",
+    );
     expect(screen.getByRole("button", { name: "2030-06-01" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "2030-06-30" })).toBeInTheDocument();
-  });
-
-  it("navigates months via month and year pickers", async () => {
-    const user = userEvent.setup();
-    const onMonthChange = vi.fn();
-
-    render(
-      <MonthlyCalendarGrid
-        year={2030}
-        month={5}
-        onMonthChange={onMonthChange}
-      />,
-    );
-
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "Select month" }),
-      "11",
-    );
-    expect(onMonthChange).toHaveBeenCalledWith(2030, 11);
-
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "Select year" }),
-      "2029",
-    );
-    expect(onMonthChange).toHaveBeenCalledWith(2029, 5);
   });
 
   it("navigates months via prev and next controls", async () => {

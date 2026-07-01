@@ -54,10 +54,10 @@ export function KanbanTaskCard({
       {...attributes}
       {...listeners}
       className={[
-        "group cursor-grab touch-none rounded-kanban border border-kanban-border bg-white p-4 transition-all duration-200 active:cursor-grabbing",
+        "group cursor-grab touch-none ds-card p-4 transition-all duration-200 active:cursor-grabbing",
         isActivelyDragging || isDragging
-          ? "z-50 scale-[1.02] shadow-md ring-2 ring-accent/30"
-          : "hover:shadow-sm",
+          ? "z-50 scale-[1.02] ring-2 ring-accent/30"
+          : "ds-card-interactive",
       ].join(" ")}
     >
       <div className="flex items-start gap-3">

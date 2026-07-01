@@ -33,7 +33,7 @@ export function ExpenseCategoryChart({
 }: ExpenseCategoryChartProps) {
   if (isLoading) {
     return (
-      <div className="rounded-card bg-surface-card p-10 text-center text-label">
+      <div className="ds-card p-10 text-center text-label">
         Loading expense categories...
       </div>
     );
@@ -51,7 +51,7 @@ export function ExpenseCategoryChart({
   }
 
   return (
-    <section className="rounded-card bg-surface-card p-6">
+    <section className="ds-card p-6">
       <div>
         <h2 className="text-lg font-light tracking-subhead text-foreground">Spend by category</h2>
         <p className="mt-1 text-sm text-label">

@@ -5,15 +5,7 @@ import { afterEach, describe, expect, it, vi, type ReactElement } from "vitest";
 
 import { EventDayPanel } from "./EventDayPanel";
 import type { EventDetailResponse, EventResponse } from "../lib/events-api";
-import { createMockEventResponse, createMockMember } from "../test/test-utils";
-
-vi.mock("../lib/event-tasks-api", () => ({
-  fetchEventTasks: vi.fn(),
-  createEventTask: vi.fn(),
-  updateEventTask: vi.fn(),
-  updateEventTaskChecklistItem: vi.fn(),
-  deleteEventTask: vi.fn(),
-}));
+import { createMockEventResponse } from "../test/test-utils";
 
 const dayEvent: EventResponse = createMockEventResponse({
   id: 1,
@@ -24,38 +16,10 @@ const dayEvent: EventResponse = createMockEventResponse({
 
 const eventDetail: EventDetailResponse = {
   ...dayEvent,
-  prep_tasks: [
-    {
-      id: 10,
-      group_name: "Food & Beverage",
-      due_date: "2030-06-10T12:00:00+00:00",
-      assignee_id: 3,
-      is_overdue: false,
-      is_complete: false,
-      checklist_items: [
-        {
-          id: 100,
-          label: "Order catering",
-          is_completed: true,
-          sort_order: 0,
-        },
-        {
-          id: 101,
-          label: "Confirm dietary restrictions",
-          is_completed: false,
-          sort_order: 1,
-        },
-      ],
-    },
-  ],
+  prep_tasks: [],
 };
 
 const panelProps = {
-  member: null,
-  canManageSimple: false,
-  canAssignChecklist: false,
-  assignableMembers: [] as import("../lib/auth-api").MemberResponse[],
-  taskRefreshKey: 1,
   rsvpLoading: false,
   onRsvpStatusChange: vi.fn(),
 };
@@ -69,7 +33,7 @@ describe("EventDayPanel", () => {
     cleanup();
   });
 
-  it("shows upcoming events when no day is selected", () => {
+  it("prompts to select a day and shows a compact upcoming list", () => {
     renderPanel(
       <EventDayPanel
         selectedDate={null}
@@ -85,13 +49,16 @@ describe("EventDayPanel", () => {
       />,
     );
 
-    expect(screen.getByText("Upcoming events")).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: /Dashain Celebration/i }),
+      screen.getByText(/Select a day on the calendar/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Coming up")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Dashain Celebration" }),
     ).toHaveAttribute("href", "/events/1");
   });
 
-  it("shows event details, progress bar, and checklist items", () => {
+  it("shows event title, badge, time, and RSVP controls for a selected day", () => {
     renderPanel(
       <EventDayPanel
         selectedDate="2030-06-15"
@@ -101,22 +68,21 @@ describe("EventDayPanel", () => {
         eventDetail={eventDetail}
         detailLoading={false}
         detailError={null}
+        upcomingEvents={[]}
+        upcomingLoading={false}
         {...panelProps}
       />,
     );
 
+    expect(screen.getByText(/June 15, 2030/i)).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Dashain Celebration" }),
     ).toHaveAttribute("href", "/events/1");
-    expect(
-      screen.getByRole("progressbar", { name: "Overall task progress" }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("progressbar", { name: "Task progress" })).toBeInTheDocument();
+    expect(screen.getByText("Cultural")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Going" })).toBeInTheDocument();
-    expect(screen.getByText("Order catering")).toBeInTheDocument();
   });
 
-  it("shows selected RSVP state without attendee counts", () => {
+  it("shows selected RSVP state", () => {
     renderPanel(
       <EventDayPanel
         selectedDate="2030-06-15"
@@ -129,6 +95,8 @@ describe("EventDayPanel", () => {
         }}
         detailLoading={false}
         detailError={null}
+        upcomingEvents={[]}
+        upcomingLoading={false}
         {...panelProps}
       />,
     );
@@ -137,78 +105,6 @@ describe("EventDayPanel", () => {
       "aria-pressed",
       "true",
     );
-    expect(screen.queryByText(/members going/i)).not.toBeInTheDocument();
-  });
-
-  it("hides the delete button when the member cannot manage events", () => {
-    renderPanel(
-      <EventDayPanel
-        selectedDate="2030-06-15"
-        dayEvents={[dayEvent]}
-        selectedEventId={1}
-        onSelectEvent={vi.fn()}
-        eventDetail={eventDetail}
-        detailLoading={false}
-        detailError={null}
-        {...panelProps}
-      />,
-    );
-
-    expect(
-      screen.queryByRole("button", { name: "Delete event" }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("calls onDeleteEvent after confirmation when allowed", async () => {
-    const user = userEvent.setup();
-    const onDeleteEvent = vi.fn();
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-
-    renderPanel(
-      <EventDayPanel
-        selectedDate="2030-06-15"
-        dayEvents={[dayEvent]}
-        selectedEventId={1}
-        onSelectEvent={vi.fn()}
-        eventDetail={eventDetail}
-        detailLoading={false}
-        detailError={null}
-        canDeleteEvent
-        onDeleteEvent={onDeleteEvent}
-        {...panelProps}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: "Delete event" }));
-    expect(onDeleteEvent).toHaveBeenCalledWith(1);
-
-    vi.restoreAllMocks();
-  });
-
-  it("does not delete when confirmation is cancelled", async () => {
-    const user = userEvent.setup();
-    const onDeleteEvent = vi.fn();
-    vi.spyOn(window, "confirm").mockReturnValue(false);
-
-    renderPanel(
-      <EventDayPanel
-        selectedDate="2030-06-15"
-        dayEvents={[dayEvent]}
-        selectedEventId={1}
-        onSelectEvent={vi.fn()}
-        eventDetail={eventDetail}
-        detailLoading={false}
-        detailError={null}
-        canDeleteEvent
-        onDeleteEvent={onDeleteEvent}
-        {...panelProps}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: "Delete event" }));
-    expect(onDeleteEvent).not.toHaveBeenCalled();
-
-    vi.restoreAllMocks();
   });
 
   it("switches events when multiple occur on the same day", async () => {
@@ -230,87 +126,13 @@ describe("EventDayPanel", () => {
         eventDetail={eventDetail}
         detailLoading={false}
         detailError={null}
+        upcomingEvents={[]}
+        upcomingLoading={false}
         {...panelProps}
       />,
     );
 
     await user.click(screen.getByRole("button", { name: "Board Meeting" }));
     expect(onSelectEvent).toHaveBeenCalledWith(2);
-  });
-
-  it("hides budget for general members", () => {
-    renderPanel(
-      <EventDayPanel
-        selectedDate="2030-06-15"
-        dayEvents={[dayEvent]}
-        selectedEventId={1}
-        onSelectEvent={vi.fn()}
-        eventDetail={eventDetail}
-        detailLoading={false}
-        detailError={null}
-        {...panelProps}
-        member={createMockMember("general")}
-      />,
-    );
-
-    expect(screen.queryByText(/Budget/i)).not.toBeInTheDocument();
-  });
-
-  it("wraps tasks in a collapsible section for general members", () => {
-    renderPanel(
-      <EventDayPanel
-        selectedDate="2030-06-15"
-        dayEvents={[dayEvent]}
-        selectedEventId={1}
-        onSelectEvent={vi.fn()}
-        eventDetail={eventDetail}
-        detailLoading={false}
-        detailError={null}
-        {...panelProps}
-        member={createMockMember("general")}
-      />,
-    );
-
-    const details = screen.getByText("Tasks & volunteer").closest("details");
-    expect(details).toBeInTheDocument();
-    expect(details).not.toHaveAttribute("open");
-  });
-
-  it("shows a meeting management link for board members", () => {
-    renderPanel(
-      <EventDayPanel
-        selectedDate="2030-06-15"
-        dayEvents={[dayEvent]}
-        selectedEventId={1}
-        onSelectEvent={vi.fn()}
-        eventDetail={{ ...eventDetail, event_type: "meeting" }}
-        detailLoading={false}
-        detailError={null}
-        {...panelProps}
-        member={createMockMember("board")}
-      />,
-    );
-
-    expect(
-      screen.getByRole("link", { name: "View meeting record ›" }),
-    ).toHaveAttribute("href", "/events/meetings/1");
-  });
-
-  it("shows budget for board members", () => {
-    renderPanel(
-      <EventDayPanel
-        selectedDate="2030-06-15"
-        dayEvents={[dayEvent]}
-        selectedEventId={1}
-        onSelectEvent={vi.fn()}
-        eventDetail={eventDetail}
-        detailLoading={false}
-        detailError={null}
-        {...panelProps}
-        member={createMockMember("board")}
-      />,
-    );
-
-    expect(screen.getByText(/Budget \$250\.00/)).toBeInTheDocument();
   });
 });

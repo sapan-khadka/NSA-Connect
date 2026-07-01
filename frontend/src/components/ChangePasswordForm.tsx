@@ -82,7 +82,7 @@ export function ChangePasswordForm() {
   return (
     <form
       onSubmit={(event) => void handleSubmit(event)}
-      className="rounded-card bg-surface-card p-6"
+      className="ds-card p-6"
     >
       <h2 className="text-lg font-light tracking-subhead text-foreground">Change password</h2>
       <p className="mt-1 text-sm text-label">

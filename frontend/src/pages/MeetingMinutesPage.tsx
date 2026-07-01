@@ -71,7 +71,7 @@ export function MeetingMinutesPage() {
       <form
         onSubmit={handleSubmit}
         noValidate
-        className="rounded-card bg-surface-card p-4 sm:p-6"
+        className="ds-card p-4 sm:p-6"
       >
         {serverError ? (
           <p

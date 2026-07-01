@@ -110,7 +110,7 @@ export function RegisterPage() {
       <form
         onSubmit={handleSubmit}
         noValidate
-        className="mt-8 space-y-5 rounded-card bg-surface-card p-6"
+        className="mt-8 space-y-5 ds-card p-6"
       >
         {serverError && (
           <p

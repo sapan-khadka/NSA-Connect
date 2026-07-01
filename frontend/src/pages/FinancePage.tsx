@@ -254,7 +254,7 @@ export function FinancePage() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-card bg-surface-card p-8">
+      <section className="ds-card p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="ds-section-label">
@@ -273,7 +273,7 @@ export function FinancePage() {
         </div>
       </section>
 
-      <section className="rounded-card bg-surface-card p-6">
+      <section className="ds-card p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="text-lg font-light tracking-subhead text-foreground">Semester filter</h2>

@@ -34,6 +34,8 @@ describe("CreateEventForm", () => {
 
     render(<CreateEventForm onCreated={vi.fn()} />);
 
+    expect(screen.getByTestId("create-event-card")).toHaveClass("ds-card");
+
     await user.click(screen.getByRole("button", { name: "New event" }));
     await user.click(screen.getByRole("button", { name: "Create event" }));
 

@@ -127,7 +127,7 @@ export function PastEventsPage() {
             return (
               <article
                 key={event.id}
-                className="rounded-card bg-surface-card p-6 shadow-sm"
+                className="ds-card p-6"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>

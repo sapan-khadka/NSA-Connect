@@ -5,6 +5,7 @@ import { createMockMember, renderWithRouter } from "../test/test-utils";
 
 vi.mock("../lib/events-api", () => ({
   fetchEvents: vi.fn().mockResolvedValue({ events: [], total: 0 }),
+  fetchUpcomingEvents: vi.fn().mockResolvedValue({ events: [], total: 0 }),
   fetchEvent: vi.fn().mockResolvedValue({
     id: 1,
     name: "Test Event",
@@ -105,43 +106,6 @@ describe("EventsHubLayout", () => {
 
     await screen.findByRole("link", { name: "Calendar" });
     expect(screen.queryByRole("link", { name: "Past events" })).not.toBeInTheDocument();
-  });
-
-  it("shows Oversight for president and vice president", async () => {
-    renderWithRouter(undefined, {
-      initialEntries: ["/events/calendar"],
-      auth: {
-        member: createMockMember("president"),
-        isAuthenticated: true,
-      },
-    });
-
-    expect(await screen.findByRole("link", { name: "Oversight" })).toBeInTheDocument();
-  });
-
-  it("shows Volunteer tab only for general members", async () => {
-    renderWithRouter(undefined, {
-      initialEntries: ["/events/calendar"],
-      auth: {
-        member: createMockMember("general"),
-        isAuthenticated: true,
-      },
-    });
-
-    expect(await screen.findByRole("link", { name: "Volunteer" })).toBeInTheDocument();
-  });
-
-  it("hides Volunteer tab for board members", async () => {
-    renderWithRouter(undefined, {
-      initialEntries: ["/events/calendar"],
-      auth: {
-        member: createMockMember("board"),
-        isAuthenticated: true,
-      },
-    });
-
-    await screen.findByRole("link", { name: "Calendar" });
-    expect(screen.queryByRole("link", { name: "Volunteer" })).not.toBeInTheDocument();
   });
 
   it("hides the tab bar on event manage pages", async () => {

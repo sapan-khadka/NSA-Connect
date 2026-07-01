@@ -7,29 +7,26 @@ import { MonthlyCalendarGrid } from "../components/MonthlyCalendarGrid";
 import { useAuth } from "../context/useAuth";
 import { toLocalIsoDate, parseIsoDate } from "../lib/calendar";
 import { formatMonthQuery } from "../lib/calendar-events";
+import { applyRsvpStatus } from "../lib/event-rsvp";
 import {
-  deleteEvent,
   fetchEvent,
   fetchEvents,
   fetchUpcomingEvents,
   updateEventRsvp,
   type EventDetailResponse,
   type EventResponse,
-  type PrepTaskResponse,
   type RsvpStatus,
 } from "../lib/events-api";
-import { applyRsvpStatus } from "../lib/event-rsvp";
-import { fetchAssignableMembers } from "../lib/members-api";
-import { canManageEventTasks, isRoleAtLeast } from "../lib/roles";
-import type { MemberResponse } from "../lib/auth-api";
+import { isRoleAtLeast } from "../lib/roles";
 
 export function EventsPage() {
   const { member } = useAuth();
   const [searchParams] = useSearchParams();
   const today = new Date();
+  const todayIso = toLocalIsoDate(today);
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(todayIso);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [events, setEvents] = useState<EventResponse[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<EventResponse[]>([]);
@@ -41,18 +38,9 @@ export function EventsPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
-  const [taskRefreshKey, setTaskRefreshKey] = useState(0);
   const [rsvpLoading, setRsvpLoading] = useState(false);
-  const [deletingEvent, setDeletingEvent] = useState(false);
-  const [assignableMembers, setAssignableMembers] = useState<MemberResponse[]>(
-    [],
-  );
 
-  const canAssignTasks = member ? isRoleAtLeast(member.role, "board") : false;
-  const canDeleteEvent = canAssignTasks;
-  const canManageTasks = member
-    ? canManageEventTasks(member.role, member.position)
-    : false;
+  const canCreateEvents = member ? isRoleAtLeast(member.role, "board") : false;
 
   useEffect(() => {
     const dateParam = searchParams.get("date");
@@ -80,7 +68,7 @@ export function EventsPage() {
       setUpcomingLoading(true);
 
       try {
-        const response = await fetchUpcomingEvents({ limit: 5 });
+        const response = await fetchUpcomingEvents({ limit: 3 });
         if (!cancelled) {
           setUpcomingEvents(response.events);
         }
@@ -135,34 +123,6 @@ export function EventsPage() {
     };
   }, [viewYear, viewMonth]);
 
-  useEffect(() => {
-    if (!canAssignTasks) {
-      setAssignableMembers([]);
-      return;
-    }
-
-    let cancelled = false;
-
-    async function loadAssignableMembers() {
-      try {
-        const response = await fetchAssignableMembers();
-        if (!cancelled) {
-          setAssignableMembers(response.members);
-        }
-      } catch {
-        if (!cancelled) {
-          setAssignableMembers([]);
-        }
-      }
-    }
-
-    void loadAssignableMembers();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [canAssignTasks]);
-
   const selectedDayEvents = useMemo(() => {
     if (!selectedDate) {
       return [];
@@ -179,6 +139,7 @@ export function EventsPage() {
     }
 
     if (selectedDayEvents.length === 0) {
+      setSelectedEventId(null);
       return;
     }
 
@@ -212,7 +173,6 @@ export function EventsPage() {
         const detail = await fetchEvent(eventId);
         if (!cancelled) {
           setEventDetail(detail);
-          setTaskRefreshKey((current) => current + 1);
         }
       } catch {
         if (!cancelled) {
@@ -233,15 +193,6 @@ export function EventsPage() {
     };
   }, [selectedEventId]);
 
-  const handleChecklistTasksChange = useCallback(
-    (tasks: PrepTaskResponse[]) => {
-      setEventDetail((current) =>
-        current ? { ...current, prep_tasks: tasks } : current,
-      );
-    },
-    [],
-  );
-
   const applyRsvpToState = useCallback(
     (status: {
       event_id: number;
@@ -251,6 +202,9 @@ export function EventsPage() {
         current ? applyRsvpStatus(current, status) : current,
       );
       setEvents((current) =>
+        current.map((event) => applyRsvpStatus(event, status)),
+      );
+      setUpcomingEvents((current) =>
         current.map((event) => applyRsvpStatus(event, status)),
       );
     },
@@ -330,32 +284,9 @@ export function EventsPage() {
     }
   }, []);
 
-  const handleDeleteEvent = useCallback(
-    async (eventId: number) => {
-      setDeletingEvent(true);
-      setError(null);
-
-      try {
-        await deleteEvent(eventId);
-        setEvents((current) => current.filter((event) => event.id !== eventId));
-        setEventDetail((current) =>
-          current && current.id === eventId ? null : current,
-        );
-        setSelectedEventId((current) =>
-          current === eventId ? null : current,
-        );
-      } catch {
-        setError("Could not delete this event. Please try again.");
-      } finally {
-        setDeletingEvent(false);
-      }
-    },
-    [],
-  );
-
   return (
-    <div className="space-y-6">
-      {canAssignTasks ? (
+    <div className="space-y-5">
+      {canCreateEvents ? (
         <CreateEventForm onCreated={(event) => void handleEventCreated(event)} />
       ) : null}
 
@@ -364,7 +295,7 @@ export function EventsPage() {
       ) : null}
       {error ? <p className="ds-field-error">{error}</p> : null}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.75fr)_minmax(16rem,20rem)]">
         <MonthlyCalendarGrid
           year={viewYear}
           month={viewMonth}
@@ -382,20 +313,9 @@ export function EventsPage() {
           eventDetail={eventDetail}
           detailLoading={detailLoading}
           detailError={detailError}
-          member={member}
-          canManageSimple={canManageTasks}
-          canAssignChecklist={canAssignTasks}
-          assignableMembers={assignableMembers}
-          taskRefreshKey={taskRefreshKey}
-          onChecklistTasksChange={handleChecklistTasksChange}
           rsvpLoading={rsvpLoading}
           onRsvpStatusChange={(status) => {
             void handleRsvpStatusChange(status);
-          }}
-          canDeleteEvent={canDeleteEvent}
-          deletingEvent={deletingEvent}
-          onDeleteEvent={(eventId) => {
-            void handleDeleteEvent(eventId);
           }}
           upcomingEvents={upcomingEvents}
           upcomingLoading={upcomingLoading}

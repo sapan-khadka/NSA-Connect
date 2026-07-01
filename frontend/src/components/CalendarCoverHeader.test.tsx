@@ -8,15 +8,10 @@ afterEach(() => {
 });
 
 describe("CalendarCoverHeader", () => {
-  it("renders decorative wall-calendar elements for the month", () => {
-    render(<CalendarCoverHeader year={2030} month={5} />);
+  it("renders a thin accent stripe above the calendar grid", () => {
+    render(<CalendarCoverHeader />);
 
-    expect(screen.getByTestId("calendar-cover-header")).toBeInTheDocument();
-    expect(screen.getByTestId("calendar-spiral-binding")).toBeInTheDocument();
-    expect(screen.getByTestId("calendar-stripe-bar")).toBeInTheDocument();
-    expect(screen.getByTestId("calendar-cover-year")).toHaveTextContent("2030");
-    expect(screen.getByTestId("calendar-cover-month")).toHaveTextContent("June");
-    expect(screen.getByTestId("calendar-diamond-row")).toBeInTheDocument();
-    expect(screen.getByTestId("calendar-folded-corner")).toBeInTheDocument();
+    expect(screen.getByTestId("calendar-accent-stripe")).toBeInTheDocument();
+    expect(screen.getByTestId("calendar-accent-stripe")).toHaveClass("bg-accent/50");
   });
 });

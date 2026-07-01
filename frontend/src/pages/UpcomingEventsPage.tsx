@@ -44,7 +44,7 @@ export function UpcomingEventsPage() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-8">
+      <section className="ds-card p-8">
         <p className="ds-section-label">
           Events
         </p>
@@ -89,7 +89,7 @@ export function UpcomingEventsPage() {
             <li key={event.id}>
               <Link
                 to={eventDetailPath(event.id)}
-                className="block rounded-card bg-surface-card p-5 transition hover:border-accent hover:shadow-sm"
+                className="block ds-card ds-card-interactive p-5"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>

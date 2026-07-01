@@ -53,8 +53,8 @@ export function AppLayout() {
   return (
     <div className="min-h-screen bg-surface">
       <header className="bg-surface">
-        <nav className="mx-auto flex w-full max-w-7xl items-center gap-4 px-6 py-3 lg:gap-6">
-          <AppLogo asLink showTagline={false} />
+        <nav className="mx-auto flex w-full max-w-7xl items-center gap-4 px-6 py-3.5 lg:gap-6">
+          <AppLogo asLink showWordmark={false} showTagline={false} />
 
           {isAuthenticated ? (
             <div className="flex min-w-0 flex-1 items-center justify-between gap-4">

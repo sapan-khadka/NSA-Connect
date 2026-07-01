@@ -21,7 +21,7 @@ export function EventBudgetBreakdown({
 }: EventBudgetBreakdownProps) {
   if (isLoading) {
     return (
-      <div className="rounded-card bg-surface-card p-10 text-center text-label">
+      <div className="ds-card p-10 text-center text-label">
         Loading event budget breakdown...
       </div>
     );
@@ -39,7 +39,7 @@ export function EventBudgetBreakdown({
   }
 
   return (
-    <section className="rounded-card bg-surface-card p-6">
+    <section className="ds-card p-6">
       <div>
         <h2 className="text-lg font-light tracking-subhead text-foreground">
           Event budget vs actual

@@ -72,7 +72,7 @@ export function FinancePendingApprovals({
 
   if (isLoading) {
     return (
-      <section className="rounded-card bg-surface-card p-6">
+      <section className="ds-card p-6">
         <p className="text-sm text-label">Loading pending approvals…</p>
       </section>
     );
@@ -100,7 +100,7 @@ export function FinancePendingApprovals({
             return (
               <li
                 key={request.id}
-                className="rounded-md bg-surface-card p-4"
+                className="rounded-md ds-card-nested p-4"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>

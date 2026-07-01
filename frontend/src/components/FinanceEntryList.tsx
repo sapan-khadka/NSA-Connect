@@ -192,7 +192,7 @@ export function FinanceEntryList({
 
   if (isLoading) {
     return (
-      <div className="rounded-card bg-surface-card p-10 text-center text-label">
+      <div className="ds-card p-10 text-center text-label">
         Loading transactions...
       </div>
     );
@@ -212,7 +212,7 @@ export function FinanceEntryList({
   const columnCount = canManage ? 7 : 6;
 
   return (
-    <section className="rounded-card bg-surface-card p-6">
+    <section className="ds-card p-6">
       <div>
         <h2 className="text-lg font-light tracking-subhead text-foreground">Recent transactions</h2>
         <p className="mt-1 text-sm text-label">
@@ -221,7 +221,7 @@ export function FinanceEntryList({
       </div>
 
       {financeLocked ? (
-        <p className="mt-4 rounded-card bg-surface-card px-3 py-2 text-sm text-foreground">
+        <p className="mt-4 ds-card-nested px-3 py-2 text-sm text-foreground">
           Event finances are closed. These entries are preserved for accountability
           and can no longer be edited.
         </p>

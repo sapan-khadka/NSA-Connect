@@ -72,7 +72,7 @@ export function NavDropdown({ label, items, isActive = false }: NavDropdownProps
         <div
           id={menuId}
           role="menu"
-          className="absolute left-0 top-full z-50 mt-1 min-w-[11rem] rounded-card bg-surface-card py-1 "
+          className="absolute left-0 top-full z-50 mt-1 min-w-[11rem] ds-card py-1 "
         >
           {items.map((item) => (
             <NavLink
@@ -152,7 +152,7 @@ export function AccountMenu({ fullName, onLogout }: AccountMenuProps) {
         aria-haspopup="menu"
         aria-controls={menuId}
         onClick={() => setOpen((current) => !current)}
-        className="flex items-center gap-2 rounded-card bg-surface-card px-2.5 py-1.5 text-left transition-colors hover:border-accent/40 hover:bg-accent/5"
+        className="flex items-center gap-2 ds-card px-2.5 py-1.5 text-left transition-colors hover:border-accent/40 hover:bg-accent/5"
       >
         <span
           aria-hidden="true"
@@ -172,7 +172,7 @@ export function AccountMenu({ fullName, onLogout }: AccountMenuProps) {
         <div
           id={menuId}
           role="menu"
-          className="absolute right-0 top-full z-50 mt-2 w-56 rounded-card bg-surface-card py-1 "
+          className="absolute right-0 top-full z-50 mt-2 w-56 ds-card py-1 "
         >
           <div className="border-b border-gray-100 px-3 py-2 sm:hidden">
             <p className="truncate text-sm font-medium text-foreground">{fullName}</p>

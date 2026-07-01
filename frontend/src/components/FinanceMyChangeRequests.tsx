@@ -59,7 +59,7 @@ export function FinanceMyChangeRequests({
 
   if (isLoading) {
     return (
-      <section className="rounded-card bg-surface-card p-6">
+      <section className="ds-card p-6">
         <p className="text-sm text-label">Loading your finance requests…</p>
       </section>
     );
@@ -88,7 +88,7 @@ export function FinanceMyChangeRequests({
             return (
               <li
                 key={request.id}
-                className="rounded-md border border-gray-100 bg-surface-muted/40 p-4"
+                className="rounded-md ds-card-nested p-4"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>

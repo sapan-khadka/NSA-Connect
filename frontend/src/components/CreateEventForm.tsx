@@ -131,12 +131,21 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
   const draftTaskCount = countChecklistTasks(draftChecklist);
 
   return (
-    <section className="rounded-card bg-surface-card p-4 sm:p-6">
+    <section
+      className="ds-card shadow-card p-4"
+      data-testid="create-event-card"
+      aria-labelledby="create-event-heading"
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-light tracking-subhead text-foreground">Create event</h2>
+          <h2
+            id="create-event-heading"
+            className="text-base font-medium text-foreground"
+          >
+            Create event
+          </h2>
           <p className="mt-1 text-sm text-label">
-            Board members can schedule new NSA events.
+            Schedule a new NSA event for the calendar.
           </p>
         </div>
         <button
@@ -302,7 +311,7 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
             </div>
           </div>
 
-          <div className="rounded-card bg-surface-card p-4">
+          <div className="ds-card-nested p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-foreground">Prep checklist</h3>

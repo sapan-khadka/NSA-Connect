@@ -47,7 +47,7 @@ export function KanbanColumn({
   return (
     <section
       className={[
-        "flex flex-col overflow-hidden rounded-kanban border border-kanban-border bg-white transition-colors duration-200",
+        "flex flex-col overflow-hidden ds-card transition-colors duration-200",
         isOver ? "ring-2 ring-accent/30" : "",
       ].join(" ")}
     >

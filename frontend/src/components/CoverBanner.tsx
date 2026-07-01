@@ -1,4 +1,4 @@
-import nsaCover from "../assets/nsa-cover.png";
+import nsaCover from "../assets/nsa-cover.PNG";
 
 type CoverBannerProps = {
   alt?: string;
@@ -12,7 +12,7 @@ export function CoverBanner({
   return (
     <div
       className={[
-        "overflow-hidden rounded-card bg-surface-card",
+        "overflow-hidden ds-card",
         className,
       ].join(" ")}
     >

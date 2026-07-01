@@ -1,9 +1,12 @@
 import type { ReactNode } from "react";
 
+import { Card } from "./Card";
+
 type HomeCardProps = {
   children: ReactNode;
   className?: string;
   padding?: "sm" | "md";
+  interactive?: boolean;
 };
 
 const PADDING_CLASS = {
@@ -15,12 +18,14 @@ export function HomeCard({
   children,
   className = "",
   padding = "md",
+  interactive = false,
 }: HomeCardProps) {
   return (
-    <section
-      className={["ds-card", PADDING_CLASS[padding], className].join(" ")}
+    <Card
+      className={[PADDING_CLASS[padding], className].filter(Boolean).join(" ")}
+      interactive={interactive}
     >
       {children}
-    </section>
+    </Card>
   );
 }

@@ -134,7 +134,7 @@ export function ProfilePage() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-8">
+      <section className="ds-card p-8">
         <p className="ds-section-label">
           Account settings
         </p>
@@ -163,7 +163,7 @@ export function ProfilePage() {
 
       <form
         onSubmit={(event) => void handleSubmit(event)}
-        className="rounded-card bg-surface-card p-6"
+        className="ds-card p-6"
       >
         <div className="flex flex-wrap items-center gap-3 border-b border-gray-200 pb-4">
           <h2 className="text-lg font-light tracking-subhead text-foreground">Contact info</h2>
@@ -263,7 +263,7 @@ export function ProfilePage() {
 
             <div>
               <p className="block text-sm font-medium text-foreground">Student ID</p>
-              <p className="mt-1 rounded-card bg-surface-card px-3 py-2 text-sm text-label">
+              <p className="mt-1 ds-card-nested px-3 py-2 text-sm text-label">
                 {member.student_id}
               </p>
             </div>

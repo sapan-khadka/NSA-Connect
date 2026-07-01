@@ -311,7 +311,7 @@ export function EventTaskManager({
       {canManageSimple ? (
         <form
           onSubmit={(event) => void handleCreate(event)}
-          className="mt-3 space-y-2 rounded-card bg-surface-card p-3"
+          className="mt-3 space-y-2 ds-card p-3"
         >
           <p className="text-xs font-medium text-label">Add assigned task</p>
           <div>
@@ -434,7 +434,7 @@ export function EventTaskManager({
                 return (
                   <li
                     key={task.id}
-                    className="rounded-md border border-gray-200 p-3"
+                    className="rounded-md ds-card-nested p-3"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>

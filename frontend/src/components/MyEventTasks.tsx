@@ -252,7 +252,7 @@ export function MyEventTasks() {
   }
 
   return (
-    <section className="rounded-card bg-surface-card p-6">
+    <section className="ds-card p-6">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-light tracking-subhead text-foreground">My tasks</h2>

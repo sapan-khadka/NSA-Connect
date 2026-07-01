@@ -97,7 +97,7 @@ export function TaskOversightPage() {
       ) : null}
 
       {isLoading ? (
-        <div className="rounded-card bg-surface-card p-10 text-center text-label">
+        <div className="ds-card p-10 text-center text-label">
           Loading oversight…
         </div>
       ) : null}
@@ -116,7 +116,7 @@ export function TaskOversightPage() {
           {overview.members.map((row) => (
             <section
               key={row.member_id}
-              className="rounded-card bg-surface-card p-6"
+              className="ds-card p-6"
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -140,7 +140,7 @@ export function TaskOversightPage() {
                   {row.tasks.map((task) => (
                     <li
                       key={task.id}
-                      className="rounded-md border border-gray-200 p-3"
+                      className="rounded-md ds-card-nested p-3"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div>

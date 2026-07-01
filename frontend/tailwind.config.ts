@@ -29,9 +29,9 @@ export default {
           badge: "#E5E5E7",
         },
         surface: {
-          DEFAULT: "#FFFFFF",
-          card: "#F5F5F7",
-          muted: "#F5F5F7",
+          DEFAULT: "#FBFBFB",
+          card: "#FFFFFF",
+          muted: "#FAFAFA",
         },
         marigold: {
           DEFAULT: "#F4A024",
@@ -96,9 +96,15 @@ export default {
         label: "0.03em",
       },
       borderRadius: {
-        card: "12px",
+        card: "14px",
         pill: "980px",
         kanban: "10px",
+      },
+      boxShadow: {
+        card:
+          "0 1px 3px rgba(0, 0, 0, 0.08), 0 6px 16px rgba(0, 0, 0, 0.08)",
+        "card-hover":
+          "0 2px 6px rgba(0, 0, 0, 0.1), 0 14px 32px rgba(0, 0, 0, 0.12)",
       },
     },
   },
