@@ -4,6 +4,7 @@ import axios from "axios";
 import { EventBudgetBreakdown } from "../components/EventBudgetBreakdown";
 import { ExpenseCategoryChart } from "../components/ExpenseCategoryChart";
 import { FinanceEntryList } from "../components/FinanceEntryList";
+import { FinanceMyChangeRequests } from "../components/FinanceMyChangeRequests";
 import { FinancePendingApprovals } from "../components/FinancePendingApprovals";
 import { FinanceSummaryCard } from "../components/FinanceSummaryCard";
 import { LogFinanceEntryForm } from "../components/LogFinanceEntryForm";
@@ -306,6 +307,7 @@ export function FinancePage() {
             refreshKey={refreshKey}
             onChanged={() => setRefreshKey((current) => current + 1)}
           />
+          <FinanceMyChangeRequests refreshKey={refreshKey} />
           <LogFinanceEntryForm
             eventOptions={eventOptions}
             onCreated={handleFinanceEntryCreated}

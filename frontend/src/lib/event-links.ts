@@ -4,6 +4,14 @@ export function eventDetailPath(eventId: number): string {
   return `/events/${eventId}`;
 }
 
+export function photoArchivePath(): string {
+  return "/events/photos";
+}
+
+export function photoAlbumPath(eventId: number): string {
+  return `/events/photos/${eventId}`;
+}
+
 export function calendarDeepLink(event: {
   id: number;
   starts_at: string;

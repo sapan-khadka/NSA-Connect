@@ -33,7 +33,7 @@ import {
   type EventResponse,
   type RsvpStatus,
 } from "../lib/events-api";
-import { fetchPendingFinanceChangeRequests } from "../lib/finance-api";
+import { fetchPendingFinanceChangeRequests, fetchMyFinanceChangeRequestSummary } from "../lib/finance-api";
 import { formatEventDateTime } from "../lib/format-datetime";
 import {
   getMyTasksPath,
@@ -207,16 +207,25 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
             }))
           : Promise.resolve(null);
 
+        const myFinanceRequestsPromise = isRoleAtLeast(member.role, "treasurer")
+          ? fetchMyFinanceChangeRequestSummary().catch(() => ({
+              pending_count: 0,
+              recently_rejected_count: 0,
+              recently_approved_count: 0,
+            }))
+          : Promise.resolve(null);
+
         const meetingsPromise = isRoleAtLeast(member.role, "board")
           ? fetchMeetings().catch(() => ({ meetings: [], total: 0 }))
           : Promise.resolve(null);
 
-        const [upcoming, tasksResult, pendingMembers, financePending, meetingsResult] =
+        const [upcoming, tasksResult, pendingMembers, financePending, myFinanceRequests, meetingsResult] =
           await Promise.all([
             upcomingPromise,
             tasksPromise,
             pendingMembersPromise,
             financePendingPromise,
+            myFinanceRequestsPromise,
             meetingsPromise,
           ]);
 
@@ -261,6 +270,39 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
             message: `Finance change request${financePending.total === 1 ? "" : "s"} need your review`,
             to: "/finance",
             actionLabel: "Open finance",
+          });
+        }
+
+        if (myFinanceRequests && myFinanceRequests.pending_count > 0) {
+          nextAlerts.push({
+            id: "finance-my-pending",
+            count: myFinanceRequests.pending_count,
+            label: "Your finance requests",
+            message: `Your finance change request${myFinanceRequests.pending_count === 1 ? " is" : "s are"} awaiting approval`,
+            to: "/finance",
+            actionLabel: "View status",
+          });
+        }
+
+        if (myFinanceRequests && myFinanceRequests.recently_rejected_count > 0) {
+          nextAlerts.push({
+            id: "finance-my-rejected",
+            count: myFinanceRequests.recently_rejected_count,
+            label: "Finance request rejected",
+            message: `Finance change request${myFinanceRequests.recently_rejected_count === 1 ? " was" : "s were"} rejected in the last 7 days`,
+            to: "/finance",
+            actionLabel: "View details",
+          });
+        }
+
+        if (myFinanceRequests && myFinanceRequests.recently_approved_count > 0) {
+          nextAlerts.push({
+            id: "finance-my-approved",
+            count: myFinanceRequests.recently_approved_count,
+            label: "Finance request approved",
+            message: `Finance change request${myFinanceRequests.recently_approved_count === 1 ? " was" : "s were"} approved in the last 7 days`,
+            to: "/finance",
+            actionLabel: "View details",
           });
         }
 

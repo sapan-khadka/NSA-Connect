@@ -116,13 +116,14 @@ class EventRsvpAttendeeResponse(BaseModel):
     member_id: int
     full_name: str
     member_type: str
-    rsvp_status: RsvpStatus
+    rsvp_status: RsvpStatus | None
 
 
 class EventAttendeesResponse(BaseModel):
     going_count: int
     maybe_count: int
     not_going_count: int
+    no_response_count: int
     attendees: list[EventRsvpAttendeeResponse]
 
 

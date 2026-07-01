@@ -77,11 +77,18 @@ export function getApiErrorMessage(error: unknown): string {
     return "Cannot reach the server. Make sure the backend is running on port 8000.";
   }
 
-  if (error.response.status === 502 || error.response.status === 503) {
+  const detail = error.response?.data?.detail;
+
+  if (error.response.status === 502) {
     return "Cannot reach the server. Make sure the backend is running on port 8000.";
   }
 
-  const detail = error.response?.data?.detail;
+  if (error.response.status === 503) {
+    if (typeof detail === "string" && detail.trim()) {
+      return detail;
+    }
+    return "This feature is temporarily unavailable. Try again later.";
+  }
 
   if (typeof detail === "string") {
     return detail;

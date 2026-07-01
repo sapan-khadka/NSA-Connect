@@ -14,6 +14,7 @@ vi.mock("../lib/finance-api", () => ({
   fetchExpenseByCategory: vi.fn(),
   fetchFinanceEntries: vi.fn(),
   fetchPendingFinanceChangeRequests: vi.fn(),
+  fetchMyFinanceChangeRequests: vi.fn(),
   createFinanceEntry: vi.fn(),
   uploadFinanceReceipt: vi.fn(),
 }));
@@ -126,6 +127,7 @@ describe("FinancePage", () => {
       fetchFinanceSummary,
       fetchFinanceEntries,
       fetchPendingFinanceChangeRequests,
+      fetchMyFinanceChangeRequests,
     } = await import("../lib/finance-api");
     vi.mocked(fetchEventBudgetBreakdown).mockResolvedValue(mockBudgetBreakdown);
     vi.mocked(fetchExpenseByCategory).mockResolvedValue(mockExpenseCategories);
@@ -134,6 +136,15 @@ describe("FinancePage", () => {
     vi.mocked(fetchPendingFinanceChangeRequests).mockResolvedValue({
       requests: [],
       total: 0,
+    });
+    vi.mocked(fetchMyFinanceChangeRequests).mockResolvedValue({
+      requests: [],
+      total: 0,
+      summary: {
+        pending_count: 0,
+        recently_rejected_count: 0,
+        recently_approved_count: 0,
+      },
     });
 
     renderFinancePage("treasurer");

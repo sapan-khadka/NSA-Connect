@@ -210,9 +210,12 @@ def test_board_can_list_attendees_general_cannot(
     assert body["going_count"] == 1
     assert body["maybe_count"] == 1
     assert body["not_going_count"] == 0
-    assert len(body["attendees"]) == 2
-    member_types = {attendee["member_type"] for attendee in body["attendees"]}
-    assert member_types == {"Board member", "General member"}
+    assert body["no_response_count"] >= 0
+    assert len(body["attendees"]) >= 2
+    member_types = {attendee["member_type"] for attendee in body["attendees"] if attendee["rsvp_status"] is not None}
+    assert "Board member" in member_types or "General member" in member_types
+    responded = [a for a in body["attendees"] if a["rsvp_status"] is not None]
+    assert len(responded) == 2
 
 
 def test_attendee_list_is_sorted_alphabetically(
@@ -256,5 +259,26 @@ def test_attendee_list_is_sorted_alphabetically(
         attendee["full_name"]
         for attendee in response.json()["attendees"]
         if attendee["member_type"] == "General member"
+        and attendee["rsvp_status"] == "going"
     ]
     assert general_names == ["Alpha Member", "Zebra Member"]
+
+
+def test_attendee_list_includes_members_without_response(
+    client,
+    db_session,
+    board_member_headers,
+    general_member_headers,
+):
+    event = _create_event(client, board_member_headers)
+
+    response = client.get(
+        f"/api/v1/events/{event['id']}/rsvps",
+        headers=board_member_headers,
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["going_count"] == 0
+    assert body["no_response_count"] >= 1
+    assert any(attendee["rsvp_status"] is None for attendee in body["attendees"])

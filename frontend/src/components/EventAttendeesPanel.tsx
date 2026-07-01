@@ -11,14 +11,17 @@ type EventAttendeesPanelProps = {
   error: string | null;
 };
 
-function statusBadgeClass(status: RsvpStatus): string {
+function statusBadgeClass(status: RsvpStatus | null): string {
   if (status === "going") {
     return "bg-accent/10 text-foreground";
   }
   if (status === "maybe") {
     return "bg-surface-muted text-label";
   }
-  return "bg-gray-100 text-foreground";
+  if (status === "not_going") {
+    return "bg-gray-100 text-foreground";
+  }
+  return "border border-urgent/30 bg-urgent/5 text-foreground";
 }
 
 function AttendeeGroup({
@@ -128,7 +131,11 @@ export function EventAttendeesPanel({
             <span className="font-medium text-foreground">
               {data.not_going_count}
             </span>{" "}
-            not going
+            not going ·{" "}
+            <span className="font-medium text-foreground">
+              {data.no_response_count}
+            </span>{" "}
+            not yet responded
           </p>
 
           <label className="block">
@@ -147,7 +154,7 @@ export function EventAttendeesPanel({
               <p className="text-sm text-label">
                 {query.trim()
                   ? "No attendees match your search."
-                  : "No RSVP responses yet."}
+                  : "No approved members found."}
               </p>
             ) : (
               <>

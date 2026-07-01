@@ -54,12 +54,16 @@ vi.mock("../lib/finance-api", async () => {
   return {
     ...actual,
     fetchPendingFinanceChangeRequests: vi.fn(),
+    fetchMyFinanceChangeRequestSummary: vi.fn(),
   };
 });
 
 import { fetchMyEventTasks } from "../lib/event-tasks-api";
 import { fetchUpcomingEvents } from "../lib/events-api";
-import { fetchPendingFinanceChangeRequests } from "../lib/finance-api";
+import {
+  fetchMyFinanceChangeRequestSummary,
+  fetchPendingFinanceChangeRequests,
+} from "../lib/finance-api";
 import { fetchPendingMembers } from "../lib/members-api";
 import { fetchMeetings } from "../lib/meetings-api";
 
@@ -67,6 +71,7 @@ const mockedUpcoming = vi.mocked(fetchUpcomingEvents);
 const mockedMyTasks = vi.mocked(fetchMyEventTasks);
 const mockedPendingMembers = vi.mocked(fetchPendingMembers);
 const mockedFinancePending = vi.mocked(fetchPendingFinanceChangeRequests);
+const mockedMyFinanceSummary = vi.mocked(fetchMyFinanceChangeRequestSummary);
 const mockedMeetings = vi.mocked(fetchMeetings);
 
 const sampleEvent = createMockEventResponse({
@@ -139,6 +144,11 @@ describe("HomePage", () => {
     });
     mockedPendingMembers.mockResolvedValue({ members: [], total: 2 });
     mockedFinancePending.mockResolvedValue({ requests: [], total: 0 });
+    mockedMyFinanceSummary.mockResolvedValue({
+      pending_count: 0,
+      recently_rejected_count: 0,
+      recently_approved_count: 0,
+    });
     mockedMeetings.mockResolvedValue({
       meetings: [
         {

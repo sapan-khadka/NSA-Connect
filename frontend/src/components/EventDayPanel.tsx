@@ -12,7 +12,7 @@ import {
   formatEventDateTime,
   formatIsoDateLabel,
 } from "../lib/format-datetime";
-import { isEventUpcoming } from "../lib/event-rsvp";
+import { isEventUpcoming, needsRsvpResponse } from "../lib/event-rsvp";
 import { isRoleAtLeast } from "../lib/roles";
 
 type EventDayPanelProps = {
@@ -73,6 +73,11 @@ function UpcomingEventsSidebar({
               <p className="mt-0.5 text-xs text-label">
                 {formatEventDateTime(event.starts_at)}
               </p>
+              {needsRsvpResponse(event.starts_at, event.current_member_rsvp_status) ? (
+                <p className="mt-1 text-xs font-medium text-urgent">
+                  RSVP needed
+                </p>
+              ) : null}
             </Link>
           </li>
         ))}

@@ -10,8 +10,20 @@ export const RSVP_STATUS_LABELS: Record<RsvpStatus, string> = {
   not_going: "Not going",
 };
 
-export function formatRsvpStatus(status: RsvpStatus): string {
+export const RSVP_NO_RESPONSE_LABEL = "Not yet responded";
+
+export function formatRsvpStatus(status: RsvpStatus | null): string {
+  if (status === null) {
+    return RSVP_NO_RESPONSE_LABEL;
+  }
   return RSVP_STATUS_LABELS[status];
+}
+
+export function needsRsvpResponse(
+  startsAt: string,
+  currentStatus: RsvpStatus | null,
+): boolean {
+  return isEventUpcoming(startsAt) && currentStatus === null;
 }
 
 export function applyRsvpStatus<T extends {

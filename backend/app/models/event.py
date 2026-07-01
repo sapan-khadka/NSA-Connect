@@ -62,6 +62,12 @@ class Event(Base):
         back_populates="event",
         cascade="all, delete-orphan",
     )
+    photos = relationship(
+        "EventPhoto",
+        back_populates="event",
+        cascade="all, delete-orphan",
+        order_by="EventPhoto.created_at",
+    )
 
     @property
     def is_upcoming(self) -> bool:

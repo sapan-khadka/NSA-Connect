@@ -69,6 +69,7 @@ describe("EventDetailPage", () => {
       going_count: 2,
       maybe_count: 1,
       not_going_count: 0,
+      no_response_count: 1,
       attendees: [
         {
           member_id: 1,
@@ -95,7 +96,7 @@ describe("EventDetailPage", () => {
 
     expect(await screen.findByRole("heading", { name: "Attendees" })).toBeInTheDocument();
     expect(screen.getByTestId("attendee-rsvp-summary")).toHaveTextContent(
-      "2 going · 1 maybe · 0 not going",
+      "2 going · 1 maybe · 0 not going · 1 not yet responded",
     );
     expect(screen.getByText("Board Person")).toBeInTheDocument();
     await waitFor(() => {

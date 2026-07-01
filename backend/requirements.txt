@@ -32,3 +32,5 @@ pgvector==0.4.2
 PyPDF2==3.0.1
 tiktoken==0.13.0
 openai==1.109.1
+httpx==0.28.1
+zipstream-ng==1.9.2

@@ -12,6 +12,8 @@ from app.schemas.finance import (
     FinanceChangeRejectRequest,
     FinanceChangeRequestListResponse,
     FinanceChangeRequestResponse,
+    FinanceChangeRequestSummaryResponse,
+    FinanceMyChangeRequestsResponse,
     FinanceEntryCreateRequest,
     FinanceEntryListResponse,
     FinanceEntryResponse,
@@ -29,10 +31,12 @@ from app.services.finance_change_request_service import (
     FinanceChangeRequestNotFoundError,
     InvalidFinanceChangeStateError,
     approve_change_request,
+    list_my_change_requests,
     list_pending_for_reviewer,
     reject_change_request,
     submit_delete_request,
     submit_update_request,
+    summarize_my_change_requests,
 )
 from app.services.finance_service import (
     FinanceEntryNotFoundError,
@@ -146,6 +150,39 @@ def list_pending_finance_change_requests(
             FinanceChangeRequestResponse.from_request(request) for request in requests
         ],
         total=len(requests),
+    )
+
+
+@router.get("/change-requests/mine/summary", response_model=FinanceChangeRequestSummaryResponse)
+def my_finance_change_request_summary_endpoint(
+    db: Session = Depends(get_db),
+    current_member: Member = Depends(require_treasurer),
+):
+    summary = summarize_my_change_requests(db, current_member)
+    return FinanceChangeRequestSummaryResponse(
+        pending_count=summary.pending_count,
+        recently_rejected_count=summary.recently_rejected_count,
+        recently_approved_count=summary.recently_approved_count,
+    )
+
+
+@router.get("/change-requests/mine", response_model=FinanceMyChangeRequestsResponse)
+def list_my_finance_change_requests(
+    db: Session = Depends(get_db),
+    current_member: Member = Depends(require_treasurer),
+):
+    summary = summarize_my_change_requests(db, current_member)
+    requests = list_my_change_requests(db, current_member)
+    return FinanceMyChangeRequestsResponse(
+        requests=[
+            FinanceChangeRequestResponse.from_request(request) for request in requests
+        ],
+        total=len(requests),
+        summary=FinanceChangeRequestSummaryResponse(
+            pending_count=summary.pending_count,
+            recently_rejected_count=summary.recently_rejected_count,
+            recently_approved_count=summary.recently_approved_count,
+        ),
     )
 
 

@@ -25,7 +25,6 @@ class EventRsvp(Base):
     status = Column(
         SqlEnum(RsvpStatus, values_callable=lambda statuses: [s.value for s in statuses]),
         nullable=False,
-        default=RsvpStatus.GOING,
     )
     created_at = Column(DateTime(timezone=True), nullable=False)
     updated_at = Column(DateTime(timezone=True), nullable=False)

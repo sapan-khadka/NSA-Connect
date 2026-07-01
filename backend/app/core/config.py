@@ -57,6 +57,16 @@ class Settings(BaseSettings):
         default="nsa-connect/finance-receipts",
         description="Cloudinary folder for uploaded finance receipts",
     )
+    CLOUDINARY_EVENT_PHOTOS_FOLDER: str = Field(
+        default="nsa-connect/event-photos",
+        description="Cloudinary folder for event photo archive uploads",
+    )
+    DEV_UPLOAD_BASE_URL: str = Field(
+        default="http://127.0.0.1:8000",
+        description=(
+            "Base URL for resolving local dev upload paths during server-side fetches"
+        ),
+    )
 
     AI_ENABLED: bool = False
     ANTHROPIC_API_KEY: str = Field(

@@ -8,6 +8,7 @@ import { AiAssistantPage } from "./pages/AiAssistantPage";
 import { AnnouncementEmailPage } from "./pages/AnnouncementEmailPage";
 import { EventManagePage } from "./pages/EventManagePage";
 import { EventDetailPage } from "./pages/EventDetailPage";
+import { EventPhotoAlbumPage } from "./pages/EventPhotoAlbumPage";
 import { EventsPage } from "./pages/EventsPage";
 import { FinancePage } from "./pages/FinancePage";
 import { MyTasksPage } from "./pages/MyTasksPage";
@@ -19,6 +20,7 @@ import { NotFoundPage } from "./pages/NotFoundPage";
 import { PastEventsPage } from "./pages/PastEventsPage";
 import { BoardMeetingsPage } from "./pages/BoardMeetingsPage";
 import { MeetingDetailPage } from "./pages/MeetingDetailPage";
+import { PhotoArchivePage } from "./pages/PhotoArchivePage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { TaskOversightPage } from "./pages/TaskOversightPage";
@@ -115,6 +117,8 @@ export const appRoutes: RouteObject[] = [
           { path: "calendar", element: <EventsPage /> },
           { path: "upcoming", element: <Navigate to="/events/calendar" replace /> },
           { path: "tasks", element: <BoardTasksPage /> },
+          { path: "photos", element: <PhotoArchivePage /> },
+          { path: "photos/:eventId", element: <EventPhotoAlbumPage /> },
           {
             path: "past",
             element: (

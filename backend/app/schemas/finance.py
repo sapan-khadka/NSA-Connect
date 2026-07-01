@@ -184,6 +184,7 @@ class FinanceChangeRequestResponse(BaseModel):
     requested_by_id: int
     requested_by_name: str
     reviewed_by_id: int | None
+    reviewed_by_name: str | None
     review_note: str | None
     created_at: datetime
     reviewed_at: datetime | None
@@ -211,6 +212,9 @@ class FinanceChangeRequestResponse(BaseModel):
             requested_by_id=request.requested_by_id,
             requested_by_name=request.requested_by.full_name if request.requested_by else "",
             reviewed_by_id=request.reviewed_by_id,
+            reviewed_by_name=(
+                request.reviewed_by.full_name if request.reviewed_by else None
+            ),
             review_note=request.review_note,
             created_at=request.created_at,
             reviewed_at=request.reviewed_at,
@@ -223,6 +227,18 @@ class FinanceChangeRequestResponse(BaseModel):
 class FinanceChangeRequestListResponse(BaseModel):
     requests: list[FinanceChangeRequestResponse]
     total: int
+
+
+class FinanceChangeRequestSummaryResponse(BaseModel):
+    pending_count: int
+    recently_rejected_count: int
+    recently_approved_count: int
+
+
+class FinanceMyChangeRequestsResponse(BaseModel):
+    requests: list[FinanceChangeRequestResponse]
+    total: int
+    summary: FinanceChangeRequestSummaryResponse
 
 
 class FinanceChangeRejectRequest(BaseModel):

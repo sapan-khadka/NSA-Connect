@@ -15,4 +15,19 @@ describe("event-attendees-export", () => {
 
     expect(csv).toBe("Name,Member type,RSVP status\nAlpha Board,Board member,Going");
   });
+
+  it("labels members without a response in csv exports", () => {
+    const csv = buildAttendeesCsv([
+      {
+        member_id: 2,
+        full_name: "Pending Member",
+        member_type: "General member",
+        rsvp_status: null,
+      },
+    ]);
+
+    expect(csv).toBe(
+      "Name,Member type,RSVP status\nPending Member,General member,Not yet responded",
+    );
+  });
 });

@@ -62,6 +62,7 @@ export function FinancePendingApprovals({
     try {
       await rejectFinanceChangeRequest(requestId);
       setRequests((current) => current.filter((item) => item.id !== requestId));
+      onChanged?.();
     } catch (caught) {
       setError(getApiErrorMessage(caught));
     } finally {

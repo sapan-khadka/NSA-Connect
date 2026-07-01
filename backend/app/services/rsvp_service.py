@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.event import Event
@@ -27,6 +27,7 @@ class EventRsvpCounts:
     going_count: int
     maybe_count: int
     not_going_count: int
+    no_response_count: int
 
 
 @dataclass(frozen=True)
@@ -34,7 +35,7 @@ class EventRsvpAttendee:
     member_id: int
     full_name: str
     member_type: str
-    rsvp_status: RsvpStatus
+    rsvp_status: RsvpStatus | None
 
 
 def member_type_label(role: MemberRole) -> str:
@@ -53,20 +54,6 @@ def get_member_rsvp_status(
             EventRsvp.event_id == event_id,
             EventRsvp.member_id == member_id,
         ),
-    )
-
-
-def _count_rsvps_by_status(db: Session, event_id: int) -> EventRsvpCounts:
-    rows = db.execute(
-        select(EventRsvp.status, func.count())
-        .where(EventRsvp.event_id == event_id)
-        .group_by(EventRsvp.status),
-    ).all()
-    counts = {status: count for status, count in rows}
-    return EventRsvpCounts(
-        going_count=counts.get(RsvpStatus.GOING, 0),
-        maybe_count=counts.get(RsvpStatus.MAYBE, 0),
-        not_going_count=counts.get(RsvpStatus.NOT_GOING, 0),
     )
 
 
@@ -154,22 +141,44 @@ def list_event_attendees(
         raise EventNotFoundError
 
     rows = db.execute(
-        select(EventRsvp, Member)
-        .join(Member, EventRsvp.member_id == Member.id)
-        .where(
-            EventRsvp.event_id == event_id,
-            Member.status == MemberStatus.APPROVED,
+        select(Member, EventRsvp.status)
+        .outerjoin(
+            EventRsvp,
+            (EventRsvp.member_id == Member.id) & (EventRsvp.event_id == event_id),
         )
+        .where(Member.status == MemberStatus.APPROVED)
         .order_by(Member.full_name.asc()),
     ).all()
 
-    attendees = [
-        EventRsvpAttendee(
-            member_id=member.id,
-            full_name=member.full_name,
-            member_type=member_type_label(member.role),
-            rsvp_status=rsvp.status,
+    going_count = 0
+    maybe_count = 0
+    not_going_count = 0
+    no_response_count = 0
+    attendees: list[EventRsvpAttendee] = []
+
+    for member, status in rows:
+        if status is None:
+            no_response_count += 1
+        elif status == RsvpStatus.GOING:
+            going_count += 1
+        elif status == RsvpStatus.MAYBE:
+            maybe_count += 1
+        elif status == RsvpStatus.NOT_GOING:
+            not_going_count += 1
+
+        attendees.append(
+            EventRsvpAttendee(
+                member_id=member.id,
+                full_name=member.full_name,
+                member_type=member_type_label(member.role),
+                rsvp_status=status,
+            )
         )
-        for rsvp, member in rows
-    ]
-    return _count_rsvps_by_status(db, event_id), attendees
+
+    counts = EventRsvpCounts(
+        going_count=going_count,
+        maybe_count=maybe_count,
+        not_going_count=not_going_count,
+        no_response_count=no_response_count,
+    )
+    return counts, attendees

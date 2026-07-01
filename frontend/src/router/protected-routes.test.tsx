@@ -19,6 +19,20 @@ vi.mock("../lib/finance-api", () => ({
   fetchEventBudgetBreakdown: vi.fn().mockResolvedValue({ events: [], total: 0 }),
   fetchExpenseByCategory: vi.fn().mockResolvedValue({ categories: [], total_expense: "0.00" }),
   fetchPendingFinanceChangeRequests: vi.fn().mockResolvedValue({ requests: [], total: 0 }),
+  fetchMyFinanceChangeRequests: vi.fn().mockResolvedValue({
+    requests: [],
+    total: 0,
+    summary: {
+      pending_count: 0,
+      recently_rejected_count: 0,
+      recently_approved_count: 0,
+    },
+  }),
+  fetchMyFinanceChangeRequestSummary: vi.fn().mockResolvedValue({
+    pending_count: 0,
+    recently_rejected_count: 0,
+    recently_approved_count: 0,
+  }),
 }));
 
 vi.mock("../lib/event-tasks-api", () => ({

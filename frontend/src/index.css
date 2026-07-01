@@ -148,4 +148,99 @@
   .calendar-month-enter-from-next {
     animation: calendar-month-from-next 220ms ease-out;
   }
+
+  .rsvp-reaction-emoji {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    pointer-events: none;
+    font-size: 1.25rem;
+    line-height: 1;
+    z-index: 10;
+    will-change: transform, opacity;
+  }
+
+  @keyframes rsvp-burst {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.25);
+    }
+    18% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.15);
+    }
+    35% {
+      opacity: 1;
+      transform: translate(calc(-50% + var(--rsvp-x, 0px)), calc(-50% + var(--rsvp-y, 0px)))
+        scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(calc(-50% + var(--rsvp-x, 0px)), calc(-50% + var(--rsvp-y, 0px)))
+        scale(0.65);
+    }
+  }
+
+  @keyframes rsvp-wobble {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, calc(-50% - 10px)) scale(0.45);
+    }
+    12% {
+      opacity: 1;
+      transform: translate(-50%, calc(-50% - 14px)) scale(1.05);
+    }
+    20% {
+      transform: translate(-50%, calc(-50% - 12px)) scale(1) rotate(0deg);
+    }
+    35% {
+      transform: translate(-50%, calc(-50% - 12px)) scale(1) rotate(-14deg);
+    }
+    50% {
+      transform: translate(-50%, calc(-50% - 12px)) scale(1) rotate(14deg);
+    }
+    65% {
+      transform: translate(-50%, calc(-50% - 12px)) scale(1) rotate(-10deg);
+    }
+    80% {
+      opacity: 1;
+      transform: translate(-50%, calc(-50% - 12px)) scale(1) rotate(8deg);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, calc(-50% - 8px)) scale(0.9) rotate(0deg);
+    }
+  }
+
+  @keyframes rsvp-cry-sink {
+    0% {
+      opacity: 0;
+      transform: translate(calc(-50% + var(--rsvp-x, 0px)), -6px) scale(0.35);
+    }
+    10% {
+      opacity: 1;
+      transform: translate(calc(-50% + var(--rsvp-x, 0px)), -10px) scale(1.12);
+    }
+    18% {
+      opacity: 1;
+      transform: translate(calc(-50% + var(--rsvp-x, 0px)), -8px) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(calc(-50% + var(--rsvp-x, 0px)), 34px) scale(0.88);
+    }
+  }
+
+  .rsvp-reaction-burst {
+    animation: rsvp-burst 900ms ease-out forwards;
+  }
+
+  .rsvp-reaction-wobble {
+    animation: rsvp-wobble 1200ms ease-in-out forwards;
+  }
+
+  .rsvp-reaction-cry-sink {
+    animation: rsvp-cry-sink 1500ms ease-in forwards;
+    animation-fill-mode: backwards;
+  }
 }

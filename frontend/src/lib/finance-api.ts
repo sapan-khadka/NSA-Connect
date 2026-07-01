@@ -173,6 +173,7 @@ export type FinanceChangeRequestResponse = {
   requested_by_id: number;
   requested_by_name: string;
   reviewed_by_id: number | null;
+  reviewed_by_name: string | null;
   review_note: string | null;
   created_at: string;
   reviewed_at: string | null;
@@ -186,9 +187,35 @@ export type FinanceChangeRequestListResponse = {
   total: number;
 };
 
+export type FinanceChangeRequestSummaryResponse = {
+  pending_count: number;
+  recently_rejected_count: number;
+  recently_approved_count: number;
+};
+
+export type FinanceMyChangeRequestsResponse = {
+  requests: FinanceChangeRequestResponse[];
+  total: number;
+  summary: FinanceChangeRequestSummaryResponse;
+};
+
 export async function fetchPendingFinanceChangeRequests(): Promise<FinanceChangeRequestListResponse> {
   const response = await api.get<FinanceChangeRequestListResponse>(
     "/v1/finance/change-requests/pending",
+  );
+  return response.data;
+}
+
+export async function fetchMyFinanceChangeRequestSummary(): Promise<FinanceChangeRequestSummaryResponse> {
+  const response = await api.get<FinanceChangeRequestSummaryResponse>(
+    "/v1/finance/change-requests/mine/summary",
+  );
+  return response.data;
+}
+
+export async function fetchMyFinanceChangeRequests(): Promise<FinanceMyChangeRequestsResponse> {
+  const response = await api.get<FinanceMyChangeRequestsResponse>(
+    "/v1/finance/change-requests/mine",
   );
   return response.data;
 }

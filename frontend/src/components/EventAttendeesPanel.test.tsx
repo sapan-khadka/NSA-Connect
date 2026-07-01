@@ -21,6 +21,7 @@ describe("EventAttendeesPanel", () => {
           going_count: 1,
           maybe_count: 1,
           not_going_count: 0,
+          no_response_count: 2,
           attendees: [
             {
               member_id: 1,
@@ -34,13 +35,19 @@ describe("EventAttendeesPanel", () => {
               member_type: "General member",
               rsvp_status: "maybe",
             },
+            {
+              member_id: 3,
+              full_name: "No Reply Yet",
+              member_type: "General member",
+              rsvp_status: null,
+            },
           ],
         }}
       />,
     );
 
     expect(screen.getByTestId("attendee-rsvp-summary")).toHaveTextContent(
-      "1 going · 1 maybe · 0 not going",
+      "1 going · 1 maybe · 0 not going · 2 not yet responded",
     );
     expect(screen.getByText("Board members")).toBeInTheDocument();
     expect(screen.getByText("General members")).toBeInTheDocument();

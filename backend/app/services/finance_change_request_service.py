@@ -1,7 +1,8 @@
 import json
-from datetime import UTC, datetime
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.lib.event_finance import EventFinanceLockedError, assert_event_finance_editable
@@ -20,6 +21,14 @@ from app.services.finance_service import (
 )
 
 APPROVER_ROLES = frozenset({MemberRole.TREASURER, MemberRole.PRESIDENT})
+RECENT_REVIEW_DAYS = 7
+
+
+@dataclass(frozen=True)
+class FinanceChangeRequestSummary:
+    pending_count: int
+    recently_rejected_count: int
+    recently_approved_count: int
 
 
 class FinanceChangeRequestNotFoundError(Exception):
@@ -182,6 +191,80 @@ def list_pending_for_reviewer(
         for request in pending
         if request.requested_by and _can_review(request.requested_by, reviewer)
     ]
+
+
+def _recent_review_cutoff() -> datetime:
+    return datetime.now(UTC) - timedelta(days=RECENT_REVIEW_DAYS)
+
+
+def summarize_my_change_requests(
+    db: Session,
+    member: Member,
+) -> FinanceChangeRequestSummary:
+    if member.role not in APPROVER_ROLES:
+        return FinanceChangeRequestSummary(0, 0, 0)
+
+    pending_count = db.scalar(
+        select(func.count())
+        .select_from(FinanceChangeRequest)
+        .where(
+            FinanceChangeRequest.requested_by_id == member.id,
+            FinanceChangeRequest.status == FinanceChangeStatus.PENDING,
+        ),
+    ) or 0
+
+    recent_cutoff = _recent_review_cutoff()
+    recently_rejected_count = db.scalar(
+        select(func.count())
+        .select_from(FinanceChangeRequest)
+        .where(
+            FinanceChangeRequest.requested_by_id == member.id,
+            FinanceChangeRequest.status == FinanceChangeStatus.REJECTED,
+            FinanceChangeRequest.reviewed_at.is_not(None),
+            FinanceChangeRequest.reviewed_at >= recent_cutoff,
+        ),
+    ) or 0
+
+    recently_approved_count = db.scalar(
+        select(func.count())
+        .select_from(FinanceChangeRequest)
+        .where(
+            FinanceChangeRequest.requested_by_id == member.id,
+            FinanceChangeRequest.status == FinanceChangeStatus.APPROVED,
+            FinanceChangeRequest.reviewed_at.is_not(None),
+            FinanceChangeRequest.reviewed_at >= recent_cutoff,
+        ),
+    ) or 0
+
+    return FinanceChangeRequestSummary(
+        pending_count=pending_count,
+        recently_rejected_count=recently_rejected_count,
+        recently_approved_count=recently_approved_count,
+    )
+
+
+def list_my_change_requests(
+    db: Session,
+    member: Member,
+    *,
+    limit: int = 50,
+) -> list[FinanceChangeRequest]:
+    if member.role not in APPROVER_ROLES:
+        return []
+
+    return list(
+        db.scalars(
+            select(FinanceChangeRequest)
+            .where(FinanceChangeRequest.requested_by_id == member.id)
+            .options(
+                selectinload(FinanceChangeRequest.entry),
+                selectinload(FinanceChangeRequest.requested_by),
+                selectinload(FinanceChangeRequest.reviewed_by),
+            )
+            .order_by(FinanceChangeRequest.created_at.desc())
+            .limit(limit),
+        ).all(),
+    )
 
 
 def approve_change_request(

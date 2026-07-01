@@ -114,6 +114,45 @@ def test_treasurer_approves_president_delete(client, treasurer_headers, presiden
     assert all(item["id"] != entry["id"] for item in listed.json()["entries"])
 
 
+def test_requester_sees_rejected_request_in_mine_list(
+    client,
+    treasurer_headers,
+    president_headers,
+):
+    entry = _create_entry(client, treasurer_headers)
+    submitted = client.delete(
+        f"/api/v1/finance/{entry['id']}",
+        headers=treasurer_headers,
+    ).json()
+
+    rejected = client.post(
+        f"/api/v1/finance/change-requests/{submitted['id']}/reject",
+        json={"review_note": "Keep this entry for audit"},
+        headers=president_headers,
+    )
+    assert rejected.status_code == 200
+
+    mine = client.get(
+        "/api/v1/finance/change-requests/mine",
+        headers=treasurer_headers,
+    )
+    assert mine.status_code == 200
+    body = mine.json()
+    assert body["summary"]["recently_rejected_count"] == 1
+    assert body["requests"][0]["status"] == "rejected"
+    assert body["requests"][0]["review_note"] == "Keep this entry for audit"
+    assert body["requests"][0]["reviewed_by_name"] == "President"
+
+
+def test_my_finance_change_request_summary(client, treasurer_headers):
+    summary = client.get(
+        "/api/v1/finance/change-requests/mine/summary",
+        headers=treasurer_headers,
+    )
+    assert summary.status_code == 200
+    assert summary.json()["pending_count"] == 0
+
+
 def test_requester_cannot_approve_own_request(client, treasurer_headers):
     entry = _create_entry(client, treasurer_headers)
     submitted = client.patch(

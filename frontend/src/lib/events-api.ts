@@ -50,13 +50,14 @@ export type EventRsvpAttendee = {
   member_id: number;
   full_name: string;
   member_type: "Board member" | "General member";
-  rsvp_status: RsvpStatus;
+  rsvp_status: RsvpStatus | null;
 };
 
 export type EventAttendeesResponse = {
   going_count: number;
   maybe_count: number;
   not_going_count: number;
+  no_response_count: number;
   attendees: EventRsvpAttendee[];
 };
 

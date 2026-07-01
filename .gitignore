@@ -27,3 +27,6 @@ node_modules/
 frontend/dist/
 frontend/.env
 *.local
+
+# Local dev uploads (Cloudinary bypass)
+backend/dev_uploads/

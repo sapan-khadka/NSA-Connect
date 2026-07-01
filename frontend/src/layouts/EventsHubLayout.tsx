@@ -20,6 +20,8 @@ function buildEventsTabs(member: NonNullable<ReturnType<typeof useAuth>["member"
     to: "/events/tasks",
   });
 
+  tabs.push({ label: "Photo archive", to: "/events/photos" });
+
   if (canViewMemberDirectory(member.role)) {
     tabs.push({ label: "Board meetings", to: "/events/meetings" });
     tabs.push({ label: "Past events", to: "/events/past" });
@@ -40,8 +42,9 @@ export function EventsHubLayout() {
   const { member } = useAuth();
   const isManageView = Boolean(useMatch("/events/:eventId/manage"));
   const isMeetingDetailView = Boolean(useMatch("/events/meetings/:eventId"));
+  const isPhotoAlbumView = Boolean(useMatch("/events/photos/:eventId"));
 
-  if (isManageView || isMeetingDetailView) {
+  if (isManageView || isMeetingDetailView || isPhotoAlbumView) {
     return <Outlet />;
   }
 

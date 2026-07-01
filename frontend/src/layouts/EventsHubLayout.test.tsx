@@ -57,6 +57,10 @@ describe("EventsHubLayout", () => {
       "href",
       "/events/tasks",
     );
+    expect(screen.getByRole("link", { name: "Photo archive" })).toHaveAttribute(
+      "href",
+      "/events/photos",
+    );
     expect(screen.queryByRole("heading", { name: "Events" })).not.toBeInTheDocument();
   });
 
