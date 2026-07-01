@@ -12,16 +12,23 @@ export function CoverBanner({
   return (
     <div
       className={[
-        "overflow-hidden rounded-2xl border border-primary/10 bg-white shadow-sm",
+        "overflow-hidden rounded-card bg-surface-card",
         className,
       ].join(" ")}
     >
-      <img
-        src={nsaCover}
-        alt={alt}
-        data-testid="nsa-cover-banner"
-        className="h-44 w-full object-cover object-center sm:h-52 md:h-60 lg:h-64"
-      />
+      <div className="relative">
+        <img
+          src={nsaCover}
+          alt={alt}
+          data-testid="nsa-cover-banner"
+          className="h-36 w-full object-cover object-center sm:h-44 md:h-48 lg:h-52"
+        />
+        <div
+          aria-hidden="true"
+          data-testid="cover-banner-gradient"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-1/4 bg-gradient-to-t from-black/40 to-transparent"
+        />
+      </div>
     </div>
   );
 }

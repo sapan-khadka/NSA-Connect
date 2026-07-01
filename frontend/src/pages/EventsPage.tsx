@@ -1,20 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { CreateEventForm } from "../components/CreateEventForm";
 import { EventDayPanel } from "../components/EventDayPanel";
 import { MonthlyCalendarGrid } from "../components/MonthlyCalendarGrid";
 import { useAuth } from "../context/useAuth";
-import { toLocalIsoDate } from "../lib/calendar";
+import { toLocalIsoDate, parseIsoDate } from "../lib/calendar";
 import { formatMonthQuery } from "../lib/calendar-events";
 import {
-  cancelEventRsvp,
   deleteEvent,
   fetchEvent,
   fetchEvents,
-  rsvpToEvent,
+  fetchUpcomingEvents,
+  updateEventRsvp,
   type EventDetailResponse,
   type EventResponse,
   type PrepTaskResponse,
+  type RsvpStatus,
 } from "../lib/events-api";
 import { applyRsvpStatus } from "../lib/event-rsvp";
 import { fetchAssignableMembers } from "../lib/members-api";
@@ -23,12 +25,15 @@ import type { MemberResponse } from "../lib/auth-api";
 
 export function EventsPage() {
   const { member } = useAuth();
+  const [searchParams] = useSearchParams();
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [events, setEvents] = useState<EventResponse[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<EventResponse[]>([]);
+  const [upcomingLoading, setUpcomingLoading] = useState(true);
   const [eventDetail, setEventDetail] = useState<EventDetailResponse | null>(
     null,
   );
@@ -48,6 +53,54 @@ export function EventsPage() {
   const canManageTasks = member
     ? canManageEventTasks(member.role, member.position)
     : false;
+
+  useEffect(() => {
+    const dateParam = searchParams.get("date");
+    const eventParam = searchParams.get("event");
+
+    if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+      const parsed = parseIsoDate(dateParam);
+      setViewYear(parsed.getFullYear());
+      setViewMonth(parsed.getMonth());
+      setSelectedDate(dateParam);
+    }
+
+    if (eventParam) {
+      const eventId = Number(eventParam);
+      if (Number.isFinite(eventId)) {
+        setSelectedEventId(eventId);
+      }
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadUpcoming() {
+      setUpcomingLoading(true);
+
+      try {
+        const response = await fetchUpcomingEvents({ limit: 5 });
+        if (!cancelled) {
+          setUpcomingEvents(response.events);
+        }
+      } catch {
+        if (!cancelled) {
+          setUpcomingEvents([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setUpcomingLoading(false);
+        }
+      }
+    }
+
+    void loadUpcoming();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -121,8 +174,11 @@ export function EventsPage() {
   }, [events, selectedDate]);
 
   useEffect(() => {
+    if (loading || !selectedDate) {
+      return;
+    }
+
     if (selectedDayEvents.length === 0) {
-      setSelectedEventId(null);
       return;
     }
 
@@ -132,7 +188,7 @@ export function EventsPage() {
     if (!stillVisible) {
       setSelectedEventId(selectedDayEvents[0].id);
     }
-  }, [selectedDayEvents, selectedEventId]);
+  }, [loading, selectedDate, selectedDayEvents, selectedEventId]);
 
   useEffect(() => {
     if (selectedEventId === null) {
@@ -189,8 +245,7 @@ export function EventsPage() {
   const applyRsvpToState = useCallback(
     (status: {
       event_id: number;
-      rsvp_count: number;
-      current_member_has_rsvped: boolean;
+      current_member_rsvp_status: RsvpStatus | null;
     }) => {
       setEventDetail((current) =>
         current ? applyRsvpStatus(current, status) : current,
@@ -202,77 +257,43 @@ export function EventsPage() {
     [],
   );
 
-  const handleRsvp = useCallback(async () => {
-    if (!eventDetail) {
-      return;
-    }
+  const handleRsvpStatusChange = useCallback(
+    async (nextStatus: RsvpStatus) => {
+      if (!eventDetail) {
+        return;
+      }
 
-    const snapshot = eventDetail;
-    const optimistic = {
-      event_id: eventDetail.id,
-      rsvp_count: eventDetail.rsvp_count + 1,
-      current_member_has_rsvped: true,
-    };
+      const snapshot = eventDetail;
+      const optimistic = {
+        event_id: eventDetail.id,
+        current_member_rsvp_status: nextStatus,
+      };
 
-    setRsvpLoading(true);
-    applyRsvpToState(optimistic);
+      setRsvpLoading(true);
+      applyRsvpToState(optimistic);
 
-    try {
-      const status = await rsvpToEvent(eventDetail.id);
-      applyRsvpToState(status);
-    } catch {
-      setEventDetail(snapshot);
-      setEvents((current) =>
-        current.map((event) =>
-          event.id === snapshot.id
-            ? {
-                ...event,
-                rsvp_count: snapshot.rsvp_count,
-                current_member_has_rsvped: snapshot.current_member_has_rsvped,
-              }
-            : event,
-        ),
-      );
-    } finally {
-      setRsvpLoading(false);
-    }
-  }, [applyRsvpToState, eventDetail]);
-
-  const handleCancelRsvp = useCallback(async () => {
-    if (!eventDetail) {
-      return;
-    }
-
-    const snapshot = eventDetail;
-    const optimistic = {
-      event_id: eventDetail.id,
-      rsvp_count: Math.max(0, eventDetail.rsvp_count - 1),
-      current_member_has_rsvped: false,
-    };
-
-    setRsvpLoading(true);
-    applyRsvpToState(optimistic);
-
-    try {
-      const status = await cancelEventRsvp(eventDetail.id);
-      applyRsvpToState(status);
-    } catch {
-      setEventDetail(snapshot);
-      setEvents((current) =>
-        current.map((event) =>
-          event.id === snapshot.id
-            ? {
-                ...event,
-                rsvp_count: snapshot.rsvp_count,
-                current_member_has_rsvped: snapshot.current_member_has_rsvped,
-              }
-            : event,
-        ),
-      );
-    } finally {
-      setRsvpLoading(false);
-    }
-  }, [applyRsvpToState, eventDetail]);
+      try {
+        const status = await updateEventRsvp(eventDetail.id, nextStatus);
+        applyRsvpToState(status);
+      } catch {
+        setEventDetail(snapshot);
+        setEvents((current) =>
+          current.map((event) =>
+            event.id === snapshot.id
+              ? {
+                  ...event,
+                  current_member_rsvp_status:
+                    snapshot.current_member_rsvp_status,
+                }
+              : event,
+          ),
+        );
+      } finally {
+        setRsvpLoading(false);
+      }
+    },
+    [applyRsvpToState, eventDetail],
+  );
 
   function handleMonthChange(year: number, month: number) {
     setViewYear(year);
@@ -339,9 +360,9 @@ export function EventsPage() {
       ) : null}
 
       {loading ? (
-        <p className="text-sm text-gray-500">Loading events…</p>
+        <p className="text-sm text-label">Loading events…</p>
       ) : null}
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="ds-field-error">{error}</p> : null}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <MonthlyCalendarGrid
@@ -368,17 +389,16 @@ export function EventsPage() {
           taskRefreshKey={taskRefreshKey}
           onChecklistTasksChange={handleChecklistTasksChange}
           rsvpLoading={rsvpLoading}
-          onRsvp={() => {
-            void handleRsvp();
-          }}
-          onCancelRsvp={() => {
-            void handleCancelRsvp();
+          onRsvpStatusChange={(status) => {
+            void handleRsvpStatusChange(status);
           }}
           canDeleteEvent={canDeleteEvent}
           deletingEvent={deletingEvent}
           onDeleteEvent={(eventId) => {
             void handleDeleteEvent(eventId);
           }}
+          upcomingEvents={upcomingEvents}
+          upcomingLoading={upcomingLoading}
         />
       </div>
     </div>

@@ -9,7 +9,7 @@ import {
 } from "../lib/ai-api";
 
 const inputClassName =
-  "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-primary shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
+  "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
 
 export function MeetingMinutesPage() {
   const [meetingTitle, setMeetingTitle] = useState("");
@@ -53,16 +53,16 @@ export function MeetingMinutesPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-3xl font-bold text-primary">Meeting Minutes</h1>
-        <p className="mt-2 max-w-2xl text-gray-600">
+        <h1 className="text-3xl font-light tracking-headline text-foreground">Meeting Minutes</h1>
+        <p className="mt-2 max-w-2xl text-label">
           Board meeting notes and attendance are recorded on each meeting event.
           Create a meeting on the{" "}
-          <Link to="/events/calendar" className="font-medium text-accent hover:underline">
+          <Link to="/events/calendar" className="ds-link">
             events calendar
           </Link>
           , then open it to take attendance and save minutes.
         </p>
-        <p className="mt-2 max-w-2xl text-sm text-gray-500">
+        <p className="mt-2 max-w-2xl text-sm text-label">
           You can still use this page to draft a one-off AI summary from pasted
           notes.
         </p>
@@ -71,12 +71,12 @@ export function MeetingMinutesPage() {
       <form
         onSubmit={handleSubmit}
         noValidate
-        className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6"
+        className="rounded-card bg-surface-card p-4 sm:p-6"
       >
         {serverError ? (
           <p
             role="alert"
-            className="mb-5 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+            className="mb-5 ds-alert-banner"
           >
             {serverError}
           </p>
@@ -86,10 +86,10 @@ export function MeetingMinutesPage() {
           <div>
             <label
               htmlFor="meeting-title"
-              className="block text-sm font-medium text-primary"
+              className="block text-sm font-medium text-foreground"
             >
               Meeting title{" "}
-              <span className="font-normal text-gray-500">(optional)</span>
+              <span className="font-normal text-label">(optional)</span>
             </label>
             <input
               id="meeting-title"
@@ -104,7 +104,7 @@ export function MeetingMinutesPage() {
           <div>
             <label
               htmlFor="meeting-notes"
-              className="block text-sm font-medium text-primary"
+              className="block text-sm font-medium text-foreground"
             >
               Raw notes
             </label>
@@ -121,7 +121,7 @@ export function MeetingMinutesPage() {
               className={inputClassName}
             />
             {notesError ? (
-              <p className="mt-1 text-sm text-red-600">{notesError}</p>
+              <p className="mt-1 ds-field-error">{notesError}</p>
             ) : null}
           </div>
         </div>
@@ -130,7 +130,7 @@ export function MeetingMinutesPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? "Summarizing…" : "Summarize minutes"}
           </button>

@@ -74,26 +74,26 @@ export function MeetingAttendancePanel({
   }
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section className="rounded-xl border border-surface-card bg-white p-6 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-primary">Board attendance</h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <h2 className="text-lg font-light tracking-subhead text-foreground">Board attendance</h2>
+          <p className="mt-1 text-sm text-label">
             Mark each board member as present, absent, or excused.
           </p>
         </div>
         <dl className="flex flex-wrap gap-3 text-sm">
-          <div className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-800">
-            <span className="font-semibold">{presentCount}</span> present
+          <div className="rounded-full bg-mint px-3 py-1 text-primary">
+            <span>{presentCount}</span> present
           </div>
-          <div className="rounded-full bg-red-50 px-3 py-1 text-red-800">
-            <span className="font-semibold">{absentCount}</span> absent
+          <div className="rounded-full bg-primary/10 px-3 py-1 text-primary">
+            <span>{absentCount}</span> absent
           </div>
-          <div className="rounded-full bg-amber-50 px-3 py-1 text-amber-900">
-            <span className="font-semibold">{excusedCount}</span> excused
+          <div className="rounded-full bg-surface-muted px-3 py-1 text-label">
+            <span>{excusedCount}</span> excused
           </div>
           {unmarkedCount > 0 ? (
-            <div className="rounded-full bg-gray-100 px-3 py-1 text-gray-700">
+            <div className="rounded-full bg-gray-100 px-3 py-1 text-foreground">
               <span className="font-semibold">{unmarkedCount}</span> unmarked
             </div>
           ) : null}
@@ -107,13 +107,13 @@ export function MeetingAttendancePanel({
             className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
           >
             <div className="min-w-0">
-              <p className="font-medium text-primary">{entry.full_name}</p>
+              <p className="font-medium text-foreground">{entry.full_name}</p>
               {isExclusiveMemberPosition(entry.position as MemberPosition) ? (
                 <PositionBadge
                   position={entry.position as Exclude<MemberPosition, "member">}
                 />
               ) : (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-label">
                   {formatPositionLabel(entry.position as MemberPosition)}
                 </p>
               )}
@@ -137,11 +137,11 @@ export function MeetingAttendancePanel({
                         "rounded-full px-3 py-1 text-xs font-medium transition-colors",
                         selected
                           ? option.value === "present"
-                            ? "bg-emerald-600 text-white"
+                            ? "bg-accent text-white"
                             : option.value === "absent"
-                              ? "bg-red-600 text-white"
-                              : "bg-amber-600 text-white"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200",
+                              ? "bg-primary text-white"
+                              : "bg-surface-card text-foreground ring-1 ring-gray-200"
+                          : "bg-gray-100 text-foreground hover:bg-gray-200",
                       ].join(" ")}
                     >
                       {option.label}
@@ -150,7 +150,7 @@ export function MeetingAttendancePanel({
                 })}
               </div>
             ) : (
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-label">
                 {entry.status
                   ? STATUS_OPTIONS.find((option) => option.value === entry.status)
                       ?.label ?? entry.status
@@ -167,7 +167,7 @@ export function MeetingAttendancePanel({
             type="button"
             disabled={!dirty || saving}
             onClick={() => void handleSave()}
-            className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? "Saving attendance…" : "Save attendance"}
           </button>

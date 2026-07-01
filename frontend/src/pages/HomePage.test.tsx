@@ -72,7 +72,7 @@ const mockedMeetings = vi.mocked(fetchMeetings);
 const sampleEvent = createMockEventResponse({
   id: 5,
   name: "Dashain Celebration",
-  rsvp_count: 12,
+  current_member_rsvp_status: "going",
 });
 
 afterEach(() => {
@@ -170,18 +170,24 @@ describe("HomePage", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: /Welcome back, Test User/,
+        name: /Welcome back,/,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Next event")).toBeInTheDocument();
-    expect(screen.getAllByText("Dashain Celebration").length).toBeGreaterThan(0);
+    expect(screen.getByText("Test User")).toHaveClass("text-foreground");
+    expect(await screen.findByText("Next event")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("link", { name: "Dashain Celebration" }),
+    ).toHaveAttribute("href", "/events/5");
     expect(screen.getByText("Your work")).toBeInTheDocument();
     expect(screen.getByText("Print flyers")).toBeInTheDocument();
+    expect(screen.getByText("Pending signups")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
     expect(
-      screen.getByText("2 member signups waiting for approval"),
+      screen.getByText("Member signups waiting for approval"),
     ).toBeInTheDocument();
+    expect(screen.getByText("Overdue tasks")).toBeInTheDocument();
     expect(
-      screen.getByText("1 assigned task overdue"),
+      screen.getByText("Assigned task past due"),
     ).toBeInTheDocument();
     expect(screen.getByText("More for your role")).toBeInTheDocument();
     expect(screen.getByText("March Board Meeting")).toBeInTheDocument();
@@ -189,6 +195,10 @@ describe("HomePage", () => {
       "href",
       "/events/meetings/9",
     );
+    expect(screen.getByRole("navigation", { name: "Shortcuts" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Events" }),
+    ).toHaveAttribute("href", "/events/calendar");
     expect(screen.getByRole("link", { name: /My tasks/i })).toHaveAttribute(
       "href",
       "/events/tasks",
@@ -220,7 +230,8 @@ describe("HomePage", () => {
       expect(screen.getByText("Assigned work")).toBeInTheDocument(),
     );
 
-    expect(mockedMeetings).not.toHaveBeenCalled();
+    expect(screen.getByText("No open tasks assigned")).toBeInTheDocument();
+    expect(screen.getByText("You're all caught up.")).toBeInTheDocument();
 
     expect(screen.queryByLabelText("Needs attention")).not.toBeInTheDocument();
   });

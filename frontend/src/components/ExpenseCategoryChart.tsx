@@ -33,7 +33,7 @@ export function ExpenseCategoryChart({
 }: ExpenseCategoryChartProps) {
   if (isLoading) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-white p-10 text-center text-gray-500">
+      <div className="rounded-card bg-surface-card p-10 text-center text-label">
         Loading expense categories...
       </div>
     );
@@ -43,7 +43,7 @@ export function ExpenseCategoryChart({
     return (
       <div
         role="alert"
-        className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-800"
+        className="ds-alert-banner p-6"
       >
         {errorMessage}
       </div>
@@ -51,16 +51,16 @@ export function ExpenseCategoryChart({
   }
 
   return (
-    <section className="rounded-lg border border-gray-200 bg-white p-6">
+    <section className="rounded-card bg-surface-card p-6">
       <div>
-        <h2 className="text-lg font-semibold text-primary">Spend by category</h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <h2 className="text-lg font-light tracking-subhead text-foreground">Spend by category</h2>
+        <p className="mt-1 text-sm text-label">
           Expense totals grouped by category for the selected semester.
         </p>
       </div>
 
       {categories.length === 0 ? (
-        <p className="mt-8 text-center text-sm text-gray-500">
+        <p className="mt-8 text-center text-sm text-label">
           No expenses logged for this period.
         </p>
       ) : (
@@ -76,21 +76,21 @@ export function ExpenseCategoryChart({
             return (
               <div key={item.category}>
                 <div className="mb-2 flex items-center justify-between gap-4 text-sm">
-                  <span className="font-medium text-primary">
+                  <span className="font-medium text-foreground">
                     {formatFinanceCategory(item.category)}
                   </span>
-                  <span className="text-red-700">
+                  <span className="text-foreground">
                     {formatCurrency(item.total_expense)}
                   </span>
                 </div>
                 <div className="h-4 rounded-full bg-gray-100">
                   <div
                     data-testid={`expense-bar-${item.category}`}
-                    className="h-4 rounded-full bg-red-500 transition-all"
+                    className="h-4 rounded-full bg-accent transition-all"
                     style={{ width: `${width}%` }}
                   />
                 </div>
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-label">
                   {item.entry_count} {item.entry_count === 1 ? "entry" : "entries"}
                 </p>
               </div>

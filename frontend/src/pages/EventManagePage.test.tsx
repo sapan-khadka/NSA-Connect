@@ -42,7 +42,7 @@ const mockEvent = {
     id: 1,
     name: "Dashain Celebration",
     budget: "500.00",
-    rsvp_count: 12,
+    current_member_rsvp_status: null,
   }),
   prep_tasks: [],
 };

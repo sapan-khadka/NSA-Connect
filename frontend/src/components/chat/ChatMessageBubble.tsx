@@ -28,11 +28,11 @@ export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
           "max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm",
           isUser
             ? "rounded-br-md bg-accent text-white"
-            : "rounded-bl-md border border-gray-200 bg-white text-primary",
+            : "rounded-bl-md border border-gray-200 bg-white text-foreground",
         ].join(" ")}
       >
         {message.statusLabel && !message.content ? (
-          <p className="text-gray-500">{message.statusLabel}</p>
+          <p className="text-label">{message.statusLabel}</p>
         ) : (
           <p className="whitespace-pre-wrap">
             {message.content || " "}
@@ -48,16 +48,16 @@ export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
 
         {!isUser && message.constitutionSources && message.constitutionSources.length > 0 ? (
           <div className="mt-3 border-t border-gray-100 pt-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <p className="text-xs font-semibold uppercase tracking-wide text-label">
               Constitution sources
             </p>
             <ul className="mt-2 space-y-2">
               {message.constitutionSources.map((source) => (
                 <li
                   key={source.chunk_id}
-                  className="rounded-md bg-gray-50 px-3 py-2 text-xs text-gray-600"
+                  className="rounded-md bg-gray-50 px-3 py-2 text-xs text-label"
                 >
-                  <span className="font-medium text-primary">
+                  <span className="font-medium text-foreground">
                     {source.section ?? `Chunk ${source.chunk_index + 1}`}
                   </span>
                   <p className="mt-1 line-clamp-3">{source.excerpt}</p>

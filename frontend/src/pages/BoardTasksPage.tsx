@@ -151,40 +151,40 @@ export function BoardTasksPage() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      <section className="rounded-2xl bg-surface-card p-6 shadow-sm">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div className="grid min-w-[14rem] grid-cols-3 gap-3">
             <div className="text-center">
-              <p className="text-2xl font-bold text-primary">{columnCounts.todo}</p>
-              <p className="text-xs uppercase tracking-wide text-gray-500">To do</p>
+              <p className="text-2xl font-light tracking-headline text-foreground">{columnCounts.todo}</p>
+              <p className="text-xs uppercase tracking-wide text-label">To do</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-amber-600">
+              <p className="text-2xl font-light tracking-headline text-accent">
                 {columnCounts.in_progress}
               </p>
-              <p className="text-xs uppercase tracking-wide text-gray-500">
+              <p className="text-xs uppercase tracking-wide text-label">
                 Active
               </p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-emerald-600">
+              <p className="text-2xl font-light tracking-headline text-accent">
                 {columnCounts.done}
               </p>
-              <p className="text-xs uppercase tracking-wide text-gray-500">Done</p>
+              <p className="text-xs uppercase tracking-wide text-label">Done</p>
             </div>
           </div>
         </div>
 
         <div className="mt-6">
-          <div className="mb-2 flex items-center justify-between text-sm text-gray-600">
+          <div className="mb-2 flex items-center justify-between text-sm text-label">
             <span>
               {progress.done} of {progress.total} assigned tasks complete
             </span>
-            <span className="font-semibold text-primary">{progress.percent}%</span>
+            <span className="font-semibold text-foreground">{progress.percent}%</span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-gray-100">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-accent via-orange-400 to-emerald-400 transition-all duration-700"
+              className="h-full rounded-full bg-accent transition-all duration-700"
               style={{ width: `${progress.percent}%` }}
             />
           </div>
@@ -194,14 +194,14 @@ export function BoardTasksPage() {
       {moveError ? (
         <div
           role="alert"
-          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+          className="ds-alert-banner"
         >
           {moveError}
         </div>
       ) : null}
 
       {loadState.status === "loading" ? (
-        <div className="rounded-2xl border border-gray-200 bg-white p-16 text-center text-gray-500 shadow-sm">
+        <div className="rounded-2xl bg-surface-card p-16 text-center text-label shadow-sm">
           Loading your tasks…
         </div>
       ) : null}
@@ -209,7 +209,7 @@ export function BoardTasksPage() {
       {loadState.status === "error" ? (
         <div
           role="alert"
-          className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center text-red-800"
+          className="ds-alert-banner p-8 text-center"
         >
           {loadState.message}
         </div>
@@ -217,10 +217,10 @@ export function BoardTasksPage() {
 
       {loadState.status === "ready" && tasks.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-16 text-center shadow-sm">
-          <p className="text-lg font-semibold text-primary">
+          <p className="text-lg font-light tracking-subhead text-foreground">
             No tasks assigned to you yet
           </p>
-          <p className="mt-2 text-gray-500">
+          <p className="mt-2 text-label">
             When a task manager assigns you work — for example the treasurer or
             event manager — it will show up here automatically.
           </p>

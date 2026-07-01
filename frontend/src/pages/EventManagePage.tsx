@@ -141,18 +141,18 @@ export function EventManagePage() {
   }, [canManageTasks]);
 
   if (isLoading) {
-    return <p className="text-sm text-gray-500">Loading event…</p>;
+    return <p className="text-sm text-label">Loading event…</p>;
   }
 
   if (error || !event) {
     return (
       <div className="space-y-4">
-        <Link to="/events/calendar" className="text-sm text-accent hover:underline">
+        <Link to="/events/calendar" className="ds-link">
           ← Back to calendar
         </Link>
         <div
           role="alert"
-          className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-800"
+          className="ds-alert-banner p-6"
         >
           {error ?? "Event not found."}
         </div>
@@ -167,22 +167,22 @@ export function EventManagePage() {
   return (
     <div className="space-y-8">
       <div>
-        <Link to="/events/calendar" className="text-sm text-accent hover:underline">
+        <Link to="/events/calendar" className="ds-link">
           ← Back to calendar
         </Link>
       </div>
 
-      <section className="rounded-xl border border-gray-200 bg-white p-8">
+      <section className="rounded-card bg-surface-card p-8">
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-3xl font-bold text-primary">{event.name}</h1>
+          <h1 className="text-3xl font-light tracking-headline text-foreground">{event.name}</h1>
           <span
             className={`rounded-full px-2 py-0.5 text-xs font-medium ${EVENT_TYPE_BADGE_CLASS[event.event_type]}`}
           >
             {EVENT_TYPE_LABELS[event.event_type]}
           </span>
         </div>
-        <p className="mt-2 text-gray-600">{formatEventDateTime(event.starts_at)}</p>
-        <p className="mt-4 text-sm leading-relaxed text-gray-700">
+        <p className="mt-2 text-label">{formatEventDateTime(event.starts_at)}</p>
+        <p className="mt-4 text-sm leading-relaxed text-foreground">
           {event.description}
         </p>
       </section>
@@ -194,16 +194,16 @@ export function EventManagePage() {
       ) : null}
 
       {canViewBoard ? (
-        <section className="rounded-lg border border-gray-200 bg-white p-6">
-          <h2 className="text-lg font-semibold text-primary">Task completion</h2>
-          <p className="mt-1 text-sm text-gray-500">
+        <section className="rounded-card bg-surface-card p-6">
+          <h2 className="text-lg font-light tracking-subhead text-foreground">Task completion</h2>
+          <p className="mt-1 text-sm text-label">
             Progress on assigned tasks for this event only.
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-4">
             <span className="rounded-full bg-accent/10 px-3 py-1 text-sm font-semibold text-accent">
               {taskStats.completed}/{taskStats.total} done ({taskStats.percent}%)
             </span>
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-label">
               {taskStats.inProgress} in progress
             </span>
           </div>
@@ -217,47 +217,47 @@ export function EventManagePage() {
       ) : null}
 
       {budget ? (
-        <section className="rounded-lg border border-gray-200 bg-white p-6">
-          <h2 className="text-lg font-semibold text-primary">Event budget</h2>
-          <p className="mt-1 text-sm text-gray-500">
+        <section className="rounded-card bg-surface-card p-6">
+          <h2 className="text-lg font-light tracking-subhead text-foreground">Event budget</h2>
+          <p className="mt-1 text-sm text-label">
             Planned budget vs logged income and expenses for this event.
           </p>
           <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <dt className="text-xs uppercase tracking-wide text-gray-500">
+              <dt className="text-xs uppercase tracking-wide text-label">
                 Planned
               </dt>
-              <dd className="mt-1 font-semibold text-primary">
+              <dd className="mt-1 font-semibold text-foreground">
                 {formatCurrency(budget.planned_budget)}
               </dd>
             </div>
             <div>
-              <dt className="text-xs uppercase tracking-wide text-gray-500">
+              <dt className="text-xs uppercase tracking-wide text-label">
                 Expenses
               </dt>
-              <dd className="mt-1 font-semibold text-primary">
+              <dd className="mt-1 font-semibold text-foreground">
                 {formatCurrency(budget.actual_expense)}
               </dd>
             </div>
             <div>
-              <dt className="text-xs uppercase tracking-wide text-gray-500">
+              <dt className="text-xs uppercase tracking-wide text-label">
                 Income
               </dt>
-              <dd className="mt-1 font-semibold text-primary">
+              <dd className="mt-1 font-semibold text-foreground">
                 {formatCurrency(budget.actual_income)}
               </dd>
             </div>
             <div>
-              <dt className="text-xs uppercase tracking-wide text-gray-500">
+              <dt className="text-xs uppercase tracking-wide text-label">
                 Remaining
               </dt>
-              <dd className="mt-1 font-semibold text-primary">
+              <dd className="mt-1 font-semibold text-foreground">
                 {formatBudgetRemaining(budget.budget_remaining)}
               </dd>
             </div>
           </dl>
           <div className="mt-4">
-            <div className="flex items-center justify-between text-xs text-gray-500">
+            <div className="flex items-center justify-between text-xs text-label">
               <span>Budget usage</span>
               <span>{usagePercent}%</span>
             </div>

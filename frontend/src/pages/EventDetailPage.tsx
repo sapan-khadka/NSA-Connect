@@ -1,0 +1,318 @@
+import { useCallback, useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+
+import { EventAttendeesPanel } from "../components/EventAttendeesPanel";
+import { EventFinanceCloseoutBanner } from "../components/EventFinanceCloseoutBanner";
+import { EventRsvpButton } from "../components/EventRsvpButton";
+import { EventTaskManager } from "../components/EventTaskManager";
+import { ArrowLink } from "../components/ui/ArrowLink";
+import { HomeCard } from "../components/ui/HomeCard";
+import { useAuth } from "../context/useAuth";
+import { getApiErrorMessage } from "../lib/auth-api";
+import { calendarDeepLink } from "../lib/event-links";
+import { EVENT_TYPE_BADGE_CLASS, EVENT_TYPE_LABELS } from "../lib/event-types";
+import { applyRsvpStatus, isEventUpcoming } from "../lib/event-rsvp";
+import {
+  fetchEvent,
+  fetchEventAttendees,
+  updateEventRsvp,
+  type EventAttendeesResponse,
+  type EventDetailResponse,
+  type RsvpStatus,
+} from "../lib/events-api";
+import { fetchAssignableMembers } from "../lib/members-api";
+import type { MemberResponse } from "../lib/auth-api";
+import {
+  formatCurrency,
+  formatEventDateTime,
+} from "../lib/format-datetime";
+import {
+  canManageEventTasks,
+  isRoleAtLeast,
+} from "../lib/roles";
+
+export function EventDetailPage() {
+  const { eventId } = useParams();
+  const numericEventId = Number(eventId);
+  const { member } = useAuth();
+
+  const [event, setEvent] = useState<EventDetailResponse | null>(null);
+  const [assignableMembers, setAssignableMembers] = useState<MemberResponse[]>(
+    [],
+  );
+  const [taskRefreshKey, setTaskRefreshKey] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [rsvpLoading, setRsvpLoading] = useState(false);
+  const [attendees, setAttendees] = useState<EventAttendeesResponse | null>(
+    null,
+  );
+  const [attendeesLoading, setAttendeesLoading] = useState(false);
+  const [attendeesError, setAttendeesError] = useState<string | null>(null);
+
+  const canViewBoard = member ? isRoleAtLeast(member.role, "board") : false;
+  const canManageTasks = member
+    ? canManageEventTasks(member.role, member.position)
+    : false;
+  const showTasksExpanded =
+    canManageTasks || canViewBoard || member?.role !== "general";
+
+  const loadEvent = useCallback(async () => {
+    if (!Number.isFinite(numericEventId)) {
+      setError("Invalid event.");
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const detail = await fetchEvent(numericEventId);
+      setEvent(detail);
+      setTaskRefreshKey((current) => current + 1);
+    } catch (caught) {
+      setError(getApiErrorMessage(caught));
+      setEvent(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [numericEventId]);
+
+  useEffect(() => {
+    void loadEvent();
+  }, [loadEvent]);
+
+  const loadAttendees = useCallback(async () => {
+    if (!Number.isFinite(numericEventId) || !canViewBoard) {
+      setAttendees(null);
+      return;
+    }
+
+    setAttendeesLoading(true);
+    setAttendeesError(null);
+
+    try {
+      const response = await fetchEventAttendees(numericEventId);
+      setAttendees(response);
+    } catch {
+      setAttendees(null);
+      setAttendeesError("Could not load attendee list.");
+    } finally {
+      setAttendeesLoading(false);
+    }
+  }, [canViewBoard, numericEventId]);
+
+  useEffect(() => {
+    void loadAttendees();
+  }, [loadAttendees]);
+
+  useEffect(() => {
+    if (!canManageTasks) {
+      setAssignableMembers([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadMembers() {
+      try {
+        const response = await fetchAssignableMembers();
+        if (!cancelled) {
+          setAssignableMembers(response.members);
+        }
+      } catch {
+        if (!cancelled) {
+          setAssignableMembers([]);
+        }
+      }
+    }
+
+    void loadMembers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canManageTasks]);
+
+  async function handleRsvpStatusChange(status: RsvpStatus) {
+    if (!event) {
+      return;
+    }
+
+    const snapshot = event;
+    setRsvpLoading(true);
+    setEvent((current) =>
+      current
+        ? { ...current, current_member_rsvp_status: status }
+        : current,
+    );
+
+    try {
+      const response = await updateEventRsvp(event.id, status);
+      setEvent((current) =>
+        current ? applyRsvpStatus(current, response) : current,
+      );
+      if (canViewBoard) {
+        void loadAttendees();
+      }
+    } catch {
+      setEvent(snapshot);
+    } finally {
+      setRsvpLoading(false);
+    }
+  }
+
+  if (isLoading) {
+    return <p className="text-sm text-label">Loading event…</p>;
+  }
+
+  if (error || !event) {
+    return (
+      <div className="space-y-4">
+        <Link to="/" className="ds-link">
+          ← Back to home
+        </Link>
+        <div
+          role="alert"
+          className="ds-alert-banner p-6"
+        >
+          {error ?? "Event not found."}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link to="/" className="ds-link">
+          ← Back to home
+        </Link>
+        <ArrowLink to={calendarDeepLink(event)}>View on calendar</ArrowLink>
+      </div>
+
+      <HomeCard>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-3xl font-light tracking-headline text-foreground">{event.name}</h1>
+              <span
+                className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${EVENT_TYPE_BADGE_CLASS[event.event_type]}`}
+              >
+                {EVENT_TYPE_LABELS[event.event_type]}
+              </span>
+            </div>
+            <p className="text-label">{formatEventDateTime(event.starts_at)}</p>
+            <p className="text-sm text-label">
+              <span className="font-medium text-foreground">Location: </span>
+              {event.location?.trim() ? event.location : "Not specified"}
+            </p>
+            {canViewBoard ? (
+              <p className="text-sm text-label">
+                <span className="font-medium text-foreground">
+                  Budget allocated:{" "}
+                </span>
+                {formatCurrency(event.budget)}
+              </p>
+            ) : null}
+          </div>
+          {canViewBoard ? (
+            <Link
+              to={`/events/${event.id}/manage`}
+              className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-foreground transition hover:border-accent hover:text-accent"
+            >
+              Manage event
+            </Link>
+          ) : null}
+        </div>
+
+        <p className="mt-5 text-sm leading-relaxed text-foreground">
+          {event.description}
+        </p>
+
+        <div className="mt-5">
+          <EventRsvpButton
+            currentStatus={event.current_member_rsvp_status}
+            canRsvp={isEventUpcoming(event.starts_at)}
+            loading={rsvpLoading}
+            onStatusChange={(status) => void handleRsvpStatusChange(status)}
+          />
+        </div>
+
+        {event.event_type === "meeting" && canViewBoard ? (
+          <div className="mt-4">
+            <ArrowLink to={`/events/meetings/${event.id}`}>
+              View meeting record
+            </ArrowLink>
+          </div>
+        ) : null}
+      </HomeCard>
+
+      {canViewBoard ? (
+        <HomeCard>
+          <EventAttendeesPanel
+            eventName={event.name}
+            data={attendees}
+            loading={attendeesLoading}
+            error={attendeesError}
+          />
+        </HomeCard>
+      ) : null}
+
+      <EventFinanceCloseoutBanner event={event} />
+
+      <HomeCard>
+        <h2 className="text-lg font-light tracking-subhead text-foreground">Event tasks</h2>
+        <p className="mt-1 text-sm text-label">
+          Prep checklist items and assigned work linked to this event.
+        </p>
+
+        {showTasksExpanded ? (
+          <div className="mt-4">
+            <EventTaskManager
+              key={`${event.id}-${taskRefreshKey}`}
+              eventId={event.id}
+              eventName={event.name}
+              member={member}
+              canManageSimple={canManageTasks}
+              canAssignChecklist={canViewBoard}
+              assignableMembers={assignableMembers}
+              fallbackChecklistTasks={event.prep_tasks}
+              onFallbackTasksChange={(tasks) =>
+                setEvent((current) =>
+                  current ? { ...current, prep_tasks: tasks } : current,
+                )
+              }
+              refreshKey={taskRefreshKey}
+            />
+          </div>
+        ) : (
+          <details className="mt-4 rounded-lg border border-gray-200 bg-surface-muted/40 p-3">
+            <summary className="cursor-pointer text-sm font-medium text-foreground">
+              Tasks & volunteer
+            </summary>
+            <div className="mt-3">
+              <EventTaskManager
+                key={`${event.id}-${taskRefreshKey}`}
+                eventId={event.id}
+                eventName={event.name}
+                member={member}
+                canManageSimple={canManageTasks}
+                canAssignChecklist={canViewBoard}
+                assignableMembers={assignableMembers}
+                fallbackChecklistTasks={event.prep_tasks}
+                onFallbackTasksChange={(tasks) =>
+                  setEvent((current) =>
+                    current ? { ...current, prep_tasks: tasks } : current,
+                  )
+                }
+                refreshKey={taskRefreshKey}
+              />
+            </div>
+          </details>
+        )}
+      </HomeCard>
+    </div>
+  );
+}

@@ -12,13 +12,13 @@ export function PrepProgressBar({
   variant = "default",
 }: PrepProgressBarProps) {
   const fillClass =
-    variant === "danger" ? "bg-red-500" : "bg-emerald-500";
+    variant === "danger" ? "bg-overdue" : "bg-accent";
 
   return (
     <div>
       <div className="flex items-center justify-between gap-3 text-sm">
-        <span className="font-medium text-primary">{label}</span>
-        <span className="text-gray-600">
+        <span className="font-medium text-foreground">{label}</span>
+        <span className="text-label">
           {progress.completed}/{progress.total} ({progress.percent}%)
         </span>
       </div>

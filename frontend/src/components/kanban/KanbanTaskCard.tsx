@@ -54,25 +54,22 @@ export function KanbanTaskCard({
       {...attributes}
       {...listeners}
       className={[
-        "group cursor-grab touch-none rounded-xl border bg-white/95 p-4 shadow-sm backdrop-blur-sm transition-all duration-200 active:cursor-grabbing",
-        showOverdue
-          ? "border-red-200/80 ring-1 ring-red-100"
-          : "border-white/80 ring-1 ring-gray-100",
+        "group cursor-grab touch-none rounded-kanban border border-kanban-border bg-white p-4 transition-all duration-200 active:cursor-grabbing",
         isActivelyDragging || isDragging
-          ? "z-50 scale-[1.03] rotate-1 shadow-2xl ring-2 ring-accent/40"
-          : "hover:-translate-y-0.5 hover:shadow-lg hover:ring-accent/20",
+          ? "z-50 scale-[1.02] shadow-md ring-2 ring-accent/30"
+          : "hover:shadow-sm",
       ].join(" ")}
     >
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-accent">
+          <p className="text-[11px] uppercase tracking-wider text-accent">
             {task.eventName}
           </p>
-          <h3 className="mt-1 line-clamp-2 text-sm font-semibold leading-snug text-primary">
+          <h3 className="mt-1 line-clamp-2 text-sm leading-snug text-foreground">
             {isSimpleKanbanTask(task) ? task.title : (task.group_name ?? task.title)}
           </h3>
           {isSimpleKanbanTask(task) && task.description ? (
-            <p className="mt-1 line-clamp-2 text-xs text-gray-500">
+            <p className="mt-1 line-clamp-2 text-xs text-label">
               {task.description}
             </p>
           ) : null}
@@ -82,28 +79,24 @@ export function KanbanTaskCard({
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
         {task.due_date ? (
-          <span className="rounded-full bg-primary/5 px-2.5 py-1 font-medium text-primary/80">
+          <span className="rounded-full bg-surface-muted px-2.5 py-1 text-label">
             Due {formatEventDateTime(task.due_date)}
           </span>
         ) : null}
         {showOverdue ? (
-          <span className="rounded-full bg-red-100 px-2.5 py-1 font-semibold text-red-700">
-            Overdue
-          </span>
+          <span className="ds-tag-overdue">Overdue</span>
         ) : null}
         {task.is_complete ? (
-          <span className="rounded-full bg-emerald-100 px-2.5 py-1 font-semibold text-emerald-700">
-            Complete
-          </span>
+          <span className="ds-tag">Complete</span>
         ) : null}
       </div>
 
-      <p className="mt-3 text-xs text-gray-500">
+      <p className="mt-3 text-xs text-label">
         {getKanbanTaskProgressLabel(task)}
       </p>
 
       {task.completion_note ? (
-        <p className="mt-2 line-clamp-2 rounded-md bg-gray-50 px-2 py-1 text-xs text-gray-600">
+        <p className="mt-2 line-clamp-2 rounded-md bg-surface-muted px-2 py-1 text-xs text-label">
           Note: {task.completion_note}
         </p>
       ) : null}
@@ -113,7 +106,7 @@ export function KanbanTaskCard({
           type="button"
           onPointerDown={(event) => event.stopPropagation()}
           onClick={() => onOpenTask(task.id)}
-          className="mt-3 w-full rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-primary transition hover:border-accent hover:bg-accent/5"
+          className="mt-3 w-full rounded-md border border-kanban-border px-3 py-1.5 text-xs text-foreground transition hover:border-accent hover:bg-accent/5"
         >
           Open details
         </button>
@@ -124,9 +117,9 @@ export function KanbanTaskCard({
           className={[
             "h-full rounded-full transition-all duration-500",
             task.is_complete
-              ? "bg-emerald-500"
+              ? "bg-mint"
               : showOverdue
-                ? "bg-red-500"
+                ? "bg-overdue"
                 : "bg-accent",
           ].join(" ")}
           style={{ width: `${percent}%` }}

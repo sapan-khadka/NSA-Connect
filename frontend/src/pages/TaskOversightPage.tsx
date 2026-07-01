@@ -21,9 +21,9 @@ const STATUS_LABELS: Record<EventTaskStatus, string> = {
 };
 
 const STATUS_BADGE_STYLES: Record<EventTaskStatus, string> = {
-  todo: "border-gray-200 bg-gray-50 text-gray-700",
-  in_progress: "border-amber-200 bg-amber-50 text-amber-800",
-  done: "border-green-200 bg-green-50 text-green-800",
+  todo: "bg-surface-muted text-foreground",
+  in_progress: "bg-surface-card text-label",
+  done: "bg-mint text-primary",
 };
 
 export function TaskOversightPage() {
@@ -75,7 +75,7 @@ export function TaskOversightPage() {
 
   if (!allowed) {
     return (
-      <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-amber-800">
+      <div className="ds-card p-6 text-foreground">
         Only the President or Vice President can view the task oversight
         dashboard.
       </div>
@@ -90,14 +90,14 @@ export function TaskOversightPage() {
   return (
     <div className="space-y-8">
       {overview ? (
-        <p className="text-sm font-medium text-primary">
+        <p className="text-sm font-medium text-foreground">
           {overview.completed_tasks} of {overview.total_tasks} tasks complete (
           {overallPercent}%)
         </p>
       ) : null}
 
       {isLoading ? (
-        <div className="rounded-lg border border-gray-200 bg-white p-10 text-center text-gray-500">
+        <div className="rounded-card bg-surface-card p-10 text-center text-label">
           Loading oversight…
         </div>
       ) : null}
@@ -105,7 +105,7 @@ export function TaskOversightPage() {
       {error ? (
         <div
           role="alert"
-          className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-800"
+          className="ds-alert-banner p-6"
         >
           {error}
         </div>
@@ -116,14 +116,14 @@ export function TaskOversightPage() {
           {overview.members.map((row) => (
             <section
               key={row.member_id}
-              className="rounded-lg border border-gray-200 bg-white p-6"
+              className="rounded-card bg-surface-card p-6"
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-semibold text-primary">
+                  <h2 className="text-lg font-light tracking-subhead text-foreground">
                     {row.full_name}
                   </h2>
-                  <p className="mt-1 text-sm text-gray-500">
+                  <p className="mt-1 text-sm text-label">
                     {formatRoleLabel(row.role as MemberRole)} ·{" "}
                     {formatPositionLabel(row.position)}
                   </p>
@@ -134,7 +134,7 @@ export function TaskOversightPage() {
               </div>
 
               {row.tasks.length === 0 ? (
-                <p className="mt-4 text-sm text-gray-500">No tasks assigned.</p>
+                <p className="mt-4 text-sm text-label">No tasks assigned.</p>
               ) : (
                 <ul className="mt-4 space-y-3">
                   {row.tasks.map((task) => (
@@ -144,10 +144,10 @@ export function TaskOversightPage() {
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div>
-                          <p className="text-sm font-medium text-primary">
+                          <p className="text-sm font-medium text-foreground">
                             {task.title}
                           </p>
-                          <p className="mt-1 text-xs text-gray-500">
+                          <p className="mt-1 text-xs text-label">
                             {task.event_name}
                           </p>
                         </div>
@@ -159,7 +159,7 @@ export function TaskOversightPage() {
                       </div>
 
                       {task.completion_note ? (
-                        <p className="mt-2 rounded bg-gray-50 px-2 py-1 text-xs text-gray-700">
+                        <p className="mt-2 rounded bg-gray-50 px-2 py-1 text-xs text-foreground">
                           Note: {task.completion_note}
                         </p>
                       ) : null}

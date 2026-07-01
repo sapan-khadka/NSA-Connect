@@ -16,7 +16,7 @@ type ProtectedRouteProps = {
 
 function AuthLoadingState() {
   return (
-    <div className="py-16 text-center text-gray-500">Checking your session...</div>
+    <div className="py-16 text-center text-label">Checking your session...</div>
   );
 }
 

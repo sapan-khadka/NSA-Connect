@@ -63,6 +63,39 @@ export function formatMonthYear(year: number, month: number): string {
   }).format(new Date(year, month, 1));
 }
 
+const monthLabelFormatter = new Intl.DateTimeFormat(undefined, {
+  month: "long",
+});
+
+/** Month index (0–11) › display label for pickers. */
+export function getMonthLabel(month: number): string {
+  return monthLabelFormatter.format(new Date(2024, month, 1));
+}
+
+export function getMonthOptions(): Array<{ value: number; label: string }> {
+  return Array.from({ length: 12 }, (_, month) => ({
+    value: month,
+    label: getMonthLabel(month),
+  }));
+}
+
+/** Years around today, always including the currently viewed year. */
+export function getCalendarYearOptions(
+  viewedYear: number,
+  today: Date = new Date(),
+): number[] {
+  const currentYear = today.getFullYear();
+  const minYear = Math.min(currentYear - 2, viewedYear);
+  const maxYear = Math.max(currentYear + 3, viewedYear);
+  const years: number[] = [];
+
+  for (let year = minYear; year <= maxYear; year += 1) {
+    years.push(year);
+  }
+
+  return years;
+}
+
 /**
  * Build a month grid aligned to Sunday-start weeks.
  * Leading/trailing cells belong to adjacent months so every row has 7 days.

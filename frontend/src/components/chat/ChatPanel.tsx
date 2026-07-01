@@ -187,7 +187,7 @@ export function ChatPanel() {
     );
 
   return (
-    <section className="flex h-[min(72vh,720px)] flex-col overflow-hidden rounded-xl border border-gray-200 bg-gray-50 shadow-sm">
+    <section className="flex h-[min(72vh,720px)] flex-col overflow-hidden rounded-card bg-surface-card shadow-sm">
       <div
         ref={scrollRef}
         className="flex-1 space-y-4 overflow-y-auto px-4 py-5 sm:px-6"
@@ -205,7 +205,7 @@ export function ChatPanel() {
       {error ? (
         <p
           role="alert"
-          className="border-t border-red-100 bg-red-50 px-4 py-2 text-sm text-red-700 sm:px-6"
+          className="border-t border-gray-200 bg-surface-card px-4 py-2 text-sm text-foreground sm:px-6"
         >
           {error}
         </p>
@@ -228,13 +228,13 @@ export function ChatPanel() {
             rows={2}
             placeholder="Ask about the constitution, upcoming events, or prep tasks…"
             disabled={isStreaming}
-            className="min-h-[3rem] flex-1 resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-primary outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:bg-gray-100"
+            className="min-h-[3rem] flex-1 resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:bg-gray-100"
           />
           {isStreaming ? (
             <button
               type="button"
               onClick={handleStop}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-primary transition hover:border-accent hover:bg-accent/5 sm:self-end"
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-foreground transition hover:border-accent hover:bg-accent/5 sm:self-end"
             >
               Stop
             </button>
@@ -242,7 +242,7 @@ export function ChatPanel() {
             <button
               type="submit"
               disabled={draft.trim().length === 0}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 sm:self-end"
+              className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60 sm:self-end"
             >
               Send
             </button>

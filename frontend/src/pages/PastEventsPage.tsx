@@ -7,6 +7,7 @@ import {
   getEventFinanceStatusClass,
   getEventFinanceStatusLabel,
 } from "../lib/event-finance";
+import { eventDetailPath } from "../lib/event-links";
 import { fetchPastEvents, type EventResponse } from "../lib/events-api";
 import { EVENT_TYPE_BADGE_CLASS, EVENT_TYPE_LABELS } from "../lib/event-types";
 import {
@@ -82,7 +83,7 @@ export function PastEventsPage() {
   return (
     <div className="space-y-8">
       {!isLoading && events.length > 0 ? (
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-label">
           {summary.grace > 0
             ? `${summary.grace} event${summary.grace === 1 ? "" : "s"} still in the close-out window. `
             : ""}
@@ -91,13 +92,13 @@ export function PastEventsPage() {
       ) : null}
 
       {isLoading ? (
-        <p className="text-sm text-gray-500">Loading past events…</p>
+        <p className="text-sm text-label">Loading past events…</p>
       ) : null}
 
       {error ? (
         <div
           role="alert"
-          className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-800"
+          className="ds-alert-banner p-6"
         >
           {error}
         </div>
@@ -105,13 +106,13 @@ export function PastEventsPage() {
 
       {!isLoading && !error && events.length === 0 ? (
         <section className="rounded-lg border border-dashed border-gray-300 bg-white p-10 text-center">
-          <p className="text-lg font-semibold text-primary">No past events yet</p>
-          <p className="mt-2 text-gray-500">
+          <p className="text-lg font-light tracking-subhead text-foreground">No past events yet</p>
+          <p className="mt-2 text-label">
             Completed events will appear here with their final budget summaries.
           </p>
           <Link
             to="/events/calendar"
-            className="mt-4 inline-block text-sm font-medium text-accent hover:underline"
+            className="mt-4 inline-block ds-link"
           >
             View calendar
           </Link>
@@ -126,13 +127,18 @@ export function PastEventsPage() {
             return (
               <article
                 key={event.id}
-                className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
+                className="rounded-card bg-surface-card p-6 shadow-sm"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-xl font-semibold text-primary">
-                        {event.name}
+                      <h2 className="text-xl font-semibold text-foreground">
+                        <Link
+                          to={eventDetailPath(event.id)}
+                          className="hover:text-accent"
+                        >
+                          {event.name}
+                        </Link>
                       </h2>
                       <span
                         className={`rounded-full px-2 py-0.5 text-xs font-medium ${EVENT_TYPE_BADGE_CLASS[event.event_type]}`}
@@ -145,7 +151,7 @@ export function PastEventsPage() {
                         {getEventFinanceStatusLabel(event)}
                       </span>
                     </div>
-                    <p className="mt-1 text-sm text-gray-600">
+                    <p className="mt-1 text-sm text-label">
                       {formatEventDateTime(event.starts_at)}
                     </p>
                   </div>
@@ -153,7 +159,7 @@ export function PastEventsPage() {
                   {canManage ? (
                     <Link
                       to={`/events/${event.id}/manage`}
-                      className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-primary transition hover:border-accent hover:bg-accent/5"
+                      className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-foreground transition hover:border-accent hover:bg-accent/5"
                     >
                       View close-out
                     </Link>
@@ -163,34 +169,34 @@ export function PastEventsPage() {
                 {budget ? (
                   <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <div>
-                      <dt className="text-xs uppercase tracking-wide text-gray-500">
+                      <dt className="text-xs uppercase tracking-wide text-label">
                         Planned
                       </dt>
-                      <dd className="mt-1 font-semibold text-primary">
+                      <dd className="mt-1 font-semibold text-foreground">
                         {formatCurrency(budget.planned_budget)}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-xs uppercase tracking-wide text-gray-500">
+                      <dt className="text-xs uppercase tracking-wide text-label">
                         Expenses
                       </dt>
-                      <dd className="mt-1 font-semibold text-primary">
+                      <dd className="mt-1 font-semibold text-foreground">
                         {formatCurrency(budget.actual_expense)}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-xs uppercase tracking-wide text-gray-500">
+                      <dt className="text-xs uppercase tracking-wide text-label">
                         Income
                       </dt>
-                      <dd className="mt-1 font-semibold text-primary">
+                      <dd className="mt-1 font-semibold text-foreground">
                         {formatCurrency(budget.actual_income)}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-xs uppercase tracking-wide text-gray-500">
+                      <dt className="text-xs uppercase tracking-wide text-label">
                         Remaining
                       </dt>
-                      <dd className="mt-1 font-semibold text-primary">
+                      <dd className="mt-1 font-semibold text-foreground">
                         {formatBudgetRemaining(budget.budget_remaining)}
                       </dd>
                     </div>

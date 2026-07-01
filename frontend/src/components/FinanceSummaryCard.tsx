@@ -27,39 +27,30 @@ function MetricCard({
 }: MetricCardProps) {
   const sectionClass =
     tone === "income"
-      ? "border-emerald-200 bg-emerald-50"
+      ? "bg-mint/30"
       : tone === "expense"
-        ? "border-red-200 bg-red-50"
-        : "border-gray-200 bg-white";
+        ? "bg-surface-muted"
+        : "bg-surface-card";
 
-  const titleClass =
-    tone === "income"
-      ? "text-emerald-800"
-      : tone === "expense"
-        ? "text-red-800"
-        : "text-gray-500";
+  const titleClass = "text-label";
 
   const amountClass =
-    tone === "income"
-      ? "text-emerald-800"
-      : tone === "expense"
-        ? "text-red-800"
-        : tone === "balance"
-          ? currencyBalanceToneClass(amount)
-          : "text-primary";
+    tone === "balance"
+      ? currencyBalanceToneClass(amount)
+      : "text-accent";
 
   return (
-    <section className={`rounded-lg border p-6 xl:col-span-1 ${sectionClass}`}>
-      <h2 className={`text-sm font-semibold uppercase tracking-wide ${titleClass}`}>
+    <section className={`rounded-card p-6 xl:col-span-1 ${sectionClass}`}>
+      <h2 className={`ds-section-label ${titleClass}`}>
         {title}
       </h2>
       <p
         data-testid={testId}
-        className={`mt-3 text-4xl font-bold ${amountClass}`}
+        className={`mt-3 text-4xl font-light tracking-headline ${amountClass}`}
       >
         {formatCurrency(amount)}
       </p>
-      {subtitle ? <p className="mt-2 text-sm text-gray-500">{subtitle}</p> : null}
+      {subtitle ? <p className="mt-2 text-sm text-label">{subtitle}</p> : null}
     </section>
   );
 }
@@ -71,7 +62,7 @@ export function FinanceSummaryCard({
 }: FinanceSummaryCardProps) {
   if (isLoading) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-white p-10 text-center text-gray-500">
+      <div className="rounded-card bg-surface-card p-10 text-center text-label">
         Loading finance summary...
       </div>
     );
@@ -81,7 +72,7 @@ export function FinanceSummaryCard({
     return (
       <div
         role="alert"
-        className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-800"
+        className="ds-alert-banner p-6"
       >
         {errorMessage}
       </div>
@@ -123,13 +114,13 @@ export function FinanceSummaryCard({
         />
       </div>
 
-      <section className="rounded-lg border border-gray-200 bg-white p-6">
+      <section className="rounded-card bg-surface-card p-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-primary">
+            <h2 className="text-lg font-light tracking-subhead text-foreground">
               Transaction breakdown
             </h2>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-label">
               {summary.entry_count} entries in this view
             </p>
           </div>
@@ -137,7 +128,7 @@ export function FinanceSummaryCard({
 
         <div className="mt-6 overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
-            <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+            <thead className="bg-gray-50 text-xs uppercase tracking-wide text-label">
               <tr>
                 <th className="px-4 py-3 font-semibold">Category</th>
                 <th className="px-4 py-3 font-semibold">Income</th>
@@ -148,13 +139,13 @@ export function FinanceSummaryCard({
             </thead>
             <tbody className="divide-y divide-gray-100">
               <tr>
-                <td className="px-4 py-3 font-medium text-primary">
+                <td className="px-4 py-3 font-medium text-foreground">
                   Pre-event / general
                 </td>
-                <td className="px-4 py-3 text-emerald-700">
+                <td className="px-4 py-3 text-accent">
                   {formatCurrency(summary.pre_event.income)}
                 </td>
-                <td className="px-4 py-3 text-red-700">
+                <td className="px-4 py-3 text-foreground">
                   {formatCurrency(summary.pre_event.expense)}
                 </td>
                 <td
@@ -162,19 +153,19 @@ export function FinanceSummaryCard({
                 >
                   {formatCurrency(summary.pre_event.balance)}
                 </td>
-                <td className="px-4 py-3 text-gray-600">
+                <td className="px-4 py-3 text-label">
                   {summary.pre_event.entry_count}
                 </td>
               </tr>
               {summary.events.map((eventSummary) => (
                 <tr key={eventSummary.event_id}>
-                  <td className="px-4 py-3 font-medium text-primary">
+                  <td className="px-4 py-3 font-medium text-foreground">
                     {eventSummary.event_name}
                   </td>
-                  <td className="px-4 py-3 text-emerald-700">
+                  <td className="px-4 py-3 text-accent">
                     {formatCurrency(eventSummary.income)}
                   </td>
-                  <td className="px-4 py-3 text-red-700">
+                  <td className="px-4 py-3 text-foreground">
                     {formatCurrency(eventSummary.expense)}
                   </td>
                   <td
@@ -182,7 +173,7 @@ export function FinanceSummaryCard({
                   >
                     {formatCurrency(eventSummary.balance)}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">
+                  <td className="px-4 py-3 text-label">
                     {eventSummary.entry_count}
                   </td>
                 </tr>
@@ -192,7 +183,7 @@ export function FinanceSummaryCard({
                   <tr>
                     <td
                       colSpan={5}
-                      className="px-4 py-8 text-center text-gray-500"
+                      className="px-4 py-8 text-center text-label"
                     >
                       No finance entries yet for this period.
                     </td>

@@ -18,6 +18,8 @@ export type PrepTaskResponse = {
   checklist_items: PrepTaskChecklistItemResponse[];
 };
 
+export type RsvpStatus = "going" | "maybe" | "not_going";
+
 export type EventResponse = {
   id: number;
   name: string;
@@ -25,10 +27,10 @@ export type EventResponse = {
   ends_at: string | null;
   event_type: EventType;
   description: string;
+  location: string | null;
   budget: string;
   created_by_id: number;
-  rsvp_count: number;
-  current_member_has_rsvped: boolean;
+  current_member_rsvp_status: RsvpStatus | null;
   finance_lock_at: string;
   is_finance_locked: boolean;
   is_past: boolean;
@@ -41,8 +43,21 @@ export type EventDetailResponse = EventResponse & {
 
 export type EventRsvpStatusResponse = {
   event_id: number;
-  rsvp_count: number;
-  current_member_has_rsvped: boolean;
+  current_member_rsvp_status: RsvpStatus | null;
+};
+
+export type EventRsvpAttendee = {
+  member_id: number;
+  full_name: string;
+  member_type: "Board member" | "General member";
+  rsvp_status: RsvpStatus;
+};
+
+export type EventAttendeesResponse = {
+  going_count: number;
+  maybe_count: number;
+  not_going_count: number;
+  attendees: EventRsvpAttendee[];
 };
 
 export type EventListResponse = {
@@ -119,6 +134,18 @@ export async function deleteEvent(eventId: number): Promise<void> {
   await api.delete(`/v1/events/${eventId}`);
 }
 
+export async function updateEventRsvp(
+  eventId: number,
+  status: RsvpStatus,
+): Promise<EventRsvpStatusResponse> {
+  const response = await api.put<EventRsvpStatusResponse>(
+    `/v1/events/${eventId}/rsvp`,
+    { status },
+  );
+  return response.data;
+}
+
+/** @deprecated Use updateEventRsvp(eventId, "going") */
 export async function rsvpToEvent(
   eventId: number,
 ): Promise<EventRsvpStatusResponse> {
@@ -128,11 +155,21 @@ export async function rsvpToEvent(
   return response.data;
 }
 
+/** @deprecated Prefer updateEventRsvp with a new status */
 export async function cancelEventRsvp(
   eventId: number,
 ): Promise<EventRsvpStatusResponse> {
   const response = await api.delete<EventRsvpStatusResponse>(
     `/v1/events/${eventId}/rsvp`,
+  );
+  return response.data;
+}
+
+export async function fetchEventAttendees(
+  eventId: number,
+): Promise<EventAttendeesResponse> {
+  const response = await api.get<EventAttendeesResponse>(
+    `/v1/events/${eventId}/rsvps`,
   );
   return response.data;
 }

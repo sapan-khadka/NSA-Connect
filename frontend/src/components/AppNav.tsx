@@ -58,8 +58,8 @@ export function NavDropdown({ label, items, isActive = false }: NavDropdownProps
         className={[
           "inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 transition-colors",
           isActive || open
-            ? "bg-accent/10 font-medium text-accent"
-            : "text-gray-600 hover:bg-gray-50 hover:text-primary",
+            ? "bg-surface-card font-medium text-accent"
+            : "text-label hover:bg-surface-card hover:text-accent",
         ].join(" ")}
       >
         {label}
@@ -72,7 +72,7 @@ export function NavDropdown({ label, items, isActive = false }: NavDropdownProps
         <div
           id={menuId}
           role="menu"
-          className="absolute left-0 top-full z-50 mt-1 min-w-[11rem] rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+          className="absolute left-0 top-full z-50 mt-1 min-w-[11rem] rounded-card bg-surface-card py-1 "
         >
           {items.map((item) => (
             <NavLink
@@ -85,7 +85,7 @@ export function NavDropdown({ label, items, isActive = false }: NavDropdownProps
                   "block px-3 py-2 text-sm transition-colors",
                   itemActive
                     ? "bg-accent/5 font-medium text-accent"
-                    : "text-gray-700 hover:bg-gray-50 hover:text-primary",
+                    : "text-foreground hover:bg-surface-card hover:text-accent",
                 ].join(" ")
               }
             >
@@ -152,18 +152,18 @@ export function AccountMenu({ fullName, onLogout }: AccountMenuProps) {
         aria-haspopup="menu"
         aria-controls={menuId}
         onClick={() => setOpen((current) => !current)}
-        className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-left transition-colors hover:border-accent/40 hover:bg-accent/5"
+        className="flex items-center gap-2 rounded-card bg-surface-card px-2.5 py-1.5 text-left transition-colors hover:border-accent/40 hover:bg-accent/5"
       >
         <span
           aria-hidden="true"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-bold text-accent"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-medium text-accent"
         >
           {getInitials(fullName)}
         </span>
-        <span className="hidden max-w-[10rem] truncate text-sm font-medium text-primary sm:block">
+        <span className="hidden max-w-[10rem] truncate text-sm font-medium text-foreground sm:block">
           {fullName}
         </span>
-        <span aria-hidden="true" className="text-[10px] text-gray-400">
+        <span aria-hidden="true" className="text-[10px] text-label">
           ▾
         </span>
       </button>
@@ -172,10 +172,10 @@ export function AccountMenu({ fullName, onLogout }: AccountMenuProps) {
         <div
           id={menuId}
           role="menu"
-          className="absolute right-0 top-full z-50 mt-2 w-56 rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+          className="absolute right-0 top-full z-50 mt-2 w-56 rounded-card bg-surface-card py-1 "
         >
           <div className="border-b border-gray-100 px-3 py-2 sm:hidden">
-            <p className="truncate text-sm font-medium text-primary">{fullName}</p>
+            <p className="truncate text-sm font-medium text-foreground">{fullName}</p>
           </div>
           <NavLink
             to="/profile"
@@ -186,7 +186,7 @@ export function AccountMenu({ fullName, onLogout }: AccountMenuProps) {
                 "block px-3 py-2 text-sm transition-colors",
                 isActive
                   ? "bg-accent/5 font-medium text-accent"
-                  : "text-gray-700 hover:bg-gray-50 hover:text-primary",
+                  : "text-foreground hover:bg-surface-card hover:text-accent",
               ].join(" ")
             }
           >
@@ -199,7 +199,7 @@ export function AccountMenu({ fullName, onLogout }: AccountMenuProps) {
               setOpen(false);
               onLogout();
             }}
-            className="block w-full px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 hover:text-primary"
+            className="block w-full px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-surface-card hover:text-accent"
           >
             Log out
           </button>
@@ -234,8 +234,8 @@ export function PrimaryNavLink({ to, end = false, children }: PrimaryNavLinkProp
           [
             "inline-block rounded-md px-2.5 py-1.5 transition-colors",
             isActive
-              ? "bg-accent/10 font-medium text-accent"
-              : "text-gray-600 hover:bg-gray-50 hover:text-primary",
+              ? "bg-surface-card font-medium text-accent"
+              : "text-label hover:bg-surface-card hover:text-accent",
           ].join(" ")
         }
       >

@@ -20,12 +20,12 @@ export function getEventFinanceStatusLabel(event: EventResponse): string {
 
 export function getEventFinanceStatusClass(event: EventResponse): string {
   if (event.is_finance_locked) {
-    return "border-gray-200 bg-gray-100 text-gray-700";
+    return "bg-surface-muted text-foreground";
   }
   if (event.is_finance_grace_period) {
-    return "border-amber-200 bg-amber-50 text-amber-800";
+    return "bg-urgent/30 text-foreground";
   }
-  return "border-emerald-200 bg-emerald-50 text-emerald-800";
+  return "bg-mint text-primary";
 }
 
 export function isEventFinanceEditable(event: Pick<EventResponse, "is_finance_locked">): boolean {

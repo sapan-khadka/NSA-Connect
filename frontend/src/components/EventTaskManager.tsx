@@ -41,9 +41,9 @@ const STATUS_LABELS: Record<EventTaskStatus, string> = {
 };
 
 const STATUS_BADGE_STYLES: Record<EventTaskStatus, string> = {
-  todo: "border-gray-200 bg-gray-50 text-gray-700",
-  in_progress: "border-amber-200 bg-amber-50 text-amber-800",
-  done: "border-green-200 bg-green-50 text-green-800",
+  todo: "bg-surface-muted text-foreground",
+  in_progress: "bg-surface-card text-label",
+  done: "bg-mint text-primary",
 };
 
 const STATUS_ORDER: EventTaskStatus[] = ["todo", "in_progress", "done"];
@@ -298,7 +298,7 @@ export function EventTaskManager({
 
   return (
     <section aria-label="Event tasks">
-      <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+      <h4 className="text-sm font-semibold uppercase tracking-wide text-label">
         Tasks
       </h4>
 
@@ -311,13 +311,13 @@ export function EventTaskManager({
       {canManageSimple ? (
         <form
           onSubmit={(event) => void handleCreate(event)}
-          className="mt-3 space-y-2 rounded-md border border-gray-200 bg-gray-50 p-3"
+          className="mt-3 space-y-2 rounded-card bg-surface-card p-3"
         >
-          <p className="text-xs font-medium text-gray-600">Add assigned task</p>
+          <p className="text-xs font-medium text-label">Add assigned task</p>
           <div>
             <label
               htmlFor="event-task-title"
-              className="block text-xs font-medium text-gray-600"
+              className="block text-xs font-medium text-label"
             >
               Title
             </label>
@@ -334,9 +334,9 @@ export function EventTaskManager({
           <div>
             <label
               htmlFor="event-task-description"
-              className="block text-xs font-medium text-gray-600"
+              className="block text-xs font-medium text-label"
             >
-              Details <span className="text-gray-400">(optional)</span>
+              Details <span className="text-label">(optional)</span>
             </label>
             <textarea
               id="event-task-description"
@@ -351,7 +351,7 @@ export function EventTaskManager({
             <div>
               <label
                 htmlFor="event-task-assignee"
-                className="block text-xs font-medium text-gray-600"
+                className="block text-xs font-medium text-label"
               >
                 Assign to
               </label>
@@ -373,9 +373,9 @@ export function EventTaskManager({
             <div>
               <label
                 htmlFor="event-task-due"
-                className="block text-xs font-medium text-gray-600"
+                className="block text-xs font-medium text-label"
               >
-                Due <span className="text-gray-400">(optional)</span>
+                Due <span className="text-label">(optional)</span>
               </label>
               <input
                 id="event-task-due"
@@ -390,7 +390,7 @@ export function EventTaskManager({
           <button
             type="submit"
             disabled={isSubmitting || title.trim().length === 0}
-            className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-full bg-primary px-3 py-1.5 text-sm font-medium text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? "Adding…" : "Add task"}
           </button>
@@ -398,15 +398,15 @@ export function EventTaskManager({
       ) : null}
 
       {actionError ? (
-        <p className="mt-2 text-sm text-red-600">{actionError}</p>
+        <p className="mt-2 ds-field-error">{actionError}</p>
       ) : null}
 
       {isLoading ? (
-        <p className="mt-3 text-sm text-gray-500">Loading tasks…</p>
+        <p className="mt-3 text-sm text-label">Loading tasks…</p>
       ) : loadError ? (
-        <p className="mt-3 text-sm text-red-600">{loadError}</p>
+        <p className="mt-3 ds-field-error">{loadError}</p>
       ) : tasks.length === 0 ? (
-        <p className="mt-3 text-sm text-gray-600">No tasks for this event yet.</p>
+        <p className="mt-3 text-sm text-label">No tasks for this event yet.</p>
       ) : (
         <div className="mt-3 space-y-3">
           {checklistTasks.map((task) => (
@@ -438,15 +438,15 @@ export function EventTaskManager({
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="text-sm font-medium text-primary">
+                        <p className="text-sm font-medium text-foreground">
                           {task.title}
                         </p>
                         {task.description ? (
-                          <p className="mt-1 text-sm text-gray-600">
+                          <p className="mt-1 text-sm text-label">
                             {task.description}
                           </p>
                         ) : null}
-                        <p className="mt-1 text-xs text-gray-500">
+                        <p className="mt-1 text-xs text-label">
                           {task.assignee_name
                             ? `Assigned to ${task.assignee_name}`
                             : "Unassigned"}
@@ -460,7 +460,7 @@ export function EventTaskManager({
                     </div>
 
                     {task.completion_note ? (
-                      <p className="mt-2 rounded bg-gray-50 px-2 py-1 text-xs text-gray-700">
+                      <p className="mt-2 rounded bg-gray-50 px-2 py-1 text-xs text-foreground">
                         Note: {task.completion_note}
                       </p>
                     ) : null}
@@ -481,7 +481,7 @@ export function EventTaskManager({
                     ) : null}
 
                     <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <label className="text-xs text-gray-500">
+                      <label className="text-xs text-label">
                         Status
                         <select
                           value={task.status}
@@ -507,7 +507,7 @@ export function EventTaskManager({
                           type="button"
                           disabled={isBusy}
                           onClick={() => void handleDelete(task)}
-                          className="rounded border border-red-200 px-2 py-1 text-xs font-medium text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-label transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           Delete
                         </button>

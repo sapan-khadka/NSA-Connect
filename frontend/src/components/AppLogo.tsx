@@ -67,7 +67,7 @@ export function AppLogo({
         <div className="min-w-0 text-left">
           <p
             className={[
-              "font-bold tracking-tight text-primary",
+              "font-light tracking-headline text-foreground",
               styles.title,
             ].join(" ")}
           >
@@ -76,7 +76,7 @@ export function AppLogo({
           {showTagline ? (
             <p
               className={[
-                "font-medium uppercase tracking-wide text-accent",
+                "ds-section-label",
                 styles.tagline,
               ].join(" ")}
             >
@@ -135,15 +135,15 @@ export function HomeHeroBrand({
       {showSilhouette ? <HimalayanSilhouette /> : null}
       <AppLogo size="lg" showWordmark={false} className="shrink-0" />
       <div className={centered ? "md:text-left" : "min-w-0 flex-1"}>
-        <p className="text-sm font-semibold uppercase tracking-wide text-accent">
+        <p className="ds-section-label">
           {eyebrow}
         </p>
-        <h1 className="mt-2 text-3xl font-bold text-primary md:text-4xl">
+        <h1 className="mt-2 text-3xl font-light tracking-headline text-foreground md:text-4xl">
           {title}
         </h1>
         <p
           className={[
-            "mt-3 max-w-2xl text-gray-600",
+            "mt-3 max-w-2xl text-label",
             centered ? "mx-auto md:mx-0" : "",
           ].join(" ")}
         >

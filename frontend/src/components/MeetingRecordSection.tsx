@@ -44,14 +44,14 @@ export function MeetingRecordSection({
   }, [loadDetail]);
 
   if (isLoading) {
-    return <p className="text-sm text-gray-500">Loading meeting record…</p>;
+    return <p className="text-sm text-label">Loading meeting record…</p>;
   }
 
   if (error || !detail) {
     return (
       <div
         role="alert"
-        className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+        className="ds-alert-banner"
       >
         {error ?? "Could not load meeting record."}
       </div>

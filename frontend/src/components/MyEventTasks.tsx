@@ -88,18 +88,18 @@ function MySimpleTaskCard({ task, onUpdated }: MySimpleTaskCardProps) {
     <li className="rounded-md border border-gray-200 px-4 py-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="font-medium text-primary">{task.title}</p>
-          <p className="mt-1 text-sm text-gray-600">{task.event_name}</p>
+          <p className="font-medium text-foreground">{task.title}</p>
+          <p className="mt-1 text-sm text-label">{task.event_name}</p>
           {task.description ? (
-            <p className="mt-1 text-sm text-gray-500">{task.description}</p>
+            <p className="mt-1 text-sm text-label">{task.description}</p>
           ) : null}
           {task.due_date ? (
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-label">
               Due {formatEventDateTime(task.due_date)}
             </p>
           ) : null}
         </div>
-        <label className="text-xs text-gray-500">
+        <label className="text-xs text-label">
           Status
           <select
             value={task.status}
@@ -121,9 +121,9 @@ function MySimpleTaskCard({ task, onUpdated }: MySimpleTaskCardProps) {
       <div className="mt-3">
         <label
           htmlFor={`task-note-${task.id}`}
-          className="block text-xs font-medium text-gray-600"
+          className="block text-xs font-medium text-label"
         >
-          Completion note <span className="text-gray-400">(optional)</span>
+          Completion note <span className="text-label">(optional)</span>
         </label>
         <textarea
           id={`task-note-${task.id}`}
@@ -136,7 +136,7 @@ function MySimpleTaskCard({ task, onUpdated }: MySimpleTaskCardProps) {
           type="button"
           disabled={busy}
           onClick={() => void handleSaveNote()}
-          className="mt-2 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-primary transition hover:border-accent hover:bg-accent/5 disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-2 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-foreground transition hover:border-accent hover:bg-accent/5 disabled:cursor-not-allowed disabled:opacity-60"
         >
           Save note
         </button>
@@ -145,9 +145,9 @@ function MySimpleTaskCard({ task, onUpdated }: MySimpleTaskCardProps) {
       <div className="mt-3">
         <label
           htmlFor={`task-photo-${task.id}`}
-          className="block text-xs font-medium text-gray-600"
+          className="block text-xs font-medium text-label"
         >
-          Completion photo <span className="text-gray-400">(optional)</span>
+          Completion photo <span className="text-label">(optional)</span>
         </label>
         {task.completion_photo_url ? (
           <a
@@ -170,11 +170,11 @@ function MySimpleTaskCard({ task, onUpdated }: MySimpleTaskCardProps) {
           accept="image/png,image/jpeg,image/webp"
           disabled={busy}
           onChange={(event) => void handlePhotoChange(event)}
-          className="mt-1 block w-full text-sm text-gray-600 file:mr-3 file:rounded-md file:border-0 file:bg-accent/10 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-accent hover:file:bg-accent/20 disabled:opacity-60"
+          className="mt-1 block w-full text-sm text-label file:mr-3 file:rounded-md file:border-0 file:bg-accent/10 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-accent hover:file:bg-accent/20 disabled:opacity-60"
         />
       </div>
 
-      {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="mt-2 ds-field-error">{error}</p> : null}
     </li>
   );
 }
@@ -252,11 +252,11 @@ export function MyEventTasks() {
   }
 
   return (
-    <section className="rounded-lg border border-gray-200 bg-white p-6">
+    <section className="rounded-card bg-surface-card p-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-primary">My tasks</h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <h2 className="text-lg font-light tracking-subhead text-foreground">My tasks</h2>
+          <p className="mt-1 text-sm text-label">
             Assigned checklist and action items. Update progress as you work.
           </p>
         </div>
@@ -266,11 +266,11 @@ export function MyEventTasks() {
       </div>
 
       {isLoading ? (
-        <p className="mt-6 text-sm text-gray-500">Loading your tasks…</p>
+        <p className="mt-6 text-sm text-label">Loading your tasks…</p>
       ) : error ? (
-        <p className="mt-6 text-sm text-red-600">{error}</p>
+        <p className="mt-6 ds-field-error">{error}</p>
       ) : tasks.length === 0 ? (
-        <p className="mt-6 rounded-md border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-500">
+        <p className="mt-6 rounded-md border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-label">
           No tasks assigned to you.
         </p>
       ) : (

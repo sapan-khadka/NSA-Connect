@@ -26,15 +26,15 @@ const SEASON_WINDOWS: SeasonWindow[] = [
     start: "03-01",
     end: "03-20",
     heroClass:
-      "nepali-hero bg-gradient-to-br from-sky-50 via-surface to-emerald-50",
-    accentBorder: "border-emerald-300/60",
+      "nepali-hero bg-gradient-to-br from-surface-muted via-surface to-mint/20",
+    accentBorder: "border-accent/40",
   },
   {
     variant: "dashain",
     start: "09-20",
     end: "10-15",
     heroClass:
-      "nepali-hero bg-gradient-to-br from-red-50 via-surface to-primary/5",
+      "nepali-hero bg-gradient-to-br from-surface-muted via-surface to-primary/5",
     accentBorder: "border-accent/40",
   },
   {
@@ -42,7 +42,7 @@ const SEASON_WINDOWS: SeasonWindow[] = [
     start: "10-25",
     end: "11-08",
     heroClass:
-      "nepali-hero bg-gradient-to-br from-amber-50 via-surface to-orange-50",
+      "nepali-hero bg-gradient-to-br from-surface-muted via-surface to-mint/30",
     accentBorder: "border-marigold/50",
   },
 ];

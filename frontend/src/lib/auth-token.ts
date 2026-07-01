@@ -1,7 +1,17 @@
 type UnauthorizedListener = () => void;
 
+const ACCESS_TOKEN_STORAGE_KEY = "nsa_connect_access_token";
+
 let accessToken: string | null = null;
 const unauthorizedListeners = new Set<UnauthorizedListener>();
+
+export function readStoredAccessToken(): string | null {
+  try {
+    return localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
 
 export function getAccessToken(): string | null {
   return accessToken;
@@ -9,6 +19,16 @@ export function getAccessToken(): string | null {
 
 export function syncAccessToken(token: string | null): void {
   accessToken = token;
+
+  try {
+    if (token) {
+      localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, token);
+    } else {
+      localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+    }
+  } catch {
+    // Storage may be unavailable in private browsing or restricted contexts.
+  }
 }
 
 export function registerUnauthorizedListener(listener: UnauthorizedListener): () => void {
@@ -17,7 +37,7 @@ export function registerUnauthorizedListener(listener: UnauthorizedListener): ()
 }
 
 export function notifyUnauthorized(): void {
-  accessToken = null;
+  syncAccessToken(null);
   for (const listener of unauthorizedListeners) {
     listener();
   }

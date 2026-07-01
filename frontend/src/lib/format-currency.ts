@@ -16,12 +16,12 @@ export function currencyBalanceToneClass(amount: string): string {
   const value = parseCurrencyAmount(amount);
 
   if (value > 0) {
-    return "text-emerald-700";
+    return "text-accent";
   }
 
   if (value < 0) {
-    return "text-red-700";
+    return "text-foreground";
   }
 
-  return "text-primary";
+  return "text-label";
 }

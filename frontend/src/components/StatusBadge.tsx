@@ -1,7 +1,7 @@
 const STATUS_STYLES: Record<string, string> = {
-  approved: "border-green-200 bg-green-50 text-green-800",
-  pending: "border-amber-200 bg-amber-50 text-amber-800",
-  rejected: "border-red-200 bg-red-50 text-red-800",
+  approved: "bg-mint text-primary",
+  pending: "bg-surface-muted text-label",
+  rejected: "bg-primary/10 text-primary",
 };
 
 type StatusBadgeProps = {
@@ -10,11 +10,11 @@ type StatusBadgeProps = {
 
 export function StatusBadge({ status }: StatusBadgeProps) {
   const style =
-    STATUS_STYLES[status] ?? "border-gray-200 bg-gray-50 text-gray-700";
+    STATUS_STYLES[status] ?? "bg-surface-muted text-foreground";
 
   return (
     <span
-      className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold capitalize ${style}`}
+      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs capitalize ${style}`}
     >
       {status}
     </span>

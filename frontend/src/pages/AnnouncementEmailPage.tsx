@@ -10,7 +10,7 @@ import { combineDateAndTime } from "../lib/event-form";
 import { EVENT_TYPE_LABELS, EVENT_TYPES, type EventType } from "../lib/event-types";
 
 const inputClassName =
-  "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-primary shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
+  "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
 
 export function AnnouncementEmailPage() {
   const [eventName, setEventName] = useState("");
@@ -66,8 +66,8 @@ export function AnnouncementEmailPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-3xl font-bold text-primary">Announcement Email</h1>
-        <p className="mt-2 max-w-2xl text-gray-600">
+        <h1 className="text-3xl font-light tracking-headline text-foreground">Announcement Email</h1>
+        <p className="mt-2 max-w-2xl text-label">
           Enter an event name and generate a ready-to-send member announcement
           with subject line and formatted body.
         </p>
@@ -76,12 +76,12 @@ export function AnnouncementEmailPage() {
       <form
         onSubmit={handleSubmit}
         noValidate
-        className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6"
+        className="rounded-card bg-surface-card p-4 sm:p-6"
       >
         {serverError ? (
           <p
             role="alert"
-            className="mb-5 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+            className="mb-5 ds-alert-banner"
           >
             {serverError}
           </p>
@@ -89,7 +89,7 @@ export function AnnouncementEmailPage() {
 
         <div className="space-y-5">
           <div>
-            <label htmlFor="event-name" className="block text-sm font-medium text-primary">
+            <label htmlFor="event-name" className="block text-sm font-medium text-foreground">
               Event name
             </label>
             <input
@@ -105,22 +105,22 @@ export function AnnouncementEmailPage() {
               className={inputClassName}
             />
             {eventNameError ? (
-              <p className="mt-1 text-sm text-red-600">{eventNameError}</p>
+              <p className="mt-1 ds-field-error">{eventNameError}</p>
             ) : null}
           </div>
 
-          <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
+          <div className="rounded-card bg-surface-card p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="text-sm font-semibold text-primary">Event details</h2>
-                <p className="mt-1 text-sm text-gray-600">
+                <h2 className="text-sm font-semibold text-foreground">Event details</h2>
+                <p className="mt-1 text-sm text-label">
                   Optional — improves date, location, and tone in the draft.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowDetails((current) => !current)}
-                className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:border-accent hover:bg-accent/5"
+                className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:border-accent hover:bg-accent/5"
               >
                 {showDetails ? "Hide details" : "Add details"}
               </button>
@@ -131,7 +131,7 @@ export function AnnouncementEmailPage() {
                 <div>
                   <label
                     htmlFor="announcement-event-type"
-                    className="block text-sm font-medium text-primary"
+                    className="block text-sm font-medium text-foreground"
                   >
                     Event type
                   </label>
@@ -155,7 +155,7 @@ export function AnnouncementEmailPage() {
                   <div>
                     <label
                       htmlFor="announcement-event-date"
-                      className="block text-sm font-medium text-primary"
+                      className="block text-sm font-medium text-foreground"
                     >
                       Date
                     </label>
@@ -170,7 +170,7 @@ export function AnnouncementEmailPage() {
                   <div>
                     <label
                       htmlFor="announcement-event-time"
-                      className="block text-sm font-medium text-primary"
+                      className="block text-sm font-medium text-foreground"
                     >
                       Start time
                     </label>
@@ -187,7 +187,7 @@ export function AnnouncementEmailPage() {
                 <div>
                   <label
                     htmlFor="announcement-location"
-                    className="block text-sm font-medium text-primary"
+                    className="block text-sm font-medium text-foreground"
                   >
                     Location
                   </label>
@@ -204,7 +204,7 @@ export function AnnouncementEmailPage() {
                 <div>
                   <label
                     htmlFor="announcement-description"
-                    className="block text-sm font-medium text-primary"
+                    className="block text-sm font-medium text-foreground"
                   >
                     Description
                   </label>
@@ -226,7 +226,7 @@ export function AnnouncementEmailPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? "Generating draft…" : "Generate email draft"}
           </button>

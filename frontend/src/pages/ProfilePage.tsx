@@ -18,7 +18,7 @@ import {
 const graduationYears = getGraduationYearOptions();
 
 const inputClassName =
-  "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-primary shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
+  "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
 
 function memberToFormValues(member: NonNullable<ReturnType<typeof useAuth>["member"]>): ProfileFormValues {
   return {
@@ -135,11 +135,11 @@ export function ProfilePage() {
   return (
     <div className="space-y-8">
       <section className="rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-8">
-        <p className="text-sm font-semibold uppercase tracking-wide text-accent">
+        <p className="ds-section-label">
           Account settings
         </p>
-        <h1 className="mt-2 text-3xl font-bold text-primary">{member.full_name}</h1>
-        <p className="mt-3 max-w-2xl text-gray-600">
+        <h1 className="mt-2 text-3xl font-light tracking-headline text-foreground">{member.full_name}</h1>
+        <p className="mt-3 max-w-2xl text-label">
           Manage your contact information, password, and membership details in
           one place.
         </p>
@@ -150,31 +150,31 @@ export function ProfilePage() {
       </section>
 
       {serverError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="ds-alert-banner">
           {serverError}
         </div>
       )}
 
       {successMessage && (
-        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="rounded-lg ds-card px-4 py-3 text-sm text-primary">
           {successMessage}
         </div>
       )}
 
       <form
         onSubmit={(event) => void handleSubmit(event)}
-        className="rounded-lg border border-gray-200 bg-white p-6"
+        className="rounded-card bg-surface-card p-6"
       >
         <div className="flex flex-wrap items-center gap-3 border-b border-gray-200 pb-4">
-          <h2 className="text-lg font-semibold text-primary">Contact info</h2>
+          <h2 className="text-lg font-light tracking-subhead text-foreground">Contact info</h2>
         </div>
 
         {isLoading ? (
-          <p className="mt-6 text-sm text-gray-500">Loading profile...</p>
+          <p className="mt-6 text-sm text-label">Loading profile...</p>
         ) : (
           <div className="mt-6 grid gap-6 md:grid-cols-2">
             <div>
-              <label htmlFor="full_name" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="full_name" className="block text-sm font-medium text-foreground">
                 Full name
               </label>
               <input
@@ -187,12 +187,12 @@ export function ProfilePage() {
                 className={inputClassName}
               />
               {fieldErrors.full_name && (
-                <p className="mt-1 text-sm text-red-600">{fieldErrors.full_name}</p>
+                <p className="mt-1 ds-field-error">{fieldErrors.full_name}</p>
               )}
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-medium text-foreground">
                 Email
               </label>
               <input
@@ -205,16 +205,16 @@ export function ProfilePage() {
                 onBlur={() => validateField("email")}
                 className={inputClassName}
               />
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-label">
                 Must be your @{SEMO_EMAIL_DOMAIN} address
               </p>
               {fieldErrors.email && (
-                <p className="mt-1 text-sm text-red-600">{fieldErrors.email}</p>
+                <p className="mt-1 ds-field-error">{fieldErrors.email}</p>
               )}
             </div>
 
             <div>
-              <label htmlFor="major" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="major" className="block text-sm font-medium text-foreground">
                 Major
               </label>
               <input
@@ -227,14 +227,14 @@ export function ProfilePage() {
                 className={inputClassName}
               />
               {fieldErrors.major && (
-                <p className="mt-1 text-sm text-red-600">{fieldErrors.major}</p>
+                <p className="mt-1 ds-field-error">{fieldErrors.major}</p>
               )}
             </div>
 
             <div>
               <label
                 htmlFor="graduation_year"
-                className="block text-sm font-medium text-gray-700"
+                className="block text-sm font-medium text-foreground"
               >
                 Graduation year
               </label>
@@ -255,15 +255,15 @@ export function ProfilePage() {
                 ))}
               </select>
               {fieldErrors.graduation_year && (
-                <p className="mt-1 text-sm text-red-600">
+                <p className="mt-1 ds-field-error">
                   {fieldErrors.graduation_year}
                 </p>
               )}
             </div>
 
             <div>
-              <p className="block text-sm font-medium text-gray-700">Student ID</p>
-              <p className="mt-1 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">
+              <p className="block text-sm font-medium text-foreground">Student ID</p>
+              <p className="mt-1 rounded-card bg-surface-card px-3 py-2 text-sm text-label">
                 {member.student_id}
               </p>
             </div>
@@ -274,7 +274,7 @@ export function ProfilePage() {
           <button
             type="submit"
             disabled={isLoading || isSubmitting}
-            className="rounded-md bg-accent px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? "Saving..." : "Save changes"}
           </button>

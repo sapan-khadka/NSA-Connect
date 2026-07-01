@@ -115,8 +115,9 @@ describe("protected route redirects", () => {
       expect(fetchPendingMembers).toHaveBeenCalled();
     });
     expect(
-      await screen.findByText("3 member signups waiting for approval"),
+      await screen.findByText("Pending signups"),
     ).toBeInTheDocument();
+    expect(await screen.findByText("3")).toBeInTheDocument();
   });
 
   it("blocks general members from /members", async () => {

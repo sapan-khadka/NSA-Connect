@@ -27,8 +27,8 @@ export function MeetingMinutesSummary({
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-primary">{title}</h2>
-          <p className="mt-1 text-sm text-gray-600">
+          <h2 className="text-lg font-light tracking-subhead text-foreground">{title}</h2>
+          <p className="mt-1 text-sm text-label">
             {result.key_decisions.length} decisions · {result.action_items.length}{" "}
             action items
           </p>
@@ -37,7 +37,7 @@ export function MeetingMinutesSummary({
           <button
             type="button"
             onClick={onClear}
-            className="text-sm font-medium text-gray-600 underline-offset-2 hover:text-primary hover:underline"
+            className="text-sm font-medium text-label underline-offset-2 hover:text-accent hover:underline"
           >
             Clear results
           </button>
@@ -46,10 +46,10 @@ export function MeetingMinutesSummary({
 
       <div className="mt-5 space-y-6">
         <article className="rounded-md border border-white/80 bg-white p-4">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-label">
             Overview
           </h3>
-          <div className="mt-3 space-y-3 text-sm leading-relaxed text-gray-700">
+          <div className="mt-3 space-y-3 text-sm leading-relaxed text-foreground">
             {summaryParagraphs.map((paragraph) => (
               <p key={paragraph}>{paragraph}</p>
             ))}
@@ -58,10 +58,10 @@ export function MeetingMinutesSummary({
 
         {result.key_decisions.length > 0 ? (
           <article className="rounded-md border border-white/80 bg-white p-4">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-label">
               Key decisions
             </h3>
-            <ul className="mt-3 space-y-2 text-sm text-gray-700">
+            <ul className="mt-3 space-y-2 text-sm text-foreground">
               {result.key_decisions.map((decision) => (
                 <li key={decision} className="flex gap-2">
                   <span aria-hidden="true" className="text-accent">
@@ -76,13 +76,13 @@ export function MeetingMinutesSummary({
 
         {result.action_items.length > 0 ? (
           <article className="rounded-md border border-white/80 bg-white p-4">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-label">
               Action items
             </h3>
             <div className="mt-3 overflow-x-auto">
-              <table className="min-w-full text-left text-sm text-gray-700">
+              <table className="min-w-full text-left text-sm text-foreground">
                 <thead>
-                  <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
+                  <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-label">
                     <th scope="col" className="px-2 py-2 font-semibold">
                       Task
                     </th>
@@ -100,7 +100,7 @@ export function MeetingMinutesSummary({
                       key={`${item.task}-${item.owner ?? ""}-${item.due ?? ""}`}
                       className="border-b border-gray-100 last:border-b-0"
                     >
-                      <td className="px-2 py-3 align-top font-medium text-primary">
+                      <td className="px-2 py-3 align-top font-medium text-foreground">
                         {item.task}
                       </td>
                       <td className="px-2 py-3 align-top">

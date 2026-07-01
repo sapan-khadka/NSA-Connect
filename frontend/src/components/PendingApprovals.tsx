@@ -86,10 +86,10 @@ export function PendingApprovals({
   }
 
   return (
-    <section className="rounded-lg border border-gray-200 bg-white">
+    <section className="rounded-card bg-surface-card">
       <div className="border-b border-gray-200 px-6 py-4">
-        <h2 className="text-lg font-semibold text-primary">Approval queue</h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <h2 className="text-lg font-light tracking-subhead text-foreground">Approval queue</h2>
+        <p className="mt-1 text-sm text-label">
           {isLoading
             ? "Loading pending members..."
             : pendingMembers.length === 0
@@ -99,15 +99,15 @@ export function PendingApprovals({
       </div>
 
       {error && (
-        <div className="mx-6 mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mx-6 mt-4 ds-alert-banner">
           {error}
         </div>
       )}
 
       {isLoading ? (
-        <p className="px-6 py-8 text-sm text-gray-500">Loading...</p>
+        <p className="px-6 py-8 text-sm text-label">Loading...</p>
       ) : pendingMembers.length === 0 ? (
-        <p className="px-6 py-8 text-sm text-gray-500">
+        <p className="px-6 py-8 text-sm text-label">
           No pending signups right now.
         </p>
       ) : (
@@ -127,7 +127,7 @@ export function PendingApprovals({
                           type="button"
                           onClick={() => void handleReject(member.id)}
                           disabled={isActing}
-                          className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           Reject
                         </button>
@@ -137,7 +137,7 @@ export function PendingApprovals({
                         onClick={() => void handleApprove(member.id)}
                         disabled={isActing}
                         aria-label={`Approve ${member.full_name}`}
-                        className="min-w-[7.5rem] rounded-md bg-accent px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="min-w-[7.5rem] rounded-full bg-primary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {isApproving ? "Approving..." : "Approve"}
                       </button>

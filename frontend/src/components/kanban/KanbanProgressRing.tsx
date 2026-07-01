@@ -5,9 +5,9 @@ type KanbanProgressRingProps = {
 };
 
 const TONE_STROKE = {
-  default: "#e94560",
-  danger: "#dc2626",
-  success: "#059669",
+  default: "#027C68",
+  danger: "#E8590C",
+  success: "#94DEA5",
 } as const;
 
 export function KanbanProgressRing({
@@ -60,7 +60,7 @@ export function KanbanProgressRingWithLabel({
   return (
     <div className="relative flex h-11 w-11 items-center justify-center">
       <KanbanProgressRing percent={percent} tone={tone} />
-      <span className="absolute text-[10px] font-bold text-primary">{percent}%</span>
+      <span className="absolute text-[10px] font-light tracking-headline text-foreground">{percent}%</span>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import {
   WEEKDAY_LABELS,
@@ -8,21 +8,23 @@ import {
   isToday,
   toLocalIsoDate,
 } from "../lib/calendar";
+import { CalendarCoverHeader } from "./CalendarCoverHeader";
+import { CalendarMonthYearPicker } from "./CalendarMonthYearPicker";
+import {
+  CalendarCategoryDots,
+  getDayCellSurfaceClass,
+  getMonthEnterAnimationClass,
+  type MonthEnterDirection,
+} from "./calendar-grid-utils";
 import { groupEventTypesByDate } from "../lib/calendar-events";
 import type { CalendarEventInput } from "../lib/calendar-events";
 import {
-  EVENT_TYPE_DAY_CLASS,
+  EVENT_TYPE_DOT_CLASS,
   EVENT_TYPE_LABELS,
   EVENT_TYPES,
-  getCalendarDayCellClass,
-  type EventType,
+  FESTIVAL_DOT_CLASS,
 } from "../lib/event-types";
-import {
-  FESTIVAL_DAY_CLASS,
-  getFestivalDayCellClass,
-  getFestivalsOnDate,
-  toBikramSambat,
-} from "../lib/nepali-calendar";
+import { getFestivalsOnDate, toBikramSambat } from "../lib/nepali-calendar";
 
 type MonthlyCalendarGridProps = {
   year: number;
@@ -33,28 +35,36 @@ type MonthlyCalendarGridProps = {
   events?: CalendarEventInput[];
 };
 
-function getDayCellBackgroundClass(
-  dayEventTypes: EventType[],
-  options: {
-    isSelected: boolean;
-    isCurrentMonth: boolean;
-    festivals: ReturnType<typeof getFestivalsOnDate>;
-  },
-): string {
-  const { isSelected, isCurrentMonth, festivals } = options;
-
-  if (dayEventTypes.length > 0) {
-    return getCalendarDayCellClass(dayEventTypes, {
-      isSelected,
-      isCurrentMonth,
-    });
-  }
-
-  if (festivals.length > 0) {
-    return getFestivalDayCellClass({ isSelected, isCurrentMonth });
-  }
-
-  return getCalendarDayCellClass([], { isSelected, isCurrentMonth });
+function CalendarLegendList({
+  className,
+  labelled = false,
+}: {
+  className: string;
+  labelled?: boolean;
+}) {
+  return (
+    <ul
+      className={className}
+      {...(labelled ? { "aria-label": "Event type legend" } : {})}
+    >
+      {EVENT_TYPES.map((eventType) => (
+        <li key={eventType} className="flex items-center gap-1.5">
+          <span
+            aria-hidden="true"
+            className={`h-2 w-2 rounded-full ${EVENT_TYPE_DOT_CLASS[eventType]}`}
+          />
+          {EVENT_TYPE_LABELS[eventType]}
+        </li>
+      ))}
+      <li className="flex items-center gap-1.5">
+        <span
+          aria-hidden="true"
+          className={`h-2 w-2 rounded-full ${FESTIVAL_DOT_CLASS}`}
+        />
+        Nepali festival
+      </li>
+    </ul>
+  );
 }
 
 export function MonthlyCalendarGrid({
@@ -65,25 +75,46 @@ export function MonthlyCalendarGrid({
   onSelectDate,
   events = [],
 }: MonthlyCalendarGridProps) {
+  const [monthEnterDirection, setMonthEnterDirection] =
+    useState<MonthEnterDirection>(null);
+
   const cells = useMemo(() => buildMonthGrid(year, month), [year, month]);
   const eventTypesByDate = useMemo(
     () => groupEventTypesByDate(events),
     [events],
   );
   const todayIso = toLocalIsoDate(new Date());
+  const monthAnimationClass = getMonthEnterAnimationClass(monthEnterDirection);
+
+  function goToMonthYear(nextYear: number, nextMonth: number) {
+    if (nextYear === year && nextMonth === month) {
+      return;
+    }
+
+    if (nextYear > year || (nextYear === year && nextMonth > month)) {
+      setMonthEnterDirection("next");
+    } else {
+      setMonthEnterDirection("prev");
+    }
+
+    onMonthChange(nextYear, nextMonth);
+  }
 
   function goToPreviousMonth() {
+    setMonthEnterDirection("prev");
     const next = addMonths(year, month, -1);
     onMonthChange(next.year, next.month);
   }
 
   function goToNextMonth() {
+    setMonthEnterDirection("next");
     const next = addMonths(year, month, 1);
     onMonthChange(next.year, next.month);
   }
 
   function goToToday() {
     const today = new Date();
+    setMonthEnterDirection(null);
     onMonthChange(today.getFullYear(), today.getMonth());
     onSelectDate?.(todayIso);
   }
@@ -91,26 +122,30 @@ export function MonthlyCalendarGrid({
   return (
     <section
       aria-label={formatMonthYear(year, month)}
-      className="rounded-lg border border-primary/10 bg-white p-4 sm:p-6"
+      className="rounded-lg border border-primary/10 bg-white p-3 dark:border-gray-800 dark:bg-gray-950 sm:p-4"
     >
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-primary">
-          {formatMonthYear(year, month)}
-        </h2>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="sr-only">{formatMonthYear(year, month)}</h2>
 
-        <div className="flex items-center gap-2">
+        <CalendarMonthYearPicker
+          year={year}
+          month={month}
+          onChange={goToMonthYear}
+        />
+
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             aria-label="Previous month"
             onClick={goToPreviousMonth}
-            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:border-primary/30 hover:bg-surface-muted"
+            className="rounded-lg border border-surface-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-surface-muted dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-800 sm:px-3 sm:py-1.5 sm:text-sm"
           >
             Prev
           </button>
           <button
             type="button"
             onClick={goToToday}
-            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:border-primary/30 hover:bg-surface-muted"
+            className="rounded-lg border border-surface-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-surface-muted dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-800 sm:px-3 sm:py-1.5 sm:text-sm"
           >
             Today
           </button>
@@ -118,64 +153,36 @@ export function MonthlyCalendarGrid({
             type="button"
             aria-label="Next month"
             onClick={goToNextMonth}
-            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:border-primary/30 hover:bg-surface-muted"
+            className="rounded-lg border border-surface-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-surface-muted dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-800 sm:px-3 sm:py-1.5 sm:text-sm"
           >
             Next
           </button>
         </div>
       </div>
 
-      <details className="mb-4 lg:hidden">
-        <summary className="cursor-pointer text-xs font-medium text-gray-600">
+      <details className="mb-2 lg:hidden">
+        <summary className="cursor-pointer text-[11px] font-medium text-label dark:text-label">
           Calendar legend
         </summary>
-        <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-xs text-gray-600">
-          {EVENT_TYPES.map((eventType) => (
-            <li key={eventType} className="flex items-center gap-1.5">
-              <span
-                aria-hidden="true"
-                className={`h-3 w-5 rounded-sm border border-black/5 ${EVENT_TYPE_DAY_CLASS[eventType]}`}
-              />
-              {EVENT_TYPE_LABELS[eventType]}
-            </li>
-          ))}
-          <li className="flex items-center gap-1.5">
-            <span
-              aria-hidden="true"
-              className={`h-3 w-5 rounded-sm border border-black/5 ${FESTIVAL_DAY_CLASS}`}
-            />
-            Nepali festival
-          </li>
-        </ul>
+        <CalendarLegendList className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1.5 text-[11px] text-label dark:text-label" />
       </details>
 
-      <ul
-        aria-label="Event type legend"
-        className="mb-4 hidden flex-wrap gap-x-4 gap-y-2 text-xs text-gray-600 lg:flex"
-      >
-        {EVENT_TYPES.map((eventType) => (
-          <li key={eventType} className="flex items-center gap-1.5">
-            <span
-              aria-hidden="true"
-              className={`h-3 w-5 rounded-sm border border-black/5 ${EVENT_TYPE_DAY_CLASS[eventType]}`}
-            />
-            {EVENT_TYPE_LABELS[eventType]}
-          </li>
-        ))}
-        <li className="flex items-center gap-1.5">
-          <span
-            aria-hidden="true"
-            className={`h-3 w-5 rounded-sm border border-black/5 ${FESTIVAL_DAY_CLASS}`}
-          />
-          Nepali festival
-        </li>
-      </ul>
+      <CalendarLegendList
+        labelled
+        className="mb-2 hidden flex-wrap gap-x-3 gap-y-1.5 text-[11px] text-label dark:text-label lg:flex"
+      />
 
-      <div className="grid grid-cols-7 gap-px overflow-hidden rounded-md border border-gray-200 bg-gray-200">
+      <CalendarCoverHeader year={year} month={month} />
+
+      <div
+        key={`${year}-${month}`}
+        className={["grid grid-cols-7 gap-1", monthAnimationClass].join(" ")}
+        data-testid="calendar-month-grid"
+      >
         {WEEKDAY_LABELS.map((label) => (
           <div
             key={label}
-            className="bg-gray-50 px-1 py-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-500"
+            className="px-0.5 py-1 text-center text-[10px] font-semibold uppercase tracking-wide text-label dark:text-label sm:text-[11px]"
           >
             {label}
           </div>
@@ -200,34 +207,28 @@ export function MonthlyCalendarGrid({
             <button
               key={cell.isoDate}
               type="button"
+              data-testid="calendar-day-cell"
               aria-label={`${cell.isoDate}${eventSummary}${festivalSummary}`}
               aria-pressed={isSelected}
               onClick={() => onSelectDate?.(cell.isoDate)}
-              className={[
-                "relative flex min-h-16 flex-col items-center justify-center gap-0.5 px-1 py-2 text-sm transition-colors sm:min-h-20",
-                cell.isCurrentMonth ? "text-primary" : "text-gray-400",
-                getDayCellBackgroundClass(dayEventTypes, {
-                  isSelected,
-                  isCurrentMonth: cell.isCurrentMonth,
-                  festivals,
-                }),
-                cellIsToday && !isSelected ? "font-bold text-accent" : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
+              className={getDayCellSurfaceClass({
+                isCurrentMonth: cell.isCurrentMonth,
+                isSelected,
+                isToday: cellIsToday,
+              })}
             >
-              <span>{cell.day}</span>
+              <span className={cellIsToday && !isSelected ? "font-semibold" : ""}>
+                {cell.day}
+              </span>
               {bsLabel ? (
-                <span className="text-[10px] leading-none text-gray-400">
+                <span className="text-[9px] leading-none text-label dark:text-label">
                   {bsLabel}
                 </span>
               ) : null}
-              {festivals.length > 0 && dayEventTypes.length === 0 ? (
-                <span
-                  aria-hidden="true"
-                  className="absolute bottom-1.5 h-1.5 w-1.5 rounded-full bg-accent"
-                />
-              ) : null}
+              <CalendarCategoryDots
+                eventTypes={dayEventTypes}
+                hasFestival={festivals.length > 0}
+              />
             </button>
           );
         })}

@@ -253,16 +253,16 @@ export function FinancePage() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-xl border border-accent/20 bg-gradient-to-br from-accent/5 to-white p-8">
+      <section className="rounded-card bg-surface-card p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-accent">
+            <p className="ds-section-label">
               Finance
             </p>
-            <h1 className="mt-2 text-3xl font-bold text-primary">
+            <h1 className="mt-2 text-3xl font-light tracking-headline text-foreground">
               {canViewTreasury ? "Treasury overview" : "Event budget tracking"}
             </h1>
-            <p className="mt-3 max-w-2xl text-gray-600">
+            <p className="mt-3 max-w-2xl text-label">
               {canViewTreasury
                 ? "Track NSA income, expenses, running balance, and how each event compares to its planned budget."
                 : "Review how each event is tracking against its planned budget and logged spending."}
@@ -272,22 +272,22 @@ export function FinancePage() {
         </div>
       </section>
 
-      <section className="rounded-lg border border-gray-200 bg-white p-6">
+      <section className="rounded-card bg-surface-card p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-primary">Semester filter</h2>
-            <p className="mt-1 text-sm text-gray-500">
+            <h2 className="text-lg font-light tracking-subhead text-foreground">Semester filter</h2>
+            <p className="mt-1 text-sm text-label">
               Applies to spend by category, event budgets
               {canViewTreasury ? ", and treasury totals" : ""}.
             </p>
           </div>
-          <label className="flex flex-col gap-1 text-sm text-gray-600">
+          <label className="flex flex-col gap-1 text-sm text-label">
             <span className="font-medium">Semester</span>
             <select
               aria-label="Semester"
               value={semester}
               onChange={(event) => setSemester(event.target.value)}
-              className="rounded-md border border-gray-300 px-3 py-2 text-primary"
+              className="rounded-md border border-gray-300 px-3 py-2 text-foreground"
             >
               <option value="all">All time</option>
               {semesterOptions.map((option) => (

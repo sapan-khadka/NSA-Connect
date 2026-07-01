@@ -37,7 +37,7 @@ export function MembersPage() {
         description="Approve new signups, browse the directory, and manage membership."
       />
 
-      <div className="flex gap-2 border-b border-slate-200">
+      <div className="flex gap-2 border-b border-surface-card">
         {(Object.keys(TAB_LABELS) as MembersTab[]).map((tab) => {
           const isActive = activeTab === tab;
 
@@ -50,7 +50,7 @@ export function MembersPage() {
                 "border-b-2 px-4 py-2 text-sm font-medium transition-colors",
                 isActive
                   ? "border-accent text-accent"
-                  : "border-transparent text-gray-500 hover:text-primary",
+                  : "border-transparent text-label hover:text-accent",
               ].join(" ")}
             >
               {TAB_LABELS[tab]}

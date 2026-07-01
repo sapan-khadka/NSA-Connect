@@ -6,7 +6,7 @@ import type { MeetingMinutes } from "../lib/meetings-api";
 import type { SummarizeMinutesResponse } from "../lib/ai-api";
 
 const inputClassName =
-  "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-primary shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
+  "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
 
 type MeetingMinutesEditorProps = {
   eventName: string;
@@ -33,14 +33,14 @@ function MinutesStatusChip({
 
   if (draftSaved) {
     return (
-      <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-800">
+      <span className="rounded-full bg-surface-muted px-2.5 py-0.5 text-xs text-foreground">
         Draft saved
       </span>
     );
   }
 
   return (
-    <span className="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+    <span className="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-0.5 text-xs font-medium text-label">
       Not published yet
     </span>
   );
@@ -55,7 +55,7 @@ function OfficialMinutesPlaceholder({
 }) {
   return (
     <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-5">
-      <p className="text-sm text-gray-600">
+      <p className="text-sm text-label">
         {canManage
           ? draftSaved
             ? "Your draft is saved. When the meeting ends, summarize and publish official minutes for the board."
@@ -138,12 +138,12 @@ export function MeetingMinutesEditor({
     <div className="space-y-6">
       <section
         aria-label="Official minutes"
-        className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+        className="rounded-xl border border-surface-card bg-white p-6 shadow-sm"
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold text-primary">Official minutes</h2>
-            <p className="mt-1 text-sm text-gray-500">
+            <h2 className="text-lg font-light tracking-subhead text-foreground">Official minutes</h2>
+            <p className="mt-1 text-sm text-label">
               Board-facing record for {eventName}. Published after the secretary
               summarizes draft notes.
             </p>
@@ -168,7 +168,7 @@ export function MeetingMinutesEditor({
         {hasPublishedMinutes &&
         savedMinutes.updated_by_name &&
         savedMinutes.updated_at ? (
-          <p className="mt-4 text-xs text-gray-500">
+          <p className="mt-4 text-xs text-label">
             Published by {savedMinutes.updated_by_name} on{" "}
             {new Date(savedMinutes.updated_at).toLocaleString()}
           </p>
@@ -178,13 +178,13 @@ export function MeetingMinutesEditor({
       {canManage ? (
         <section
           aria-label="Secretary draft notes"
-          className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+          className="rounded-xl border border-surface-card bg-white p-6 shadow-sm"
         >
           <div>
-            <h2 className="text-lg font-semibold text-primary">
+            <h2 className="text-lg font-light tracking-subhead text-foreground">
               Secretary draft notes
             </h2>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-label">
               Scratchpad for {eventName}. Save drafts during the meeting, then
               publish official minutes when you are done.
             </p>
@@ -194,7 +194,7 @@ export function MeetingMinutesEditor({
             {serverError ? (
               <p
                 role="alert"
-                className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+                className="ds-alert-banner"
               >
                 {serverError}
               </p>
@@ -203,7 +203,7 @@ export function MeetingMinutesEditor({
             {saveSuccess ? (
               <p
                 role="status"
-                className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
+                className="ds-alert-banner"
               >
                 {saveSuccess}
               </p>
@@ -212,7 +212,7 @@ export function MeetingMinutesEditor({
             <div>
               <label
                 htmlFor="meeting-draft-notes"
-                className="block text-sm font-medium text-primary"
+                className="block text-sm font-medium text-foreground"
               >
                 Draft notes
               </label>
@@ -230,7 +230,7 @@ export function MeetingMinutesEditor({
                 className={inputClassName}
               />
               {notesError ? (
-                <p className="mt-1 text-sm text-red-600">{notesError}</p>
+                <p className="mt-1 ds-field-error">{notesError}</p>
               ) : null}
             </div>
 
@@ -238,7 +238,7 @@ export function MeetingMinutesEditor({
               <button
                 type="submit"
                 disabled={isSaving || isSummarizing}
-                className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-primary transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-foreground transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSaving ? "Saving…" : "Save draft"}
               </button>
@@ -246,7 +246,7 @@ export function MeetingMinutesEditor({
                 type="button"
                 disabled={isSaving || isSummarizing}
                 onClick={() => void handleSummarize()}
-                className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSummarizing
                   ? "Publishing…"
@@ -261,23 +261,23 @@ export function MeetingMinutesEditor({
           !hasPublishedMinutes &&
           savedMinutes.updated_by_name &&
           savedMinutes.updated_at ? (
-            <p className="mt-4 text-xs text-gray-500">
+            <p className="mt-4 text-xs text-label">
               Draft last saved by {savedMinutes.updated_by_name} on{" "}
               {new Date(savedMinutes.updated_at).toLocaleString()}
             </p>
           ) : null}
         </section>
       ) : hasDraft ? (
-        <details className="rounded-xl border border-slate-200 bg-white shadow-sm">
-          <summary className="cursor-pointer px-6 py-4 text-sm font-medium text-primary">
+        <details className="rounded-xl border border-surface-card bg-white shadow-sm">
+          <summary className="cursor-pointer px-6 py-4 text-sm font-medium text-foreground">
             View secretary&apos;s draft notes
           </summary>
           <div className="border-t border-gray-100 px-6 py-4">
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
               {savedMinutes.raw_notes}
             </p>
             {savedMinutes.updated_by_name && savedMinutes.updated_at ? (
-              <p className="mt-4 text-xs text-gray-500">
+              <p className="mt-4 text-xs text-label">
                 Draft saved by {savedMinutes.updated_by_name} on{" "}
                 {new Date(savedMinutes.updated_at).toLocaleString()}
               </p>

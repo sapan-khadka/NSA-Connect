@@ -44,7 +44,7 @@ export function RolePromotionSelect({
           }
         }}
         aria-label={`Change role for ${member.full_name}`}
-        className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm text-primary focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-60"
+        className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {PROMOTABLE_BOARD_ROLES.map((role) => (
           <option key={role} value={role}>

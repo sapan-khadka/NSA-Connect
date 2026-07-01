@@ -6,11 +6,14 @@ from app.core.dependencies import get_current_member, require_board
 from app.models.event import EventType
 from app.models.member import Member
 from app.schemas.event import (
+    EventAttendeesResponse,
     EventCreateRequest,
     EventDetailResponse,
     EventListResponse,
     EventResponse,
+    EventRsvpAttendeeResponse,
     EventRsvpStatusResponse,
+    EventRsvpUpdateRequest,
 )
 from app.schemas.preptask import PrepTaskCreateRequest, PrepTaskResponse
 from app.schemas.volunteer import VolunteerSlotCreateRequest, VolunteerSlotResponse
@@ -34,8 +37,10 @@ from app.services.rsvp_service import (
     EventNotUpcomingError,
     NotRsvpedError,
     cancel_event_rsvp,
-    get_event_rsvp_status,
+    get_member_rsvp_status,
+    list_event_attendees,
     rsvp_to_event,
+    set_event_rsvp_status,
 )
 from app.services.volunteer_service import create_volunteer_slot_for_event
 from app.api.v1.event_meetings import router as event_meetings_router
@@ -52,11 +57,10 @@ def _build_event_response(
     *,
     member_id: int,
 ) -> EventResponse:
-    rsvp_count, has_rsvped = get_event_rsvp_status(db, event.id, member_id)
+    current_status = get_member_rsvp_status(db, event.id, member_id)
     return EventResponse.from_event(
         event,
-        rsvp_count=rsvp_count,
-        current_member_has_rsvped=has_rsvped,
+        current_member_rsvp_status=current_status,
     )
 
 
@@ -66,11 +70,10 @@ def _build_event_detail_response(
     *,
     member_id: int,
 ) -> EventDetailResponse:
-    rsvp_count, has_rsvped = get_event_rsvp_status(db, event.id, member_id)
+    current_status = get_member_rsvp_status(db, event.id, member_id)
     return EventDetailResponse.from_event(
         event,
-        rsvp_count=rsvp_count,
-        current_member_has_rsvped=has_rsvped,
+        current_member_rsvp_status=current_status,
     )
 
 
@@ -152,6 +155,37 @@ def get_event_endpoint(
     )
 
 
+@router.put("/{event_id}/rsvp", response_model=EventRsvpStatusResponse)
+def update_event_rsvp_endpoint(
+    event_id: int,
+    data: EventRsvpUpdateRequest,
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    try:
+        rsvp_status = set_event_rsvp_status(
+            db,
+            event_id,
+            current_member.id,
+            data.status,
+        )
+    except EventNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        ) from None
+    except EventNotUpcomingError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Cannot RSVP to a past event",
+        ) from None
+
+    return EventRsvpStatusResponse(
+        event_id=event_id,
+        current_member_rsvp_status=rsvp_status,
+    )
+
+
 @router.post(
     "/{event_id}/rsvp",
     response_model=EventRsvpStatusResponse,
@@ -163,7 +197,7 @@ def rsvp_to_event_endpoint(
     db: Session = Depends(get_db),
 ):
     try:
-        rsvp_count, has_rsvped = rsvp_to_event(db, event_id, current_member.id)
+        rsvp_status = rsvp_to_event(db, event_id, current_member.id)
     except EventNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -182,8 +216,7 @@ def rsvp_to_event_endpoint(
 
     return EventRsvpStatusResponse(
         event_id=event_id,
-        rsvp_count=rsvp_count,
-        current_member_has_rsvped=has_rsvped,
+        current_member_rsvp_status=rsvp_status,
     )
 
 
@@ -194,7 +227,7 @@ def cancel_event_rsvp_endpoint(
     db: Session = Depends(get_db),
 ):
     try:
-        rsvp_count, has_rsvped = cancel_event_rsvp(db, event_id, current_member.id)
+        cancel_event_rsvp(db, event_id, current_member.id)
     except EventNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -208,8 +241,37 @@ def cancel_event_rsvp_endpoint(
 
     return EventRsvpStatusResponse(
         event_id=event_id,
-        rsvp_count=rsvp_count,
-        current_member_has_rsvped=has_rsvped,
+        current_member_rsvp_status=None,
+    )
+
+
+@router.get("/{event_id}/rsvps", response_model=EventAttendeesResponse)
+def list_event_attendees_endpoint(
+    event_id: int,
+    _: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    try:
+        counts, attendees = list_event_attendees(db, event_id)
+    except EventNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        ) from None
+
+    return EventAttendeesResponse(
+        going_count=counts.going_count,
+        maybe_count=counts.maybe_count,
+        not_going_count=counts.not_going_count,
+        attendees=[
+            EventRsvpAttendeeResponse(
+                member_id=attendee.member_id,
+                full_name=attendee.full_name,
+                member_type=attendee.member_type,
+                rsvp_status=attendee.rsvp_status,
+            )
+            for attendee in attendees
+        ],
     )
 
 

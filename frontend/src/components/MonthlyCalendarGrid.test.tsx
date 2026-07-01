@@ -15,9 +15,35 @@ describe("MonthlyCalendarGrid", () => {
     );
 
     expect(screen.getByText("Sun")).toBeInTheDocument();
-    expect(screen.getByText("June 2030")).toBeInTheDocument();
+    expect(screen.getByTestId("calendar-cover-year")).toHaveTextContent("2030");
+    expect(screen.getByTestId("calendar-cover-month")).toHaveTextContent("June");
     expect(screen.getByRole("button", { name: "2030-06-01" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "2030-06-30" })).toBeInTheDocument();
+  });
+
+  it("navigates months via month and year pickers", async () => {
+    const user = userEvent.setup();
+    const onMonthChange = vi.fn();
+
+    render(
+      <MonthlyCalendarGrid
+        year={2030}
+        month={5}
+        onMonthChange={onMonthChange}
+      />,
+    );
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Select month" }),
+      "11",
+    );
+    expect(onMonthChange).toHaveBeenCalledWith(2030, 11);
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Select year" }),
+      "2029",
+    );
+    expect(onMonthChange).toHaveBeenCalledWith(2029, 5);
   });
 
   it("navigates months via prev and next controls", async () => {
@@ -39,7 +65,7 @@ describe("MonthlyCalendarGrid", () => {
     expect(onMonthChange).toHaveBeenCalledWith(2030, 6);
   });
 
-  it("renders type-coloured day cells and legend", () => {
+  it("renders category dots on event days and legend", () => {
     render(
       <MonthlyCalendarGrid
         year={2030}
@@ -66,7 +92,9 @@ describe("MonthlyCalendarGrid", () => {
     const dayCell = screen.getByRole("button", {
       name: "2030-06-15, Cultural, Meeting",
     });
-    expect(dayCell.className).toContain("bg-red-600/20");
+    const dots = dayCell.querySelector('[data-testid="calendar-category-dots"]');
+    expect(dots?.querySelector(".bg-\\[\\#D85A30\\]")).toBeTruthy();
+    expect(dots?.querySelector(".bg-\\[\\#378ADD\\]")).toBeTruthy();
   });
 
   it("shows Bikram Sambat labels for current-month days", () => {
@@ -84,7 +112,8 @@ describe("MonthlyCalendarGrid", () => {
     );
 
     const holiCell = screen.getByRole("button", { name: /2030-03-20, Holi/ });
-    expect(holiCell.className).toContain("bg-accent/10");
+    const dots = holiCell.querySelector('[data-testid="calendar-category-dots"]');
+    expect(dots?.querySelector(".bg-\\[\\#7F77DD\\]")).toBeTruthy();
     expect(screen.getAllByText("Nepali festival").length).toBeGreaterThan(0);
   });
 

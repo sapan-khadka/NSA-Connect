@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   addMonths,
   buildMonthGrid,
+  getCalendarYearOptions,
   getDaysInMonth,
   getFirstWeekday,
+  getMonthLabel,
   isSameDay,
   toLocalIsoDate,
 } from "./calendar";
@@ -46,5 +48,15 @@ describe("calendar date math", () => {
     const morning = new Date(2030, 5, 15, 9, 0);
     const evening = new Date(2030, 5, 15, 21, 30);
     expect(isSameDay(morning, evening)).toBe(true);
+  });
+
+  it("builds month labels and year options for pickers", () => {
+    expect(getMonthLabel(5)).toBe("June");
+    expect(getCalendarYearOptions(2026, new Date(2026, 5, 15))).toEqual([
+      2024, 2025, 2026, 2027, 2028, 2029,
+    ]);
+    expect(getCalendarYearOptions(2030, new Date(2026, 5, 15))).toEqual([
+      2024, 2025, 2026, 2027, 2028, 2029, 2030,
+    ]);
   });
 });

@@ -1,7 +1,7 @@
 export function TypingIndicator({ label = "Assistant is typing" }: { label?: string }) {
   return (
     <div
-      className="flex items-center gap-2 text-sm text-gray-500"
+      className="flex items-center gap-2 text-sm text-label"
       aria-live="polite"
       aria-label={label}
     >

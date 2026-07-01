@@ -56,7 +56,7 @@ export function MeetingDetailPage() {
   }, [numericEventId]);
 
   if (isLoading) {
-    return <p className="text-sm text-gray-500">Loading meeting…</p>;
+    return <p className="text-sm text-label">Loading meeting…</p>;
   }
 
   if (error || !detail) {
@@ -64,13 +64,13 @@ export function MeetingDetailPage() {
       <div className="space-y-4">
         <Link
           to="/events/meetings"
-          className="text-sm text-accent hover:underline"
+          className="ds-link"
         >
           ← Back to board meetings
         </Link>
         <div
           role="alert"
-          className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-800"
+          className="ds-alert-banner p-6"
         >
           {error ?? "Meeting not found."}
         </div>
@@ -83,17 +83,17 @@ export function MeetingDetailPage() {
       <div>
         <Link
           to="/events/meetings"
-          className="text-sm text-accent hover:underline"
+          className="ds-link"
         >
           ← Back to board meetings
         </Link>
       </div>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-surface-card bg-white p-6 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-primary">{detail.event_name}</h1>
-            <p className="text-sm text-gray-600">
+            <h1 className="text-3xl font-light tracking-headline text-foreground">{detail.event_name}</h1>
+            <p className="text-sm text-label">
               {formatEventDateTime(detail.starts_at)}
             </p>
             <MeetingStatusChips meeting={meetingRecordStatus(detail)} />
@@ -101,23 +101,23 @@ export function MeetingDetailPage() {
           {detail.can_manage ? (
             <Link
               to={`/events/${detail.event_id}/manage`}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-primary transition hover:border-accent hover:bg-accent/5"
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-foreground transition hover:border-accent hover:bg-accent/5"
             >
               Manage event
             </Link>
           ) : null}
         </div>
 
-        <div className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+        <div className="mt-6 rounded-card bg-surface-card p-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-label">
             Agenda
           </h2>
           {detail.agenda ? (
-            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-foreground">
               {detail.agenda}
             </p>
           ) : (
-            <p className="mt-2 text-sm text-gray-500">
+            <p className="mt-2 text-sm text-label">
               No agenda was added when this meeting was created.
             </p>
           )}

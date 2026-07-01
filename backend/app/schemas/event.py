@@ -10,6 +10,7 @@ from app.lib.event_finance import (
     is_event_finance_locked,
 )
 from app.models.event import EventType
+from app.models.event_rsvp import RsvpStatus
 
 if TYPE_CHECKING:
     from app.models.event import Event
@@ -68,10 +69,10 @@ class EventResponse(BaseModel):
     ends_at: datetime | None = None
     event_type: EventType
     description: str
+    location: str | None = None
     budget: Decimal
     created_by_id: int
-    rsvp_count: int
-    current_member_has_rsvped: bool
+    current_member_rsvp_status: RsvpStatus | None = None
     finance_lock_at: datetime
     is_finance_locked: bool
     is_past: bool
@@ -82,8 +83,7 @@ class EventResponse(BaseModel):
         cls,
         event: "Event",
         *,
-        rsvp_count: int = 0,
-        current_member_has_rsvped: bool = False,
+        current_member_rsvp_status: RsvpStatus | None = None,
     ) -> "EventResponse":
         return cls(
             id=event.id,
@@ -92,10 +92,10 @@ class EventResponse(BaseModel):
             ends_at=event.ends_at,
             event_type=event.event_type,
             description=event.description,
+            location=event.location,
             budget=Decimal(event.budget),
             created_by_id=event.created_by_id,
-            rsvp_count=rsvp_count,
-            current_member_has_rsvped=current_member_has_rsvped,
+            current_member_rsvp_status=current_member_rsvp_status,
             finance_lock_at=get_event_finance_lock_at(event),
             is_finance_locked=is_event_finance_locked(event),
             is_past=not event.is_upcoming,
@@ -103,10 +103,27 @@ class EventResponse(BaseModel):
         )
 
 
+class EventRsvpUpdateRequest(BaseModel):
+    status: RsvpStatus
+
+
 class EventRsvpStatusResponse(BaseModel):
     event_id: int
-    rsvp_count: int
-    current_member_has_rsvped: bool
+    current_member_rsvp_status: RsvpStatus | None
+
+
+class EventRsvpAttendeeResponse(BaseModel):
+    member_id: int
+    full_name: str
+    member_type: str
+    rsvp_status: RsvpStatus
+
+
+class EventAttendeesResponse(BaseModel):
+    going_count: int
+    maybe_count: int
+    not_going_count: int
+    attendees: list[EventRsvpAttendeeResponse]
 
 
 class EventListResponse(BaseModel):
@@ -122,13 +139,11 @@ class EventDetailResponse(EventResponse):
         cls,
         event: "Event",
         *,
-        rsvp_count: int = 0,
-        current_member_has_rsvped: bool = False,
+        current_member_rsvp_status: RsvpStatus | None = None,
     ) -> "EventDetailResponse":
         base = EventResponse.from_event(
             event,
-            rsvp_count=rsvp_count,
-            current_member_has_rsvped=current_member_has_rsvped,
+            current_member_rsvp_status=current_member_rsvp_status,
         )
         return cls(
             **base.model_dump(),

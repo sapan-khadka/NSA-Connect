@@ -8,7 +8,7 @@ import {
 } from "../lib/validation";
 
 const inputClassName =
-  "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-primary shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
+  "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
 
 type PasswordFormErrors = {
   current_password?: string;
@@ -82,22 +82,22 @@ export function ChangePasswordForm() {
   return (
     <form
       onSubmit={(event) => void handleSubmit(event)}
-      className="rounded-lg border border-gray-200 bg-white p-6"
+      className="rounded-card bg-surface-card p-6"
     >
-      <h2 className="text-lg font-semibold text-primary">Change password</h2>
-      <p className="mt-1 text-sm text-gray-500">
+      <h2 className="text-lg font-light tracking-subhead text-foreground">Change password</h2>
+      <p className="mt-1 text-sm text-label">
         Use at least 8 characters. You will stay signed in after updating your
         password.
       </p>
 
       {serverError ? (
-        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mt-4 ds-alert-banner">
           {serverError}
         </div>
       ) : null}
 
       {successMessage ? (
-        <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="mt-4 ds-card px-4 py-3 text-sm text-primary">
           {successMessage}
         </div>
       ) : null}
@@ -106,7 +106,7 @@ export function ChangePasswordForm() {
         <div className="md:col-span-2">
           <label
             htmlFor="current_password"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-foreground"
           >
             Current password
           </label>
@@ -128,7 +128,7 @@ export function ChangePasswordForm() {
             className={inputClassName}
           />
           {fieldErrors.current_password ? (
-            <p className="mt-1 text-sm text-red-600">
+            <p className="mt-1 ds-field-error">
               {fieldErrors.current_password}
             </p>
           ) : null}
@@ -137,7 +137,7 @@ export function ChangePasswordForm() {
         <div>
           <label
             htmlFor="new_password"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-foreground"
           >
             New password
           </label>
@@ -159,14 +159,14 @@ export function ChangePasswordForm() {
             className={inputClassName}
           />
           {fieldErrors.new_password ? (
-            <p className="mt-1 text-sm text-red-600">{fieldErrors.new_password}</p>
+            <p className="mt-1 ds-field-error">{fieldErrors.new_password}</p>
           ) : null}
         </div>
 
         <div>
           <label
             htmlFor="confirm_password"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-foreground"
           >
             Confirm new password
           </label>
@@ -188,7 +188,7 @@ export function ChangePasswordForm() {
             className={inputClassName}
           />
           {fieldErrors.confirm_password ? (
-            <p className="mt-1 text-sm text-red-600">
+            <p className="mt-1 ds-field-error">
               {fieldErrors.confirm_password}
             </p>
           ) : null}
@@ -199,7 +199,7 @@ export function ChangePasswordForm() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="rounded-md bg-accent px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSubmitting ? "Updating…" : "Update password"}
         </button>

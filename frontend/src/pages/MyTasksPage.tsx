@@ -36,17 +36,17 @@ function TaskList({
   tone,
 }: TaskListProps) {
   return (
-    <section className="rounded-lg border border-gray-200 bg-white p-6">
+    <section className="rounded-card bg-surface-card p-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-primary">{title}</h2>
-          <p className="mt-1 text-sm text-gray-500">{description}</p>
+          <h2 className="text-lg font-light tracking-subhead text-foreground">{title}</h2>
+          <p className="mt-1 text-sm text-label">{description}</p>
         </div>
         <span
           className={[
             "rounded-full px-3 py-1 text-sm font-semibold",
             tone === "done"
-              ? "bg-emerald-100 text-emerald-800"
+              ? "bg-mint text-primary"
               : "bg-accent/10 text-accent",
           ].join(" ")}
         >
@@ -55,7 +55,7 @@ function TaskList({
       </div>
 
       {signups.length === 0 ? (
-        <p className="mt-6 rounded-md border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-500">
+        <p className="mt-6 rounded-md border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-label">
           {emptyMessage}
         </p>
       ) : (
@@ -67,15 +67,15 @@ function TaskList({
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="font-medium text-primary">{signup.task_name}</p>
-                  <p className="mt-1 text-sm text-gray-600">{signup.event_name}</p>
+                  <p className="font-medium text-foreground">{signup.task_name}</p>
+                  <p className="mt-1 text-sm text-label">{signup.event_name}</p>
                 </div>
                 <span
                   className={[
                     "rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide",
                     signup.is_done
-                      ? "bg-emerald-100 text-emerald-800"
-                      : "bg-amber-100 text-amber-800",
+                      ? "bg-mint text-primary"
+                      : "bg-surface-muted text-label",
                   ].join(" ")}
                 >
                   {signup.is_done ? "Done" : "Upcoming"}
@@ -83,14 +83,14 @@ function TaskList({
               </div>
               <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
                 <div>
-                  <dt className="text-gray-500">Event date</dt>
-                  <dd className="font-medium text-primary">
+                  <dt className="text-label">Event date</dt>
+                  <dd className="font-medium text-foreground">
                     {formatEventDateTime(signup.event_starts_at)}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-gray-500">Signed up</dt>
-                  <dd className="font-medium text-primary">
+                  <dt className="text-label">Signed up</dt>
+                  <dd className="font-medium text-foreground">
                     {formatEventDateTime(signup.signed_up_at)}
                   </dd>
                 </div>
@@ -147,7 +147,7 @@ export function MyTasksPage() {
       <MyEventTasks />
 
       {loadState.status === "loading" ? (
-        <div className="rounded-lg border border-gray-200 bg-white p-10 text-center text-gray-500">
+        <div className="rounded-card bg-surface-card p-10 text-center text-label">
           Loading your tasks...
         </div>
       ) : null}
@@ -155,7 +155,7 @@ export function MyTasksPage() {
       {loadState.status === "error" ? (
         <div
           role="alert"
-          className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-800"
+          className="ds-alert-banner p-6"
         >
           {loadState.message}
         </div>
@@ -163,15 +163,15 @@ export function MyTasksPage() {
 
       {loadState.status === "ready" && signups.length === 0 ? (
         <section className="rounded-lg border border-dashed border-gray-300 bg-white p-10 text-center">
-          <p className="text-lg font-semibold text-primary">
+          <p className="text-lg font-light tracking-subhead text-foreground">
             No volunteer tasks yet
           </p>
-          <p className="mt-2 text-gray-500">
+          <p className="mt-2 text-label">
             Browse events on the calendar and sign up when volunteer slots open.
           </p>
           <Link
             to="/events/calendar"
-            className="mt-6 inline-flex rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
+            className="mt-6 inline-flex rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
           >
             Browse events
           </Link>

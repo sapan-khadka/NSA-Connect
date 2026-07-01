@@ -172,14 +172,14 @@ export function MemberDirectory() {
   }
 
   return (
-    <section className="rounded-lg border border-gray-200 bg-white">
+    <section className="rounded-card bg-surface-card">
       <div className="border-b border-gray-200 px-6 py-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-primary">Member directory</h2>
-            <p className="mt-1 text-sm text-gray-500">{resultSummary}</p>
+            <h2 className="text-lg font-light tracking-subhead text-foreground">Member directory</h2>
+            <p className="mt-1 text-sm text-label">{resultSummary}</p>
             {isPresident && (
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-label">
                 Assign a position to set leadership roles. Use the access
                 dropdown only for general and board members without a position.
               </p>
@@ -193,14 +193,14 @@ export function MemberDirectory() {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search by name, email, ID, major, role..."
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-primary placeholder:text-gray-400 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-foreground placeholder:text-label focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
             />
           </label>
         </div>
       </div>
 
       {error && (
-        <div className="mx-6 mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mx-6 mt-4 ds-alert-banner">
           {error}
         </div>
       )}
@@ -209,28 +209,28 @@ export function MemberDirectory() {
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-gray-500">
+              <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-label">
                 Name
               </th>
-              <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-gray-500">
+              <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-label">
                 Email
               </th>
-              <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-gray-500">
+              <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-label">
                 Student ID
               </th>
-              <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-gray-500">
+              <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-label">
                 Major
               </th>
-              <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-gray-500">
+              <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-label">
                 Graduation
               </th>
-              <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-gray-500">
+              <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-label">
                 Access
               </th>
-              <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-gray-500">
+              <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-label">
                 Position
               </th>
-              <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-gray-500">
+              <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-label">
                 Status
               </th>
             </tr>
@@ -238,13 +238,13 @@ export function MemberDirectory() {
           <tbody className="divide-y divide-gray-200 bg-white">
             {isLoading ? (
               <tr>
-                <td colSpan={8} className="px-6 py-8 text-gray-500">
+                <td colSpan={8} className="px-6 py-8 text-label">
                   Loading members...
                 </td>
               </tr>
             ) : visibleMembers.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-6 py-8 text-gray-500">
+                <td colSpan={8} className="px-6 py-8 text-label">
                   {isSearching
                     ? "No members match your search."
                     : "No members found."}
@@ -253,13 +253,13 @@ export function MemberDirectory() {
             ) : (
               visibleMembers.map((member) => (
                 <tr key={member.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 font-medium text-primary">
+                  <td className="px-6 py-4 font-medium text-foreground">
                     {member.full_name}
                   </td>
-                  <td className="px-6 py-4 text-gray-600">{member.email}</td>
-                  <td className="px-6 py-4 text-gray-600">{member.student_id}</td>
-                  <td className="px-6 py-4 text-gray-600">{member.major}</td>
-                  <td className="px-6 py-4 text-gray-600">
+                  <td className="px-6 py-4 text-label">{member.email}</td>
+                  <td className="px-6 py-4 text-label">{member.student_id}</td>
+                  <td className="px-6 py-4 text-label">{member.major}</td>
+                  <td className="px-6 py-4 text-label">
                     {member.graduation_year}
                   </td>
                   <td className="px-6 py-4">
@@ -286,7 +286,7 @@ export function MemberDirectory() {
                         onPositionChange={handlePositionChange}
                       />
                     ) : (
-                      <span className="text-gray-600">
+                      <span className="text-label">
                         {formatPositionLabel(member.position)}
                       </span>
                     )}
@@ -303,8 +303,8 @@ export function MemberDirectory() {
 
       {!isSearching && totalPages > 0 && (
         <div className="flex flex-col gap-4 border-t border-gray-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <label htmlFor="page-size" className="font-medium text-gray-700">
+          <div className="flex items-center gap-2 text-sm text-label">
+            <label htmlFor="page-size" className="font-medium text-foreground">
               Rows per page
             </label>
             <select
@@ -313,7 +313,7 @@ export function MemberDirectory() {
               onChange={(event) =>
                 handlePageSizeChange(Number(event.target.value))
               }
-              className="rounded-md border border-gray-300 px-2 py-1 text-sm text-primary focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+              className="rounded-md border border-gray-300 px-2 py-1 text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
             >
               {PAGE_SIZE_OPTIONS.map((option) => (
                 <option key={option} value={option}>
@@ -324,14 +324,14 @@ export function MemberDirectory() {
           </div>
 
           <div className="flex items-center gap-3">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-label">
               Page {page} of {totalPages}
             </p>
             <button
               type="button"
               onClick={() => setPage((current) => Math.max(1, current - 1))}
               disabled={page <= 1 || isLoading}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Previous
             </button>
@@ -341,7 +341,7 @@ export function MemberDirectory() {
                 setPage((current) => Math.min(totalPages, current + 1))
               }
               disabled={page >= totalPages || isLoading}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Next
             </button>
@@ -350,7 +350,7 @@ export function MemberDirectory() {
       )}
 
       {isSearching && total > SEARCH_FETCH_PAGE_SIZE && (
-        <p className="border-t border-gray-200 px-6 py-3 text-xs text-gray-500">
+        <p className="border-t border-gray-200 px-6 py-3 text-xs text-label">
           Search covers the first {SEARCH_FETCH_PAGE_SIZE} members. Refine your
           query for more specific results.
         </p>

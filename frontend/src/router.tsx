@@ -7,6 +7,7 @@ import { BoardTasksPage } from "./pages/BoardTasksPage";
 import { AiAssistantPage } from "./pages/AiAssistantPage";
 import { AnnouncementEmailPage } from "./pages/AnnouncementEmailPage";
 import { EventManagePage } from "./pages/EventManagePage";
+import { EventDetailPage } from "./pages/EventDetailPage";
 import { EventsPage } from "./pages/EventsPage";
 import { FinancePage } from "./pages/FinancePage";
 import { MyTasksPage } from "./pages/MyTasksPage";
@@ -161,6 +162,10 @@ export const appRoutes: RouteObject[] = [
                 <EventManagePage />
               </ProtectedRoute>
             ),
+          },
+          {
+            path: ":eventId",
+            element: <EventDetailPage />,
           },
         ],
       },

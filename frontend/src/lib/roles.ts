@@ -41,25 +41,28 @@ export function formatRoleLabel(role: MemberRole): string {
 }
 
 export const ROLE_BADGE_STYLES: Record<MemberRole, string> = {
-  president: "border-purple-200 bg-purple-50 text-purple-800",
-  treasurer: "border-blue-200 bg-blue-50 text-blue-800",
-  board: "border-accent/30 bg-accent/10 text-accent",
-  general: "border-gray-200 bg-gray-50 text-gray-700",
+  president: "bg-roleBadge-president-bg text-roleBadge-president",
+  treasurer: "bg-roleBadge-treasurer-bg text-roleBadge-treasurer",
+  board: "bg-roleBadge-board-bg text-roleBadge-board",
+  general: "bg-roleBadge-general-bg text-roleBadge-general",
 };
 
 const ROLE_BADGE_SIZE_STYLES = {
-  sm: "px-2.5 py-0.5 text-xs",
-  md: "px-3 py-1 text-sm",
+  sm: "py-1 px-2.5 text-xs",
+  md: "py-1.5 px-3 text-sm",
 } as const;
 
 export type RoleBadgeSize = keyof typeof ROLE_BADGE_SIZE_STYLES;
+
+const BADGE_BASE_CLASS =
+  "inline-flex items-center gap-1.5 rounded-pill font-medium";
 
 export function getRoleBadgeClassName(
   role: MemberRole,
   size: RoleBadgeSize = "sm",
 ): string {
   return [
-    "inline-flex rounded-full border font-semibold uppercase tracking-wide",
+    BADGE_BASE_CLASS,
     ROLE_BADGE_SIZE_STYLES[size],
     ROLE_BADGE_STYLES[role],
   ].join(" ");
@@ -130,13 +133,13 @@ export const POSITION_BADGE_STYLES: Record<
   Exclude<MemberPosition, "member">,
   string
 > = {
-  president: "border-purple-200 bg-purple-50 text-purple-800",
-  vice_president: "border-indigo-200 bg-indigo-50 text-indigo-800",
-  secretary: "border-teal-200 bg-teal-50 text-teal-800",
-  treasurer: "border-blue-200 bg-blue-50 text-blue-800",
-  event_manager: "border-orange-200 bg-orange-50 text-orange-800",
-  public_relations_officer: "border-pink-200 bg-pink-50 text-pink-800",
-  new_student_representative: "border-emerald-200 bg-emerald-50 text-emerald-800",
+  president: "bg-roleBadge-president-bg text-roleBadge-president",
+  vice_president: "bg-roleBadge-vicePresident-bg text-roleBadge-vicePresident",
+  secretary: "bg-roleBadge-secretary-bg text-roleBadge-secretary",
+  treasurer: "bg-roleBadge-treasurer-bg text-roleBadge-treasurer",
+  event_manager: "bg-roleBadge-eventManager-bg text-roleBadge-eventManager",
+  public_relations_officer: "bg-roleBadge-pro-bg text-roleBadge-pro",
+  new_student_representative: "bg-roleBadge-nsr-bg text-roleBadge-nsr",
 };
 
 export function getPositionBadgeClassName(
@@ -144,7 +147,7 @@ export function getPositionBadgeClassName(
   size: RoleBadgeSize = "sm",
 ): string {
   return [
-    "inline-flex rounded-full border font-semibold tracking-wide",
+    BADGE_BASE_CLASS,
     ROLE_BADGE_SIZE_STYLES[size],
     POSITION_BADGE_STYLES[position],
   ].join(" ");

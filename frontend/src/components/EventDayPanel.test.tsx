@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi, type ReactElement } from "vitest";
 
 import { EventDayPanel } from "./EventDayPanel";
 import type { EventDetailResponse, EventResponse } from "../lib/events-api";
@@ -57,17 +57,20 @@ const panelProps = {
   assignableMembers: [] as import("../lib/auth-api").MemberResponse[],
   taskRefreshKey: 1,
   rsvpLoading: false,
-  onRsvp: vi.fn(),
-  onCancelRsvp: vi.fn(),
+  onRsvpStatusChange: vi.fn(),
 };
+
+function renderPanel(ui: ReactElement) {
+  return render(<MemoryRouter>{ui}</MemoryRouter>);
+}
 
 describe("EventDayPanel", () => {
   afterEach(() => {
     cleanup();
   });
 
-  it("prompts the user to select a day when none is chosen", () => {
-    render(
+  it("shows upcoming events when no day is selected", () => {
+    renderPanel(
       <EventDayPanel
         selectedDate={null}
         dayEvents={[]}
@@ -76,17 +79,20 @@ describe("EventDayPanel", () => {
         eventDetail={null}
         detailLoading={false}
         detailError={null}
+        upcomingEvents={[dayEvent]}
+        upcomingLoading={false}
         {...panelProps}
       />,
     );
 
+    expect(screen.getByText("Upcoming events")).toBeInTheDocument();
     expect(
-      screen.getByText(/Click a calendar day to view events and tasks/i),
-    ).toBeInTheDocument();
+      screen.getByRole("link", { name: /Dashain Celebration/i }),
+    ).toHaveAttribute("href", "/events/1");
   });
 
   it("shows event details, progress bar, and checklist items", () => {
-    render(
+    renderPanel(
       <EventDayPanel
         selectedDate="2030-06-15"
         dayEvents={[dayEvent]}
@@ -99,17 +105,19 @@ describe("EventDayPanel", () => {
       />,
     );
 
-    expect(screen.getByRole("heading", { name: "Dashain Celebration" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Dashain Celebration" }),
+    ).toHaveAttribute("href", "/events/1");
     expect(
       screen.getByRole("progressbar", { name: "Overall task progress" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "Task progress" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "RSVP" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Going" })).toBeInTheDocument();
     expect(screen.getByText("Order catering")).toBeInTheDocument();
   });
 
-  it("shows cancel RSVP when member is already going", () => {
-    render(
+  it("shows selected RSVP state without attendee counts", () => {
+    renderPanel(
       <EventDayPanel
         selectedDate="2030-06-15"
         dayEvents={[dayEvent]}
@@ -117,8 +125,7 @@ describe("EventDayPanel", () => {
         onSelectEvent={vi.fn()}
         eventDetail={{
           ...eventDetail,
-          rsvp_count: 3,
-          current_member_has_rsvped: true,
+          current_member_rsvp_status: "going",
         }}
         detailLoading={false}
         detailError={null}
@@ -126,12 +133,15 @@ describe("EventDayPanel", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Cancel RSVP" })).toBeInTheDocument();
-    expect(screen.getByText("3 members going")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Going" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.queryByText(/members going/i)).not.toBeInTheDocument();
   });
 
   it("hides the delete button when the member cannot manage events", () => {
-    render(
+    renderPanel(
       <EventDayPanel
         selectedDate="2030-06-15"
         dayEvents={[dayEvent]}
@@ -154,7 +164,7 @@ describe("EventDayPanel", () => {
     const onDeleteEvent = vi.fn();
     vi.spyOn(window, "confirm").mockReturnValue(true);
 
-    render(
+    renderPanel(
       <EventDayPanel
         selectedDate="2030-06-15"
         dayEvents={[dayEvent]}
@@ -180,7 +190,7 @@ describe("EventDayPanel", () => {
     const onDeleteEvent = vi.fn();
     vi.spyOn(window, "confirm").mockReturnValue(false);
 
-    render(
+    renderPanel(
       <EventDayPanel
         selectedDate="2030-06-15"
         dayEvents={[dayEvent]}
@@ -211,7 +221,7 @@ describe("EventDayPanel", () => {
       event_type: "meeting",
     };
 
-    render(
+    renderPanel(
       <EventDayPanel
         selectedDate="2030-06-15"
         dayEvents={[dayEvent, secondEvent]}
@@ -229,7 +239,7 @@ describe("EventDayPanel", () => {
   });
 
   it("hides budget for general members", () => {
-    render(
+    renderPanel(
       <EventDayPanel
         selectedDate="2030-06-15"
         dayEvents={[dayEvent]}
@@ -247,7 +257,7 @@ describe("EventDayPanel", () => {
   });
 
   it("wraps tasks in a collapsible section for general members", () => {
-    render(
+    renderPanel(
       <EventDayPanel
         selectedDate="2030-06-15"
         dayEvents={[dayEvent]}
@@ -267,29 +277,27 @@ describe("EventDayPanel", () => {
   });
 
   it("shows a meeting management link for board members", () => {
-    render(
-      <MemoryRouter>
-        <EventDayPanel
-          selectedDate="2030-06-15"
-          dayEvents={[dayEvent]}
-          selectedEventId={1}
-          onSelectEvent={vi.fn()}
-          eventDetail={{ ...eventDetail, event_type: "meeting" }}
-          detailLoading={false}
-          detailError={null}
-          {...panelProps}
-          member={createMockMember("board")}
-        />
-      </MemoryRouter>,
+    renderPanel(
+      <EventDayPanel
+        selectedDate="2030-06-15"
+        dayEvents={[dayEvent]}
+        selectedEventId={1}
+        onSelectEvent={vi.fn()}
+        eventDetail={{ ...eventDetail, event_type: "meeting" }}
+        detailLoading={false}
+        detailError={null}
+        {...panelProps}
+        member={createMockMember("board")}
+      />,
     );
 
     expect(
-      screen.getByRole("link", { name: "View meeting record →" }),
+      screen.getByRole("link", { name: "View meeting record ›" }),
     ).toHaveAttribute("href", "/events/meetings/1");
   });
 
   it("shows budget for board members", () => {
-    render(
+    renderPanel(
       <EventDayPanel
         selectedDate="2030-06-15"
         dayEvents={[dayEvent]}

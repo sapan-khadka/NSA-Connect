@@ -52,11 +52,11 @@ describe("PrepTaskChecklist", () => {
 
     expect(screen.getByText("Setup")).toBeInTheDocument();
     expect(screen.getByText("Overdue")).toBeInTheDocument();
-    expect(screen.getByRole("article")).toHaveClass("border-red-300");
+    expect(screen.getByRole("article")).toHaveClass("border-primary/20");
     expect(screen.getByRole("progressbar", { name: "Task progress" })).toBeInTheDocument();
     expect(
       screen.getByRole("progressbar", { name: "Task progress" }).firstChild,
-    ).toHaveClass("bg-red-500");
+    ).toHaveClass("bg-overdue");
     expect(screen.getByText("Reserve room")).toBeInTheDocument();
   });
 
@@ -76,7 +76,7 @@ describe("PrepTaskChecklist", () => {
     expect(screen.getByRole("article")).toHaveClass("border-gray-200");
     expect(
       screen.getByRole("progressbar", { name: "Task progress" }).firstChild,
-    ).toHaveClass("bg-emerald-500");
+    ).toHaveClass("bg-accent");
   });
 
   it("shows assignee dropdown for board members", async () => {

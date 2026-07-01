@@ -7,9 +7,6 @@ export type KanbanColumnConfig = {
   id: KanbanColumnId;
   title: string;
   subtitle: string;
-  headerClass: string;
-  surfaceClass: string;
-  glowClass: string;
 };
 
 export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
@@ -17,25 +14,16 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
     id: "todo",
     title: "To do",
     subtitle: "Assigned to you",
-    headerClass: "from-slate-700 to-slate-900",
-    surfaceClass: "from-slate-50/90 to-white/70",
-    glowClass: "bg-slate-400/20",
   },
   {
     id: "in_progress",
     title: "In progress",
     subtitle: "Work underway",
-    headerClass: "from-amber-500 to-orange-600",
-    surfaceClass: "from-amber-50/90 to-white/70",
-    glowClass: "bg-amber-400/25",
   },
   {
     id: "done",
     title: "Done",
     subtitle: "Completed with notes or photos",
-    headerClass: "from-emerald-500 to-teal-600",
-    surfaceClass: "from-emerald-50/90 to-white/70",
-    glowClass: "bg-emerald-400/25",
   },
 ];
 
@@ -59,44 +47,33 @@ export function KanbanColumn({
   return (
     <section
       className={[
-        "flex min-h-[28rem] flex-col overflow-hidden rounded-2xl border border-white/60 shadow-lg backdrop-blur-md transition-all duration-300",
-        isOver ? "scale-[1.01] ring-2 ring-accent/50 shadow-2xl" : "",
+        "flex flex-col overflow-hidden rounded-kanban border border-kanban-border bg-white transition-colors duration-200",
+        isOver ? "ring-2 ring-accent/30" : "",
       ].join(" ")}
     >
-      <header
-        className={[
-          "relative overflow-hidden bg-gradient-to-r px-5 py-4 text-white",
-          column.headerClass,
-        ].join(" ")}
-      >
-        <div
-          className={[
-            "pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full blur-2xl",
-            column.glowClass,
-          ].join(" ")}
-        />
-        <div className="relative flex items-end justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-bold tracking-tight">{column.title}</h2>
-            <p className="text-sm text-white/80">{column.subtitle}</p>
-          </div>
-          <span className="rounded-full bg-white/20 px-3 py-1 text-sm font-bold backdrop-blur-sm">
-            {tasks.length}
-          </span>
+      <header className="flex items-center justify-between gap-3 border-b border-kanban-border bg-kanban-header px-4 py-3">
+        <div className="min-w-0">
+          <h2 className="text-base text-foreground">{column.title}</h2>
+          <p className="text-sm text-label">{column.subtitle}</p>
         </div>
+        <span
+          aria-label={`${tasks.length} tasks`}
+          className="flex h-[22px] min-w-[22px] shrink-0 items-center justify-center rounded-full bg-kanban-badge px-1.5 text-xs text-foreground"
+        >
+          {tasks.length}
+        </span>
       </header>
 
       <div
         ref={setNodeRef}
         className={[
-          "flex flex-1 flex-col gap-3 bg-gradient-to-b p-4 transition-colors duration-300",
-          column.surfaceClass,
-          isOver ? "bg-accent/5" : "",
+          "flex flex-col gap-3 p-3 transition-colors duration-200",
+          isOver ? "bg-accent/5" : "bg-white",
         ].join(" ")}
       >
         {tasks.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-gray-300/80 bg-white/40 px-4 py-10 text-center">
-            <p className="text-sm text-gray-500">
+          <div className="rounded-kanban border border-dashed border-kanban-border px-4 py-6 text-center">
+            <p className="text-sm text-label">
               {isOver ? "Drop task here" : "No tasks in this column"}
             </p>
           </div>

@@ -11,10 +11,11 @@ afterEach(() => {
 });
 
 describe("CoverBanner", () => {
-  it("renders the NSA community cover image", () => {
+  it("renders the NSA community cover image with bottom gradient", () => {
     render(<CoverBanner />);
 
     expect(screen.getByTestId("nsa-cover-banner")).toBeInTheDocument();
+    expect(screen.getByTestId("cover-banner-gradient")).toBeInTheDocument();
   });
 });
 

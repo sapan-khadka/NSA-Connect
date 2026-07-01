@@ -51,7 +51,7 @@ export function EventsHubLayout() {
     <div className="space-y-6">
       <nav
         aria-label="Events sections"
-        className="sticky top-0 z-10 -mx-1 border-b border-slate-200 bg-surface/95 px-1 backdrop-blur-sm"
+        className="sticky top-0 z-10 -mx-1 border-b border-surface-card bg-surface/95 px-1 backdrop-blur-sm"
       >
         <div className="flex gap-1 overflow-x-auto">
           {tabs.map((tab) => (
@@ -64,7 +64,7 @@ export function EventsHubLayout() {
                   "shrink-0 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
                   isActive
                     ? "border-accent text-accent"
-                    : "border-transparent text-gray-500 hover:text-primary",
+                    : "border-transparent text-label hover:text-accent",
                 ].join(" ")
               }
             >

@@ -29,5 +29,8 @@ describe("RoleBadge", () => {
     render(<RoleBadge role="board" size="md" />);
 
     expect(screen.getByText("Board")).toHaveClass("text-sm");
+    expect(screen.getByText("Board").closest("span")).toHaveClass(
+      "bg-roleBadge-board-bg",
+    );
   });
 });

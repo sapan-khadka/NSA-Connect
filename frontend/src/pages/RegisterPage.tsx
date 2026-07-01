@@ -23,7 +23,7 @@ const initialValues: RegisterFormValues = {
 };
 
 const inputClassName =
-  "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-primary shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
+  "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
 
 export function RegisterPage() {
   const [values, setValues] = useState<RegisterFormValues>(initialValues);
@@ -83,14 +83,14 @@ export function RegisterPage() {
   if (isComplete) {
     return (
       <div className="mx-auto max-w-md text-center">
-        <h1 className="text-3xl font-bold text-primary">Registration submitted</h1>
-        <p className="mt-4 text-gray-600">
+        <h1 className="text-3xl font-light tracking-headline text-foreground">Registration submitted</h1>
+        <p className="mt-4 text-label">
           Your account is pending board approval. You&apos;ll be able to sign in
           once a board member approves your registration.
         </p>
         <Link
           to="/login"
-          className="mt-6 inline-block font-medium text-accent hover:text-accent-hover"
+          className="mt-6 inline-block font-medium text-accent"
         >
           Go to login
         </Link>
@@ -101,8 +101,8 @@ export function RegisterPage() {
   return (
     <div className="mx-auto max-w-md">
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-primary">Register</h1>
-        <p className="mt-2 text-gray-500">
+        <h1 className="text-3xl font-light tracking-headline text-foreground">Register</h1>
+        <p className="mt-2 text-label">
           Join NSA Connect with your @{SEMO_EMAIL_DOMAIN} email
         </p>
       </div>
@@ -110,19 +110,19 @@ export function RegisterPage() {
       <form
         onSubmit={handleSubmit}
         noValidate
-        className="mt-8 space-y-5 rounded-lg border border-gray-200 bg-gray-50 p-6"
+        className="mt-8 space-y-5 rounded-card bg-surface-card p-6"
       >
         {serverError && (
           <p
             role="alert"
-            className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+            className="ds-alert-banner"
           >
             {serverError}
           </p>
         )}
 
         <div>
-          <label htmlFor="full_name" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="full_name" className="block text-sm font-medium text-foreground">
             Full name
           </label>
           <input
@@ -139,14 +139,14 @@ export function RegisterPage() {
             placeholder="Sapan Khadka"
           />
           {fieldErrors.full_name && (
-            <p id="full_name-error" className="mt-1 text-sm text-red-600">
+            <p id="full_name-error" className="mt-1 ds-field-error">
               {fieldErrors.full_name}
             </p>
           )}
         </div>
 
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="email" className="block text-sm font-medium text-foreground">
             Email
           </label>
           <input
@@ -163,7 +163,7 @@ export function RegisterPage() {
             placeholder="you@semo.edu"
           />
           {fieldErrors.email && (
-            <p id="email-error" className="mt-1 text-sm text-red-600">
+            <p id="email-error" className="mt-1 ds-field-error">
               {fieldErrors.email}
             </p>
           )}
@@ -172,7 +172,7 @@ export function RegisterPage() {
         <div>
           <label
             htmlFor="student_id"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-foreground"
           >
             Student ID
           </label>
@@ -190,14 +190,14 @@ export function RegisterPage() {
             placeholder="S12345678"
           />
           {fieldErrors.student_id && (
-            <p id="student_id-error" className="mt-1 text-sm text-red-600">
+            <p id="student_id-error" className="mt-1 ds-field-error">
               {fieldErrors.student_id}
             </p>
           )}
         </div>
 
         <div>
-          <label htmlFor="major" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="major" className="block text-sm font-medium text-foreground">
             Major
           </label>
           <input
@@ -214,7 +214,7 @@ export function RegisterPage() {
             placeholder="Computer Science"
           />
           {fieldErrors.major && (
-            <p id="major-error" className="mt-1 text-sm text-red-600">
+            <p id="major-error" className="mt-1 ds-field-error">
               {fieldErrors.major}
             </p>
           )}
@@ -223,7 +223,7 @@ export function RegisterPage() {
         <div>
           <label
             htmlFor="graduation_year"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-foreground"
           >
             Graduation year
           </label>
@@ -247,7 +247,7 @@ export function RegisterPage() {
             ))}
           </select>
           {fieldErrors.graduation_year && (
-            <p id="graduation_year-error" className="mt-1 text-sm text-red-600">
+            <p id="graduation_year-error" className="mt-1 ds-field-error">
               {fieldErrors.graduation_year}
             </p>
           )}
@@ -256,7 +256,7 @@ export function RegisterPage() {
         <div>
           <label
             htmlFor="password"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-foreground"
           >
             Password
           </label>
@@ -273,7 +273,7 @@ export function RegisterPage() {
             className={inputClassName}
           />
           {fieldErrors.password && (
-            <p id="password-error" className="mt-1 text-sm text-red-600">
+            <p id="password-error" className="mt-1 ds-field-error">
               {fieldErrors.password}
             </p>
           )}
@@ -282,15 +282,15 @@ export function RegisterPage() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded-md bg-accent px-4 py-2 font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-full bg-primary px-4 py-2 font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSubmitting ? "Submitting..." : "Create account"}
         </button>
       </form>
 
-      <p className="mt-4 text-center text-sm text-gray-500">
+      <p className="mt-4 text-center text-sm text-label">
         Already have an account?{" "}
-        <Link to="/login" className="font-medium text-accent hover:text-accent-hover">
+        <Link to="/login" className="font-medium text-accent">
           Sign in
         </Link>
       </p>

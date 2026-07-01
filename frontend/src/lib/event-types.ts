@@ -16,50 +16,63 @@ export const EVENT_TYPE_LABELS: Record<EventType, string> = {
   service: "Service",
 };
 
+/** Saturated calendar / legend colors. */
+export const EVENT_TYPE_COLOR: Record<EventType, string> = {
+  cultural: "#D85A30",
+  meeting: "#378ADD",
+  fundraiser: "#EF9F27",
+  social: "#639922",
+  service: "#1D9E75",
+};
+
+export const FESTIVAL_EVENT_COLOR = "#7F77DD";
+
 export function isCulturalEvent(eventType: EventType): boolean {
   return eventType === "cultural";
 }
 
-/** Tailwind background classes for calendar dots — full strings for JIT scanning. */
+/** Tailwind background classes for calendar category dots — full strings for JIT. */
 export const EVENT_TYPE_DOT_CLASS: Record<EventType, string> = {
-  cultural: "bg-red-600",
-  meeting: "bg-blue-900",
-  fundraiser: "bg-amber-500",
-  social: "bg-emerald-600",
-  service: "bg-teal-600",
+  cultural: "bg-[#D85A30]",
+  meeting: "bg-[#378ADD]",
+  fundraiser: "bg-[#EF9F27]",
+  social: "bg-[#639922]",
+  service: "bg-[#1D9E75]",
 };
 
-/** Transparent fill for calendar day cells — full strings for JIT scanning. */
+export const FESTIVAL_DOT_CLASS = "bg-[#7F77DD]";
+
+/** Legacy translucent fills — kept for any non-grid references. */
 export const EVENT_TYPE_DAY_CLASS: Record<EventType, string> = {
-  cultural: "bg-red-600/20",
-  meeting: "bg-blue-900/15",
-  fundraiser: "bg-amber-500/20",
-  social: "bg-emerald-600/20",
-  service: "bg-teal-600/20",
+  cultural: "bg-[#D85A30]/15",
+  meeting: "bg-[#378ADD]/15",
+  fundraiser: "bg-[#EF9F27]/15",
+  social: "bg-[#639922]/15",
+  service: "bg-[#1D9E75]/15",
 };
 
 export const EVENT_TYPE_DAY_HOVER_CLASS: Record<EventType, string> = {
-  cultural: "hover:bg-red-600/30",
-  meeting: "hover:bg-blue-900/25",
-  fundraiser: "hover:bg-amber-500/30",
-  social: "hover:bg-emerald-600/30",
-  service: "hover:bg-teal-600/30",
+  cultural: "hover:bg-[#D85A30]/20",
+  meeting: "hover:bg-[#378ADD]/20",
+  fundraiser: "hover:bg-[#EF9F27]/20",
+  social: "hover:bg-[#639922]/20",
+  service: "hover:bg-[#1D9E75]/20",
 };
 
 export const EVENT_TYPE_DAY_SELECTED_CLASS: Record<EventType, string> = {
-  cultural: "bg-red-600/35 ring-2 ring-inset ring-red-500",
-  meeting: "bg-blue-900/25 ring-2 ring-inset ring-blue-700",
-  fundraiser: "bg-amber-500/35 ring-2 ring-inset ring-amber-400",
-  social: "bg-emerald-600/35 ring-2 ring-inset ring-emerald-500",
-  service: "bg-teal-600/35 ring-2 ring-inset ring-teal-500",
+  cultural: "bg-[#D85A30]/20 ring-2 ring-inset ring-[#D85A30]",
+  meeting: "bg-[#378ADD]/20 ring-2 ring-inset ring-[#378ADD]",
+  fundraiser: "bg-[#EF9F27]/20 ring-2 ring-inset ring-[#EF9F27]",
+  social: "bg-[#639922]/20 ring-2 ring-inset ring-[#639922]",
+  service: "bg-[#1D9E75]/20 ring-2 ring-inset ring-[#1D9E75]",
 };
 
 export const EVENT_TYPE_DAY_MUTED_CLASS: Record<EventType, string> = {
-  cultural: "bg-red-600/10",
-  meeting: "bg-blue-900/10",
-  fundraiser: "bg-amber-500/10",
-  social: "bg-emerald-600/10",
-  service: "bg-teal-600/10",
+  cultural: "bg-[#D85A30]/8",
+  meeting: "bg-[#378ADD]/8",
+  fundraiser: "bg-[#EF9F27]/8",
+  social: "bg-[#639922]/8",
+  service: "bg-[#1D9E75]/8",
 };
 
 export function getCalendarDayCellClass(
@@ -94,9 +107,9 @@ export function getCalendarDayCellClass(
 }
 
 export const EVENT_TYPE_BADGE_CLASS: Record<EventType, string> = {
-  cultural: "bg-red-100 text-red-900",
-  meeting: "bg-blue-100 text-blue-900",
-  fundraiser: "bg-amber-100 text-amber-900",
-  social: "bg-emerald-100 text-emerald-900",
-  service: "bg-teal-100 text-teal-900",
+  cultural: "bg-mint text-primary",
+  meeting: "bg-mint text-primary",
+  fundraiser: "bg-mint text-primary",
+  social: "bg-mint text-primary",
+  service: "bg-mint text-primary",
 };

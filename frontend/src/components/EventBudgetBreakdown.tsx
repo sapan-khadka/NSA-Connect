@@ -21,7 +21,7 @@ export function EventBudgetBreakdown({
 }: EventBudgetBreakdownProps) {
   if (isLoading) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-white p-10 text-center text-gray-500">
+      <div className="rounded-card bg-surface-card p-10 text-center text-label">
         Loading event budget breakdown...
       </div>
     );
@@ -31,7 +31,7 @@ export function EventBudgetBreakdown({
     return (
       <div
         role="alert"
-        className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-800"
+        className="ds-alert-banner p-6"
       >
         {errorMessage}
       </div>
@@ -39,12 +39,12 @@ export function EventBudgetBreakdown({
   }
 
   return (
-    <section className="rounded-lg border border-gray-200 bg-white p-6">
+    <section className="rounded-card bg-surface-card p-6">
       <div>
-        <h2 className="text-lg font-semibold text-primary">
+        <h2 className="text-lg font-light tracking-subhead text-foreground">
           Event budget vs actual
         </h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-label">
           Compare each event&apos;s planned budget against logged spending.
         </p>
       </div>
@@ -54,7 +54,7 @@ export function EventBudgetBreakdown({
           data-testid="event-budget-table"
           className="min-w-full divide-y divide-gray-200 text-left text-sm"
         >
-          <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+          <thead className="bg-gray-50 text-xs uppercase tracking-wide text-label">
             <tr>
               <th className="px-4 py-3 font-semibold">Event</th>
               <th className="px-4 py-3 font-semibold">Planned budget</th>
@@ -74,21 +74,21 @@ export function EventBudgetBreakdown({
 
               return (
                 <tr key={event.event_id}>
-                  <td className="px-4 py-3 font-medium text-primary">
+                  <td className="px-4 py-3 font-medium text-foreground">
                     {event.event_name}
                   </td>
-                  <td className="px-4 py-3 text-gray-700">
+                  <td className="px-4 py-3 text-foreground">
                     {formatCurrency(event.planned_budget)}
                   </td>
-                  <td className="px-4 py-3 text-red-700">
+                  <td className="px-4 py-3 text-foreground">
                     {formatCurrency(event.actual_expense)}
                   </td>
-                  <td className="px-4 py-3 text-emerald-700">
+                  <td className="px-4 py-3 text-accent">
                     {formatCurrency(event.actual_income)}
                   </td>
                   <td
                     className={`px-4 py-3 font-medium ${
-                      event.over_budget ? "text-red-700" : "text-emerald-700"
+                      event.over_budget ? "text-foreground" : "text-accent"
                     }`}
                   >
                     {formatBudgetRemaining(event.budget_remaining)}
@@ -101,7 +101,7 @@ export function EventBudgetBreakdown({
                           style={{ width: `${usagePercent}%` }}
                         />
                       </div>
-                      <span className="text-xs text-gray-600">
+                      <span className="text-xs text-label">
                         {usagePercent}%
                       </span>
                     </div>
@@ -120,7 +120,7 @@ export function EventBudgetBreakdown({
               <tr>
                 <td
                   colSpan={7}
-                  className="px-4 py-8 text-center text-gray-500"
+                  className="px-4 py-8 text-center text-label"
                 >
                   No events found for this period.
                 </td>

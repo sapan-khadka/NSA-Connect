@@ -71,23 +71,23 @@ export function FinancePendingApprovals({
 
   if (isLoading) {
     return (
-      <section className="rounded-lg border border-gray-200 bg-white p-6">
-        <p className="text-sm text-gray-500">Loading pending approvals…</p>
+      <section className="rounded-card bg-surface-card p-6">
+        <p className="text-sm text-label">Loading pending approvals…</p>
       </section>
     );
   }
 
   return (
-    <section className="rounded-lg border border-amber-200 bg-amber-50/40 p-6">
-      <h2 className="text-lg font-semibold text-primary">Pending finance approvals</h2>
-      <p className="mt-1 text-sm text-gray-600">
+    <section className="ds-card p-6">
+      <h2 className="text-lg font-light tracking-subhead text-foreground">Pending finance approvals</h2>
+      <p className="mt-1 text-sm text-label">
         Treasurer and president must approve each other&apos;s edits and deletions.
       </p>
 
-      {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="mt-3 ds-field-error">{error}</p> : null}
 
       {requests.length === 0 ? (
-        <p className="mt-4 text-sm text-gray-500">No pending change requests.</p>
+        <p className="mt-4 text-sm text-label">No pending change requests.</p>
       ) : (
         <ul className="mt-4 space-y-3">
           {requests.map((request) => {
@@ -99,22 +99,22 @@ export function FinancePendingApprovals({
             return (
               <li
                 key={request.id}
-                className="rounded-md border border-gray-200 bg-white p-4"
+                className="rounded-md bg-surface-card p-4"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="font-medium text-primary">
+                    <p className="font-medium text-foreground">
                       {request.action === "delete" ? "Delete" : "Update"} request
                     </p>
-                    <p className="mt-1 text-sm text-gray-600">
+                    <p className="mt-1 text-sm text-label">
                       {request.entry_description || "Finance entry"} · {amountLabel}
                     </p>
-                    <p className="mt-1 text-xs text-gray-500">
+                    <p className="mt-1 text-xs text-label">
                       Requested by {request.requested_by_name} ·{" "}
                       {formatEventDateTime(request.created_at)}
                     </p>
                     {request.payload ? (
-                      <pre className="mt-2 overflow-x-auto rounded bg-gray-50 p-2 text-xs text-gray-700">
+                      <pre className="mt-2 overflow-x-auto rounded bg-gray-50 p-2 text-xs text-foreground">
                         {JSON.stringify(request.payload, null, 2)}
                       </pre>
                     ) : null}
@@ -124,7 +124,7 @@ export function FinancePendingApprovals({
                       type="button"
                       disabled={isBusy}
                       onClick={() => void handleApprove(request.id)}
-                      className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white transition hover:bg-accent-hover disabled:opacity-60"
+                      className="rounded-full bg-primary px-3 py-1.5 text-sm font-medium text-white transition hover:bg-primary-hover disabled:opacity-60"
                     >
                       Approve
                     </button>
@@ -132,7 +132,7 @@ export function FinancePendingApprovals({
                       type="button"
                       disabled={isBusy}
                       onClick={() => void handleReject(request.id)}
-                      className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-primary transition hover:bg-gray-50 disabled:opacity-60"
+                      className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-gray-50 disabled:opacity-60"
                     >
                       Reject
                     </button>

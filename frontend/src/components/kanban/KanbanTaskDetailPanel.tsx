@@ -145,12 +145,12 @@ export function KanbanTaskDetailPanel({
             </p>
             <h2
               id="kanban-task-detail-title"
-              className="mt-1 text-lg font-semibold text-primary"
+              className="mt-1 text-lg font-light tracking-subhead text-foreground"
             >
               {title}
             </h2>
             {task.due_date ? (
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-label">
                 Due {formatEventDateTime(task.due_date)}
               </p>
             ) : null}
@@ -158,7 +158,7 @@ export function KanbanTaskDetailPanel({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md border border-gray-200 px-2.5 py-1 text-sm text-gray-600 transition hover:bg-gray-50"
+            className="rounded-md border border-gray-200 px-2.5 py-1 text-sm text-label transition hover:bg-gray-50"
           >
             Close
           </button>
@@ -166,23 +166,23 @@ export function KanbanTaskDetailPanel({
 
         <div className="space-y-5 px-5 py-4">
           {task.description ? (
-            <p className="text-sm text-gray-600">{task.description}</p>
+            <p className="text-sm text-label">{task.description}</p>
           ) : null}
 
           {error ? (
-            <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <p className="ds-alert-banner">
               {error}
             </p>
           ) : null}
 
           {successMessage ? (
-            <p className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+            <p className="ds-alert-banner">
               {successMessage}
             </p>
           ) : null}
 
           {isSimpleKanbanTask(task) ? (
-            <label className="block text-sm text-gray-600">
+            <label className="block text-sm text-label">
               Status
               <select
                 value={task.status}
@@ -218,7 +218,7 @@ export function KanbanTaskDetailPanel({
           <div>
             <label
               htmlFor={`kanban-task-note-${task.id}`}
-              className="block text-sm font-medium text-gray-700"
+              className="block text-sm font-medium text-foreground"
             >
               Completion note
             </label>
@@ -234,7 +234,7 @@ export function KanbanTaskDetailPanel({
               type="button"
               disabled={busy}
               onClick={() => void handleSaveNote()}
-              className="mt-2 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-primary transition hover:border-accent hover:bg-accent/5 disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-2 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-foreground transition hover:border-accent hover:bg-accent/5 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Save note
             </button>
@@ -243,7 +243,7 @@ export function KanbanTaskDetailPanel({
           <div>
             <label
               htmlFor={`kanban-task-photo-${task.id}`}
-              className="block text-sm font-medium text-gray-700"
+              className="block text-sm font-medium text-foreground"
             >
               Completion photo
             </label>
@@ -268,7 +268,7 @@ export function KanbanTaskDetailPanel({
               accept="image/png,image/jpeg,image/webp"
               disabled={busy}
               onChange={(event) => void handlePhotoChange(event)}
-              className="mt-2 block w-full text-sm text-gray-600 file:mr-3 file:rounded-md file:border-0 file:bg-accent/10 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-accent hover:file:bg-accent/20 disabled:opacity-60"
+              className="mt-2 block w-full text-sm text-label file:mr-3 file:rounded-md file:border-0 file:bg-accent/10 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-accent hover:file:bg-accent/20 disabled:opacity-60"
             />
           </div>
         </div>

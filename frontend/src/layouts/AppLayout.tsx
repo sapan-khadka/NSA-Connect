@@ -7,7 +7,7 @@ import {
   PrimaryNavLink,
 } from "../components/AppNav";
 import { AppLogo } from "../components/AppLogo";
-import { PrayerFlagStripe } from "../components/NepaliDecor";
+import { HeaderAccentLine } from "../components/NepaliDecor";
 import { useAuth } from "../context/useAuth";
 import { useLogout } from "../context/useLogout";
 import {
@@ -19,8 +19,8 @@ const guestLinkClass = ({ isActive }: { isActive: boolean }) =>
   [
     "inline-block rounded-md px-2.5 py-1.5 transition-colors",
     isActive
-      ? "bg-accent/10 font-medium text-accent"
-      : "text-gray-600 hover:bg-gray-50 hover:text-primary",
+      ? "bg-surface-card font-medium text-accent"
+      : "text-label hover:bg-surface-card hover:text-accent",
   ].join(" ");
 
 export function AppLayout() {
@@ -52,7 +52,7 @@ export function AppLayout() {
 
   return (
     <div className="min-h-screen bg-surface">
-      <header className="border-b border-gray-200 bg-white">
+      <header className="bg-surface">
         <nav className="mx-auto flex w-full max-w-7xl items-center gap-4 px-6 py-3 lg:gap-6">
           <AppLogo asLink showTagline={false} />
 
@@ -91,7 +91,7 @@ export function AppLayout() {
             </ul>
           )}
         </nav>
-        <PrayerFlagStripe />
+        <HeaderAccentLine />
       </header>
 
       <main

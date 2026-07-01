@@ -25,7 +25,7 @@ describe("UpcomingEventsPage", () => {
     vi.clearAllMocks();
   });
 
-  it("lists upcoming events with links to manage", async () => {
+  it("lists upcoming events with links to detail pages", async () => {
     const { fetchUpcomingEvents } = await import("../lib/events-api");
     vi.mocked(fetchUpcomingEvents).mockResolvedValue(mockEvents);
 
@@ -53,9 +53,9 @@ describe("UpcomingEventsPage", () => {
     );
 
     expect(await screen.findByText("Dashain Celebration")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /manage tasks & budget/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /View event/i })).toHaveAttribute(
       "href",
-      "/events/1/manage",
+      "/events/1",
     );
   });
 

@@ -5,6 +5,8 @@ import {
   type MemberRole,
   type RoleBadgeSize,
 } from "../lib/roles";
+import { getRoleBadgeIcon } from "../lib/role-badge-icons";
+import { RoleBadgePill } from "./RoleBadgePill";
 
 type RoleBadgeProps = {
   role: MemberRole | string;
@@ -17,7 +19,7 @@ export function RoleBadge({ role, size = "sm", className }: RoleBadgeProps) {
     return (
       <span
         className={[
-          "inline-flex rounded-full border border-gray-200 bg-gray-50 px-2.5 py-0.5 text-xs font-semibold text-gray-700",
+          "inline-flex items-center gap-1.5 rounded-pill bg-roleBadge-general-bg py-1 px-2.5 text-xs font-medium text-roleBadge-general",
           className,
         ]
           .filter(Boolean)
@@ -29,12 +31,13 @@ export function RoleBadge({ role, size = "sm", className }: RoleBadgeProps) {
   }
 
   return (
-    <span
+    <RoleBadgePill
+      label={formatRoleLabel(role)}
+      icon={getRoleBadgeIcon(role)}
+      size={size}
       className={[getRoleBadgeClassName(role, size), className]
         .filter(Boolean)
         .join(" ")}
-    >
-      {formatRoleLabel(role)}
-    </span>
+    />
   );
 }

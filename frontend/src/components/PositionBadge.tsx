@@ -5,6 +5,8 @@ import {
   type MemberPosition,
   type RoleBadgeSize,
 } from "../lib/roles";
+import { getPositionBadgeIcon } from "../lib/role-badge-icons";
+import { RoleBadgePill } from "./RoleBadgePill";
 
 type PositionBadgeProps = {
   position: MemberPosition;
@@ -21,13 +23,19 @@ export function PositionBadge({
     return null;
   }
 
+  const icon = getPositionBadgeIcon(position);
+  if (!icon) {
+    return null;
+  }
+
   return (
-    <span
+    <RoleBadgePill
+      label={formatPositionLabel(position)}
+      icon={icon}
+      size={size}
       className={[getPositionBadgeClassName(position, size), className]
         .filter(Boolean)
         .join(" ")}
-    >
-      {formatPositionLabel(position)}
-    </span>
+    />
   );
 }

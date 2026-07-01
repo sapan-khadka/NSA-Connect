@@ -28,7 +28,7 @@ type LogFinanceEntryFormProps = {
 };
 
 const inputClassName =
-  "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-primary shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
+  "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
 
 export function LogFinanceEntryForm({
   eventOptions,
@@ -96,10 +96,10 @@ export function LogFinanceEntryForm({
   }
 
   return (
-    <section className="rounded-lg border border-gray-200 bg-white p-6">
+    <section className="rounded-card bg-surface-card p-6">
       <div>
-        <h2 className="text-lg font-semibold text-primary">Log transaction</h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <h2 className="text-lg font-light tracking-subhead text-foreground">Log transaction</h2>
+        <p className="mt-1 text-sm text-label">
           Record income or expense and optionally attach a receipt image.
         </p>
       </div>
@@ -107,14 +107,14 @@ export function LogFinanceEntryForm({
       {serverError && (
         <div
           role="alert"
-          className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          className="mt-4 ds-alert-banner"
         >
           {serverError}
         </div>
       )}
 
       {successMessage && (
-        <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="mt-4 ds-card px-4 py-3 text-sm text-primary">
           {successMessage}
         </div>
       )}
@@ -124,7 +124,7 @@ export function LogFinanceEntryForm({
         className="mt-6 grid gap-5 md:grid-cols-2"
       >
         <div>
-          <label htmlFor="entry_type" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="entry_type" className="block text-sm font-medium text-foreground">
             Type
           </label>
           <select
@@ -144,7 +144,7 @@ export function LogFinanceEntryForm({
         </div>
 
         <div>
-          <label htmlFor="category" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="category" className="block text-sm font-medium text-foreground">
             Category
           </label>
           <select
@@ -164,7 +164,7 @@ export function LogFinanceEntryForm({
         </div>
 
         <div>
-          <label htmlFor="amount" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="amount" className="block text-sm font-medium text-foreground">
             Amount
           </label>
           <input
@@ -177,12 +177,12 @@ export function LogFinanceEntryForm({
             className={inputClassName}
           />
           {fieldErrors.amount && (
-            <p className="mt-1 text-sm text-red-600">{fieldErrors.amount}</p>
+            <p className="mt-1 ds-field-error">{fieldErrors.amount}</p>
           )}
         </div>
 
         <div>
-          <label htmlFor="event_id" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="event_id" className="block text-sm font-medium text-foreground">
             Linked event
           </label>
           <select
@@ -201,7 +201,7 @@ export function LogFinanceEntryForm({
         </div>
 
         <div className="md:col-span-2">
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="description" className="block text-sm font-medium text-foreground">
             Description
           </label>
           <textarea
@@ -214,7 +214,7 @@ export function LogFinanceEntryForm({
         </div>
 
         <div className="md:col-span-2">
-          <label htmlFor="receipt" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="receipt" className="block text-sm font-medium text-foreground">
             Receipt (optional)
           </label>
           <input
@@ -226,7 +226,7 @@ export function LogFinanceEntryForm({
               setServerError(null);
               setSuccessMessage(null);
             }}
-            className="mt-1 block w-full text-sm text-gray-600 file:mr-4 file:rounded-md file:border-0 file:bg-accent/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-accent"
+            className="mt-1 block w-full text-sm text-label file:mr-4 file:rounded-md file:border-0 file:bg-accent/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-accent"
           />
         </div>
 
@@ -234,7 +234,7 @@ export function LogFinanceEntryForm({
           <button
             type="submit"
             disabled={isSubmitting}
-            className="rounded-md bg-accent px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? "Saving..." : "Log transaction"}
           </button>

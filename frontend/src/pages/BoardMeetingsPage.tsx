@@ -26,28 +26,28 @@ function MeetingListSection({
 
   return (
     <section className="space-y-4">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-label">
         {title}
       </h2>
       <div className="grid gap-4">
         {meetings.map((meeting) => (
           <article
             key={meeting.event_id}
-            className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+            className="rounded-xl border border-surface-card bg-white p-6 shadow-sm"
           >
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0 space-y-2">
                 <div>
-                  <h3 className="text-xl font-semibold text-primary">
+                  <h3 className="text-xl font-semibold text-foreground">
                     {meeting.event_name}
                   </h3>
-                  <p className="mt-1 text-sm text-gray-600">
+                  <p className="mt-1 text-sm text-label">
                     {formatEventDateTime(meeting.starts_at)}
                   </p>
                 </div>
                 {meeting.agenda ? (
-                  <p className="line-clamp-2 text-sm text-gray-600">
-                    <span className="font-medium text-gray-700">Agenda:</span>{" "}
+                  <p className="line-clamp-2 text-sm text-label">
+                    <span className="font-medium text-foreground">Agenda:</span>{" "}
                     {meeting.agenda}
                   </p>
                 ) : null}
@@ -55,7 +55,7 @@ function MeetingListSection({
               </div>
               <Link
                 to={`/events/meetings/${meeting.event_id}`}
-                className="shrink-0 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-primary transition hover:border-accent hover:bg-accent/5"
+                className="shrink-0 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-foreground transition hover:border-accent hover:bg-accent/5"
               >
                 View meeting
               </Link>
@@ -115,20 +115,20 @@ export function BoardMeetingsPage() {
       />
 
       {!isLoading && meetings.length > 0 ? (
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-label">
           {recordedCount} of {meetings.length} meeting
           {meetings.length === 1 ? "" : "s"} have attendance or minutes on file.
         </p>
       ) : null}
 
       {isLoading ? (
-        <p className="text-sm text-gray-500">Loading board meetings…</p>
+        <p className="text-sm text-label">Loading board meetings…</p>
       ) : null}
 
       {error ? (
         <div
           role="alert"
-          className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-800"
+          className="ds-alert-banner p-6"
         >
           {error}
         </div>
@@ -136,14 +136,14 @@ export function BoardMeetingsPage() {
 
       {!isLoading && !error && meetings.length === 0 ? (
         <section className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center">
-          <p className="text-lg font-semibold text-primary">No board meetings yet</p>
-          <p className="mt-2 text-gray-500">
+          <p className="text-lg font-light tracking-subhead text-foreground">No board meetings yet</p>
+          <p className="mt-2 text-label">
             Create a meeting event on the calendar, then record attendance and
             minutes from the meeting page.
           </p>
           <Link
             to="/events/calendar"
-            className="mt-4 inline-block text-sm font-medium text-accent hover:underline"
+            className="mt-4 inline-block ds-link"
           >
             Open calendar
           </Link>

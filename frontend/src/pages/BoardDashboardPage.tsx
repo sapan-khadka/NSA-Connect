@@ -15,34 +15,34 @@ export function BoardDashboardPage() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-xl border border-accent/20 bg-gradient-to-br from-accent/5 to-white p-8">
-        <p className="text-sm font-semibold uppercase tracking-wide text-accent">
+      <section className="rounded-card bg-surface-card p-8">
+        <p className="ds-section-label">
           Board Dashboard
         </p>
-        <h1 className="mt-2 text-3xl font-bold text-primary">
+        <h1 className="mt-2 text-3xl font-light tracking-headline text-foreground">
           Board workspace, {member.full_name}
         </h1>
-        <p className="mt-3 max-w-2xl text-gray-600">
+        <p className="mt-3 max-w-2xl text-label">
           Approve new signups with one click, manage members, and oversee NSA
           operations from one place.
         </p>
       </section>
 
       <div className="grid gap-6 md:grid-cols-3">
-        <section className="rounded-lg border border-gray-200 bg-white p-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+        <section className="rounded-card bg-surface-card p-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-label">
             Pending approvals
           </h2>
           <p
             data-testid="pending-approval-count"
-            className="mt-3 text-4xl font-bold text-primary"
+            className="mt-3 text-4xl font-light tracking-headline text-foreground"
           >
             {pendingCount ?? "..."}
           </p>
         </section>
 
-        <section className="rounded-lg border border-gray-200 bg-white p-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+        <section className="rounded-card bg-surface-card p-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-label">
             Your role
           </h2>
           <div className="mt-3">
@@ -50,26 +50,26 @@ export function BoardDashboardPage() {
           </div>
         </section>
 
-        <section className="rounded-lg border border-gray-200 bg-white p-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+        <section className="rounded-card bg-surface-card p-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-label">
             Board tools
           </h2>
-          <p className="mt-3 text-2xl font-bold text-primary">Active</p>
+          <p className="mt-3 text-2xl font-light tracking-headline text-foreground">Active</p>
         </section>
       </div>
 
       <PendingApprovals onCountChange={setPendingCount} showReject={false} />
 
-      <section className="rounded-lg border border-gray-200 bg-white p-6">
-        <h2 className="text-lg font-semibold text-primary">Board actions</h2>
+      <section className="rounded-card bg-surface-card p-6">
+        <h2 className="text-lg font-light tracking-subhead text-foreground">Board actions</h2>
         <ul className="mt-4 grid gap-3 md:grid-cols-2">
           <li>
             <Link
               to="/events/tasks"
-              className="block rounded-md border border-accent/30 bg-gradient-to-br from-accent/10 to-white px-4 py-3 transition-all hover:border-accent hover:shadow-md"
+              className="block rounded-card bg-surface-card px-4 py-3 transition hover:bg-surface-muted"
             >
-              <p className="font-medium text-primary">Task board</p>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="font-medium text-foreground">Task board</p>
+              <p className="mt-1 text-sm text-label">
                 Drag checklist tasks across To do, In progress, and Done.
               </p>
             </Link>
@@ -79,8 +79,8 @@ export function BoardDashboardPage() {
               to="/board/meeting-minutes"
               className="block rounded-md border border-gray-200 px-4 py-3 transition-colors hover:border-accent hover:bg-accent/5"
             >
-              <p className="font-medium text-primary">Meeting minutes</p>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="font-medium text-foreground">Meeting minutes</p>
+              <p className="mt-1 text-sm text-label">
                 Summarize raw notes into decisions and action items.
               </p>
             </Link>
@@ -90,8 +90,8 @@ export function BoardDashboardPage() {
               to="/board/announcement-email"
               className="block rounded-md border border-gray-200 px-4 py-3 transition-colors hover:border-accent hover:bg-accent/5"
             >
-              <p className="font-medium text-primary">Announcement email</p>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="font-medium text-foreground">Announcement email</p>
+              <p className="mt-1 text-sm text-label">
                 Generate a formatted member email from an event name.
               </p>
             </Link>
@@ -101,8 +101,8 @@ export function BoardDashboardPage() {
               to="/members?tab=pending"
               className="block rounded-md border border-gray-200 px-4 py-3 transition-colors hover:border-accent hover:bg-accent/5"
             >
-              <p className="font-medium text-primary">Full approval queue</p>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="font-medium text-foreground">Full approval queue</p>
+              <p className="mt-1 text-sm text-label">
                 Review all pending signups and reject if needed.
               </p>
             </Link>
@@ -112,8 +112,8 @@ export function BoardDashboardPage() {
               to="/members"
               className="block rounded-md border border-gray-200 px-4 py-3 transition-colors hover:border-accent hover:bg-accent/5"
             >
-              <p className="font-medium text-primary">Member directory</p>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="font-medium text-foreground">Member directory</p>
+              <p className="mt-1 text-sm text-label">
                 Browse and search all NSA Connect members.
               </p>
             </Link>
@@ -123,8 +123,8 @@ export function BoardDashboardPage() {
               to="/finance"
               className="block rounded-md border border-gray-200 px-4 py-3 transition-colors hover:border-accent hover:bg-accent/5"
             >
-              <p className="font-medium text-primary">Finance overview</p>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="font-medium text-foreground">Finance overview</p>
+              <p className="mt-1 text-sm text-label">
                 Monitor dues, expenses, and treasury activity.
               </p>
             </Link>

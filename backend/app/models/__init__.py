@@ -1,7 +1,7 @@
 from app.models.base import Base
 from app.models.constitutional_chunk import ConstitutionalChunk
 from app.models.event import Event, EventType
-from app.models.event_rsvp import EventRsvp
+from app.models.event_rsvp import EventRsvp, RsvpStatus
 from app.models.event_task import (
     EventTask,
     EventTaskChecklistItem,
@@ -25,6 +25,7 @@ __all__ = [
     "ConstitutionalChunk",
     "Event",
     "EventRsvp",
+    "RsvpStatus",
     "EventTask",
     "EventTaskChecklistItem",
     "EventTaskKind",

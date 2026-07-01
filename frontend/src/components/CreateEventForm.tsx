@@ -28,7 +28,7 @@ type CreateEventFormProps = {
 };
 
 const inputClassName =
-  "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-primary shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
+  "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
 
 export function CreateEventForm({ onCreated }: CreateEventFormProps) {
   const [values, setValues] = useState<CreateEventFormValues>(
@@ -131,18 +131,18 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
   const draftTaskCount = countChecklistTasks(draftChecklist);
 
   return (
-    <section className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6">
+    <section className="rounded-card bg-surface-card p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-primary">Create event</h2>
-          <p className="mt-1 text-sm text-gray-600">
+          <h2 className="text-lg font-light tracking-subhead text-foreground">Create event</h2>
+          <p className="mt-1 text-sm text-label">
             Board members can schedule new NSA events.
           </p>
         </div>
         <button
           type="button"
           onClick={() => setIsExpanded((current) => !current)}
-          className="rounded-md border border-gray-200 px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:border-accent hover:bg-accent/5"
+          className="rounded-md border border-gray-200 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:border-accent hover:bg-accent/5"
         >
           {isExpanded ? "Hide form" : "New event"}
         </button>
@@ -157,14 +157,14 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
           {serverError ? (
             <p
               role="alert"
-              className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+              className="ds-alert-banner"
             >
               {serverError}
             </p>
           ) : null}
 
           <div>
-            <label htmlFor="event-name" className="block text-sm font-medium text-primary">
+            <label htmlFor="event-name" className="block text-sm font-medium text-foreground">
               Event name
             </label>
             <input
@@ -176,14 +176,14 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
               className={inputClassName}
             />
             {fieldErrors.name ? (
-              <p className="mt-1 text-sm text-red-600">{fieldErrors.name}</p>
+              <p className="mt-1 ds-field-error">{fieldErrors.name}</p>
             ) : null}
           </div>
 
           <div>
             <label
               htmlFor="event-description"
-              className="block text-sm font-medium text-primary"
+              className="block text-sm font-medium text-foreground"
             >
               {values.event_type === "meeting" ? "Agenda / description" : "Description"}
             </label>
@@ -201,7 +201,7 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
               className={inputClassName}
             />
             {fieldErrors.description ? (
-              <p className="mt-1 text-sm text-red-600">{fieldErrors.description}</p>
+              <p className="mt-1 ds-field-error">{fieldErrors.description}</p>
             ) : null}
           </div>
 
@@ -209,7 +209,7 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
             <div>
               <label
                 htmlFor="event-type"
-                className="block text-sm font-medium text-primary"
+                className="block text-sm font-medium text-foreground"
               >
                 Event type
               </label>
@@ -232,17 +232,17 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
                 ))}
               </select>
               {fieldErrors.event_type ? (
-                <p className="mt-1 text-sm text-red-600">{fieldErrors.event_type}</p>
+                <p className="mt-1 ds-field-error">{fieldErrors.event_type}</p>
               ) : null}
             </div>
 
             <div>
               <label
                 htmlFor="event-budget"
-                className="block text-sm font-medium text-primary"
+                className="block text-sm font-medium text-foreground"
               >
                 Budget (USD){" "}
-                <span className="font-normal text-gray-500">(optional)</span>
+                <span className="font-normal text-label">(optional)</span>
               </label>
               <input
                 id="event-budget"
@@ -257,14 +257,14 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
                 className={inputClassName}
               />
               {fieldErrors.budget ? (
-                <p className="mt-1 text-sm text-red-600">{fieldErrors.budget}</p>
+                <p className="mt-1 ds-field-error">{fieldErrors.budget}</p>
               ) : null}
             </div>
 
             <div>
               <label
                 htmlFor="event-date"
-                className="block text-sm font-medium text-primary"
+                className="block text-sm font-medium text-foreground"
               >
                 Date
               </label>
@@ -277,14 +277,14 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
                 className={inputClassName}
               />
               {fieldErrors.event_date ? (
-                <p className="mt-1 text-sm text-red-600">{fieldErrors.event_date}</p>
+                <p className="mt-1 ds-field-error">{fieldErrors.event_date}</p>
               ) : null}
             </div>
 
             <div>
               <label
                 htmlFor="event-time"
-                className="block text-sm font-medium text-primary"
+                className="block text-sm font-medium text-foreground"
               >
                 Start time
               </label>
@@ -297,16 +297,16 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
                 className={inputClassName}
               />
               {fieldErrors.event_time ? (
-                <p className="mt-1 text-sm text-red-600">{fieldErrors.event_time}</p>
+                <p className="mt-1 ds-field-error">{fieldErrors.event_time}</p>
               ) : null}
             </div>
           </div>
 
-          <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
+          <div className="rounded-card bg-surface-card p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-primary">Prep checklist</h3>
-                <p className="mt-1 text-sm text-gray-600">
+                <h3 className="text-sm font-semibold text-foreground">Prep checklist</h3>
+                <p className="mt-1 text-sm text-label">
                   Generate 10–15 AI-suggested tasks from the event name and type.
                 </p>
               </div>
@@ -325,7 +325,7 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
             {checklistError ? (
               <p
                 role="alert"
-                className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+                className="mt-3 ds-alert-banner"
               >
                 {checklistError}
               </p>
@@ -343,7 +343,7 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             {draftTaskCount > 0 ? (
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-label">
                 Ready to create event with {draftTaskCount} prep tasks.
               </p>
             ) : (
@@ -352,7 +352,7 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
             <button
               type="submit"
               disabled={isSubmitting || isGeneratingChecklist}
-              className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting
                 ? draftTaskCount > 0

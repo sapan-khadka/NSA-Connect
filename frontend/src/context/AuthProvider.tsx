@@ -9,6 +9,7 @@ import {
 import { fetchCurrentMember } from "../lib/auth-api";
 import type { MemberResponse } from "../lib/auth-api";
 import {
+  readStoredAccessToken,
   registerUnauthorizedListener,
   syncAccessToken,
 } from "../lib/auth-token";
@@ -22,16 +23,55 @@ type AuthProviderProps = {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [token, setToken] = useState<string | null>(null);
   const [member, setMember] = useState<AuthContextValue["member"]>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    syncAccessToken(token);
-  }, [token]);
+    let cancelled = false;
+
+    async function restoreSession() {
+      const storedToken = readStoredAccessToken();
+      if (!storedToken) {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      syncAccessToken(storedToken);
+      if (!cancelled) {
+        setToken(storedToken);
+      }
+
+      try {
+        const currentMember = await fetchCurrentMember();
+        if (!cancelled) {
+          setMember(currentMember);
+        }
+      } catch {
+        if (!cancelled) {
+          setToken(null);
+          setMember(null);
+          syncAccessToken(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void restoreSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     return registerUnauthorizedListener(() => {
       setToken(null);
       setMember(null);
+      syncAccessToken(null);
     });
   }, []);
 

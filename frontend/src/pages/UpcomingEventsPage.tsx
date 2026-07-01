@@ -3,18 +3,15 @@ import { Link } from "react-router-dom";
 
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage } from "../lib/auth-api";
+import { eventDetailPath } from "../lib/event-links";
 import { fetchUpcomingEvents, type EventResponse } from "../lib/events-api";
 import { EVENT_TYPE_BADGE_CLASS, EVENT_TYPE_LABELS } from "../lib/event-types";
 import { formatEventDateTime } from "../lib/format-datetime";
-import { isRoleAtLeast } from "../lib/roles";
 
 export function UpcomingEventsPage() {
-  const { member } = useAuth();
   const [events, setEvents] = useState<EventResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const canManage = member ? isRoleAtLeast(member.role, "board") : false;
 
   useEffect(() => {
     let cancelled = false;
@@ -48,24 +45,24 @@ export function UpcomingEventsPage() {
   return (
     <div className="space-y-8">
       <section className="rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-8">
-        <p className="text-sm font-semibold uppercase tracking-wide text-accent">
+        <p className="ds-section-label">
           Events
         </p>
-        <h1 className="mt-2 text-3xl font-bold text-primary">Upcoming events</h1>
-        <p className="mt-3 max-w-2xl text-gray-600">
+        <h1 className="mt-2 text-3xl font-light tracking-headline text-foreground">Upcoming events</h1>
+        <p className="mt-3 max-w-2xl text-label">
           Open an event to manage its tasks, budget, and completion progress in
           one place.
         </p>
       </section>
 
       {isLoading ? (
-        <p className="text-sm text-gray-500">Loading upcoming events…</p>
+        <p className="text-sm text-label">Loading upcoming events…</p>
       ) : null}
 
       {error ? (
         <div
           role="alert"
-          className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-800"
+          className="ds-alert-banner p-6"
         >
           {error}
         </div>
@@ -73,13 +70,13 @@ export function UpcomingEventsPage() {
 
       {!isLoading && !error && events.length === 0 ? (
         <section className="rounded-lg border border-dashed border-gray-300 bg-white p-10 text-center">
-          <p className="text-lg font-semibold text-primary">No upcoming events</p>
-          <p className="mt-2 text-gray-500">
+          <p className="text-lg font-light tracking-subhead text-foreground">No upcoming events</p>
+          <p className="mt-2 text-label">
             Check back when new events are scheduled.
           </p>
           <Link
             to="/events"
-            className="mt-6 inline-flex rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-hover"
+            className="mt-6 inline-flex rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-hover"
           >
             Open calendar
           </Link>
@@ -91,15 +88,15 @@ export function UpcomingEventsPage() {
           {events.map((event) => (
             <li key={event.id}>
               <Link
-                to={`/events/${event.id}/manage`}
-                className="block rounded-lg border border-gray-200 bg-white p-5 transition hover:border-accent hover:shadow-sm"
+                to={eventDetailPath(event.id)}
+                className="block rounded-card bg-surface-card p-5 transition hover:border-accent hover:shadow-sm"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-lg font-semibold text-primary">
+                    <h2 className="text-lg font-light tracking-subhead text-foreground">
                       {event.name}
                     </h2>
-                    <p className="mt-1 text-sm text-gray-600">
+                    <p className="mt-1 text-sm text-label">
                       {formatEventDateTime(event.starts_at)}
                     </p>
                   </div>
@@ -109,18 +106,12 @@ export function UpcomingEventsPage() {
                     {EVENT_TYPE_LABELS[event.event_type]}
                   </span>
                 </div>
-                <p className="mt-3 line-clamp-2 text-sm text-gray-600">
+                <p className="mt-3 line-clamp-2 text-sm text-label">
                   {event.description}
                 </p>
-                {canManage ? (
-                  <p className="mt-4 text-sm font-medium text-accent">
-                    Manage tasks & budget →
-                  </p>
-                ) : (
-                  <p className="mt-4 text-sm font-medium text-accent">
-                    View event →
-                  </p>
-                )}
+                <p className="mt-4 text-sm font-medium text-accent">
+                  View event ›
+                </p>
               </Link>
             </li>
           ))}

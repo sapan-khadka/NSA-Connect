@@ -34,7 +34,7 @@ type EditDraft = {
 const CATEGORY_OPTIONS = Object.keys(FINANCE_CATEGORY_LABELS);
 
 const editInputClassName =
-  "w-full rounded-md border border-gray-300 px-2 py-1 text-sm text-primary focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
+  "w-full rounded-md border border-gray-300 px-2 py-1 text-sm text-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
 
 export function FinanceEntryList({
   semester,
@@ -192,7 +192,7 @@ export function FinanceEntryList({
 
   if (isLoading) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-white p-10 text-center text-gray-500">
+      <div className="rounded-card bg-surface-card p-10 text-center text-label">
         Loading transactions...
       </div>
     );
@@ -202,7 +202,7 @@ export function FinanceEntryList({
     return (
       <div
         role="alert"
-        className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-800"
+        className="ds-alert-banner p-6"
       >
         {errorMessage}
       </div>
@@ -212,16 +212,16 @@ export function FinanceEntryList({
   const columnCount = canManage ? 7 : 6;
 
   return (
-    <section className="rounded-lg border border-gray-200 bg-white p-6">
+    <section className="rounded-card bg-surface-card p-6">
       <div>
-        <h2 className="text-lg font-semibold text-primary">Recent transactions</h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <h2 className="text-lg font-light tracking-subhead text-foreground">Recent transactions</h2>
+        <p className="mt-1 text-sm text-label">
           Latest logged income and expense entries for the selected semester.
         </p>
       </div>
 
       {financeLocked ? (
-        <p className="mt-4 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+        <p className="mt-4 rounded-card bg-surface-card px-3 py-2 text-sm text-foreground">
           Event finances are closed. These entries are preserved for accountability
           and can no longer be edited.
         </p>
@@ -230,14 +230,14 @@ export function FinanceEntryList({
       {actionError ? (
         <p
           role="alert"
-          className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+          className="mt-4 ds-alert-banner"
         >
           {actionError}
         </p>
       ) : null}
 
       {actionNotice ? (
-        <p className="mt-4 rounded-md border border-accent/20 bg-accent/5 px-3 py-2 text-sm text-primary">
+        <p className="mt-4 rounded-md border border-accent/20 bg-accent/5 px-3 py-2 text-sm text-foreground">
           {actionNotice}
         </p>
       ) : null}
@@ -247,7 +247,7 @@ export function FinanceEntryList({
           data-testid="finance-entry-list"
           className="min-w-full divide-y divide-gray-200 text-left text-sm"
         >
-          <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+          <thead className="bg-gray-50 text-xs uppercase tracking-wide text-label">
             <tr>
               <th className="px-4 py-3 font-semibold">Date</th>
               <th className="px-4 py-3 font-semibold">Type</th>
@@ -268,7 +268,7 @@ export function FinanceEntryList({
               if (isEditing) {
                 return (
                   <tr key={entry.id} className="bg-accent/5">
-                    <td className="px-4 py-3 text-gray-600">
+                    <td className="px-4 py-3 text-label">
                       {formatEventDateTime(entry.created_at)}
                     </td>
                     <td className="px-4 py-3">
@@ -326,14 +326,14 @@ export function FinanceEntryList({
                         className={editInputClassName}
                       />
                     </td>
-                    <td className="px-4 py-3 text-gray-400">—</td>
+                    <td className="px-4 py-3 text-label">—</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => void saveEdit(entry.id)}
                           disabled={isBusy}
-                          className="rounded-md bg-accent px-3 py-1 text-xs font-medium text-white transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+                          className="rounded-full bg-primary px-3 py-1 text-xs font-medium text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {isBusy ? "Saving…" : "Save"}
                         </button>
@@ -341,7 +341,7 @@ export function FinanceEntryList({
                           type="button"
                           onClick={cancelEdit}
                           disabled={isBusy}
-                          className="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-60"
+                          className="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-foreground transition hover:bg-gray-50 disabled:opacity-60"
                         >
                           Cancel
                         </button>
@@ -353,25 +353,25 @@ export function FinanceEntryList({
 
               return (
                 <tr key={entry.id}>
-                  <td className="px-4 py-3 text-gray-600">
+                  <td className="px-4 py-3 text-label">
                     {formatEventDateTime(entry.created_at)}
                   </td>
-                  <td className="px-4 py-3 capitalize text-primary">
+                  <td className="px-4 py-3 capitalize text-foreground">
                     {entry.entry_type}
                   </td>
-                  <td className="px-4 py-3 text-gray-700">
+                  <td className="px-4 py-3 text-foreground">
                     {formatFinanceCategory(entry.category)}
                   </td>
                   <td
                     className={`px-4 py-3 font-medium ${
                       entry.entry_type === "income"
-                        ? "text-emerald-700"
-                        : "text-red-700"
+                        ? "text-accent"
+                        : "text-foreground"
                     }`}
                   >
                     {formatCurrency(entry.amount)}
                   </td>
-                  <td className="px-4 py-3 text-gray-700">
+                  <td className="px-4 py-3 text-foreground">
                     {entry.description || "—"}
                   </td>
                   <td className="px-4 py-3">
@@ -385,7 +385,7 @@ export function FinanceEntryList({
                         View
                       </a>
                     ) : (
-                      <span className="text-gray-400">—</span>
+                      <span className="text-label">—</span>
                     )}
                   </td>
                   {canManage ? (
@@ -395,7 +395,7 @@ export function FinanceEntryList({
                           type="button"
                           onClick={() => startEdit(entry)}
                           disabled={isBusy || editingId !== null}
-                          className="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-primary transition hover:border-accent hover:bg-accent/5 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-foreground transition hover:border-accent hover:bg-accent/5 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           Edit
                         </button>
@@ -403,7 +403,7 @@ export function FinanceEntryList({
                           type="button"
                           onClick={() => void handleDelete(entry)}
                           disabled={isBusy || editingId !== null}
-                          className="rounded-md border border-red-200 px-3 py-1 text-xs font-medium text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-label transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {isBusy ? "…" : "Delete"}
                         </button>
@@ -417,7 +417,7 @@ export function FinanceEntryList({
               <tr>
                 <td
                   colSpan={columnCount}
-                  className="px-4 py-8 text-center text-gray-500"
+                  className="px-4 py-8 text-center text-label"
                 >
                   No transactions logged for this period.
                 </td>
