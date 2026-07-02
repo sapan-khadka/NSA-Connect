@@ -9,7 +9,7 @@ describe("EventAttendeesPanel", () => {
     cleanup();
   });
 
-  it("shows summary, grouped attendees, and filters by search", async () => {
+  it("shows a compact summary collapsed by default and expands on toggle", async () => {
     const user = userEvent.setup();
 
     render(
@@ -47,10 +47,21 @@ describe("EventAttendeesPanel", () => {
     );
 
     expect(screen.getByTestId("attendee-rsvp-summary")).toHaveTextContent(
+      "1 going · 2 not yet responded",
+    );
+    expect(screen.queryByText("Board members")).not.toBeInTheDocument();
+    expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Show ⌄" }));
+
+    expect(screen.getByTestId("attendee-rsvp-summary")).toHaveTextContent(
       "1 going · 1 maybe · 0 not going · 2 not yet responded",
     );
     expect(screen.getByText("Board members")).toBeInTheDocument();
     expect(screen.getByText("General members")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Export attendee list" }),
+    ).toBeInTheDocument();
 
     await user.type(screen.getByRole("searchbox"), "Zeta");
     expect(screen.queryByText("Alpha Board")).not.toBeInTheDocument();

@@ -63,6 +63,25 @@
     letter-spacing: 0.03em;
   }
 
+  .ds-nav-pill {
+    @apply inline-flex items-center gap-1 rounded-full px-4 py-2 text-sm text-label outline-none transition-colors;
+    @apply focus:outline-none;
+  }
+
+  .ds-nav-pill:focus-visible {
+    box-shadow:
+      0 0 0 2px #ffffff,
+      0 0 0 4px rgba(2, 124, 104, 0.45);
+  }
+
+  .ds-nav-pill--active {
+    @apply bg-surface-card font-medium text-foreground shadow-card;
+  }
+
+  .ds-nav-pill:not(.ds-nav-pill--active):hover {
+    @apply bg-surface-muted;
+  }
+
   .ds-card {
     @apply rounded-card bg-surface-card;
     box-shadow: var(--ds-card-shadow);

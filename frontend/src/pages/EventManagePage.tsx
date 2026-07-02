@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
+import { canCreateEventTasks } from "../lib/event-finance";
 import { EventFinanceCloseoutBanner } from "../components/EventFinanceCloseoutBanner";
 import { EventTaskManager } from "../components/EventTaskManager";
 import { MeetingRecordSection } from "../components/MeetingRecordSection";
@@ -280,6 +281,7 @@ export function EventManagePage() {
           eventName={event.name}
           member={member}
           canManageSimple={canManageTasks}
+          canCreateTasks={canCreateEventTasks(event)}
           canAssignChecklist={canViewBoard}
           assignableMembers={assignableMembers}
           refreshKey={refreshKey}

@@ -12,6 +12,7 @@ vi.mock("../lib/events-api", async () => {
   return {
     ...actual,
     fetchUpcomingEvents: vi.fn(),
+    updateEventRsvp: vi.fn(),
     rsvpToEvent: vi.fn(),
     cancelEventRsvp: vi.fn(),
   };
@@ -77,6 +78,7 @@ const mockedMeetings = vi.mocked(fetchMeetings);
 const sampleEvent = createMockEventResponse({
   id: 5,
   name: "Dashain Celebration",
+  event_type: "cultural",
   current_member_rsvp_status: "going",
 });
 
@@ -114,7 +116,7 @@ describe("HomePage", () => {
     expect(mockedUpcoming).not.toHaveBeenCalled();
   });
 
-  it("shows a personalized member hub with tasks and alerts", async () => {
+  it("shows a compact member dashboard with activity and role tools", async () => {
     mockedUpcoming.mockResolvedValue({ events: [sampleEvent], total: 1 });
     mockedMyTasks.mockResolvedValue({
       tasks: [
@@ -154,17 +156,17 @@ describe("HomePage", () => {
         {
           event_id: 9,
           event_name: "March Board Meeting",
-          starts_at: "2030-05-01T18:00:00+00:00",
-          is_past: true,
+          starts_at: "2030-07-01T18:00:00+00:00",
+          is_past: false,
           agenda: "Budget review",
-          has_attendance: true,
-          has_minutes: true,
+          has_attendance: false,
+          has_minutes: false,
           has_summary: false,
-          present_count: 5,
-          absent_count: 1,
+          present_count: 0,
+          absent_count: 0,
           excused_count: 0,
           unmarked_count: 0,
-          minutes_updated_at: "2030-05-01T20:00:00+00:00",
+          minutes_updated_at: null,
         },
       ],
       total: 1,
@@ -184,35 +186,33 @@ describe("HomePage", () => {
       }),
     ).toBeInTheDocument();
     expect(screen.getByText("Test User")).toHaveClass("text-foreground");
-    expect(await screen.findByText("Next event")).toBeInTheDocument();
-    expect(
-      await screen.findByRole("link", { name: "Dashain Celebration" }),
-    ).toHaveAttribute("href", "/events/5");
+    expect(screen.queryByRole("navigation", { name: "Shortcuts" })).not.toBeInTheDocument();
+
+    expect(await screen.findByLabelText("Activity")).toBeInTheDocument();
+    expect(screen.getByText("1 assigned task past due")).toBeInTheDocument();
+    expect(screen.getByText("2 member signups waiting for approval")).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: /Review/ })).toHaveLength(2);
+
     expect(screen.getByText("Your work")).toBeInTheDocument();
     expect(screen.getByText("Print flyers")).toBeInTheDocument();
-    expect(screen.getByText("Pending signups")).toBeInTheDocument();
-    expect(screen.getByText("2")).toBeInTheDocument();
+
+    expect(screen.getByText("Up next")).toBeInTheDocument();
     expect(
-      screen.getByText("Member signups waiting for approval"),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Overdue tasks")).toBeInTheDocument();
-    expect(
-      screen.getByText("Assigned task past due"),
-    ).toBeInTheDocument();
-    expect(screen.getByText("More for your role")).toBeInTheDocument();
+      screen.getByRole("link", { name: "Dashain Celebration" }),
+    ).toHaveAttribute("href", "/events/5");
+    expect(screen.getByRole("link", { name: /Full calendar/ })).toHaveAttribute(
+      "href",
+      "/events/calendar",
+    );
+
+    expect(screen.getByText("Next board meeting")).toBeInTheDocument();
     expect(screen.getByText("March Board Meeting")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /View meeting/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "View ›" })).toHaveAttribute(
       "href",
       "/events/meetings/9",
     );
-    expect(screen.getByRole("navigation", { name: "Shortcuts" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Events" }),
-    ).toHaveAttribute("href", "/events/calendar");
-    expect(screen.getByRole("link", { name: /My tasks/i })).toHaveAttribute(
-      "href",
-      "/events/tasks",
-    );
+
+    expect(screen.getByText("More for your role")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Past events/i })).toHaveAttribute(
       "href",
       "/events/past",
@@ -223,7 +223,58 @@ describe("HomePage", () => {
     );
   });
 
-  it("does not show needs-attention alerts when counts are zero", async () => {
+  it("hides board meeting card for general members", async () => {
+    mockedUpcoming.mockResolvedValue({ events: [sampleEvent], total: 1 });
+    mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
+    mockedPendingMembers.mockResolvedValue({ members: [], total: 0 });
+
+    render(
+      <MemoryRouter>
+        <MockAuthProvider value={{ member: createMockMember("general") }}>
+          <HomePage />
+        </MockAuthProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText("Assigned work")).toBeInTheDocument(),
+    );
+
+    expect(screen.queryByText("Next board meeting")).not.toBeInTheDocument();
+    expect(mockedMeetings).not.toHaveBeenCalled();
+  });
+
+  it("skips meetings when choosing the up next event", async () => {
+    mockedUpcoming.mockResolvedValue({
+      events: [
+        createMockEventResponse({
+          id: 8,
+          name: "April Board Meeting",
+          event_type: "meeting",
+        }),
+        sampleEvent,
+      ],
+      total: 2,
+    });
+    mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
+    mockedPendingMembers.mockResolvedValue({ members: [], total: 0 });
+    mockedMeetings.mockResolvedValue({ meetings: [], total: 0 });
+
+    render(
+      <MemoryRouter>
+        <MockAuthProvider value={{ member: createMockMember("president") }}>
+          <HomePage />
+        </MockAuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(
+      await screen.findByRole("link", { name: "Dashain Celebration" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "April Board Meeting" })).not.toBeInTheDocument();
+  });
+
+  it("does not show activity when counts are zero", async () => {
     mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
     mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
     mockedPendingMembers.mockResolvedValue({ members: [], total: 0 });
@@ -241,8 +292,6 @@ describe("HomePage", () => {
     );
 
     expect(screen.getByText("No open tasks assigned")).toBeInTheDocument();
-    expect(screen.getByText("You're all caught up.")).toBeInTheDocument();
-
-    expect(screen.queryByLabelText("Needs attention")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Activity")).not.toBeInTheDocument();
   });
 });

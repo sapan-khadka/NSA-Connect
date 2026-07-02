@@ -6,6 +6,10 @@ type NavDropdownItem = {
   to: string;
 };
 
+export function buildNavPillClass(isActive: boolean): string {
+  return isActive ? "ds-nav-pill ds-nav-pill--active" : "ds-nav-pill";
+}
+
 type NavDropdownProps = {
   label: string;
   items: NavDropdownItem[];
@@ -55,12 +59,7 @@ export function NavDropdown({ label, items, isActive = false }: NavDropdownProps
         aria-haspopup="menu"
         aria-controls={menuId}
         onClick={() => setOpen((current) => !current)}
-        className={[
-          "inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 transition-colors",
-          isActive || open
-            ? "bg-surface-card font-medium text-accent"
-            : "text-label hover:bg-surface-card hover:text-accent",
-        ].join(" ")}
+        className={buildNavPillClass(isActive || open)}
       >
         {label}
         <span aria-hidden="true" className="text-[10px]">
@@ -230,14 +229,7 @@ export function PrimaryNavLink({ to, end = false, children }: PrimaryNavLinkProp
       <NavLink
         to={to}
         end={end}
-        className={({ isActive }) =>
-          [
-            "inline-block rounded-md px-2.5 py-1.5 transition-colors",
-            isActive
-              ? "bg-surface-card font-medium text-accent"
-              : "text-label hover:bg-surface-card hover:text-accent",
-          ].join(" ")
-        }
+        className={({ isActive }) => buildNavPillClass(isActive)}
       >
         {children}
       </NavLink>

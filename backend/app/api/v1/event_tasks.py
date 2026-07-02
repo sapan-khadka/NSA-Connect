@@ -21,6 +21,7 @@ from app.schemas.event_task import (
 from app.services.event_service import EventNotFoundError
 from app.services.event_task_service import (
     EventTaskChecklistItemNotFoundError,
+    EventTaskCreationClosedError,
     EventTaskForbiddenError,
     EventTaskNotFoundError,
     InvalidEventTaskAssigneeError,
@@ -63,6 +64,11 @@ def create_event_task_endpoint(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Assignee must be an approved board member",
+        ) from None
+    except EventTaskCreationClosedError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This event has ended. New tasks can no longer be added.",
         ) from None
 
     return EventTaskResponse.from_task(task)

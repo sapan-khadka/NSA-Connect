@@ -54,6 +54,10 @@ class EventTaskChecklistItemNotFoundError(Exception):
     pass
 
 
+class EventTaskCreationClosedError(Exception):
+    """Raised when an event has ended and new tasks can no longer be added."""
+
+
 def is_task_manager(member: Member) -> bool:
     return member.role == MemberRole.PRESIDENT or member.position in {
         MemberPosition.VICE_PRESIDENT,
@@ -136,8 +140,11 @@ def create_simple_event_task(
     *,
     created_by: Member,
 ) -> EventTask:
-    if db.get(Event, event_id) is None:
+    event = db.get(Event, event_id)
+    if event is None:
         raise EventNotFoundError
+    if not event.is_upcoming:
+        raise EventTaskCreationClosedError
 
     _validate_assignee(db, data.assignee_id)
 

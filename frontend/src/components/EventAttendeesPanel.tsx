@@ -24,6 +24,14 @@ function statusBadgeClass(status: RsvpStatus | null): string {
   return "border border-urgent/30 bg-urgent/5 text-foreground";
 }
 
+function buildCompactSummary(data: EventAttendeesResponse): string {
+  return `${data.going_count} going · ${data.no_response_count} not yet responded`;
+}
+
+function buildFullSummary(data: EventAttendeesResponse): string {
+  return `${data.going_count} going · ${data.maybe_count} maybe · ${data.not_going_count} not going · ${data.no_response_count} not yet responded`;
+}
+
 function AttendeeGroup({
   title,
   attendees,
@@ -65,6 +73,7 @@ export function EventAttendeesPanel({
   loading,
   error,
 }: EventAttendeesPanelProps) {
+  const [expanded, setExpanded] = useState(false);
   const [query, setQuery] = useState("");
 
   const filteredAttendees = useMemo(() => {
@@ -90,24 +99,8 @@ export function EventAttendeesPanel({
   );
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-light tracking-subhead text-foreground">Attendees</h2>
-          <p className="mt-1 text-sm text-label">
-            Board-only view of RSVP responses for this event.
-          </p>
-        </div>
-        {data ? (
-          <button
-            type="button"
-            onClick={() => downloadAttendeesCsv(data.attendees, eventName)}
-            className="rounded-xl border border-gray-300 px-3 py-1.5 text-sm font-medium text-foreground transition hover:border-accent hover:text-accent"
-          >
-            Export attendee list
-          </button>
-        ) : null}
-      </div>
+    <div className="space-y-3">
+      <h2 className="text-lg font-light tracking-subhead text-foreground">Attendees</h2>
 
       {loading ? (
         <p className="text-sm text-label">Loading attendees…</p>
@@ -120,52 +113,64 @@ export function EventAttendeesPanel({
 
       {data ? (
         <>
-          <p
-            className="text-sm text-label"
-            data-testid="attendee-rsvp-summary"
-          >
-            <span className="font-medium text-foreground">{data.going_count}</span>{" "}
-            going ·{" "}
-            <span className="font-medium text-foreground">{data.maybe_count}</span>{" "}
-            maybe ·{" "}
-            <span className="font-medium text-foreground">
-              {data.not_going_count}
-            </span>{" "}
-            not going ·{" "}
-            <span className="font-medium text-foreground">
-              {data.no_response_count}
-            </span>{" "}
-            not yet responded
-          </p>
-
-          <label className="block">
-            <span className="sr-only">Search attendees</span>
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search by name…"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
-            />
-          </label>
-
-          <div className="max-h-80 space-y-4 overflow-y-auto pr-1">
-            {filteredAttendees.length === 0 ? (
-              <p className="text-sm text-label">
-                {query.trim()
-                  ? "No attendees match your search."
-                  : "No approved members found."}
-              </p>
-            ) : (
-              <>
-                <AttendeeGroup title="Board members" attendees={boardMembers} />
-                <AttendeeGroup
-                  title="General members"
-                  attendees={generalMembers}
-                />
-              </>
-            )}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p
+              className="text-sm text-label"
+              data-testid="attendee-rsvp-summary"
+            >
+              {expanded ? buildFullSummary(data) : buildCompactSummary(data)}
+            </p>
+            <button
+              type="button"
+              onClick={() => setExpanded((current) => !current)}
+              className="rounded-full border border-gray-200 px-3 py-1 text-sm font-medium text-foreground transition-colors hover:border-accent hover:text-accent"
+            >
+              {expanded ? "Hide ⌃" : "Show ⌄"}
+            </button>
           </div>
+
+          {expanded ? (
+            <div className="space-y-4 border-t border-gray-100 pt-4">
+              <div className="flex flex-wrap items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => downloadAttendeesCsv(data.attendees, eventName)}
+                  className="rounded-full border border-gray-200 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:border-accent hover:text-accent"
+                >
+                  Export attendee list
+                </button>
+              </div>
+
+              <label className="block">
+                <span className="sr-only">Search attendees</span>
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search by name…"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+                />
+              </label>
+
+              <div className="max-h-80 space-y-4 overflow-y-auto pr-1">
+                {filteredAttendees.length === 0 ? (
+                  <p className="text-sm text-label">
+                    {query.trim()
+                      ? "No attendees match your search."
+                      : "No approved members found."}
+                  </p>
+                ) : (
+                  <>
+                    <AttendeeGroup title="Board members" attendees={boardMembers} />
+                    <AttendeeGroup
+                      title="General members"
+                      attendees={generalMembers}
+                    />
+                  </>
+                )}
+              </div>
+            </div>
+          ) : null}
         </>
       ) : null}
     </div>

@@ -32,6 +32,13 @@ export function isEventFinanceEditable(event: Pick<EventResponse, "is_finance_lo
   return !event.is_finance_locked;
 }
 
+/** New prep/assigned tasks are only meaningful before the event runs. */
+export function canCreateEventTasks(
+  event: Pick<EventResponse, "is_past">,
+): boolean {
+  return !event.is_past;
+}
+
 export function getFinanceCloseoutMessage(event: EventResponse): string | null {
   if (event.is_finance_grace_period) {
     return `Log or edit entries until ${formatFinanceLockDeadline(event.finance_lock_at)}. After that, this event's finances close automatically for accountability.`;

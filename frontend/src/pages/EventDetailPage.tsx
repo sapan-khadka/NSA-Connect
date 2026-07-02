@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { EventAttendeesPanel } from "../components/EventAttendeesPanel";
+import { canCreateEventTasks } from "../lib/event-finance";
 import { EventFinanceCloseoutBanner } from "../components/EventFinanceCloseoutBanner";
 import { EventRsvpButton } from "../components/EventRsvpButton";
 import { EventTaskManager } from "../components/EventTaskManager";
@@ -263,32 +264,26 @@ export function EventDetailPage() {
       <EventFinanceCloseoutBanner event={event} />
 
       <HomeCard>
-        <h2 className="text-lg font-light tracking-subhead text-foreground">Event tasks</h2>
-        <p className="mt-1 text-sm text-label">
-          Prep checklist items and assigned work linked to this event.
-        </p>
-
         {showTasksExpanded ? (
-          <div className="mt-4">
-            <EventTaskManager
-              key={`${event.id}-${taskRefreshKey}`}
-              eventId={event.id}
-              eventName={event.name}
-              member={member}
-              canManageSimple={canManageTasks}
-              canAssignChecklist={canViewBoard}
-              assignableMembers={assignableMembers}
-              fallbackChecklistTasks={event.prep_tasks}
-              onFallbackTasksChange={(tasks) =>
-                setEvent((current) =>
-                  current ? { ...current, prep_tasks: tasks } : current,
-                )
-              }
-              refreshKey={taskRefreshKey}
-            />
-          </div>
+          <EventTaskManager
+            key={`${event.id}-${taskRefreshKey}`}
+            eventId={event.id}
+            eventName={event.name}
+            member={member}
+            canManageSimple={canManageTasks}
+            canCreateTasks={canCreateEventTasks(event)}
+            canAssignChecklist={canViewBoard}
+            assignableMembers={assignableMembers}
+            fallbackChecklistTasks={event.prep_tasks}
+            onFallbackTasksChange={(tasks) =>
+              setEvent((current) =>
+                current ? { ...current, prep_tasks: tasks } : current,
+              )
+            }
+            refreshKey={taskRefreshKey}
+          />
         ) : (
-          <details className="mt-4 rounded-lg border border-gray-200 bg-surface-muted/40 p-3">
+          <details className="rounded-lg border border-gray-200 bg-surface-muted/40 p-3">
             <summary className="cursor-pointer text-sm font-medium text-foreground">
               Tasks & volunteer
             </summary>
@@ -299,6 +294,7 @@ export function EventDetailPage() {
                 eventName={event.name}
                 member={member}
                 canManageSimple={canManageTasks}
+                canCreateTasks={canCreateEventTasks(event)}
                 canAssignChecklist={canViewBoard}
                 assignableMembers={assignableMembers}
                 fallbackChecklistTasks={event.prep_tasks}

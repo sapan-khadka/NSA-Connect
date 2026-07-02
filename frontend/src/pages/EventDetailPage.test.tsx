@@ -96,9 +96,9 @@ describe("EventDetailPage", () => {
 
     expect(await screen.findByRole("heading", { name: "Attendees" })).toBeInTheDocument();
     expect(screen.getByTestId("attendee-rsvp-summary")).toHaveTextContent(
-      "2 going · 1 maybe · 0 not going · 1 not yet responded",
+      "2 going · 1 not yet responded",
     );
-    expect(screen.getByText("Board Person")).toBeInTheDocument();
+    expect(screen.queryByText("Board Person")).not.toBeInTheDocument();
     await waitFor(() => {
       expect(mockedFetchEventAttendees).toHaveBeenCalledWith(7);
     });

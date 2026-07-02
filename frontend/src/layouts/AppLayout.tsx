@@ -2,6 +2,7 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 
 import {
   AccountMenu,
+  buildNavPillClass,
   NavDropdown,
   NavDivider,
   PrimaryNavLink,
@@ -16,12 +17,7 @@ import {
 } from "../lib/roles";
 
 const guestLinkClass = ({ isActive }: { isActive: boolean }) =>
-  [
-    "inline-block rounded-md px-2.5 py-1.5 transition-colors",
-    isActive
-      ? "bg-surface-card font-medium text-accent"
-      : "text-label hover:bg-surface-card hover:text-accent",
-  ].join(" ");
+  buildNavPillClass(isActive);
 
 export function AppLayout() {
   const { isAuthenticated, member } = useAuth();

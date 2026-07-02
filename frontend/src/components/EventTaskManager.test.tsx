@@ -111,9 +111,10 @@ describe("EventTaskManager", () => {
     await waitFor(() =>
       expect(screen.getByText("Book the venue")).toBeInTheDocument(),
     );
-    expect(screen.getByText("Assigned to Board Member")).toBeInTheDocument();
+    expect(screen.getByText("Board Member")).toBeInTheDocument();
+    expect(screen.getByText("0/1 done")).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Add task" }),
+      screen.queryByRole("button", { name: "+ Add task" }),
     ).not.toBeInTheDocument();
   });
 
@@ -126,6 +127,7 @@ describe("EventTaskManager", () => {
 
     await waitFor(() => expect(mockedFetch).toHaveBeenCalled());
 
+    await user.click(screen.getByRole("button", { name: "+ Add task" }));
     await user.type(screen.getByLabelText("Title"), "Print flyers");
     await user.selectOptions(screen.getByLabelText("Assign to"), "2");
     await user.click(screen.getByRole("button", { name: "Add task" }));
@@ -138,7 +140,7 @@ describe("EventTaskManager", () => {
     expect(await screen.findByText("Print flyers")).toBeInTheDocument();
   });
 
-  it("changes a task status", async () => {
+  it("changes a task status from the status pill menu", async () => {
     const user = userEvent.setup();
     mockedFetch.mockResolvedValue({ tasks: [makeTask()], total: 1 });
     mockedUpdate.mockResolvedValue(makeTask({ status: "done" }));
@@ -149,7 +151,8 @@ describe("EventTaskManager", () => {
       expect(screen.getByText("Book the venue")).toBeInTheDocument(),
     );
 
-    await user.selectOptions(screen.getByLabelText(/Status/), "done");
+    await user.click(screen.getByRole("button", { name: "To do" }));
+    await user.click(screen.getByRole("menuitem", { name: "Done" }));
 
     await waitFor(() =>
       expect(mockedUpdate).toHaveBeenCalledWith(1, { status: "done" }),
@@ -168,11 +171,30 @@ describe("EventTaskManager", () => {
       expect(screen.getByText("Book the venue")).toBeInTheDocument(),
     );
 
-    await user.click(screen.getByRole("button", { name: "Delete" }));
+    await user.click(
+      screen.getByRole("button", { name: "Delete task Book the venue" }),
+    );
 
     await waitFor(() => expect(mockedDelete).toHaveBeenCalledWith(1));
     await waitFor(() =>
       expect(screen.queryByText("Book the venue")).not.toBeInTheDocument(),
     );
+  });
+
+  it("hides add task controls after the event has ended", async () => {
+    mockedFetch.mockResolvedValue({ tasks: [makeTask()], total: 1 });
+
+    renderManager({ canManageSimple: true, canCreateTasks: false });
+
+    await waitFor(() =>
+      expect(screen.getByText("Book the venue")).toBeInTheDocument(),
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "+ Add task" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText("This event has ended — new tasks can't be added."),
+    ).toBeInTheDocument();
   });
 });

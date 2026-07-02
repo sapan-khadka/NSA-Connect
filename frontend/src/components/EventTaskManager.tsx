@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
+import { Trash2 } from "lucide-react";
 
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/auth-api";
@@ -27,6 +35,7 @@ type EventTaskManagerProps = {
   eventName: string;
   member: MemberResponse | null;
   canManageSimple: boolean;
+  canCreateTasks?: boolean;
   canAssignChecklist: boolean;
   assignableMembers: MemberResponse[];
   fallbackChecklistTasks?: PrepTaskResponse[];
@@ -42,7 +51,7 @@ const STATUS_LABELS: Record<EventTaskStatus, string> = {
 
 const STATUS_BADGE_STYLES: Record<EventTaskStatus, string> = {
   todo: "bg-surface-muted text-foreground",
-  in_progress: "bg-surface-card text-label",
+  in_progress: "bg-accent/10 text-accent",
   done: "bg-mint text-primary",
 };
 
@@ -50,11 +59,204 @@ const STATUS_ORDER: EventTaskStatus[] = ["todo", "in_progress", "done"];
 
 const EMPTY_FALLBACK_CHECKLIST: PrepTaskResponse[] = [];
 
+function getInitials(fullName: string): string {
+  return fullName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+function calcTaskCompletionSummary(tasks: EventTaskResponse[]): {
+  completed: number;
+  total: number;
+} {
+  const total = tasks.length;
+  const completed = tasks.filter((task) =>
+    task.task_kind === "simple" ? task.status === "done" : task.is_complete,
+  ).length;
+
+  return { completed, total };
+}
+
+function AssigneeAvatar({ name }: { name: string | null }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-medium text-accent"
+    >
+      {name ? getInitials(name) : "?"}
+    </span>
+  );
+}
+
+function TaskStatusPill({
+  status,
+  disabled,
+  onChange,
+}: {
+  status: EventTaskStatus;
+  disabled: boolean;
+  onChange: (status: EventTaskStatus) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const menuId = useId();
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handlePointerDown(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [open]);
+
+  return (
+    <div ref={rootRef} className="relative shrink-0">
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={menuId}
+        disabled={disabled}
+        onClick={() => setOpen((current) => !current)}
+        className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${STATUS_BADGE_STYLES[status]}`}
+      >
+        {STATUS_LABELS[status]}
+      </button>
+
+      {open ? (
+        <div
+          id={menuId}
+          role="menu"
+          className="absolute right-0 top-full z-20 mt-1 min-w-[8.5rem] ds-card py-1"
+        >
+          {STATUS_ORDER.map((option) => (
+            <button
+              key={option}
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                if (option !== status) {
+                  onChange(option);
+                }
+              }}
+              className={[
+                "block w-full px-3 py-2 text-left text-xs transition-colors",
+                option === status
+                  ? "bg-accent/5 font-medium text-accent"
+                  : "text-foreground hover:bg-surface-muted",
+              ].join(" ")}
+            >
+              {STATUS_LABELS[option]}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SimpleTaskRow({
+  task,
+  isBusy,
+  canManageSimple,
+  onStatusChange,
+  onDelete,
+}: {
+  task: EventTaskResponse;
+  isBusy: boolean;
+  canManageSimple: boolean;
+  onStatusChange: (status: EventTaskStatus) => void;
+  onDelete: () => void;
+}) {
+  return (
+    <li className="ds-card-nested p-3">
+      <div className="flex items-center gap-3">
+        <AssigneeAvatar name={task.assignee_name} />
+
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-foreground">
+            {task.title}
+          </p>
+          <p className="truncate text-xs text-label">
+            {task.assignee_name ?? "Unassigned"}
+          </p>
+        </div>
+
+        <TaskStatusPill
+          status={task.status}
+          disabled={isBusy}
+          onChange={onStatusChange}
+        />
+
+        {canManageSimple ? (
+          <button
+            type="button"
+            aria-label={`Delete task ${task.title}`}
+            disabled={isBusy}
+            onClick={onDelete}
+            className="shrink-0 rounded-full p-1.5 text-label transition-colors hover:bg-surface-muted hover:text-overdue disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+          </button>
+        ) : null}
+      </div>
+
+      {task.description ? (
+        <p className="mt-2 pl-12 text-sm text-label">{task.description}</p>
+      ) : null}
+
+      {task.completion_note ? (
+        <p className="mt-2 rounded bg-gray-50 px-2 py-1 pl-12 text-xs text-foreground">
+          Note: {task.completion_note}
+        </p>
+      ) : null}
+
+      {task.completion_photo_url ? (
+        <a
+          href={task.completion_photo_url}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-2 inline-block pl-12"
+        >
+          <img
+            src={task.completion_photo_url}
+            alt={`Completion photo for ${task.title}`}
+            className="h-20 w-20 rounded object-cover"
+          />
+        </a>
+      ) : null}
+    </li>
+  );
+}
+
 export function EventTaskManager({
   eventId,
   eventName,
   member,
   canManageSimple,
+  canCreateTasks = true,
   canAssignChecklist,
   assignableMembers,
   fallbackChecklistTasks = EMPTY_FALLBACK_CHECKLIST,
@@ -68,6 +270,7 @@ export function EventTaskManager({
   const [busyTaskId, setBusyTaskId] = useState<number | null>(null);
   const [togglingItemId, setTogglingItemId] = useState<number | null>(null);
   const [assigningTaskId, setAssigningTaskId] = useState<number | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -164,6 +367,7 @@ export function EventTaskManager({
       setDescription("");
       setAssigneeId("");
       setDueDate("");
+      setShowAddForm(false);
     } catch (error) {
       setActionError(getApiErrorMessage(error));
     } finally {
@@ -290,7 +494,9 @@ export function EventTaskManager({
   const checklistTasks = tasks.filter((task) => task.task_kind === "checklist");
   const simpleTasks = tasks.filter((task) => task.task_kind === "simple");
   const progress = calcEventTasksProgress(tasks);
+  const completionSummary = calcTaskCompletionSummary(tasks);
   const showSection = canFetchAll || checklistTasks.length > 0;
+  const allowCreateTasks = canManageSimple && canCreateTasks;
 
   if (!showSection) {
     return null;
@@ -298,9 +504,34 @@ export function EventTaskManager({
 
   return (
     <section aria-label="Event tasks">
-      <h4 className="text-sm font-semibold uppercase tracking-wide text-label">
-        Tasks
-      </h4>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-baseline gap-2">
+          <h2 className="text-lg font-light tracking-subhead text-foreground">
+            Tasks
+          </h2>
+          {completionSummary.total > 0 ? (
+            <span className="text-sm text-label">
+              {completionSummary.completed}/{completionSummary.total} done
+            </span>
+          ) : null}
+        </div>
+
+        {allowCreateTasks && !showAddForm ? (
+          <button
+            type="button"
+            onClick={() => setShowAddForm(true)}
+            className="rounded-full border border-gray-200 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:border-accent hover:text-accent"
+          >
+            + Add task
+          </button>
+        ) : null}
+      </div>
+
+      {canManageSimple && !canCreateTasks ? (
+        <p className="mt-2 text-sm text-label">
+          This event has ended — new tasks can&apos;t be added.
+        </p>
+      ) : null}
 
       {checklistTasks.length > 0 ? (
         <div className="mt-3">
@@ -308,12 +539,21 @@ export function EventTaskManager({
         </div>
       ) : null}
 
-      {canManageSimple ? (
+      {allowCreateTasks && showAddForm ? (
         <form
           onSubmit={(event) => void handleCreate(event)}
           className="mt-3 space-y-2 ds-card p-3"
         >
-          <p className="text-xs font-medium text-label">Add assigned task</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-medium text-label">New task</p>
+            <button
+              type="button"
+              onClick={() => setShowAddForm(false)}
+              className="text-xs font-medium text-label transition-colors hover:text-foreground"
+            >
+              Cancel
+            </button>
+          </div>
           <div>
             <label
               htmlFor="event-task-title"
@@ -428,94 +668,19 @@ export function EventTaskManager({
           ))}
 
           {simpleTasks.length > 0 ? (
-            <ul className="space-y-3">
-              {simpleTasks.map((task) => {
-                const isBusy = busyTaskId === task.id;
-                return (
-                  <li
-                    key={task.id}
-                    className="rounded-md ds-card-nested p-3"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-medium text-foreground">
-                          {task.title}
-                        </p>
-                        {task.description ? (
-                          <p className="mt-1 text-sm text-label">
-                            {task.description}
-                          </p>
-                        ) : null}
-                        <p className="mt-1 text-xs text-label">
-                          {task.assignee_name
-                            ? `Assigned to ${task.assignee_name}`
-                            : "Unassigned"}
-                        </p>
-                      </div>
-                      <span
-                        className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium ${STATUS_BADGE_STYLES[task.status]}`}
-                      >
-                        {STATUS_LABELS[task.status]}
-                      </span>
-                    </div>
-
-                    {task.completion_note ? (
-                      <p className="mt-2 rounded bg-gray-50 px-2 py-1 text-xs text-foreground">
-                        Note: {task.completion_note}
-                      </p>
-                    ) : null}
-
-                    {task.completion_photo_url ? (
-                      <a
-                        href={task.completion_photo_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-2 inline-block"
-                      >
-                        <img
-                          src={task.completion_photo_url}
-                          alt={`Completion photo for ${task.title}`}
-                          className="h-20 w-20 rounded object-cover"
-                        />
-                      </a>
-                    ) : null}
-
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <label className="text-xs text-label">
-                        Status
-                        <select
-                          value={task.status}
-                          disabled={isBusy}
-                          onChange={(event) =>
-                            void handleStatusChange(
-                              task,
-                              event.target.value as EventTaskStatus,
-                            )
-                          }
-                          className="ml-1 rounded border border-gray-300 px-2 py-1 text-xs focus:border-accent focus:outline-none disabled:opacity-60"
-                        >
-                          {STATUS_ORDER.map((status) => (
-                            <option key={status} value={status}>
-                              {STATUS_LABELS[status]}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-
-                      {canManageSimple ? (
-                        <button
-                          type="button"
-                          disabled={isBusy}
-                          onClick={() => void handleDelete(task)}
-                          className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-label transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          Delete
-                        </button>
-                      ) : null}
-                    </div>
-                  </li>
-                );
-              })}
+            <ul className="space-y-2">
+              {simpleTasks.map((task) => (
+                <SimpleTaskRow
+                  key={task.id}
+                  task={task}
+                  isBusy={busyTaskId === task.id}
+                  canManageSimple={canManageSimple}
+                  onStatusChange={(status) => {
+                    void handleStatusChange(task, status);
+                  }}
+                  onDelete={() => void handleDelete(task)}
+                />
+              ))}
             </ul>
           ) : null}
         </div>

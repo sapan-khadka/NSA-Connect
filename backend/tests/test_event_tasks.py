@@ -312,6 +312,43 @@ def test_board_member_can_upload_task_photo(client, board_headers):
     assert response.json()["photo_url"].startswith("https://")
 
 
+def test_create_task_on_past_event_returns_400(
+    client,
+    president_headers,
+    db_session,
+):
+    from datetime import UTC, datetime
+
+    from sqlalchemy import select
+
+    from app.models.event import Event, EventType
+    from app.models.member import Member
+
+    president = db_session.scalar(
+        select(Member).where(Member.email == "president@semo.edu"),
+    )
+    assert president is not None
+
+    event = Event(
+        title="Past Celebration",
+        description="Already happened",
+        event_type=EventType.CULTURAL,
+        starts_at=datetime(2020, 6, 1, 18, tzinfo=UTC),
+        budget="250.00",
+        created_by_id=president.id,
+    )
+    db_session.add(event)
+    db_session.commit()
+    db_session.refresh(event)
+
+    response = _create_task(client, president_headers, event.id)
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == (
+        "This event has ended. New tasks can no longer be added."
+    )
+
+
 def test_list_event_tasks_for_event(
     client,
     president_headers,

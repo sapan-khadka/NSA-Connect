@@ -3,7 +3,6 @@ import type { LucideIcon } from "lucide-react";
 import {
   AlertCircle,
   Archive,
-  ArrowRight,
   ClipboardList,
   ListTodo,
   Sparkles,
@@ -16,7 +15,6 @@ import { EventRsvpButton } from "../components/EventRsvpButton";
 import { CoverBanner } from "../components/CoverBanner";
 import { HomeHeroBrand } from "../components/AppLogo";
 import { HomeProfileCard } from "../components/HomeProfileCard";
-import { HomeShortcutPills } from "../components/HomeShortcutPills";
 import { ArrowLink } from "../components/ui/ArrowLink";
 import { EmptyState } from "../components/ui/EmptyState";
 import { HomeCard } from "../components/ui/HomeCard";
@@ -50,19 +48,14 @@ import {
   isRoleAtLeast,
 } from "../lib/roles";
 
-type HomeAlert = {
+type ActivityTone = "urgent" | "info";
+
+type HomeActivity = {
   id: string;
-  count: number;
-  label: string;
   message: string;
   to: string;
   actionLabel: string;
-};
-
-const ALERT_ICONS: Record<string, LucideIcon> = {
-  "overdue-tasks": AlertCircle,
-  "pending-members": Users,
-  "finance-pending": Wallet,
+  tone: ActivityTone;
 };
 
 type QuickLink = {
@@ -72,20 +65,63 @@ type QuickLink = {
   icon: LucideIcon;
 };
 
+function findNextNonMeetingEvent(events: EventResponse[]): EventResponse | null {
+  return events.find((event) => event.event_type !== "meeting") ?? null;
+}
+
+function findNextBoardMeeting(meetings: MeetingSummary[]): MeetingSummary | null {
+  return (
+    meetings
+      .filter((meeting) => !meeting.is_past)
+      .sort(
+        (left, right) =>
+          new Date(left.starts_at).getTime() - new Date(right.starts_at).getTime(),
+      )[0] ?? null
+  );
+}
+
 function QuickLinkCard({ title, description, to, icon: Icon }: QuickLink) {
   return (
     <Link
       to={to}
-      className="group flex h-full flex-col ds-card ds-card-interactive px-4 py-4"
+      className="group flex h-full flex-col ds-card ds-card-interactive p-[0.9rem]"
     >
       <Icon
         className="h-[18px] w-[18px] text-accent transition-colors group-hover:text-primary"
         strokeWidth={1.75}
         aria-hidden="true"
       />
-      <p className="mt-2 font-medium text-foreground">{title}</p>
-      <p className="mt-1 text-sm text-label">{description}</p>
+      <p className="mt-2 text-[13px] font-medium text-foreground">{title}</p>
+      <p className="mt-1 line-clamp-1 text-xs text-label">{description}</p>
     </Link>
+  );
+}
+
+function ActivityRow({ activity }: { activity: HomeActivity }) {
+  const dotClass =
+    activity.tone === "urgent"
+      ? "bg-overdue"
+      : "bg-mint";
+
+  return (
+    <li className="flex items-start gap-3 border-b border-gray-100 py-3 last:border-b-0 last:pb-0 first:pt-0">
+      <span
+        aria-hidden="true"
+        className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dotClass}`}
+      />
+      <p
+        className={
+          activity.tone === "urgent"
+            ? "min-w-0 flex-1 text-sm font-medium text-foreground"
+            : "min-w-0 flex-1 text-sm text-label"
+        }
+      >
+        {activity.message}
+      </p>
+      <ArrowLink to={activity.to} className="shrink-0 whitespace-nowrap">
+        {activity.actionLabel}
+      </ArrowLink>
+    </li>
   );
 }
 
@@ -95,7 +131,7 @@ function buildQuickLinks(member: MemberResponse): QuickLink[] {
   if (isRoleAtLeast(member.role, "board")) {
     links.push({
       title: "Past events",
-      description: "Review completed events and finance close-out status.",
+      description: "Close-out status",
       to: "/events/past",
       icon: Archive,
     });
@@ -104,7 +140,7 @@ function buildQuickLinks(member: MemberResponse): QuickLink[] {
   if (canViewMemberDirectory(member.role)) {
     links.push({
       title: "Member directory",
-      description: "Browse and search all NSA Connect members.",
+      description: "Browse NSA members",
       to: "/members",
       icon: Users,
     });
@@ -113,7 +149,7 @@ function buildQuickLinks(member: MemberResponse): QuickLink[] {
   if (canViewTaskOversight(member.role, member.position)) {
     links.push({
       title: "Task oversight",
-      description: "See completion progress across the team.",
+      description: "Team completion progress",
       to: "/events/oversight",
       icon: ClipboardList,
     });
@@ -122,7 +158,7 @@ function buildQuickLinks(member: MemberResponse): QuickLink[] {
   if (canAccessFinance(member.role)) {
     links.push({
       title: "Finance",
-      description: "Review budgets, dues, and treasury activity.",
+      description: "Budgets and treasury",
       to: "/finance",
       icon: Wallet,
     });
@@ -131,13 +167,95 @@ function buildQuickLinks(member: MemberResponse): QuickLink[] {
   if (member.role === "general") {
     links.push({
       title: "AI assistant",
-      description: "Ask about events, tasks, and NSA operations.",
+      description: "Ask about NSA events",
       to: "/assistant",
       icon: Sparkles,
     });
   }
 
   return links;
+}
+
+function buildActivities({
+  member,
+  tasksSummary,
+  pendingMembersTotal,
+  financePendingTotal,
+  myFinanceRequests,
+}: {
+  member: MemberResponse;
+  tasksSummary: ReturnType<typeof summarizeMyTasks>;
+  pendingMembersTotal: number;
+  financePendingTotal: number;
+  myFinanceRequests: {
+    pending_count: number;
+    recently_rejected_count: number;
+    recently_approved_count: number;
+  } | null;
+}): HomeActivity[] {
+  const activities: HomeActivity[] = [];
+
+  if (tasksSummary.overdueCount > 0) {
+    activities.push({
+      id: "overdue-tasks",
+      message: `${tasksSummary.overdueCount} assigned task${tasksSummary.overdueCount === 1 ? "" : "s"} past due`,
+      to: getMyTasksPath(member.role),
+      actionLabel: "Review",
+      tone: "urgent",
+    });
+  }
+
+  if (pendingMembersTotal > 0) {
+    activities.push({
+      id: "pending-members",
+      message: `${pendingMembersTotal} member signup${pendingMembersTotal === 1 ? "" : "s"} waiting for approval`,
+      to: "/members?tab=pending",
+      actionLabel: "Review",
+      tone: "urgent",
+    });
+  }
+
+  if (financePendingTotal > 0) {
+    activities.push({
+      id: "finance-pending",
+      message: `${financePendingTotal} finance change request${financePendingTotal === 1 ? "" : "s"} need your review`,
+      to: "/finance",
+      actionLabel: "Review",
+      tone: "urgent",
+    });
+  }
+
+  if (myFinanceRequests && myFinanceRequests.pending_count > 0) {
+    activities.push({
+      id: "finance-my-pending",
+      message: `${myFinanceRequests.pending_count} of your finance request${myFinanceRequests.pending_count === 1 ? "" : "s"} awaiting approval`,
+      to: "/finance",
+      actionLabel: "View",
+      tone: "urgent",
+    });
+  }
+
+  if (myFinanceRequests && myFinanceRequests.recently_rejected_count > 0) {
+    activities.push({
+      id: "finance-my-rejected",
+      message: `${myFinanceRequests.recently_rejected_count} finance request${myFinanceRequests.recently_rejected_count === 1 ? "" : "s"} rejected this week`,
+      to: "/finance",
+      actionLabel: "Review",
+      tone: "urgent",
+    });
+  }
+
+  if (myFinanceRequests && myFinanceRequests.recently_approved_count > 0) {
+    activities.push({
+      id: "finance-my-approved",
+      message: `${myFinanceRequests.recently_approved_count} finance request${myFinanceRequests.recently_approved_count === 1 ? "" : "s"} approved this week`,
+      to: "/finance",
+      actionLabel: "View",
+      tone: "info",
+    });
+  }
+
+  return activities;
 }
 
 function PublicHomeView() {
@@ -171,16 +289,19 @@ function PublicHomeView() {
 }
 
 function MemberHomeView({ member }: { member: MemberResponse }) {
-  const [nextEvents, setNextEvents] = useState<EventResponse[]>([]);
-  const [featuredEvent, setFeaturedEvent] = useState<EventResponse | null>(null);
-  const [tasksSummary, setTasksSummary] = useState(
-    summarizeMyTasks([]),
+  const [nextEvent, setNextEvent] = useState<EventResponse | null>(null);
+  const [tasksSummary, setTasksSummary] = useState(summarizeMyTasks([]));
+  const [activities, setActivities] = useState<HomeActivity[]>([]);
+  const [nextBoardMeeting, setNextBoardMeeting] = useState<MeetingSummary | null>(
+    null,
   );
-  const [alerts, setAlerts] = useState<HomeAlert[]>([]);
-  const [latestMeeting, setLatestMeeting] = useState<MeetingSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [rsvpLoading, setRsvpLoading] = useState(false);
+
+  const isBoardMember = isRoleAtLeast(member.role, "board");
+  const quickLinks = buildQuickLinks(member);
+  const tasksPath = getMyTasksPath(member.role);
 
   useEffect(() => {
     let cancelled = false;
@@ -190,13 +311,13 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
       setLoadError(null);
 
       try {
-        const upcomingPromise = fetchUpcomingEvents({ limit: 3 });
+        const upcomingPromise = fetchUpcomingEvents({ limit: 10 });
         const tasksPromise = fetchMyEventTasks().catch(() => ({
           tasks: [],
           total: 0,
         }));
 
-        const pendingMembersPromise = isRoleAtLeast(member.role, "board")
+        const pendingMembersPromise = isBoardMember
           ? fetchPendingMembers().catch(() => ({ members: [], total: 0 }))
           : Promise.resolve(null);
 
@@ -215,7 +336,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
             }))
           : Promise.resolve(null);
 
-        const meetingsPromise = isRoleAtLeast(member.role, "board")
+        const meetingsPromise = isBoardMember
           ? fetchMeetings().catch(() => ({ meetings: [], total: 0 }))
           : Promise.resolve(null);
 
@@ -233,89 +354,21 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
           return;
         }
 
-        setNextEvents(upcoming.events);
-        setFeaturedEvent(upcoming.events[0] ?? null);
-        setTasksSummary(summarizeMyTasks(tasksResult.tasks));
-
-        const nextAlerts: HomeAlert[] = [];
         const summary = summarizeMyTasks(tasksResult.tasks);
-
-        if (summary.overdueCount > 0) {
-          nextAlerts.push({
-            id: "overdue-tasks",
-            count: summary.overdueCount,
-            label: "Overdue tasks",
-            message: `Assigned task${summary.overdueCount === 1 ? "" : "s"} past due`,
-            to: getMyTasksPath(member.role),
-            actionLabel: "Review tasks",
-          });
-        }
-
-        if (pendingMembers && pendingMembers.total > 0) {
-          nextAlerts.push({
-            id: "pending-members",
-            count: pendingMembers.total,
-            label: "Pending signups",
-            message: `Member signup${pendingMembers.total === 1 ? "" : "s"} waiting for approval`,
-            to: "/members?tab=pending",
-            actionLabel: "Review signups",
-          });
-        }
-
-        if (financePending && financePending.total > 0) {
-          nextAlerts.push({
-            id: "finance-pending",
-            count: financePending.total,
-            label: "Finance reviews",
-            message: `Finance change request${financePending.total === 1 ? "" : "s"} need your review`,
-            to: "/finance",
-            actionLabel: "Open finance",
-          });
-        }
-
-        if (myFinanceRequests && myFinanceRequests.pending_count > 0) {
-          nextAlerts.push({
-            id: "finance-my-pending",
-            count: myFinanceRequests.pending_count,
-            label: "Your finance requests",
-            message: `Your finance change request${myFinanceRequests.pending_count === 1 ? " is" : "s are"} awaiting approval`,
-            to: "/finance",
-            actionLabel: "View status",
-          });
-        }
-
-        if (myFinanceRequests && myFinanceRequests.recently_rejected_count > 0) {
-          nextAlerts.push({
-            id: "finance-my-rejected",
-            count: myFinanceRequests.recently_rejected_count,
-            label: "Finance request rejected",
-            message: `Finance change request${myFinanceRequests.recently_rejected_count === 1 ? " was" : "s were"} rejected in the last 7 days`,
-            to: "/finance",
-            actionLabel: "View details",
-          });
-        }
-
-        if (myFinanceRequests && myFinanceRequests.recently_approved_count > 0) {
-          nextAlerts.push({
-            id: "finance-my-approved",
-            count: myFinanceRequests.recently_approved_count,
-            label: "Finance request approved",
-            message: `Finance change request${myFinanceRequests.recently_approved_count === 1 ? " was" : "s were"} approved in the last 7 days`,
-            to: "/finance",
-            actionLabel: "View details",
-          });
-        }
-
-        setAlerts(nextAlerts);
-
-        if (meetingsResult) {
-          const recordedMeeting = meetingsResult.meetings.find(
-            (meeting) => meeting.has_attendance || meeting.has_minutes,
-          );
-          setLatestMeeting(recordedMeeting ?? meetingsResult.meetings[0] ?? null);
-        } else {
-          setLatestMeeting(null);
-        }
+        setNextEvent(findNextNonMeetingEvent(upcoming.events));
+        setTasksSummary(summary);
+        setActivities(
+          buildActivities({
+            member,
+            tasksSummary: summary,
+            pendingMembersTotal: pendingMembers?.total ?? 0,
+            financePendingTotal: financePending?.total ?? 0,
+            myFinanceRequests,
+          }),
+        );
+        setNextBoardMeeting(
+          meetingsResult ? findNextBoardMeeting(meetingsResult.meetings) : null,
+        );
       } catch (caught) {
         if (!cancelled) {
           setLoadError(getApiErrorMessage(caught));
@@ -332,55 +385,30 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
     return () => {
       cancelled = true;
     };
-  }, [member]);
+  }, [isBoardMember, member]);
 
   async function handleRsvpStatusChange(status: RsvpStatus) {
-    if (!featuredEvent) {
+    if (!nextEvent) {
       return;
     }
 
-    const snapshot = featuredEvent;
+    const snapshot = nextEvent;
     setRsvpLoading(true);
-    setFeaturedEvent((current) =>
+    setNextEvent((current) =>
       current ? { ...current, current_member_rsvp_status: status } : current,
-    );
-    setNextEvents((current) =>
-      current.map((event) =>
-        event.id === featuredEvent.id
-          ? { ...event, current_member_rsvp_status: status }
-          : event,
-      ),
     );
 
     try {
-      const response = await updateEventRsvp(featuredEvent.id, status);
-      setFeaturedEvent((current) =>
+      const response = await updateEventRsvp(nextEvent.id, status);
+      setNextEvent((current) =>
         current ? applyRsvpStatus(current, response) : current,
       );
-      setNextEvents((current) =>
-        current.map((event) =>
-          event.id === featuredEvent.id ? applyRsvpStatus(event, response) : event,
-        ),
-      );
     } catch {
-      setFeaturedEvent(snapshot);
-      setNextEvents((current) =>
-        current.map((event) =>
-          event.id === snapshot.id
-            ? {
-                ...event,
-                current_member_rsvp_status: snapshot.current_member_rsvp_status,
-              }
-            : event,
-        ),
-      );
+      setNextEvent(snapshot);
     } finally {
       setRsvpLoading(false);
     }
   }
-
-  const quickLinks = buildQuickLinks(member);
-  const tasksPath = getMyTasksPath(member.role);
 
   return (
     <div className="space-y-6">
@@ -394,65 +422,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
         <p className="mt-1 text-sm text-label">
           Your daily check-in for NSA events and assigned work.
         </p>
-        <HomeShortcutPills member={member} />
       </div>
-
-      {alerts.length > 0 ? (
-        <section aria-label="Needs attention" className="ds-card p-4">
-          <SectionLabel>Needs attention</SectionLabel>
-          <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {alerts.map((alert) => (
-              <li key={alert.id} className="ds-card-nested p-3">
-                <SectionLabel
-                  icon={ALERT_ICONS[alert.id]}
-                  iconClassName={
-                    alert.id === "overdue-tasks"
-                      ? "h-4 w-4 shrink-0 text-overdue"
-                      : undefined
-                  }
-                  className={alert.id === "overdue-tasks" ? "text-overdue" : undefined}
-                >
-                  {alert.label}
-                </SectionLabel>
-                <p
-                  className={
-                    alert.id === "overdue-tasks"
-                      ? "ds-stat-overdue-chip"
-                      : "ds-stat-value"
-                  }
-                >
-                  {alert.count}
-                </p>
-                <p className="mt-0.5 text-sm text-label">{alert.message}</p>
-                <div className="mt-2">
-                  <ArrowLink to={alert.to}>{alert.actionLabel}</ArrowLink>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {latestMeeting ? (
-        <HomeCard padding="sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="ds-section-label">
-                Board meetings
-              </h2>
-              <p className="mt-1 font-medium text-foreground">{latestMeeting.event_name}</p>
-              <p className="mt-1 text-sm text-label">
-                {latestMeeting.has_attendance || latestMeeting.has_minutes
-                  ? "Attendance or minutes are on file for this meeting."
-                  : "Scheduled board meeting — open to view the agenda."}
-              </p>
-            </div>
-            <ArrowLink to={`/events/meetings/${latestMeeting.event_id}`}>
-              View meeting
-            </ArrowLink>
-          </div>
-        </HomeCard>
-      ) : null}
 
       {loadError ? (
         <div role="alert" className="ds-alert-banner">
@@ -460,114 +430,34 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
         </div>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <HomeCard>
+      <div
+        className={
+          activities.length > 0
+            ? "grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]"
+            : "grid gap-6"
+        }
+      >
+        {activities.length > 0 ? (
+          <section aria-label="Activity" className="ds-card p-4 sm:p-5">
+            <h2 className="ds-section-label">Activity</h2>
+            <ul className="mt-3">
+              {activities.map((activity) => (
+                <ActivityRow key={activity.id} activity={activity} />
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        <HomeCard padding="sm">
           <div className="flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-light tracking-subhead text-foreground">Next event</h2>
-              <p className="mt-1 text-sm text-label">
-                The nearest upcoming event on the NSA calendar.
-              </p>
-            </div>
-            <ArrowLink to="/events/calendar">Calendar</ArrowLink>
-          </div>
-
-          {isLoading ? (
-            <p className="mt-6 text-sm text-label">Loading events…</p>
-          ) : null}
-
-          {!isLoading && !featuredEvent ? (
-            <EmptyState
-              icon="calendar"
-              title="No upcoming events"
-              description="No events yet — check back before the next festival."
-            />
-          ) : null}
-
-          {!isLoading && featuredEvent ? (
-            <div className="mt-6 space-y-4">
-              <div className="ds-card-nested p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <Link
-                      to={eventDetailPath(featuredEvent.id)}
-                      className="text-lg font-light tracking-subhead text-foreground hover:text-accent"
-                    >
-                      {featuredEvent.name}
-                    </Link>
-                    <p className="mt-1 text-sm text-label">
-                      {formatEventDateTime(featuredEvent.starts_at)}
-                    </p>
-                  </div>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${EVENT_TYPE_BADGE_CLASS[featuredEvent.event_type]}`}
-                  >
-                    {EVENT_TYPE_LABELS[featuredEvent.event_type]}
-                  </span>
-                </div>
-                {featuredEvent.description ? (
-                  <p className="mt-3 line-clamp-3 text-sm text-label">
-                    {featuredEvent.description}
-                  </p>
-                ) : null}
-              </div>
-
-              <EventRsvpButton
-                currentStatus={featuredEvent.current_member_rsvp_status}
-                canRsvp
-                loading={rsvpLoading}
-                onStatusChange={(status) => void handleRsvpStatusChange(status)}
-              />
-
-              <ArrowLink to={eventDetailPath(featuredEvent.id)}>
-                View event details
-              </ArrowLink>
-
-              {nextEvents.length > 1 ? (
-                <div>
-                  <p className="ds-section-label">
-                    Also coming up
-                  </p>
-                  <ul className="mt-2 space-y-2">
-                    {nextEvents.slice(1).map((event) => (
-                      <li
-                        key={event.id}
-                        className="ds-card-nested px-3 py-2 text-sm"
-                      >
-                        <Link
-                          to={eventDetailPath(event.id)}
-                          className="font-medium text-foreground hover:text-accent"
-                        >
-                          {event.name}
-                        </Link>
-                        <span className="text-label">
-                          {" "}
-                          · {formatEventDateTime(event.starts_at)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </HomeCard>
-
-        <HomeCard>
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-light tracking-subhead text-foreground">
-                {member.role === "general" ? "Assigned work" : "Your work"}
-              </h2>
-              <p className="mt-1 text-sm text-label">
-                Assigned event tasks and volunteer commitments.
-              </p>
-            </div>
+            <h2 className="text-base font-medium text-foreground">
+              {member.role === "general" ? "Assigned work" : "Your work"}
+            </h2>
             <ArrowLink to={tasksPath}>View all</ArrowLink>
           </div>
 
           {isLoading ? (
-            <p className="mt-6 text-sm text-label">Loading tasks…</p>
+            <p className="mt-4 text-sm text-label">Loading tasks…</p>
           ) : null}
 
           {!isLoading && tasksSummary.openCount === 0 ? (
@@ -579,10 +469,10 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
           ) : null}
 
           {!isLoading && tasksSummary.openCount > 0 ? (
-            <div className="mt-6 space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
+            <div className="mt-4 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="ds-stat-tile">
-                  <SectionLabel icon={ListTodo}>Open tasks</SectionLabel>
+                  <SectionLabel icon={ListTodo}>Open</SectionLabel>
                   <p className="ds-stat-value">{tasksSummary.openCount}</p>
                 </div>
                 <div className="ds-stat-tile">
@@ -600,45 +490,113 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
               </div>
 
               {tasksSummary.nextTask ? (
-                <div className="ds-card-nested p-4">
-                  <SectionLabel icon={ArrowRight}>Up next</SectionLabel>
-                  <p className="mt-2 font-medium text-foreground">
-                    {getTaskDisplayName(tasksSummary.nextTask)}
-                  </p>
-                  <p className="mt-1 text-sm text-label">
-                    {tasksSummary.nextTask.event_name}
-                  </p>
-                  {tasksSummary.nextTask.due_date ? (
-                    <p className="mt-1 text-sm text-label">
-                      Due {formatEventDateTime(tasksSummary.nextTask.due_date)}
-                    </p>
-                  ) : (
-                    <p className="mt-1 text-sm text-label">No due date</p>
-                  )}
-                </div>
+                <p className="text-sm text-foreground">
+                  <span className="text-label">Next due: </span>
+                  {getTaskDisplayName(tasksSummary.nextTask)}
+                </p>
               ) : null}
             </div>
           ) : null}
         </HomeCard>
       </div>
 
-      <HomeProfileCard member={member} />
+      <div
+        className={
+          isBoardMember && nextBoardMeeting
+            ? "grid gap-6 lg:grid-cols-2"
+            : "grid gap-6"
+        }
+      >
+        <HomeCard padding="sm">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-base font-medium text-foreground">Up next</h2>
+            <ArrowLink to="/events/calendar">Full calendar</ArrowLink>
+          </div>
 
-      {quickLinks.length > 0 ? (
-        <HomeCard>
-          <h2 className="text-lg font-light tracking-subhead text-foreground">More for your role</h2>
-          <p className="mt-1 text-sm text-label">
-            Board and leadership tools not shown in the shortcuts above.
-          </p>
-          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-            {quickLinks.map((link) => (
-              <li key={link.to + link.title}>
-                <QuickLinkCard {...link} />
-              </li>
-            ))}
-          </ul>
+          {isLoading ? (
+            <p className="mt-4 text-sm text-label">Loading events…</p>
+          ) : null}
+
+          {!isLoading && !nextEvent ? (
+            <EmptyState
+              icon="calendar"
+              title="No upcoming events"
+              description="Check the calendar for the next festival or social."
+            />
+          ) : null}
+
+          {!isLoading && nextEvent ? (
+            <div className="mt-4 space-y-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <Link
+                    to={eventDetailPath(nextEvent.id)}
+                    className="font-medium text-foreground hover:text-accent"
+                  >
+                    {nextEvent.name}
+                  </Link>
+                  <p className="mt-1 text-sm text-label">
+                    {formatEventDateTime(nextEvent.starts_at)}
+                  </p>
+                </div>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${EVENT_TYPE_BADGE_CLASS[nextEvent.event_type]}`}
+                >
+                  {EVENT_TYPE_LABELS[nextEvent.event_type]}
+                </span>
+              </div>
+
+              <EventRsvpButton
+                currentStatus={nextEvent.current_member_rsvp_status}
+                canRsvp
+                loading={rsvpLoading}
+                embedded
+                onStatusChange={(status) => void handleRsvpStatusChange(status)}
+              />
+            </div>
+          ) : null}
         </HomeCard>
-      ) : null}
+
+        {isBoardMember && nextBoardMeeting ? (
+          <HomeCard padding="sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-base font-medium text-foreground">
+                  Next board meeting
+                </h2>
+                <p className="mt-2 font-medium text-foreground">
+                  {nextBoardMeeting.event_name}
+                </p>
+                <p className="mt-1 text-sm text-label">
+                  {formatEventDateTime(nextBoardMeeting.starts_at)}
+                </p>
+              </div>
+              <ArrowLink to={`/events/meetings/${nextBoardMeeting.event_id}`}>
+                View
+              </ArrowLink>
+            </div>
+          </HomeCard>
+        ) : null}
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)]">
+        <HomeProfileCard member={member} />
+
+        {quickLinks.length > 0 ? (
+          <HomeCard padding="sm">
+            <h2 className="text-base font-medium text-foreground">
+              More for your role
+            </h2>
+            <ul className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+              {quickLinks.map((link) => (
+                <li key={link.to + link.title}>
+                  <QuickLinkCard {...link} />
+                </li>
+              ))}
+            </ul>
+          </HomeCard>
+        ) : null}
+      </div>
     </div>
   );
 }
