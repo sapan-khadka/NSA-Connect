@@ -1,4 +1,5 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -147,6 +148,8 @@ describe("EventManagePage", () => {
     renderPage("board");
 
     expect(await screen.findByText("Dashain Celebration")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Meeting" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Logistics" })).not.toBeInTheDocument();
     expect(screen.getByText("Task completion")).toBeInTheDocument();
     expect(screen.getByText("1/2 done (50%)")).toBeInTheDocument();
     expect(screen.getByText("Event budget")).toBeInTheDocument();
@@ -154,7 +157,8 @@ describe("EventManagePage", () => {
     expect(screen.queryByTestId("finance-entry-list")).not.toBeInTheDocument();
   });
 
-  it("shows meeting record tools for meeting events", async () => {
+  it("shows meeting tools on the Meeting tab for meeting events", async () => {
+    const user = userEvent.setup();
     const { fetchEvent } = await import("../lib/events-api");
     const { fetchEventTasks } = await import("../lib/event-tasks-api");
     const { fetchEventBudgetForEvent } = await import("../lib/finance-api");
@@ -179,6 +183,40 @@ describe("EventManagePage", () => {
     renderPage("board");
 
     expect(await screen.findByTestId("meeting-record-section")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Meeting" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Logistics" })).toBeInTheDocument();
+    expect(screen.queryByText("Task completion")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Logistics" }));
+
+    expect(await screen.findByText("Task completion")).toBeInTheDocument();
+    expect(screen.queryByTestId("meeting-record-section")).not.toBeInTheDocument();
+  });
+
+  it("does not show meeting tabs for non-meeting events", async () => {
+    const { fetchEvent } = await import("../lib/events-api");
+    const { fetchEventTasks } = await import("../lib/event-tasks-api");
+    const { fetchEventBudgetForEvent } = await import("../lib/finance-api");
+
+    vi.mocked(fetchEvent).mockResolvedValue(mockEvent);
+    vi.mocked(fetchEventTasks).mockResolvedValue({ tasks: [], total: 0 });
+    vi.mocked(fetchEventBudgetForEvent).mockResolvedValue({
+      event_id: 1,
+      event_name: "Dashain Celebration",
+      planned_budget: "500.00",
+      actual_expense: "0.00",
+      actual_income: "0.00",
+      budget_remaining: "500.00",
+      over_budget: false,
+      entry_count: 0,
+    });
+
+    renderPage("board");
+
+    expect(await screen.findByText("Task completion")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Meeting" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Logistics" })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("meeting-record-section")).not.toBeInTheDocument();
   });
 
   it("shows finance entries for treasurer", async () => {

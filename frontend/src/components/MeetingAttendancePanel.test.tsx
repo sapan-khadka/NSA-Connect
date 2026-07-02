@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -41,7 +41,11 @@ describe("MeetingAttendancePanel", () => {
     );
 
     expect(screen.getByText("Board attendance")).toBeInTheDocument();
-    expect(screen.getByText("Not marked")).toBeInTheDocument();
+    const alexRow = screen.getByText("Alex Rivera").closest("li");
+    expect(alexRow).not.toBeNull();
+    expect(within(alexRow!).getByText("—")).toBeInTheDocument();
+    const boardMemberRow = screen.getByText("Board Member").closest("li");
+    expect(within(boardMemberRow!).getByText("P")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Save attendance" })).not.toBeInTheDocument();
   });
 

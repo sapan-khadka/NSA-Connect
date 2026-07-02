@@ -7,11 +7,29 @@ import { formatPositionLabel, isExclusiveMemberPosition, type MemberPosition } f
 const STATUS_OPTIONS: {
   value: MeetingAttendanceStatus;
   label: string;
+  ariaLabel: string;
 }[] = [
-  { value: "present", label: "Present" },
-  { value: "absent", label: "Absent" },
-  { value: "excused", label: "Excused" },
+  { value: "present", label: "P", ariaLabel: "Present" },
+  { value: "absent", label: "A", ariaLabel: "Absent" },
+  { value: "excused", label: "E", ariaLabel: "Excused" },
 ];
+
+function segmentClass(
+  value: MeetingAttendanceStatus,
+  selected: boolean,
+): string {
+  if (!selected) {
+    return "text-label hover:text-foreground";
+  }
+
+  if (value === "present") {
+    return "bg-accent text-white shadow-sm";
+  }
+  if (value === "absent") {
+    return "bg-primary text-white shadow-sm";
+  }
+  return "bg-surface-card text-foreground shadow-sm ring-1 ring-gray-200";
+}
 
 type MeetingAttendancePanelProps = {
   attendance: MeetingAttendanceEntry[];
@@ -76,38 +94,37 @@ export function MeetingAttendancePanel({
   return (
     <section className="ds-card p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-light tracking-subhead text-foreground">Board attendance</h2>
-          <p className="mt-1 text-sm text-label">
-            Mark each board member as present, absent, or excused.
-          </p>
-        </div>
-        <dl className="flex flex-wrap gap-3 text-sm">
-          <div className="rounded-full bg-mint px-3 py-1 text-primary">
-            <span>{presentCount}</span> present
+        <h2 className="text-lg font-light tracking-subhead text-foreground">
+          Board attendance
+        </h2>
+        <dl className="flex flex-wrap gap-2 text-xs">
+          <div className="rounded-full bg-mint/40 px-2.5 py-1 text-primary">
+            <span className="font-medium">{presentCount}</span> P
           </div>
-          <div className="rounded-full bg-primary/10 px-3 py-1 text-primary">
-            <span>{absentCount}</span> absent
+          <div className="rounded-full bg-primary/10 px-2.5 py-1 text-primary">
+            <span className="font-medium">{absentCount}</span> A
           </div>
-          <div className="rounded-full bg-surface-muted px-3 py-1 text-label">
-            <span>{excusedCount}</span> excused
+          <div className="rounded-full bg-surface-muted px-2.5 py-1 text-label">
+            <span className="font-medium">{excusedCount}</span> E
           </div>
           {unmarkedCount > 0 ? (
-            <div className="rounded-full bg-gray-100 px-3 py-1 text-foreground">
-              <span className="font-semibold">{unmarkedCount}</span> unmarked
+            <div className="rounded-full bg-gray-100 px-2.5 py-1 text-foreground">
+              <span className="font-medium">{unmarkedCount}</span> —
             </div>
           ) : null}
         </dl>
       </div>
 
-      <ul className="mt-5 divide-y divide-gray-100 rounded-lg border border-gray-200">
+      <ul className="mt-4 divide-y divide-gray-100 rounded-lg border border-gray-200">
         {attendance.map((entry) => (
           <li
             key={entry.member_id}
-            className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+            className="flex flex-wrap items-center justify-between gap-3 px-3 py-2.5"
           >
             <div className="min-w-0">
-              <p className="font-medium text-foreground">{entry.full_name}</p>
+              <p className="text-sm font-medium text-foreground">
+                {entry.full_name}
+              </p>
               {isExclusiveMemberPosition(entry.position as MemberPosition) ? (
                 <PositionBadge
                   position={entry.position as Exclude<MemberPosition, "member">}
@@ -123,7 +140,7 @@ export function MeetingAttendancePanel({
               <div
                 role="group"
                 aria-label={`Attendance for ${entry.full_name}`}
-                className="flex flex-wrap gap-2"
+                className="inline-flex rounded-full border border-gray-200 bg-gray-100 p-0.5"
               >
                 {STATUS_OPTIONS.map((option) => {
                   const selected = statuses[entry.member_id] === option.value;
@@ -131,17 +148,12 @@ export function MeetingAttendancePanel({
                     <button
                       key={option.value}
                       type="button"
+                      aria-label={option.ariaLabel}
                       aria-pressed={selected}
                       onClick={() => setStatus(entry.member_id, option.value)}
                       className={[
-                        "rounded-full px-3 py-1 text-xs font-medium transition-colors",
-                        selected
-                          ? option.value === "present"
-                            ? "bg-accent text-white"
-                            : option.value === "absent"
-                              ? "bg-primary text-white"
-                              : "bg-surface-card text-foreground ring-1 ring-gray-200"
-                          : "bg-gray-100 text-foreground hover:bg-gray-200",
+                        "min-w-[2rem] rounded-full px-2 py-1 text-xs font-semibold transition-colors",
+                        segmentClass(option.value, selected),
                       ].join(" ")}
                     >
                       {option.label}
@@ -154,7 +166,7 @@ export function MeetingAttendancePanel({
                 {entry.status
                   ? STATUS_OPTIONS.find((option) => option.value === entry.status)
                       ?.label ?? entry.status
-                  : "Not marked"}
+                  : "—"}
               </p>
             )}
           </li>

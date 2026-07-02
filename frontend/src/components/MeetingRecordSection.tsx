@@ -49,10 +49,7 @@ export function MeetingRecordSection({
 
   if (error || !detail) {
     return (
-      <div
-        role="alert"
-        className="ds-alert-banner"
-      >
+      <div role="alert" className="ds-alert-banner">
         {error ?? "Could not load meeting record."}
       </div>
     );
@@ -60,6 +57,17 @@ export function MeetingRecordSection({
 
   return (
     <div className="space-y-6">
+      <section className="ds-card p-4">
+        <h2 className="text-base font-medium text-foreground">Agenda</h2>
+        {detail.agenda ? (
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+            {detail.agenda}
+          </p>
+        ) : (
+          <p className="mt-2 text-sm text-label">No agenda on file.</p>
+        )}
+      </section>
+
       <MeetingAttendancePanel
         attendance={detail.attendance}
         canManage={detail.can_manage}

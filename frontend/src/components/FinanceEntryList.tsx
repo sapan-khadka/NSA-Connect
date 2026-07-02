@@ -215,9 +215,6 @@ export function FinanceEntryList({
     <section className="ds-card p-6">
       <div>
         <h2 className="text-lg font-light tracking-subhead text-foreground">Recent transactions</h2>
-        <p className="mt-1 text-sm text-label">
-          Latest logged income and expense entries for the selected semester.
-        </p>
       </div>
 
       {financeLocked ? (

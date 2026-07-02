@@ -66,19 +66,15 @@ describe("MeetingMinutesEditor", () => {
     vi.clearAllMocks();
   });
 
-  it("shows official minutes placeholder before publish", () => {
+  it("shows a unified minutes section before publish", () => {
     renderEditor();
 
-    expect(screen.getByRole("heading", { name: "Official minutes" })).toBeInTheDocument();
-    expect(screen.getByText("Not published yet")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Minutes" })).toBeInTheDocument();
+    expect(screen.getByText("Not published")).toBeInTheDocument();
+    expect(screen.getByLabelText("Minutes notes")).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "Official minutes will appear here after you summarize and publish.",
-      ),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Secretary draft notes" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("heading", { name: "Official minutes" }),
+    ).not.toBeInTheDocument();
   });
 
   it("saves draft notes and shows success message", async () => {
@@ -86,7 +82,7 @@ describe("MeetingMinutesEditor", () => {
     const { onSaveNotes } = renderEditor();
 
     await user.type(
-      screen.getByLabelText("Draft notes"),
+      screen.getByLabelText("Minutes notes"),
       "Notes from the meeting.",
     );
     await user.click(screen.getByRole("button", { name: "Save draft" }));
@@ -101,13 +97,11 @@ describe("MeetingMinutesEditor", () => {
     expect(screen.getByText("Draft saved")).toBeInTheDocument();
   });
 
-  it("publishes official minutes above draft section", async () => {
+  it("publishes official minutes in the same section", async () => {
     const user = userEvent.setup();
     const { onSummarize } = renderEditor({ minutes: draftMinutes });
 
-    await user.click(
-      screen.getByRole("button", { name: "Summarize & publish minutes" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Publish" }));
 
     await waitFor(() => {
       expect(onSummarize).toHaveBeenCalledWith(
@@ -118,32 +112,34 @@ describe("MeetingMinutesEditor", () => {
     expect(
       await screen.findByText("The board reviewed the election timeline."),
     ).toBeInTheDocument();
-    expect(screen.getByText("Minutes published")).toBeInTheDocument();
+    expect(screen.getByText("Published")).toBeInTheDocument();
     expect(
       screen.getByText("Official minutes published — board members will be notified."),
     ).toBeInTheDocument();
   });
 
-  it("shows published minutes first and collapses draft notes for board members", () => {
+  it("shows published minutes read-only for board members", () => {
     renderEditor({ minutes: publishedMinutes, canManage: false });
 
     expect(screen.getByText("The board reviewed the election timeline.")).toBeInTheDocument();
-    expect(
-      screen.queryByRole("heading", { name: "Secretary draft notes" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Minutes notes")).not.toBeInTheDocument();
+    expect(screen.getByText("Published")).toBeInTheDocument();
+  });
+
+  it("shows collapsible draft notes when only a draft exists", () => {
+    renderEditor({ minutes: draftMinutes, canManage: false });
+
     expect(
       screen.getByText("View secretary's draft notes"),
     ).toBeInTheDocument();
-    expect(screen.queryByLabelText("Draft notes")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Minutes notes")).not.toBeInTheDocument();
   });
 
   it("requires draft notes before publishing", async () => {
     const user = userEvent.setup();
     const { onSummarize } = renderEditor();
 
-    await user.click(
-      screen.getByRole("button", { name: "Summarize & publish minutes" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Publish" }));
 
     expect(
       await screen.findByText("Add draft notes before publishing official minutes."),
