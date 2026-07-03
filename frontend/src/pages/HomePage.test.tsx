@@ -1,6 +1,6 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MockAuthProvider, createMockEventResponse, createMockMember } from "../test/test-utils";
 import { HomePage } from "./HomePage";
@@ -12,6 +12,7 @@ vi.mock("../lib/events-api", async () => {
   return {
     ...actual,
     fetchUpcomingEvents: vi.fn(),
+    fetchEventAttendees: vi.fn(),
     updateEventRsvp: vi.fn(),
     rsvpToEvent: vi.fn(),
     cancelEventRsvp: vi.fn(),
@@ -59,21 +60,28 @@ vi.mock("../lib/finance-api", async () => {
   };
 });
 
+vi.mock("../lib/recent-memories", () => ({
+  fetchRecentMemories: vi.fn(),
+}));
+
 import { fetchMyEventTasks } from "../lib/event-tasks-api";
-import { fetchUpcomingEvents } from "../lib/events-api";
+import { fetchEventAttendees, fetchUpcomingEvents } from "../lib/events-api";
 import {
   fetchMyFinanceChangeRequestSummary,
   fetchPendingFinanceChangeRequests,
 } from "../lib/finance-api";
 import { fetchPendingMembers } from "../lib/members-api";
 import { fetchMeetings } from "../lib/meetings-api";
+import { fetchRecentMemories } from "../lib/recent-memories";
 
 const mockedUpcoming = vi.mocked(fetchUpcomingEvents);
+const mockedEventAttendees = vi.mocked(fetchEventAttendees);
 const mockedMyTasks = vi.mocked(fetchMyEventTasks);
 const mockedPendingMembers = vi.mocked(fetchPendingMembers);
 const mockedFinancePending = vi.mocked(fetchPendingFinanceChangeRequests);
 const mockedMyFinanceSummary = vi.mocked(fetchMyFinanceChangeRequestSummary);
 const mockedMeetings = vi.mocked(fetchMeetings);
+const mockedRecentMemories = vi.mocked(fetchRecentMemories);
 
 const sampleEvent = createMockEventResponse({
   id: 5,
@@ -85,6 +93,10 @@ const sampleEvent = createMockEventResponse({
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+});
+
+beforeEach(() => {
+  mockedRecentMemories.mockResolvedValue(null);
 });
 
 describe("HomePage", () => {
@@ -171,6 +183,13 @@ describe("HomePage", () => {
       ],
       total: 1,
     });
+    mockedEventAttendees.mockResolvedValue({
+      going_count: 2,
+      maybe_count: 1,
+      not_going_count: 0,
+      no_response_count: 7,
+      attendees: [],
+    });
 
     render(
       <MemoryRouter>
@@ -207,6 +226,7 @@ describe("HomePage", () => {
 
     expect(screen.getByText("Next board meeting")).toBeInTheDocument();
     expect(screen.getByText("March Board Meeting")).toBeInTheDocument();
+    expect(screen.getByText("2 going · 7 not yet responded")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View ›" })).toHaveAttribute(
       "href",
       "/events/meetings/9",
@@ -274,7 +294,120 @@ describe("HomePage", () => {
     expect(screen.queryByRole("link", { name: "April Board Meeting" })).not.toBeInTheDocument();
   });
 
-  it("does not show activity when counts are zero", async () => {
+  it("uses neutral overdue styling when the overdue count is zero", async () => {
+    mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
+    mockedMyTasks.mockResolvedValue({
+      tasks: [
+        {
+          id: 1,
+          event_id: 5,
+          event_name: "Dashain Celebration",
+          task_kind: "simple",
+          title: "On-time task",
+          group_name: null,
+          description: "",
+          assignee_id: 1,
+          assignee_name: "Board User",
+          status: "todo",
+          due_date: "2030-05-20T12:00:00+00:00",
+          is_overdue: false,
+          is_complete: false,
+          checklist_items: [],
+          completion_note: null,
+          completion_photo_url: null,
+          completed_at: null,
+          created_by_id: 2,
+          created_at: "2030-05-01T12:00:00+00:00",
+        },
+      ],
+      total: 1,
+    });
+    mockedPendingMembers.mockResolvedValue({ members: [], total: 0 });
+    mockedFinancePending.mockResolvedValue({ requests: [], total: 0 });
+    mockedMyFinanceSummary.mockResolvedValue({
+      pending_count: 0,
+      recently_rejected_count: 0,
+      recently_approved_count: 0,
+    });
+    mockedMeetings.mockResolvedValue({ meetings: [], total: 0 });
+
+    render(
+      <MemoryRouter>
+        <MockAuthProvider value={{ member: createMockMember("president") }}>
+          <HomePage />
+        </MockAuthProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText("Your work")).toBeInTheDocument(),
+    );
+
+    const overdueTile = screen.getByText("Overdue").closest(".ds-stat-tile");
+    expect(overdueTile).not.toBeNull();
+    expect(within(overdueTile as HTMLElement).getByText("0")).toHaveClass(
+      "ds-stat-value",
+    );
+    expect(screen.queryByText("0", { selector: ".ds-stat-overdue-chip" })).not.toBeInTheDocument();
+  });
+
+  it("limits activity height when many items are present", async () => {
+    mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
+    mockedMyTasks.mockResolvedValue({
+      tasks: [
+        {
+          id: 1,
+          event_id: 5,
+          event_name: "Dashain Celebration",
+          task_kind: "simple",
+          title: "Late task",
+          group_name: null,
+          description: "",
+          assignee_id: 1,
+          assignee_name: "Board User",
+          status: "todo",
+          due_date: "2030-05-20T12:00:00+00:00",
+          is_overdue: true,
+          is_complete: false,
+          checklist_items: [],
+          completion_note: null,
+          completion_photo_url: null,
+          completed_at: null,
+          created_by_id: 2,
+          created_at: "2030-05-01T12:00:00+00:00",
+        },
+      ],
+      total: 1,
+    });
+    mockedPendingMembers.mockResolvedValue({ members: [], total: 3 });
+    mockedFinancePending.mockResolvedValue({ requests: [], total: 2 });
+    mockedMyFinanceSummary.mockResolvedValue({
+      pending_count: 1,
+      recently_rejected_count: 1,
+      recently_approved_count: 1,
+    });
+    mockedMeetings.mockResolvedValue({ meetings: [], total: 0 });
+
+    render(
+      <MemoryRouter>
+        <MockAuthProvider value={{ member: createMockMember("treasurer") }}>
+          <HomePage />
+        </MockAuthProvider>
+      </MemoryRouter>,
+    );
+
+    const activityList = await screen.findByLabelText("Activity");
+    expect(activityList.querySelector("ul")).toHaveClass("max-h-64", "overflow-y-auto");
+    expect(screen.getAllByText("Recent · clears from this feed after 7 days")).toHaveLength(2);
+
+    const activityItems = Array.from(
+      activityList.querySelectorAll("li p.text-sm"),
+    ).map((node) => node.textContent);
+    expect(activityItems[0]).toContain("assigned task");
+    expect(activityItems.at(-1)).toContain("approved this week");
+  });
+
+  it("shows an activity empty state when counts are zero", async () => {
     mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
     mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
     mockedPendingMembers.mockResolvedValue({ members: [], total: 0 });
@@ -292,6 +425,55 @@ describe("HomePage", () => {
     );
 
     expect(screen.getByText("No open tasks assigned")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Activity")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Activity")).toBeInTheDocument();
+    expect(screen.getByText("All caught up")).toBeInTheDocument();
+    expect(
+      screen.getByText("Nothing needs your attention right now."),
+    ).toBeInTheDocument();
+  });
+
+  it("shows recent memories near the bottom when an album has photos", async () => {
+    mockedUpcoming.mockResolvedValue({ events: [sampleEvent], total: 1 });
+    mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
+    mockedPendingMembers.mockResolvedValue({ members: [], total: 0 });
+    mockedMeetings.mockResolvedValue({ meetings: [], total: 0 });
+    mockedRecentMemories.mockResolvedValue({
+      album: {
+        event_id: 7,
+        event_name: "Dashain",
+        starts_at: "2026-10-01T18:00:00Z",
+        event_type: "cultural",
+        photo_count: 5,
+        cover_thumbnail_url: "https://example.com/cover.jpg",
+      },
+      photos: [
+        {
+          id: 1,
+          event_id: 7,
+          uploaded_by_id: 1,
+          uploaded_by_name: "Member",
+          image_url: "https://example.com/1.jpg",
+          thumbnail_url: "https://example.com/1-thumb.jpg",
+          created_at: "2026-10-02T12:00:00Z",
+          can_delete: false,
+        },
+      ],
+      extraPhotoCount: 1,
+    });
+
+    render(
+      <MemoryRouter>
+        <MockAuthProvider value={{ member: createMockMember("general") }}>
+          <HomePage />
+        </MockAuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Recent memories")).toBeInTheDocument();
+    expect(screen.getByText("From Dashain · 5 photos")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View all photos ›" })).toHaveAttribute(
+      "href",
+      "/events/photos",
+    );
   });
 });

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 
 import type { EventAttendeesResponse, RsvpStatus } from "../lib/events-api";
 import { downloadAttendeesCsv } from "../lib/event-attendees-export";
-import { formatRsvpStatus } from "../lib/event-rsvp";
+import { formatCompactAttendeeSummary, formatRsvpStatus } from "../lib/event-rsvp";
 
 type EventAttendeesPanelProps = {
   eventName: string;
@@ -25,7 +25,7 @@ function statusBadgeClass(status: RsvpStatus | null): string {
 }
 
 function buildCompactSummary(data: EventAttendeesResponse): string {
-  return `${data.going_count} going · ${data.no_response_count} not yet responded`;
+  return formatCompactAttendeeSummary(data);
 }
 
 function buildFullSummary(data: EventAttendeesResponse): string {

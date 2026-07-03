@@ -10,7 +10,7 @@ type CalendarMonthYearPickerProps = {
 };
 
 const selectClassName =
-  "rounded-md border border-surface-card bg-white px-2 py-1 text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
+  "rounded-lg border border-[#F0F0EE] bg-white px-2 py-1 text-xs text-foreground focus:border-primary/30 focus:outline-none focus:ring-2 focus:ring-primary/10";
 
 export function CalendarMonthYearPicker({
   year,

@@ -2,7 +2,9 @@ from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from app.lib.event_dates import validate_starts_at_not_before_today
 
 from app.lib.event_finance import (
     get_event_finance_lock_at,
@@ -39,17 +41,8 @@ class EventCreateRequest(BaseModel):
 
     @field_validator("starts_at")
     @classmethod
-    def starts_at_must_be_timezone_aware(cls, value: datetime) -> datetime:
-        if value.tzinfo is None or value.tzinfo.utcoffset(value) is None:
-            raise ValueError("starts_at must include a timezone")
-        return value
-
-    @field_validator("starts_at")
-    @classmethod
-    def starts_at_must_be_in_future(cls, value: datetime) -> datetime:
-        if value <= datetime.now(value.tzinfo):
-            raise ValueError("Event date must be in the future")
-        return value
+    def starts_at_must_not_be_before_today(cls, value: datetime) -> datetime:
+        return validate_starts_at_not_before_today(value)
 
     @field_validator("budget")
     @classmethod
@@ -77,6 +70,7 @@ class EventResponse(BaseModel):
     is_finance_locked: bool
     is_past: bool
     is_finance_grace_period: bool
+    show_in_photo_archive: bool
 
     @classmethod
     def from_event(
@@ -100,7 +94,29 @@ class EventResponse(BaseModel):
             is_finance_locked=is_event_finance_locked(event),
             is_past=not event.is_upcoming,
             is_finance_grace_period=is_event_finance_grace_period(event),
+            show_in_photo_archive=event.show_in_photo_archive,
         )
+
+
+class EventPatchRequest(BaseModel):
+    show_in_photo_archive: bool | None = None
+    starts_at: datetime | None = None
+
+    @field_validator("starts_at")
+    @classmethod
+    def starts_at_must_not_be_before_today(
+        cls,
+        value: datetime | None,
+    ) -> datetime | None:
+        if value is None:
+            return None
+        return validate_starts_at_not_before_today(value)
+
+    @model_validator(mode="after")
+    def at_least_one_field(self) -> "EventPatchRequest":
+        if self.show_in_photo_archive is None and self.starts_at is None:
+            raise ValueError("At least one field must be provided")
+        return self
 
 
 class EventRsvpUpdateRequest(BaseModel):

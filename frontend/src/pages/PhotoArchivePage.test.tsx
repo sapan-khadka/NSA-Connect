@@ -57,7 +57,7 @@ describe("PhotoArchivePage", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByText("No past event albums yet")).toBeInTheDocument(),
+      expect(screen.getByText("No event albums yet")).toBeInTheDocument(),
     );
   });
 });

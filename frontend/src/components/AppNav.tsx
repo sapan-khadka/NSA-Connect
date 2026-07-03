@@ -6,9 +6,12 @@ type NavDropdownItem = {
   to: string;
 };
 
-export function buildNavPillClass(isActive: boolean): string {
-  return isActive ? "ds-nav-pill ds-nav-pill--active" : "ds-nav-pill";
+export function buildNavLinkClass(isActive: boolean): string {
+  return isActive ? "ds-nav-link ds-nav-link--active" : "ds-nav-link";
 }
+
+/** @deprecated Use buildNavLinkClass */
+export const buildNavPillClass = buildNavLinkClass;
 
 type NavDropdownProps = {
   label: string;
@@ -59,10 +62,10 @@ export function NavDropdown({ label, items, isActive = false }: NavDropdownProps
         aria-haspopup="menu"
         aria-controls={menuId}
         onClick={() => setOpen((current) => !current)}
-        className={buildNavPillClass(isActive || open)}
+        className={buildNavLinkClass(isActive || open)}
       >
         {label}
-        <span aria-hidden="true" className="text-[10px]">
+        <span aria-hidden="true" className="text-[10px] text-[#9A9A9A]">
           ▾
         </span>
       </button>
@@ -151,18 +154,15 @@ export function AccountMenu({ fullName, onLogout }: AccountMenuProps) {
         aria-haspopup="menu"
         aria-controls={menuId}
         onClick={() => setOpen((current) => !current)}
-        className="flex items-center gap-2 ds-card px-2.5 py-1.5 text-left transition-colors hover:border-accent/40 hover:bg-accent/5"
+        className="ds-nav-account-trigger"
       >
-        <span
-          aria-hidden="true"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-medium text-accent"
-        >
+        <span aria-hidden="true" className="ds-nav-account-avatar">
           {getInitials(fullName)}
         </span>
-        <span className="hidden max-w-[10rem] truncate text-sm font-medium text-foreground sm:block">
+        <span className="hidden max-w-[10rem] truncate text-sm text-foreground sm:block">
           {fullName}
         </span>
-        <span aria-hidden="true" className="text-[10px] text-label">
+        <span aria-hidden="true" className="text-[10px] text-[#9A9A9A]">
           ▾
         </span>
       </button>
@@ -174,7 +174,7 @@ export function AccountMenu({ fullName, onLogout }: AccountMenuProps) {
           className="absolute right-0 top-full z-50 mt-2 w-56 ds-card py-1 "
         >
           <div className="border-b border-gray-100 px-3 py-2 sm:hidden">
-            <p className="truncate text-sm font-medium text-foreground">{fullName}</p>
+            <p className="truncate text-sm text-foreground">{fullName}</p>
           </div>
           <NavLink
             to="/profile"
@@ -209,12 +209,7 @@ export function AccountMenu({ fullName, onLogout }: AccountMenuProps) {
 }
 
 export function NavDivider() {
-  return (
-    <li
-      aria-hidden="true"
-      className="mx-1 hidden h-5 w-px bg-gray-200 md:block"
-    />
-  );
+  return <li aria-hidden="true" className="ds-nav-divider" />;
 }
 
 type PrimaryNavLinkProps = {
@@ -229,7 +224,7 @@ export function PrimaryNavLink({ to, end = false, children }: PrimaryNavLinkProp
       <NavLink
         to={to}
         end={end}
-        className={({ isActive }) => buildNavPillClass(isActive)}
+        className={({ isActive }) => buildNavLinkClass(isActive)}
       >
         {children}
       </NavLink>

@@ -63,23 +63,88 @@
     letter-spacing: 0.03em;
   }
 
-  .ds-nav-pill {
-    @apply inline-flex items-center gap-1 rounded-full px-4 py-2 text-sm text-label outline-none transition-colors;
-    @apply focus:outline-none;
+  .ds-app-header {
+    position: relative;
+    border-bottom: 1px solid #ececec;
   }
 
-  .ds-nav-pill:focus-visible {
-    box-shadow:
-      0 0 0 2px #ffffff,
-      0 0 0 4px rgba(2, 124, 104, 0.45);
+  .ds-app-header::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: -1px;
+    left: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      #ececec 14%,
+      #ececec 86%,
+      transparent 100%
+    );
+    pointer-events: none;
   }
 
-  .ds-nav-pill--active {
-    @apply bg-surface-card font-medium text-foreground shadow-card;
+  .ds-nav-link {
+    @apply relative inline-flex items-center gap-1 px-3 py-2 text-sm outline-none transition-colors;
+    color: #9a9a9a;
   }
 
-  .ds-nav-pill:not(.ds-nav-pill--active):hover {
-    @apply bg-surface-muted;
+  .ds-nav-link:hover {
+    color: #1d1d1f;
+  }
+
+  .ds-nav-link:focus-visible {
+    @apply rounded-sm outline outline-2 outline-offset-2;
+    outline-color: rgba(2, 124, 104, 0.35);
+  }
+
+  .ds-nav-link--active {
+    color: #1d1d1f;
+    font-weight: 500;
+  }
+
+  .ds-nav-link--active::after {
+    content: "";
+    position: absolute;
+    right: 0.75rem;
+    bottom: 0.2rem;
+    left: 0.75rem;
+    height: 2px;
+    border-radius: 1px;
+    background-color: #027c68;
+  }
+
+  .ds-nav-divider {
+    @apply mx-2.5 hidden w-px shrink-0 self-center md:block;
+    height: 1rem;
+    background-color: #ececec;
+  }
+
+  .ds-nav-brand-wordmark {
+    color: #1d1d1f;
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+
+  .ds-nav-account-trigger {
+    @apply inline-flex items-center gap-2.5 px-1 py-1 text-left transition-opacity outline-none;
+  }
+
+  .ds-nav-account-trigger:hover {
+    @apply opacity-80;
+  }
+
+  .ds-nav-account-trigger:focus-visible {
+    @apply rounded-sm outline outline-2 outline-offset-2;
+    outline-color: rgba(2, 124, 104, 0.35);
+  }
+
+  .ds-nav-account-avatar {
+    @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-transparent text-xs font-medium text-accent;
+    border: 1.5px solid #e7f4f0;
   }
 
   .ds-card {
@@ -118,6 +183,20 @@
   .ds-stat-value-emphasis {
     @apply mt-2 text-3xl tracking-headline text-accent;
     font-weight: 400;
+  }
+
+  .events-calendar-card {
+    @apply rounded-2xl bg-white;
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.05),
+      0 10px 26px rgba(0, 0, 0, 0.06);
+  }
+
+  .events-sidebar-card {
+    @apply rounded-2xl bg-white;
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.05),
+      0 10px 26px rgba(0, 0, 0, 0.06);
   }
 
   .btn-primary {

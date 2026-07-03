@@ -73,6 +73,26 @@ def test_president_can_log_expense(client, president_member_headers):
     assert body["created_by_id"] == 2
 
 
+def test_create_finance_entry_accepts_custom_category(
+    client,
+    treasurer_member_headers,
+):
+    response = client.post(
+        "/api/v1/finance",
+        json=_finance_payload(
+            entry_type="expense",
+            category="Equipment Rental",
+            amount="42.00",
+            description="Speaker honorarium",
+            receipt_url=None,
+        ),
+        headers=treasurer_member_headers,
+    )
+
+    assert response.status_code == 201
+    assert response.json()["category"] == "equipment_rental"
+
+
 def test_create_finance_entry_rejects_unknown_event(
     client,
     treasurer_member_headers,
@@ -91,7 +111,9 @@ def test_create_finance_entry_rejects_unknown_event(
     "field, value",
     [
         ("entry_type", "transfer"),
-        ("category", "invalid"),
+        ("category", ""),
+        ("category", "a"),
+        ("category", "9equipment"),
         ("amount", "0.00"),
         ("amount", "-10.00"),
     ],

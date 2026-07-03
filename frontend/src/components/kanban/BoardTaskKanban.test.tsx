@@ -45,6 +45,30 @@ const tasks: KanbanTask[] = [
     id: 2,
     event_id: 5,
     event_name: "Dashain Celebration",
+    task_kind: "simple",
+    title: "Order catering",
+    group_name: null,
+    description: "",
+    assignee_id: 3,
+    assignee_name: null,
+    status: "in_progress",
+    due_date: "2030-05-21T12:00:00+00:00",
+    is_overdue: false,
+    is_complete: false,
+    checklist_items: [],
+    completion_note: null,
+    completion_photo_url: null,
+    completed_at: null,
+    created_by_id: null,
+    created_at: "2030-05-21T12:00:00+00:00",
+    eventId: 5,
+    eventName: "Dashain Celebration",
+    eventStartsAt: "2030-06-01T18:00:00+00:00",
+  },
+  {
+    id: 3,
+    event_id: 5,
+    event_name: "Dashain Celebration",
     task_kind: "checklist",
     title: "Food & Beverage",
     group_name: "Food & Beverage",
@@ -74,7 +98,7 @@ describe("BoardTaskKanban", () => {
     cleanup();
   });
 
-  it("renders three kanban columns with task cards", () => {
+  it("renders three kanban columns with color-coded headers and task cards", () => {
     render(
       <MemoryRouter>
         <BoardTaskKanban tasks={tasks} onMoveTask={vi.fn()} />
@@ -82,10 +106,40 @@ describe("BoardTaskKanban", () => {
     );
 
     expect(screen.getByText("To do")).toBeInTheDocument();
-    expect(screen.getByText("In progress")).toBeInTheDocument();
+    expect(screen.getAllByText("In progress").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Done")).toBeInTheDocument();
+    expect(screen.getByText("Assigned to you")).toBeInTheDocument();
     expect(screen.getByText("Setup")).toBeInTheDocument();
+    expect(screen.getByText("Order catering")).toBeInTheDocument();
     expect(screen.getByText("Food & Beverage")).toBeInTheDocument();
-    expect(screen.getAllByText("Dashain Celebration")).toHaveLength(2);
+    expect(document.querySelectorAll('[data-kanban-column="todo"]')).not.toHaveLength(0);
+  });
+
+  it("styles in-progress cards without ds-card focus-outline classes", () => {
+    render(
+      <MemoryRouter>
+        <BoardTaskKanban tasks={tasks} onMoveTask={vi.fn()} />
+      </MemoryRouter>,
+    );
+
+    const card = screen.getByText("Order catering").closest("article");
+    expect(card).not.toHaveClass("ds-card");
+    expect(card).not.toHaveClass("ds-card-interactive");
+    expect(card).toHaveClass("focus-visible:outline-none");
+  });
+
+  it("renders filled open-details buttons on task cards", () => {
+    render(
+      <MemoryRouter>
+        <BoardTaskKanban tasks={tasks} onMoveTask={vi.fn()} onOpenTask={vi.fn()} />
+      </MemoryRouter>,
+    );
+
+    const buttons = screen.getAllByRole("button", { name: "Open details" });
+    expect(buttons.length).toBeGreaterThan(0);
+    for (const button of buttons) {
+      expect(button).toHaveClass("text-white");
+      expect(button).not.toHaveClass("border");
+    }
   });
 });

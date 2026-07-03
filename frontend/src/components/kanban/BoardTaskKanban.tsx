@@ -115,7 +115,11 @@ export function BoardTaskKanban({
       <DragOverlay dropAnimation={{ duration: 220, easing: "cubic-bezier(0.18, 0.67, 0.6, 1.22)" }}>
         {overlayTask ? (
           <div className="rotate-2 scale-105">
-            <KanbanTaskCard task={overlayTask} isDragging />
+            <KanbanTaskCard
+              task={overlayTask}
+              columnId={getKanbanColumn(overlayTask)}
+              isDragging
+            />
           </div>
         ) : null}
       </DragOverlay>

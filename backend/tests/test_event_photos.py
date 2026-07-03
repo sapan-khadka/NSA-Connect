@@ -46,6 +46,7 @@ def past_event(db_session, board_member):
         event_type=EventType.CULTURAL,
         starts_at=datetime(2020, 6, 1, 18, tzinfo=UTC),
         budget=Decimal("100.00"),
+        show_in_photo_archive=True,
         created_by_id=board_member.id,
     )
     db_session.add(event)
@@ -107,6 +108,108 @@ def test_list_photo_albums_returns_past_events_with_cover(
     assert body["albums"][0]["event_name"] == "Dashain 2020"
     assert body["albums"][0]["photo_count"] == 1
     assert body["albums"][0]["cover_thumbnail_url"] is not None
+
+
+def test_list_photo_albums_includes_visible_past_event_with_zero_photos(
+    client,
+    general_member_headers,
+    past_event,
+):
+    response = client.get("/api/v1/events/photos/albums", headers=general_member_headers)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["albums"][0]["event_id"] == past_event.id
+    assert body["albums"][0]["photo_count"] == 0
+    assert body["albums"][0]["cover_thumbnail_url"] is None
+
+
+def test_list_photo_albums_excludes_past_meeting_when_hidden(
+    client,
+    db_session,
+    general_member_headers,
+    board_member,
+):
+    meeting = Event(
+        title="March Board Meeting",
+        description="Past board meeting.",
+        event_type=EventType.MEETING,
+        starts_at=datetime(2020, 5, 1, 18, tzinfo=UTC),
+        budget=Decimal("0.00"),
+        show_in_photo_archive=False,
+        created_by_id=board_member.id,
+    )
+    db_session.add(meeting)
+    db_session.commit()
+
+    response = client.get("/api/v1/events/photos/albums", headers=general_member_headers)
+
+    assert response.status_code == 200
+    assert response.json()["total"] == 0
+
+
+def test_patch_show_in_photo_archive_includes_meeting_in_albums(
+    client,
+    db_session,
+    board_member_headers,
+    general_member_headers,
+    board_member,
+):
+    meeting = Event(
+        title="Social Board Retreat",
+        description="Meeting with photos worth sharing.",
+        event_type=EventType.MEETING,
+        starts_at=datetime(2020, 4, 1, 18, tzinfo=UTC),
+        budget=Decimal("0.00"),
+        show_in_photo_archive=False,
+        created_by_id=board_member.id,
+    )
+    db_session.add(meeting)
+    db_session.commit()
+    db_session.refresh(meeting)
+
+    patch = client.patch(
+        f"/api/v1/events/{meeting.id}",
+        json={"show_in_photo_archive": True},
+        headers=board_member_headers,
+    )
+    assert patch.status_code == 200
+
+    response = client.get("/api/v1/events/photos/albums", headers=general_member_headers)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["albums"][0]["event_id"] == meeting.id
+    assert body["albums"][0]["photo_count"] == 0
+
+
+def test_list_photo_albums_includes_upcoming_event_when_visible(
+    client,
+    db_session,
+    general_member_headers,
+    board_member,
+):
+    upcoming = Event(
+        title="Tihar",
+        description="Upcoming cultural event.",
+        event_type=EventType.CULTURAL,
+        starts_at=datetime(2030, 11, 1, 18, tzinfo=UTC),
+        budget=Decimal("100.00"),
+        show_in_photo_archive=True,
+        created_by_id=board_member.id,
+    )
+    db_session.add(upcoming)
+    db_session.commit()
+
+    response = client.get("/api/v1/events/photos/albums", headers=general_member_headers)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] >= 1
+    album_ids = [album["event_id"] for album in body["albums"]]
+    assert upcoming.id in album_ids
 
 
 def test_member_can_upload_event_photo(

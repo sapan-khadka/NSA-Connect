@@ -1,21 +1,50 @@
+import { Check } from "lucide-react";
+
+import type { KanbanColumnId } from "../../lib/kanban-status";
+import { getKanbanColumnTheme } from "../../lib/kanban-theme";
+
 type KanbanProgressRingProps = {
   percent: number;
-  tone?: "default" | "danger" | "success";
+  columnId: KanbanColumnId;
   size?: number;
 };
 
-const TONE_STROKE = {
-  default: "#027C68",
-  danger: "#E8590C",
-  success: "#94DEA5",
-} as const;
+function KanbanDoneCheckmark({
+  size = 44,
+  color,
+}: {
+  size?: number;
+  color: string;
+}) {
+  const iconSize = Math.round(size * 0.42);
+
+  return (
+    <div
+      className="flex shrink-0 items-center justify-center rounded-full"
+      style={{
+        width: size,
+        height: size,
+        backgroundColor: color,
+      }}
+      aria-hidden="true"
+    >
+      <Check
+        size={iconSize}
+        strokeWidth={2.5}
+        className="text-white"
+        aria-hidden="true"
+      />
+    </div>
+  );
+}
 
 export function KanbanProgressRing({
   percent,
-  tone = "default",
+  columnId,
   size = 44,
 }: KanbanProgressRingProps) {
-  const stroke = 4;
+  const theme = getKanbanColumnTheme(columnId);
+  const stroke = 3;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (percent / 100) * circumference;
@@ -33,16 +62,16 @@ export function KanbanProgressRing({
         cy={size / 2}
         r={radius}
         fill="none"
-        stroke="currentColor"
+        stroke={theme.progressColor}
+        strokeOpacity={0.18}
         strokeWidth={stroke}
-        className="text-gray-200"
       />
       <circle
         cx={size / 2}
         cy={size / 2}
         r={radius}
         fill="none"
-        stroke={TONE_STROKE[tone]}
+        stroke={theme.progressColor}
         strokeWidth={stroke}
         strokeLinecap="round"
         strokeDasharray={circumference}
@@ -53,29 +82,32 @@ export function KanbanProgressRing({
   );
 }
 
+type KanbanProgressRingWithLabelProps = {
+  percent: number;
+  columnId: KanbanColumnId;
+};
+
 export function KanbanProgressRingWithLabel({
   percent,
-  tone = "default",
-}: Omit<KanbanProgressRingProps, "size">) {
+  columnId,
+}: KanbanProgressRingWithLabelProps) {
+  const theme = getKanbanColumnTheme(columnId);
+
+  if (columnId === "done") {
+    return <KanbanDoneCheckmark color={theme.progressColor} />;
+  }
+
   return (
     <div className="relative flex h-11 w-11 items-center justify-center">
-      <KanbanProgressRing percent={percent} tone={tone} />
-      <span className="absolute text-[10px] font-light tracking-headline text-foreground">{percent}%</span>
+      <KanbanProgressRing percent={percent} columnId={columnId} />
+      <span
+        className="absolute text-[10px] font-medium"
+        style={{ color: theme.progressColor }}
+      >
+        {percent}%
+      </span>
     </div>
   );
-}
-
-export function getKanbanProgressTone(
-  isOverdue: boolean,
-  isComplete: boolean,
-): "default" | "danger" | "success" {
-  if (isComplete) {
-    return "success";
-  }
-  if (isOverdue) {
-    return "danger";
-  }
-  return "default";
 }
 
 export function getTaskProgressPercent(task: {

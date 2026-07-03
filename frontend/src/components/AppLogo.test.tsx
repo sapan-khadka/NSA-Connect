@@ -33,4 +33,15 @@ describe("AppLogo", () => {
 
     expect(screen.getByRole("link")).toHaveAttribute("href", "/");
   });
+
+  it("renders the editorial nav brand with mountain mark and wordmark", () => {
+    render(
+      <MemoryRouter>
+        <AppLogo asLink size="nav" />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("NSA Connect")).toHaveClass("ds-nav-brand-wordmark");
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
 });

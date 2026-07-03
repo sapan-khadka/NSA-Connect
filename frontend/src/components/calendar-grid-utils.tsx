@@ -1,5 +1,7 @@
 import {
   EVENT_TYPE_DOT_CLASS,
+  EVENT_TYPE_LABELS,
+  EVENT_TYPES,
   FESTIVAL_DOT_CLASS,
   type EventType,
 } from "../lib/event-types";
@@ -24,40 +26,83 @@ type DayCellSurfaceOptions = {
   isToday: boolean;
 };
 
+const DAY_CELL_BASE =
+  "relative flex min-h-[3.25rem] flex-col items-center justify-center gap-0.5 rounded-[10px] border border-transparent bg-white px-0.5 py-1.5 text-sm transition-all duration-150 ease-out";
+
+const DAY_CELL_TILE_SHADOW =
+  "shadow-[0_1px_2px_rgba(0,0,0,0.04),0_3px_8px_rgba(0,0,0,0.04)] hover:-translate-y-px hover:shadow-[0_2px_4px_rgba(0,0,0,0.06),0_8px_18px_rgba(0,0,0,0.08)]";
+
+const DAY_CELL_TODAY =
+  "bg-gradient-to-b from-[#E7F4F0] to-[#DCF0E8] shadow-[0_0_0_3px_#E7F4F0,0_3px_10px_rgba(2,124,104,0.18)] hover:-translate-y-px hover:shadow-[0_0_0_3px_#E7F4F0,0_6px_16px_rgba(2,124,104,0.22)]";
+
+const DAY_CELL_SELECTED =
+  "z-10 shadow-[0_0_0_2px_#023D54,0_3px_10px_rgba(2,61,84,0.15)] hover:-translate-y-px hover:shadow-[0_0_0_2px_#023D54,0_8px_18px_rgba(2,61,84,0.2)]";
+
 export function getDayCellSurfaceClass({
   isCurrentMonth,
   isSelected,
   isToday,
 }: DayCellSurfaceOptions): string {
-  const classes = [
-    "relative flex min-h-[2.75rem] flex-col items-center justify-center gap-0 px-0.5 py-1 sm:min-h-[3rem]",
-    "rounded-[8px] border border-transparent text-sm",
-    "bg-white text-foreground dark:bg-gray-900 dark:text-gray-100",
-    "shadow-[0_2px_6px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.35)]",
-    "transition-[transform,box-shadow,opacity,border-color,background-color] duration-150 ease-out",
-    "hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_4px_12px_rgba(0,0,0,0.45)]",
-  ];
+  const classes = [DAY_CELL_BASE];
 
   if (!isCurrentMonth) {
-    classes.push("opacity-40 hover:opacity-55 text-label dark:text-label");
+    classes.push("text-label opacity-50");
+  } else {
+    classes.push("text-foreground");
   }
 
-  if (isSelected) {
-    classes.push(
-      "z-10 -translate-y-0.5 border-accent",
-      "shadow-[0_6px_16px_rgba(0,0,0,0.12)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.5)]",
-      "hover:shadow-[0_8px_18px_rgba(0,0,0,0.14)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.55)]",
-    );
+  if (isSelected && isToday) {
+    classes.push(DAY_CELL_TODAY, DAY_CELL_SELECTED);
+  } else if (isSelected) {
+    classes.push(DAY_CELL_SELECTED);
   } else if (isToday) {
-    classes.push(
-      "bg-accent/5 dark:bg-accent/20",
-      "ring-2 ring-accent/75 dark:ring-accent/90",
-      "shadow-[0_2px_6px_rgba(0,0,0,0.06),0_0_0_4px_rgba(2,124,104,0.22)]",
-      "dark:shadow-[0_2px_6px_rgba(0,0,0,0.35),0_0_0_4px_rgba(2,124,104,0.35)]",
-    );
+    classes.push(DAY_CELL_TODAY);
+  } else {
+    classes.push(DAY_CELL_TILE_SHADOW);
   }
 
   return classes.join(" ");
+}
+
+export function getTodayDateNumberClass(isToday: boolean, isSelected: boolean): string {
+  if (isToday) {
+    return "text-sm font-semibold text-[#027C68]";
+  }
+  if (isSelected) {
+    return "text-sm font-semibold text-foreground";
+  }
+  return "text-sm";
+}
+
+type YearMonthTileOptions = {
+  isCurrentMonth: boolean;
+};
+
+const YEAR_TILE_BASE =
+  "flex min-h-[5.5rem] flex-col items-center justify-center rounded-[14px] border border-transparent bg-white px-3 py-4 text-center transition-all duration-150 ease-out";
+
+const YEAR_TILE_SHADOW =
+  "shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.05)] hover:-translate-y-0.5 hover:shadow-[0_2px_4px_rgba(0,0,0,0.06),0_10px_22px_rgba(0,0,0,0.08)]";
+
+const YEAR_TILE_CURRENT =
+  "bg-gradient-to-b from-[#E7F4F0] to-[#DCF0E8] shadow-[0_0_0_3px_#E7F4F0,0_3px_10px_rgba(2,124,104,0.18)] hover:-translate-y-0.5 hover:shadow-[0_0_0_3px_#E7F4F0,0_6px_16px_rgba(2,124,104,0.22)]";
+
+export function getYearMonthTileClass({
+  isCurrentMonth,
+}: YearMonthTileOptions): string {
+  if (isCurrentMonth) {
+    return [YEAR_TILE_BASE, YEAR_TILE_CURRENT].join(" ");
+  }
+
+  return [YEAR_TILE_BASE, YEAR_TILE_SHADOW].join(" ");
+}
+
+export function getYearMonthLabelClass(isCurrentMonth: boolean): string {
+  if (isCurrentMonth) {
+    return "text-sm font-semibold text-[#027C68]";
+  }
+
+  return "text-sm font-medium text-foreground";
 }
 
 type CategoryDot = {
@@ -95,26 +140,49 @@ export function CalendarCategoryDots({
     return null;
   }
 
-  const visible = dots.slice(0, 3);
+  const visible = dots.slice(0, 4);
   const overflow = dots.length - visible.length;
 
   return (
     <div
       aria-hidden="true"
-      className="absolute bottom-1 flex items-center gap-0.5"
+      className="mt-0.5 flex items-center justify-center gap-[3px]"
       data-testid="calendar-category-dots"
     >
       {visible.map((dot) => (
         <span
           key={dot.key}
-          className={`h-1.5 w-1.5 rounded-full ${dot.className}`}
+          className={`h-[5px] w-[5px] rounded-full ${dot.className}`}
         />
       ))}
       {overflow > 0 ? (
-        <span className="text-[9px] font-semibold leading-none text-label dark:text-label">
+        <span className="text-[9px] font-semibold leading-none text-label">
           +{overflow}
         </span>
       ) : null}
     </div>
+  );
+}
+
+export function CalendarLegendList({ className }: { className?: string }) {
+  return (
+    <ul aria-label="Event type legend" className={className}>
+      {EVENT_TYPES.map((eventType) => (
+        <li key={eventType} className="flex items-center gap-1.5">
+          <span
+            aria-hidden="true"
+            className={`h-[5px] w-[5px] rounded-full ${EVENT_TYPE_DOT_CLASS[eventType]}`}
+          />
+          {EVENT_TYPE_LABELS[eventType]}
+        </li>
+      ))}
+      <li className="flex items-center gap-1.5">
+        <span
+          aria-hidden="true"
+          className={`h-[5px] w-[5px] rounded-full ${FESTIVAL_DOT_CLASS}`}
+        />
+        Nepali festival
+      </li>
+    </ul>
   );
 }

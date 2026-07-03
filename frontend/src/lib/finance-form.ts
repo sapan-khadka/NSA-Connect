@@ -1,3 +1,9 @@
+import {
+  CUSTOM_FINANCE_CATEGORY,
+  resolveFinanceCategoryForSubmit,
+  validateCustomFinanceCategory,
+} from "./finance-categories";
+
 export const FINANCE_ENTRY_TYPES = ["income", "expense"] as const;
 
 export type FinanceEntryType = (typeof FINANCE_ENTRY_TYPES)[number];
@@ -20,7 +26,8 @@ export type FinanceCategory = (typeof FINANCE_CATEGORIES)[number];
 
 export type LogFinanceEntryFormValues = {
   entry_type: FinanceEntryType;
-  category: FinanceCategory;
+  category: FinanceCategory | typeof CUSTOM_FINANCE_CATEGORY;
+  customCategory: string;
   amount: string;
   description: string;
   event_id: string;
@@ -33,6 +40,7 @@ export type LogFinanceEntryFormErrors = Partial<
 export const initialLogFinanceEntryValues: LogFinanceEntryFormValues = {
   entry_type: "expense",
   category: "food_beverage",
+  customCategory: "",
   amount: "",
   description: "",
   event_id: "",
@@ -58,5 +66,18 @@ export function validateLogFinanceEntryForm(
     }
   }
 
+  if (values.category === CUSTOM_FINANCE_CATEGORY) {
+    const customError = validateCustomFinanceCategory(values.customCategory);
+    if (customError) {
+      errors.customCategory = customError;
+    }
+  }
+
   return errors;
+}
+
+export function getSubmittedFinanceCategory(
+  values: LogFinanceEntryFormValues,
+): string {
+  return resolveFinanceCategoryForSubmit(values.category, values.customCategory);
 }

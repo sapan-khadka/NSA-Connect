@@ -10,6 +10,7 @@ from app.schemas.event import (
     EventCreateRequest,
     EventDetailResponse,
     EventListResponse,
+    EventPatchRequest,
     EventResponse,
     EventRsvpAttendeeResponse,
     EventRsvpStatusResponse,
@@ -25,6 +26,7 @@ from app.services.event_service import (
     list_events,
     list_past_events,
     list_upcoming_events,
+    update_event,
 )
 from app.services.event_task_service import (
     InvalidEventTaskAssigneeError,
@@ -363,6 +365,24 @@ def create_event_endpoint(
         data,
         created_by_id=current_member.id,
     )
+    return _build_event_response(db, event, member_id=current_member.id)
+
+
+@router.patch("/{event_id}", response_model=EventResponse)
+def patch_event_endpoint(
+    event_id: int,
+    data: EventPatchRequest,
+    current_member: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    try:
+        event = update_event(db, event_id, data)
+    except EventNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        ) from None
+
     return _build_event_response(db, event, member_id=current_member.id)
 
 

@@ -2,12 +2,12 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AccountMenu, buildNavPillClass, PrimaryNavLink } from "./AppNav";
+import { AccountMenu, buildNavLinkClass, PrimaryNavLink } from "./AppNav";
 
-describe("buildNavPillClass", () => {
-  it("returns active and inactive pill classes", () => {
-    expect(buildNavPillClass(true)).toBe("ds-nav-pill ds-nav-pill--active");
-    expect(buildNavPillClass(false)).toBe("ds-nav-pill");
+describe("buildNavLinkClass", () => {
+  it("returns active and inactive editorial link classes", () => {
+    expect(buildNavLinkClass(true)).toBe("ds-nav-link ds-nav-link--active");
+    expect(buildNavLinkClass(false)).toBe("ds-nav-link");
   });
 });
 
@@ -16,7 +16,7 @@ describe("PrimaryNavLink", () => {
     cleanup();
   });
 
-  it("applies active pill styling on the current route", () => {
+  it("applies active underline styling on the current route", () => {
     render(
       <MemoryRouter initialEntries={["/"]}>
         <ul>
@@ -28,7 +28,7 @@ describe("PrimaryNavLink", () => {
     );
 
     const link = screen.getByRole("link", { name: "Home" });
-    expect(link).toHaveClass("ds-nav-pill", "ds-nav-pill--active");
+    expect(link).toHaveClass("ds-nav-link", "ds-nav-link--active");
   });
 });
 
@@ -56,5 +56,18 @@ describe("AccountMenu", () => {
 
     await user.click(screen.getByRole("menuitem", { name: "Log out" }));
     expect(onLogout).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses a lightweight account trigger without card background", () => {
+    render(
+      <MemoryRouter>
+        <AccountMenu fullName="Mukesh Mahato" onLogout={vi.fn()} />
+      </MemoryRouter>,
+    );
+
+    const trigger = screen.getByRole("button", { name: "Account menu for Mukesh Mahato" });
+    expect(trigger).toHaveClass("ds-nav-account-trigger");
+    expect(trigger.querySelector(".ds-nav-account-avatar")).toBeInTheDocument();
+    expect(trigger).not.toHaveClass("ds-card");
   });
 });

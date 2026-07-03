@@ -44,7 +44,7 @@ export function PhotoArchivePage() {
       <PageHeader
         eyebrow="Events"
         title="Photo archive"
-        description="Browse photo albums from past NSA events. Open an album to view, upload, and share memories."
+        description="Browse event photo albums. Open an album to view, upload, and share memories."
       />
 
       {isLoading ? (
@@ -60,8 +60,8 @@ export function PhotoArchivePage() {
       {!isLoading && !error && albums.length === 0 ? (
         <EmptyState
           icon="calendar"
-          title="No past event albums yet"
-          description="Photo albums appear here after events have passed."
+          title="No event albums yet"
+          description="Events appear here when board members enable “Show in photo archive” on the manage page."
         />
       ) : null}
 

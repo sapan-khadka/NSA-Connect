@@ -1,18 +1,41 @@
 import {
+  budgetDisplayPercent,
   budgetProgressBarClass,
-  budgetStatusClass,
-  budgetStatusLabel,
   budgetUsagePercent,
-  formatBudgetRemaining,
+  formatBudgetSpentLabel,
   type EventBudgetRow,
 } from "../lib/event-budget";
-import { formatCurrency } from "../lib/format-currency";
+import { parseCurrencyAmount } from "../lib/format-currency";
 
 type EventBudgetBreakdownProps = {
   events: EventBudgetRow[];
   isLoading: boolean;
   errorMessage: string | null;
 };
+
+function percentPillClass(event: EventBudgetRow): string {
+  if (parseCurrencyAmount(event.planned_budget) <= 0) {
+    return "bg-gray-100 text-label";
+  }
+
+  if (event.over_budget) {
+    return "bg-overdue-surface text-overdue";
+  }
+
+  if (parseCurrencyAmount(event.actual_expense) === 0) {
+    return "bg-gray-100 text-label";
+  }
+
+  return "bg-mint/40 text-primary";
+}
+
+function percentPillLabel(event: EventBudgetRow): string {
+  if (parseCurrencyAmount(event.planned_budget) <= 0) {
+    return "—";
+  }
+
+  return `${budgetDisplayPercent(event.planned_budget, event.actual_expense)}%`;
+}
 
 export function EventBudgetBreakdown({
   events,
@@ -21,7 +44,7 @@ export function EventBudgetBreakdown({
 }: EventBudgetBreakdownProps) {
   if (isLoading) {
     return (
-      <div className="ds-card p-10 text-center text-label">
+      <div className="rounded-card border border-gray-200 bg-surface-card p-10 text-center text-label shadow-card">
         Loading event budget breakdown...
       </div>
     );
@@ -29,105 +52,64 @@ export function EventBudgetBreakdown({
 
   if (errorMessage) {
     return (
-      <div
-        role="alert"
-        className="ds-alert-banner p-6"
-      >
+      <div role="alert" className="ds-alert-banner p-6">
         {errorMessage}
       </div>
     );
   }
 
   return (
-    <section className="ds-card p-6">
-      <div>
-        <h2 className="text-lg font-light tracking-subhead text-foreground">
-          Event budget vs actual
-        </h2>
-        <p className="mt-1 text-sm text-label">
-          Compare each event&apos;s planned budget against logged spending.
-        </p>
-      </div>
+    <section className="rounded-card border border-gray-200 bg-surface-card p-6 shadow-card">
+      <h2 className="text-base font-medium text-foreground">
+        Event budgets
+      </h2>
 
-      <div className="mt-6 overflow-x-auto">
-        <table
-          data-testid="event-budget-table"
-          className="min-w-full divide-y divide-gray-200 text-left text-sm"
-        >
-          <thead className="bg-gray-50 text-xs uppercase tracking-wide text-label">
-            <tr>
-              <th className="px-4 py-3 font-semibold">Event</th>
-              <th className="px-4 py-3 font-semibold">Planned budget</th>
-              <th className="px-4 py-3 font-semibold">Actual expense</th>
-              <th className="px-4 py-3 font-semibold">Actual income</th>
-              <th className="px-4 py-3 font-semibold">Remaining</th>
-              <th className="px-4 py-3 font-semibold">Usage</th>
-              <th className="px-4 py-3 font-semibold">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {events.map((event) => {
-              const usagePercent = budgetUsagePercent(
-                event.planned_budget,
-                event.actual_expense,
-              );
+      <div
+        data-testid="event-budget-list"
+        className="mt-6 space-y-6"
+      >
+        {events.map((event) => {
+          const usagePercent = budgetUsagePercent(
+            event.planned_budget,
+            event.actual_expense,
+          );
 
-              return (
-                <tr key={event.event_id}>
-                  <td className="px-4 py-3 font-medium text-foreground">
-                    {event.event_name}
-                  </td>
-                  <td className="px-4 py-3 text-foreground">
-                    {formatCurrency(event.planned_budget)}
-                  </td>
-                  <td className="px-4 py-3 text-foreground">
-                    {formatCurrency(event.actual_expense)}
-                  </td>
-                  <td className="px-4 py-3 text-accent">
-                    {formatCurrency(event.actual_income)}
-                  </td>
-                  <td
-                    className={`px-4 py-3 font-medium ${
-                      event.over_budget ? "text-foreground" : "text-accent"
-                    }`}
-                  >
-                    {formatBudgetRemaining(event.budget_remaining)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex min-w-32 items-center gap-3">
-                      <div className="h-2 flex-1 rounded-full bg-gray-100">
-                        <div
-                          className={`h-2 rounded-full ${budgetProgressBarClass(event)}`}
-                          style={{ width: `${usagePercent}%` }}
-                        />
-                      </div>
-                      <span className="text-xs text-label">
-                        {usagePercent}%
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide ${budgetStatusClass(event)}`}
-                    >
-                      {budgetStatusLabel(event)}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-            {events.length === 0 && (
-              <tr>
-                <td
-                  colSpan={7}
-                  className="px-4 py-8 text-center text-label"
-                >
-                  No events found for this period.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+          return (
+            <div
+              key={event.event_id}
+              data-testid={`event-budget-row-${event.event_id}`}
+              className="flex items-start gap-4"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-medium text-foreground">{event.event_name}</p>
+                <p className="mt-0.5 text-[11px] font-light text-label">
+                  {formatBudgetSpentLabel(
+                    event.actual_expense,
+                    event.planned_budget,
+                  )}
+                </p>
+                <div className="mt-3 h-2 rounded-full bg-gray-100">
+                  <div
+                    data-testid={`event-budget-bar-${event.event_id}`}
+                    className={`h-2 rounded-full ${budgetProgressBarClass(event)}`}
+                    style={{ width: `${usagePercent}%` }}
+                  />
+                </div>
+              </div>
+              <span
+                className={`mt-0.5 inline-flex min-w-10 shrink-0 items-center justify-center rounded-pill px-2.5 py-1 text-[11px] font-medium ${percentPillClass(event)}`}
+              >
+                {percentPillLabel(event)}
+              </span>
+            </div>
+          );
+        })}
+
+        {events.length === 0 ? (
+          <p className="py-4 text-center text-sm text-label">
+            No events found for this period.
+          </p>
+        ) : null}
       </div>
     </section>
   );

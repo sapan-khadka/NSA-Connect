@@ -67,12 +67,9 @@ export function FinanceMyChangeRequests({
 
   return (
     <section className="ds-card p-6">
-      <h2 className="text-lg font-light tracking-subhead text-foreground">
+      <h2 className="text-base font-medium text-foreground">
         Your finance requests
       </h2>
-      <p className="mt-1 text-sm text-label">
-        Track edits and deletions you submitted for president or treasurer approval.
-      </p>
 
       {error ? <p className="mt-3 ds-field-error">{error}</p> : null}
 

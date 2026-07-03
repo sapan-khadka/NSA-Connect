@@ -44,6 +44,7 @@ const mockEvent = {
     name: "Dashain Celebration",
     budget: "500.00",
     current_member_rsvp_status: null,
+    show_in_photo_archive: true,
   }),
   prep_tasks: [],
 };
@@ -148,6 +149,9 @@ describe("EventManagePage", () => {
     renderPage("board");
 
     expect(await screen.findByText("Dashain Celebration")).toBeInTheDocument();
+    expect(
+      screen.getByRole("checkbox", { name: /Show in photo archive/i }),
+    ).toBeChecked();
     expect(screen.queryByRole("button", { name: "Meeting" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Logistics" })).not.toBeInTheDocument();
     expect(screen.getByText("Task completion")).toBeInTheDocument();

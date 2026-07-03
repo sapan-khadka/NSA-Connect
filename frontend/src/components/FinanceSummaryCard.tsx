@@ -1,68 +1,127 @@
+import type { ReactNode } from "react";
+
 import type { FinanceSummaryResponse } from "../lib/finance-api";
 import {
   currencyBalanceToneClass,
   formatCurrency,
+  parseCurrencyAmount,
 } from "../lib/format-currency";
 
-type FinanceSummaryCardProps = {
+type FinanceSummaryMetricsProps = {
   isLoading: boolean;
   errorMessage: string | null;
+  summary: FinanceSummaryResponse | null;
+  pendingCount?: number;
+};
+
+type FinanceTransactionBreakdownProps = {
   summary: FinanceSummaryResponse | null;
 };
 
 type MetricCardProps = {
   title: string;
-  amount: string;
+  children: ReactNode;
   testId?: string;
-  tone?: "default" | "income" | "expense" | "balance";
-  subtitle?: string;
+  variant?: "neutral" | "positive" | "negative";
+  caption?: string | null;
 };
+
+function netBalanceCaption(summary: FinanceSummaryResponse): string | null {
+  const balance = parseCurrencyAmount(summary.balance);
+  const income = parseCurrencyAmount(summary.total_income);
+  const expense = parseCurrencyAmount(summary.total_expense);
+
+  if (balance < 0 && income === 0 && expense > 0) {
+    return "Spending with no income yet";
+  }
+
+  if (balance < 0) {
+    return "Expenses exceed income";
+  }
+
+  if (balance > 0 && expense > income) {
+    return null;
+  }
+
+  return null;
+}
+
+function netBalanceVariant(amount: string): "neutral" | "positive" | "negative" {
+  const value = parseCurrencyAmount(amount);
+
+  if (value < 0) {
+    return "negative";
+  }
+
+  if (value > 0) {
+    return "positive";
+  }
+
+  return "neutral";
+}
+
+function metricCardClasses(variant: "neutral" | "positive" | "negative"): string {
+  if (variant === "negative") {
+    return "border border-overdue/20 bg-overdue-surface";
+  }
+
+  if (variant === "positive") {
+    return "border border-accent/20 bg-mint/25";
+  }
+
+  return "border border-gray-200 bg-surface-card";
+}
+
+function TrendDownIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 16 16"
+      className="h-4 w-4 text-overdue"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+    >
+      <path d="M3 5.5 8 10.5 13 5.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 function MetricCard({
   title,
-  amount,
+  children,
   testId,
-  tone = "default",
-  subtitle,
+  variant = "neutral",
+  caption,
 }: MetricCardProps) {
-  const sectionClass =
-    tone === "income"
-      ? "bg-mint/30"
-      : tone === "expense"
-        ? "bg-surface-muted"
-        : "bg-surface-card";
-
-  const titleClass = "text-label";
-
-  const amountClass =
-    tone === "balance"
-      ? currencyBalanceToneClass(amount)
-      : "text-accent";
-
   return (
-    <section className={`rounded-card p-6 shadow-card xl:col-span-1 ${sectionClass}`}>
-      <h2 className={`ds-section-label ${titleClass}`}>
-        {title}
-      </h2>
-      <p
-        data-testid={testId}
-        className={`mt-3 text-4xl font-light tracking-headline ${amountClass}`}
-      >
-        {formatCurrency(amount)}
-      </p>
-      {subtitle ? <p className="mt-2 text-sm text-label">{subtitle}</p> : null}
+    <section
+      data-testid={testId}
+      className={`rounded-card p-5 shadow-card ${metricCardClasses(variant)}`}
+    >
+      <div className="flex items-center gap-1.5">
+        {variant === "negative" ? <TrendDownIcon /> : null}
+        <h2 className="text-xs font-medium uppercase tracking-label text-label">
+          {title}
+        </h2>
+      </div>
+      <div className="mt-3">{children}</div>
+      {caption ? (
+        <p className="mt-2 text-xs font-light text-overdue">{caption}</p>
+      ) : null}
     </section>
   );
 }
 
-export function FinanceSummaryCard({
+export function FinanceSummaryMetrics({
   isLoading,
   errorMessage,
   summary,
-}: FinanceSummaryCardProps) {
+  pendingCount = 0,
+}: FinanceSummaryMetricsProps) {
   if (isLoading) {
     return (
-      <div className="ds-card p-10 text-center text-label">
+      <div className="rounded-card border border-gray-200 bg-surface-card p-10 text-center text-label shadow-card">
         Loading finance summary...
       </div>
     );
@@ -70,10 +129,7 @@ export function FinanceSummaryCard({
 
   if (errorMessage) {
     return (
-      <div
-        role="alert"
-        className="ds-alert-banner p-6"
-      >
+      <div role="alert" className="ds-alert-banner p-6">
         {errorMessage}
       </div>
     );
@@ -83,116 +139,155 @@ export function FinanceSummaryCard({
     return null;
   }
 
+  const balanceVariant = netBalanceVariant(summary.balance);
+  const balanceAmountClass =
+    balanceVariant === "negative"
+      ? "text-overdue"
+      : balanceVariant === "positive"
+        ? "text-accent"
+        : "text-foreground";
+
   return (
-    <>
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          title="Running balance"
-          amount={summary.balance}
-          testId="finance-running-balance"
-          tone="balance"
-          subtitle="Net position across logged entries"
-        />
-        <MetricCard
-          title="Total income"
-          amount={summary.total_income}
-          testId="finance-total-income"
-          tone="income"
-        />
-        <MetricCard
-          title="Total expense"
-          amount={summary.total_expense}
-          testId="finance-total-expense"
-          tone="expense"
-        />
-        <MetricCard
-          title="Net balance"
-          amount={summary.balance}
-          testId="finance-net-balance"
-          tone="balance"
-          subtitle="Income minus expenses"
-        />
-      </div>
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <MetricCard
+        title="Net balance"
+        testId="finance-net-balance"
+        variant={balanceVariant}
+        caption={balanceVariant === "negative" ? netBalanceCaption(summary) : null}
+      >
+        <p
+          data-testid="finance-net-balance-amount"
+          className={`text-3xl font-light tracking-headline ${balanceAmountClass}`}
+        >
+          {formatCurrency(summary.balance)}
+        </p>
+      </MetricCard>
 
-      <section className="ds-card p-6">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-light tracking-subhead text-foreground">
-              Transaction breakdown
-            </h2>
-            <p className="mt-1 text-sm text-label">
-              {summary.entry_count} entries in this view
-            </p>
-          </div>
-        </div>
+      <MetricCard title="Income" testId="finance-total-income">
+        <p
+          data-testid="finance-total-income-amount"
+          className="text-3xl font-light tracking-headline text-foreground"
+        >
+          {formatCurrency(summary.total_income)}
+        </p>
+      </MetricCard>
 
-        <div className="mt-6 overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
-            <thead className="bg-gray-50 text-xs uppercase tracking-wide text-label">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Category</th>
-                <th className="px-4 py-3 font-semibold">Income</th>
-                <th className="px-4 py-3 font-semibold">Expense</th>
-                <th className="px-4 py-3 font-semibold">Balance</th>
-                <th className="px-4 py-3 font-semibold">Entries</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              <tr>
+      <MetricCard title="Expenses" testId="finance-total-expense">
+        <p
+          data-testid="finance-total-expense-amount"
+          className="text-3xl font-light tracking-headline text-foreground"
+        >
+          {formatCurrency(summary.total_expense)}
+        </p>
+      </MetricCard>
+
+      <MetricCard title="Pending" testId="finance-pending-count">
+        <p className="text-3xl font-light tracking-headline text-foreground">
+          <span>{pendingCount}</span>{" "}
+          <span className="text-sm font-light text-label">
+            {pendingCount === 1 ? "request" : "requests"}
+          </span>
+        </p>
+      </MetricCard>
+    </div>
+  );
+}
+
+export function FinanceTransactionBreakdown({
+  summary,
+}: FinanceTransactionBreakdownProps) {
+  if (!summary) {
+    return null;
+  }
+
+  return (
+    <section className="ds-card p-6">
+      <h2 className="text-base font-medium text-foreground">
+        Transaction breakdown
+      </h2>
+
+      <div className="mt-6 overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
+          <thead className="bg-gray-50 text-xs uppercase tracking-wide text-label">
+            <tr>
+              <th className="px-4 py-3 font-semibold">Category</th>
+              <th className="px-4 py-3 font-semibold">Income</th>
+              <th className="px-4 py-3 font-semibold">Expense</th>
+              <th className="px-4 py-3 font-semibold">Balance</th>
+              <th className="px-4 py-3 font-semibold">Entries</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            <tr>
+              <td className="px-4 py-3 font-medium text-foreground">
+                Pre-event / general
+              </td>
+              <td className="px-4 py-3 text-accent">
+                {formatCurrency(summary.pre_event.income)}
+              </td>
+              <td className="px-4 py-3 text-foreground">
+                {formatCurrency(summary.pre_event.expense)}
+              </td>
+              <td
+                className={`px-4 py-3 font-medium ${currencyBalanceToneClass(summary.pre_event.balance)}`}
+              >
+                {formatCurrency(summary.pre_event.balance)}
+              </td>
+              <td className="px-4 py-3 text-label">
+                {summary.pre_event.entry_count}
+              </td>
+            </tr>
+            {summary.events.map((eventSummary) => (
+              <tr key={eventSummary.event_id}>
                 <td className="px-4 py-3 font-medium text-foreground">
-                  Pre-event / general
+                  {eventSummary.event_name}
                 </td>
                 <td className="px-4 py-3 text-accent">
-                  {formatCurrency(summary.pre_event.income)}
+                  {formatCurrency(eventSummary.income)}
                 </td>
                 <td className="px-4 py-3 text-foreground">
-                  {formatCurrency(summary.pre_event.expense)}
+                  {formatCurrency(eventSummary.expense)}
                 </td>
                 <td
-                  className={`px-4 py-3 font-medium ${currencyBalanceToneClass(summary.pre_event.balance)}`}
+                  className={`px-4 py-3 font-medium ${currencyBalanceToneClass(eventSummary.balance)}`}
                 >
-                  {formatCurrency(summary.pre_event.balance)}
+                  {formatCurrency(eventSummary.balance)}
                 </td>
                 <td className="px-4 py-3 text-label">
-                  {summary.pre_event.entry_count}
+                  {eventSummary.entry_count}
                 </td>
               </tr>
-              {summary.events.map((eventSummary) => (
-                <tr key={eventSummary.event_id}>
-                  <td className="px-4 py-3 font-medium text-foreground">
-                    {eventSummary.event_name}
-                  </td>
-                  <td className="px-4 py-3 text-accent">
-                    {formatCurrency(eventSummary.income)}
-                  </td>
-                  <td className="px-4 py-3 text-foreground">
-                    {formatCurrency(eventSummary.expense)}
-                  </td>
-                  <td
-                    className={`px-4 py-3 font-medium ${currencyBalanceToneClass(eventSummary.balance)}`}
-                  >
-                    {formatCurrency(eventSummary.balance)}
-                  </td>
-                  <td className="px-4 py-3 text-label">
-                    {eventSummary.entry_count}
-                  </td>
-                </tr>
-              ))}
-              {summary.events.length === 0 &&
-                summary.pre_event.entry_count === 0 && (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="px-4 py-8 text-center text-label"
-                    >
-                      No finance entries yet for this period.
-                    </td>
-                  </tr>
-                )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+            ))}
+            {summary.events.length === 0 && summary.pre_event.entry_count === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-4 py-8 text-center text-label">
+                  No finance entries yet for this period.
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+/** @deprecated Prefer FinanceSummaryMetrics and FinanceTransactionBreakdown */
+export function FinanceSummaryCard({
+  isLoading,
+  errorMessage,
+  summary,
+  pendingCount,
+}: FinanceSummaryMetricsProps) {
+  return (
+    <>
+      <FinanceSummaryMetrics
+        isLoading={isLoading}
+        errorMessage={errorMessage}
+        summary={summary}
+        pendingCount={pendingCount}
+      />
+      <FinanceTransactionBreakdown summary={summary} />
     </>
   );
 }

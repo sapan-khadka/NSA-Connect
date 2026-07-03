@@ -26,6 +26,11 @@ vi.mock("../lib/events-api", () => ({
 
 vi.mock("../lib/event-tasks-api", () => ({
   fetchEventTasks: vi.fn().mockResolvedValue({ tasks: [], total: 0 }),
+  fetchTaskOverview: vi.fn().mockResolvedValue({
+    total_tasks: 0,
+    completed_tasks: 0,
+    members: [],
+  }),
 }));
 
 vi.mock("../lib/finance-api", () => ({
@@ -93,6 +98,36 @@ describe("EventsHubLayout", () => {
       "href",
       "/events/meetings",
     );
+    expect(screen.queryByRole("link", { name: "Task oversight" })).not.toBeInTheDocument();
+  });
+
+  it("shows Task oversight for president and highlights it on /events/oversight", async () => {
+    renderWithRouter(undefined, {
+      initialEntries: ["/events/oversight"],
+      auth: {
+        member: createMockMember("president"),
+        isAuthenticated: true,
+      },
+    });
+
+    const oversightTab = await screen.findByRole("link", { name: "Task oversight" });
+    expect(oversightTab).toHaveAttribute("href", "/events/oversight");
+    expect(oversightTab.className).toContain("border-accent");
+  });
+
+  it("shows Task oversight for vice president", async () => {
+    renderWithRouter(undefined, {
+      initialEntries: ["/events/oversight"],
+      auth: {
+        member: createMockMember("board", { position: "vice_president" }),
+        isAuthenticated: true,
+      },
+    });
+
+    expect(await screen.findByRole("link", { name: "Task oversight" })).toHaveAttribute(
+      "href",
+      "/events/oversight",
+    );
   });
 
   it("hides Past events for general members", async () => {
@@ -106,6 +141,8 @@ describe("EventsHubLayout", () => {
 
     await screen.findByRole("link", { name: "Calendar" });
     expect(screen.queryByRole("link", { name: "Past events" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Board meetings" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Task oversight" })).not.toBeInTheDocument();
   });
 
   it("hides the tab bar on event manage pages", async () => {

@@ -1,5 +1,3 @@
-from datetime import UTC, datetime
-
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -44,8 +42,7 @@ def list_photo_albums(
     limit: int = 50,
     offset: int = 0,
 ) -> tuple[list[dict], int]:
-    now = datetime.now(UTC)
-    events, total = _list_past_events(db, limit=limit, offset=offset)
+    events, total = _list_photo_archive_events(db, limit=limit, offset=offset)
 
     if not events:
         return [], total
@@ -194,15 +191,18 @@ def delete_event_photo(
     db.commit()
 
 
-def _list_past_events(
+def _list_photo_archive_events(
     db: Session,
     *,
     limit: int,
     offset: int,
 ) -> tuple[list[Event], int]:
-    now = datetime.now(UTC)
-    query = select(Event).where(Event.starts_at < now)
-    count_query = select(func.count()).select_from(Event).where(Event.starts_at < now)
+    query = select(Event).where(Event.show_in_photo_archive.is_(True))
+    count_query = (
+        select(func.count())
+        .select_from(Event)
+        .where(Event.show_in_photo_archive.is_(True))
+    )
     total = db.scalar(count_query) or 0
     events = db.scalars(
         query.order_by(Event.starts_at.desc()).offset(offset).limit(limit)

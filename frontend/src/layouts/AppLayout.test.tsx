@@ -26,7 +26,7 @@ describe("AppLayout navigation", () => {
       "href",
       "/events/calendar",
     );
-    expect(screen.getByTestId("header-accent-line")).toBeInTheDocument();
+    expect(screen.getByRole("banner")).toHaveClass("ds-app-header");
   });
 
   it("shows only Login and Register for unauthenticated users", () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  formatNepaliMonthRange,
   getFestivalsOnDate,
   toBikramSambat,
 } from "./nepali-calendar";
@@ -26,5 +27,9 @@ describe("nepali-calendar", () => {
 
   it("returns no festivals on ordinary dates", () => {
     expect(getFestivalsOnDate("2030-06-15")).toEqual([]);
+  });
+
+  it("returns a Bikram Sambat month range for a Gregorian month", () => {
+    expect(formatNepaliMonthRange(2030, 5)).toMatch(/\w+/);
   });
 });

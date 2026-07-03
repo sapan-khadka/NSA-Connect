@@ -3,10 +3,11 @@ from datetime import UTC, datetime
 from sqlalchemy import extract, func, select, update
 from sqlalchemy.orm import Session, selectinload
 
+from app.lib.event_photo_archive import default_show_in_photo_archive
 from app.models.event import Event, EventType
 from app.models.event_task import EventTask
 from app.models.finance_entry import FinanceEntry
-from app.schemas.event import EventCreateRequest
+from app.schemas.event import EventCreateRequest, EventPatchRequest
 
 
 class EventNotFoundError(Exception):
@@ -25,6 +26,7 @@ def create_event(
         event_type=data.event_type,
         starts_at=data.starts_at,
         budget=data.budget,
+        show_in_photo_archive=default_show_in_photo_archive(data.event_type),
         created_by_id=created_by_id,
     )
     db.add(event)
@@ -50,6 +52,24 @@ def delete_event(db: Session, event_id: int) -> None:
     # cascade automatically when the event is deleted.
     db.delete(event)
     db.commit()
+
+
+def update_event(
+    db: Session,
+    event_id: int,
+    data: EventPatchRequest,
+) -> Event:
+    event = db.get(Event, event_id)
+    if event is None:
+        raise EventNotFoundError
+
+    if data.show_in_photo_archive is not None:
+        event.show_in_photo_archive = data.show_in_photo_archive
+    if data.starts_at is not None:
+        event.starts_at = data.starts_at
+    db.commit()
+    db.refresh(event)
+    return event
 
 
 def list_events(

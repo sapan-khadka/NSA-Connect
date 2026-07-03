@@ -1,7 +1,10 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { FinanceSummaryCard } from "./FinanceSummaryCard";
+import {
+  FinanceSummaryCard,
+  FinanceSummaryMetrics,
+} from "./FinanceSummaryCard";
 
 const mockSummary = {
   balance: "260.00",
@@ -37,20 +40,58 @@ describe("FinanceSummaryCard", () => {
         isLoading={false}
         errorMessage={null}
         summary={mockSummary}
+        pendingCount={2}
       />,
     );
 
-    expect(screen.getByTestId("finance-running-balance")).toHaveTextContent(
+    expect(screen.getByTestId("finance-net-balance-amount")).toHaveTextContent(
       "$260.00",
     );
-    expect(screen.getByTestId("finance-total-income")).toHaveTextContent(
+    expect(screen.getByTestId("finance-total-income-amount")).toHaveTextContent(
       "$300.00",
     );
-    expect(screen.getByTestId("finance-total-expense")).toHaveTextContent(
+    expect(screen.getByTestId("finance-total-expense-amount")).toHaveTextContent(
       "$40.00",
     );
+    expect(screen.getByTestId("finance-pending-count")).toHaveTextContent("2 requests");
     expect(screen.getByText("Transaction breakdown")).toBeInTheDocument();
     expect(screen.getByText("Dashain Celebration")).toBeInTheDocument();
+  });
+
+  it("highlights net balance only when the value is notable", () => {
+    render(
+      <FinanceSummaryMetrics
+        isLoading={false}
+        errorMessage={null}
+        summary={mockSummary}
+      />,
+    );
+
+    const incomeCard = screen.getByTestId("finance-total-income").closest("section");
+    const netBalanceCard = screen.getByTestId("finance-net-balance").closest("section");
+
+    expect(incomeCard).toHaveClass("border-gray-200");
+    expect(netBalanceCard).toHaveClass("bg-mint/25");
+  });
+
+  it("uses warning styling for negative net balance", () => {
+    render(
+      <FinanceSummaryMetrics
+        isLoading={false}
+        errorMessage={null}
+        summary={{
+          ...mockSummary,
+          balance: "-15.00",
+          total_income: "0.00",
+          total_expense: "15.00",
+        }}
+      />,
+    );
+
+    const netBalanceCard = screen.getByTestId("finance-net-balance").closest("section");
+    expect(netBalanceCard).toHaveClass("bg-overdue-surface");
+    expect(screen.getByTestId("finance-net-balance-amount")).toHaveClass("text-overdue");
+    expect(screen.getByText("Spending with no income yet")).toBeInTheDocument();
   });
 
   it("shows loading and error states", () => {

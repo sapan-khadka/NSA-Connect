@@ -15,6 +15,7 @@ import { EventRsvpButton } from "../components/EventRsvpButton";
 import { CoverBanner } from "../components/CoverBanner";
 import { HomeHeroBrand } from "../components/AppLogo";
 import { HomeProfileCard } from "../components/HomeProfileCard";
+import { RecentMemoriesStrip } from "../components/RecentMemoriesStrip";
 import { ArrowLink } from "../components/ui/ArrowLink";
 import { EmptyState } from "../components/ui/EmptyState";
 import { HomeCard } from "../components/ui/HomeCard";
@@ -24,8 +25,9 @@ import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/auth-api";
 import { fetchMyEventTasks } from "../lib/event-tasks-api";
 import { EVENT_TYPE_BADGE_CLASS, EVENT_TYPE_LABELS } from "../lib/event-types";
-import { applyRsvpStatus } from "../lib/event-rsvp";
+import { applyRsvpStatus, formatCompactAttendeeSummary } from "../lib/event-rsvp";
 import {
+  fetchEventAttendees,
   fetchUpcomingEvents,
   updateEventRsvp,
   type EventResponse,
@@ -34,6 +36,11 @@ import {
 import { fetchPendingFinanceChangeRequests, fetchMyFinanceChangeRequestSummary } from "../lib/finance-api";
 import { formatEventDateTime } from "../lib/format-datetime";
 import {
+  buildHomeActivities,
+  RECENT_ACTIVITY_FOOTNOTE,
+  type HomeActivity,
+} from "../lib/home-activities";
+import {
   getMyTasksPath,
   getTaskDisplayName,
   summarizeMyTasks,
@@ -41,6 +48,7 @@ import {
 import { eventDetailPath } from "../lib/event-links";
 import { fetchPendingMembers } from "../lib/members-api";
 import { fetchMeetings, type MeetingSummary } from "../lib/meetings-api";
+import { fetchRecentMemories, type RecentMemoriesPreview } from "../lib/recent-memories";
 import {
   canAccessFinance,
   canViewMemberDirectory,
@@ -48,15 +56,7 @@ import {
   isRoleAtLeast,
 } from "../lib/roles";
 
-type ActivityTone = "urgent" | "info";
-
-type HomeActivity = {
-  id: string;
-  message: string;
-  to: string;
-  actionLabel: string;
-  tone: ActivityTone;
-};
+const HOME_ACTIVITY_MAX_HEIGHT_CLASS = "max-h-64";
 
 type QuickLink = {
   title: string;
@@ -97,30 +97,56 @@ function QuickLinkCard({ title, description, to, icon: Icon }: QuickLink) {
   );
 }
 
-function ActivityRow({ activity }: { activity: HomeActivity }) {
-  const dotClass =
-    activity.tone === "urgent"
+function ActivityRow({
+  activity,
+  showDividerAbove = false,
+}: {
+  activity: HomeActivity;
+  showDividerAbove?: boolean;
+}) {
+  const isRecent = activity.kind === "recent";
+  const dotClass = isRecent
+    ? "border border-gray-300 bg-transparent"
+    : activity.tone === "urgent"
       ? "bg-overdue"
       : "bg-mint";
 
   return (
-    <li className="flex items-start gap-3 border-b border-gray-100 py-3 last:border-b-0 last:pb-0 first:pt-0">
-      <span
-        aria-hidden="true"
-        className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dotClass}`}
-      />
-      <p
-        className={
-          activity.tone === "urgent"
-            ? "min-w-0 flex-1 text-sm font-medium text-foreground"
-            : "min-w-0 flex-1 text-sm text-label"
-        }
-      >
-        {activity.message}
-      </p>
-      <ArrowLink to={activity.to} className="shrink-0 whitespace-nowrap">
-        {activity.actionLabel}
-      </ArrowLink>
+    <li className="list-none">
+      {showDividerAbove ? (
+        <div
+          aria-hidden="true"
+          className="mb-3 border-b border-dashed border-gray-200"
+        />
+      ) : null}
+      <div className="flex items-start gap-3 border-b border-gray-100 py-3 last:border-b-0">
+        <span
+          aria-hidden="true"
+          className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dotClass}`}
+        />
+        <div className="min-w-0 flex-1">
+          <p
+            className={
+              isRecent
+                ? "text-sm text-label"
+                : activity.tone === "urgent"
+                  ? "text-sm font-medium text-foreground"
+                  : "text-sm text-label"
+            }
+          >
+            {activity.message}
+          </p>
+          {isRecent ? (
+            <p className="mt-1 text-xs text-label/80">{RECENT_ACTIVITY_FOOTNOTE}</p>
+          ) : null}
+        </div>
+        <ArrowLink
+          to={activity.to}
+          className={isRecent ? "shrink-0 whitespace-nowrap text-label" : "shrink-0 whitespace-nowrap"}
+        >
+          {activity.actionLabel}
+        </ArrowLink>
+      </div>
     </li>
   );
 }
@@ -176,88 +202,6 @@ function buildQuickLinks(member: MemberResponse): QuickLink[] {
   return links;
 }
 
-function buildActivities({
-  member,
-  tasksSummary,
-  pendingMembersTotal,
-  financePendingTotal,
-  myFinanceRequests,
-}: {
-  member: MemberResponse;
-  tasksSummary: ReturnType<typeof summarizeMyTasks>;
-  pendingMembersTotal: number;
-  financePendingTotal: number;
-  myFinanceRequests: {
-    pending_count: number;
-    recently_rejected_count: number;
-    recently_approved_count: number;
-  } | null;
-}): HomeActivity[] {
-  const activities: HomeActivity[] = [];
-
-  if (tasksSummary.overdueCount > 0) {
-    activities.push({
-      id: "overdue-tasks",
-      message: `${tasksSummary.overdueCount} assigned task${tasksSummary.overdueCount === 1 ? "" : "s"} past due`,
-      to: getMyTasksPath(member.role),
-      actionLabel: "Review",
-      tone: "urgent",
-    });
-  }
-
-  if (pendingMembersTotal > 0) {
-    activities.push({
-      id: "pending-members",
-      message: `${pendingMembersTotal} member signup${pendingMembersTotal === 1 ? "" : "s"} waiting for approval`,
-      to: "/members?tab=pending",
-      actionLabel: "Review",
-      tone: "urgent",
-    });
-  }
-
-  if (financePendingTotal > 0) {
-    activities.push({
-      id: "finance-pending",
-      message: `${financePendingTotal} finance change request${financePendingTotal === 1 ? "" : "s"} need your review`,
-      to: "/finance",
-      actionLabel: "Review",
-      tone: "urgent",
-    });
-  }
-
-  if (myFinanceRequests && myFinanceRequests.pending_count > 0) {
-    activities.push({
-      id: "finance-my-pending",
-      message: `${myFinanceRequests.pending_count} of your finance request${myFinanceRequests.pending_count === 1 ? "" : "s"} awaiting approval`,
-      to: "/finance",
-      actionLabel: "View",
-      tone: "urgent",
-    });
-  }
-
-  if (myFinanceRequests && myFinanceRequests.recently_rejected_count > 0) {
-    activities.push({
-      id: "finance-my-rejected",
-      message: `${myFinanceRequests.recently_rejected_count} finance request${myFinanceRequests.recently_rejected_count === 1 ? "" : "s"} rejected this week`,
-      to: "/finance",
-      actionLabel: "Review",
-      tone: "urgent",
-    });
-  }
-
-  if (myFinanceRequests && myFinanceRequests.recently_approved_count > 0) {
-    activities.push({
-      id: "finance-my-approved",
-      message: `${myFinanceRequests.recently_approved_count} finance request${myFinanceRequests.recently_approved_count === 1 ? "" : "s"} approved this week`,
-      to: "/finance",
-      actionLabel: "View",
-      tone: "info",
-    });
-  }
-
-  return activities;
-}
-
 function PublicHomeView() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -295,9 +239,15 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
   const [nextBoardMeeting, setNextBoardMeeting] = useState<MeetingSummary | null>(
     null,
   );
+  const [meetingAttendeeSummary, setMeetingAttendeeSummary] = useState<
+    string | null
+  >(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [rsvpLoading, setRsvpLoading] = useState(false);
+  const [recentMemories, setRecentMemories] = useState<RecentMemoriesPreview | null>(
+    null,
+  );
 
   const isBoardMember = isRoleAtLeast(member.role, "board");
   const quickLinks = buildQuickLinks(member);
@@ -350,6 +300,20 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
             meetingsPromise,
           ]);
 
+        const nextMeeting = meetingsResult
+          ? findNextBoardMeeting(meetingsResult.meetings)
+          : null;
+
+        let attendeeSummary: string | null = null;
+        if (nextMeeting) {
+          try {
+            const attendees = await fetchEventAttendees(nextMeeting.event_id);
+            attendeeSummary = formatCompactAttendeeSummary(attendees);
+          } catch {
+            attendeeSummary = null;
+          }
+        }
+
         if (cancelled) {
           return;
         }
@@ -358,17 +322,16 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
         setNextEvent(findNextNonMeetingEvent(upcoming.events));
         setTasksSummary(summary);
         setActivities(
-          buildActivities({
-            member,
+          buildHomeActivities({
+            role: member.role,
             tasksSummary: summary,
             pendingMembersTotal: pendingMembers?.total ?? 0,
             financePendingTotal: financePending?.total ?? 0,
             myFinanceRequests,
           }),
         );
-        setNextBoardMeeting(
-          meetingsResult ? findNextBoardMeeting(meetingsResult.meetings) : null,
-        );
+        setNextBoardMeeting(nextMeeting);
+        setMeetingAttendeeSummary(attendeeSummary);
       } catch (caught) {
         if (!cancelled) {
           setLoadError(getApiErrorMessage(caught));
@@ -386,6 +349,29 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
       cancelled = true;
     };
   }, [isBoardMember, member]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadRecentMemories() {
+      try {
+        const memories = await fetchRecentMemories();
+        if (!cancelled) {
+          setRecentMemories(memories);
+        }
+      } catch {
+        if (!cancelled) {
+          setRecentMemories(null);
+        }
+      }
+    }
+
+    void loadRecentMemories();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function handleRsvpStatusChange(status: RsvpStatus) {
     if (!nextEvent) {
@@ -410,6 +396,10 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
     }
   }
 
+  const firstRecentActivityIndex = activities.findIndex(
+    (activity) => activity.kind === "recent",
+  );
+
   return (
     <div className="space-y-6">
       <CoverBanner />
@@ -430,23 +420,42 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
         </div>
       ) : null}
 
-      <div
-        className={
-          activities.length > 0
-            ? "grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]"
-            : "grid gap-6"
-        }
-      >
-        {activities.length > 0 ? (
-          <section aria-label="Activity" className="ds-card p-4 sm:p-5">
-            <h2 className="ds-section-label">Activity</h2>
-            <ul className="mt-3">
-              {activities.map((activity) => (
-                <ActivityRow key={activity.id} activity={activity} />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+        <section aria-label="Activity" className="ds-card p-4 sm:p-5">
+          <h2 className="ds-section-label">Activity</h2>
+
+          {isLoading ? (
+            <p className="mt-4 text-sm text-label">Loading activity…</p>
+          ) : null}
+
+          {!isLoading && activities.length > 0 ? (
+            <ul
+              className={[
+                "mt-3 overflow-y-auto overscroll-y-contain",
+                HOME_ACTIVITY_MAX_HEIGHT_CLASS,
+              ].join(" ")}
+            >
+              {activities.map((activity, index) => (
+                <ActivityRow
+                  key={activity.id}
+                  activity={activity}
+                  showDividerAbove={
+                    index === firstRecentActivityIndex &&
+                    firstRecentActivityIndex > 0
+                  }
+                />
               ))}
             </ul>
-          </section>
-        ) : null}
+          ) : null}
+
+          {!isLoading && activities.length === 0 ? (
+            <EmptyState
+              icon="check"
+              title="All caught up"
+              description="Nothing needs your attention right now."
+            />
+          ) : null}
+        </section>
 
         <HomeCard padding="sm">
           <div className="flex items-center justify-between gap-4">
@@ -478,12 +487,24 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
                 <div className="ds-stat-tile">
                   <SectionLabel
                     icon={AlertCircle}
-                    iconClassName="h-4 w-4 shrink-0 text-overdue"
-                    className="text-overdue"
+                    iconClassName={
+                      tasksSummary.overdueCount > 0
+                        ? "h-4 w-4 shrink-0 text-overdue"
+                        : "h-4 w-4 shrink-0 text-label"
+                    }
+                    className={
+                      tasksSummary.overdueCount > 0 ? "text-overdue" : undefined
+                    }
                   >
                     Overdue
                   </SectionLabel>
-                  <p className="ds-stat-overdue-chip">
+                  <p
+                    className={
+                      tasksSummary.overdueCount > 0
+                        ? "ds-stat-overdue-chip"
+                        : "ds-stat-value"
+                    }
+                  >
                     {tasksSummary.overdueCount}
                   </p>
                 </div>
@@ -503,7 +524,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
       <div
         className={
           isBoardMember && nextBoardMeeting
-            ? "grid gap-6 lg:grid-cols-2"
+            ? "grid items-start gap-6 lg:grid-cols-2"
             : "grid gap-6"
         }
       >
@@ -570,6 +591,11 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
                 <p className="mt-1 text-sm text-label">
                   {formatEventDateTime(nextBoardMeeting.starts_at)}
                 </p>
+                {meetingAttendeeSummary ? (
+                  <p className="mt-3 text-sm text-label">
+                    {meetingAttendeeSummary}
+                  </p>
+                ) : null}
               </div>
               <ArrowLink to={`/events/meetings/${nextBoardMeeting.event_id}`}>
                 View
@@ -597,6 +623,8 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
           </HomeCard>
         ) : null}
       </div>
+
+      {recentMemories ? <RecentMemoriesStrip memories={recentMemories} /> : null}
     </div>
   );
 }

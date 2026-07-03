@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   buildCreateEventPayload,
   combineDateAndTime,
+  EVENT_DATE_PAST_ERROR,
+  getMinEventDate,
+  isEventDateBeforeToday,
   validateCreateEventForm,
 } from "./event-form";
 
@@ -79,5 +82,38 @@ describe("event form", () => {
     expect(payload.event_type).toBe("social");
     expect(payload.budget).toBe("125.50");
     expect(payload.starts_at).toContain("2030-06-15T18:00:00");
+  });
+
+  it("rejects event dates before today", () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const pastDate = getMinEventDate(yesterday);
+
+    expect(isEventDateBeforeToday(pastDate, new Date())).toBe(true);
+    expect(
+      validateCreateEventForm({
+        name: "Spring Social",
+        description: "Food and games.",
+        event_type: "social",
+        event_date: pastDate,
+        event_time: "18:00",
+        budget: "",
+      }).event_date,
+    ).toBe(EVENT_DATE_PAST_ERROR);
+  });
+
+  it("allows today's date even when the time has passed", () => {
+    const today = getMinEventDate();
+
+    expect(
+      validateCreateEventForm({
+        name: "Tonight's event",
+        description: "Still schedulable today.",
+        event_type: "cultural",
+        event_date: today,
+        event_time: "00:01",
+        budget: "",
+      }).event_date,
+    ).toBeUndefined();
   });
 });

@@ -1,5 +1,36 @@
 import type { EventType } from "./event-types";
 import { EVENT_TYPES } from "./event-types";
+import { toLocalIsoDate } from "./calendar";
+
+export const EVENT_DATE_PAST_ERROR = "Event date can't be in the past";
+
+export function getMinEventDate(today: Date = new Date()): string {
+  return toLocalIsoDate(today);
+}
+
+export function isEventDateBeforeToday(
+  eventDate: string,
+  today: Date = new Date(),
+): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(eventDate)) {
+    return false;
+  }
+
+  return eventDate < getMinEventDate(today);
+}
+
+export function splitEventDateTime(startsAt: string): {
+  event_date: string;
+  event_time: string;
+} {
+  const date = new Date(startsAt);
+  const pad = (value: number) => String(value).padStart(2, "0");
+
+  return {
+    event_date: toLocalIsoDate(date),
+    event_time: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
+  };
+}
 
 export type CreateEventFormValues = {
   name: string;
@@ -73,11 +104,8 @@ export function validateCreateEventField(
       if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
         return "Enter a valid date";
       }
-      if (values.event_time && /^\d{2}:\d{2}$/.test(values.event_time)) {
-        const startsAt = new Date(combineDateAndTime(value, values.event_time));
-        if (startsAt <= new Date()) {
-          return "Event date and time must be in the future";
-        }
+      if (isEventDateBeforeToday(value)) {
+        return EVENT_DATE_PAST_ERROR;
       }
       return null;
     case "event_time":
@@ -87,13 +115,12 @@ export function validateCreateEventField(
       if (!/^\d{2}:\d{2}$/.test(value)) {
         return "Enter a valid time";
       }
-      if (values.event_date && /^\d{4}-\d{2}-\d{2}$/.test(values.event_date)) {
-        const startsAt = new Date(
-          combineDateAndTime(values.event_date, value),
-        );
-        if (startsAt <= new Date()) {
-          return "Event date and time must be in the future";
-        }
+      if (
+        values.event_date &&
+        /^\d{4}-\d{2}-\d{2}$/.test(values.event_date) &&
+        isEventDateBeforeToday(values.event_date)
+      ) {
+        return EVENT_DATE_PAST_ERROR;
       }
       return null;
     case "budget": {

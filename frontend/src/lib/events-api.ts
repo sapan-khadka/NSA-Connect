@@ -35,6 +35,7 @@ export type EventResponse = {
   is_finance_locked: boolean;
   is_past: boolean;
   is_finance_grace_period: boolean;
+  show_in_photo_archive: boolean;
 };
 
 export type EventDetailResponse = EventResponse & {
@@ -128,6 +129,19 @@ export async function addPrepTaskToEvent(
 
 export async function fetchEvent(eventId: number): Promise<EventDetailResponse> {
   const response = await api.get<EventDetailResponse>(`/v1/events/${eventId}`);
+  return response.data;
+}
+
+export type EventPatchRequest = {
+  show_in_photo_archive?: boolean;
+  starts_at?: string;
+};
+
+export async function patchEvent(
+  eventId: number,
+  data: EventPatchRequest,
+): Promise<EventResponse> {
+  const response = await api.patch<EventResponse>(`/v1/events/${eventId}`, data);
   return response.data;
 }
 

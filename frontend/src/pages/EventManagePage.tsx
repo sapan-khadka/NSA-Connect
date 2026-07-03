@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { EventManageLogisticsSection } from "../components/EventManageLogisticsSection";
+import { EventManageScheduleFields } from "../components/EventManageScheduleFields";
+import { EventPhotoArchiveSetting } from "../components/EventPhotoArchiveSetting";
 import { MeetingRecordSection } from "../components/MeetingRecordSection";
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage } from "../lib/auth-api";
@@ -182,6 +184,16 @@ export function EventManagePage() {
           </p>
         ) : null}
       </section>
+
+      {canViewBoard ? (
+        <>
+          <EventManageScheduleFields event={event} onUpdated={setEvent} />
+          <EventPhotoArchiveSetting
+            event={event}
+            onUpdated={setEvent}
+          />
+        </>
+      ) : null}
 
       {isMeetingEvent ? (
         <>

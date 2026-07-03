@@ -38,13 +38,7 @@ class FinanceEntry(Base):
         ),
         nullable=False,
     )
-    category = Column(
-        SqlEnum(
-            FinanceCategory,
-            values_callable=lambda categories: [category.value for category in categories],
-        ),
-        nullable=False,
-    )
+    category = Column(String(64), nullable=False)
     amount = Column(Numeric(10, 2), nullable=False)
     description = Column(Text, nullable=False, default="")
     receipt_url = Column(String(2048), nullable=True)

@@ -2,13 +2,12 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 
 import {
   AccountMenu,
-  buildNavPillClass,
+  buildNavLinkClass,
   NavDropdown,
   NavDivider,
   PrimaryNavLink,
 } from "../components/AppNav";
 import { AppLogo } from "../components/AppLogo";
-import { HeaderAccentLine } from "../components/NepaliDecor";
 import { useAuth } from "../context/useAuth";
 import { useLogout } from "../context/useLogout";
 import {
@@ -17,7 +16,7 @@ import {
 } from "../lib/roles";
 
 const guestLinkClass = ({ isActive }: { isActive: boolean }) =>
-  buildNavPillClass(isActive);
+  buildNavLinkClass(isActive);
 
 export function AppLayout() {
   const { isAuthenticated, member } = useAuth();
@@ -48,13 +47,13 @@ export function AppLayout() {
 
   return (
     <div className="min-h-screen bg-surface">
-      <header className="bg-surface">
-        <nav className="mx-auto flex w-full max-w-7xl items-center gap-4 px-6 py-3.5 lg:gap-6">
-          <AppLogo asLink showWordmark={false} showTagline={false} />
+      <header className="ds-app-header bg-surface">
+        <nav className="mx-auto flex min-h-[3.75rem] w-full max-w-7xl items-center gap-3 px-6 lg:gap-5">
+          <AppLogo asLink size="nav" showTagline={false} />
 
           {isAuthenticated ? (
-            <div className="flex min-w-0 flex-1 items-center justify-between gap-4">
-              <ul className="flex min-w-0 flex-wrap items-center gap-1 text-sm">
+            <div className="flex min-w-0 flex-1 items-center justify-between gap-3 lg:gap-4">
+              <ul className="flex min-w-0 flex-wrap items-center gap-0.5 text-sm">
                 <PrimaryNavLink to="/" end>
                   Home
                 </PrimaryNavLink>
@@ -73,7 +72,7 @@ export function AppLayout() {
               ) : null}
             </div>
           ) : (
-            <ul className="ml-auto flex items-center gap-1 text-sm">
+            <ul className="ml-auto flex items-center gap-0.5 text-sm">
               <li>
                 <NavLink to="/login" className={guestLinkClass}>
                   Login
@@ -87,7 +86,6 @@ export function AppLayout() {
             </ul>
           )}
         </nav>
-        <HeaderAccentLine />
       </header>
 
       <main

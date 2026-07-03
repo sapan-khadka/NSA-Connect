@@ -1,4 +1,4 @@
-import { formatCurrency, parseCurrencyAmount } from "./format-currency";
+import { formatCurrency, formatCurrencyCompact, parseCurrencyAmount } from "./format-currency";
 
 export type EventBudgetRow = {
   event_id: number;
@@ -23,6 +23,31 @@ export function budgetUsagePercent(
   }
 
   return Math.min(100, Math.round((expense / budget) * 100));
+}
+
+export function budgetDisplayPercent(
+  plannedBudget: string,
+  actualExpense: string,
+): number {
+  const budget = parseCurrencyAmount(plannedBudget);
+  const expense = parseCurrencyAmount(actualExpense);
+
+  if (budget <= 0) {
+    return expense > 0 ? 100 : 0;
+  }
+
+  return Math.round((expense / budget) * 100);
+}
+
+export function formatBudgetSpentLabel(
+  actualExpense: string,
+  plannedBudget: string,
+): string {
+  if (parseCurrencyAmount(plannedBudget) <= 0) {
+    return "No budget set";
+  }
+
+  return `${formatCurrencyCompact(actualExpense)} of ${formatCurrencyCompact(plannedBudget)}`;
 }
 
 export function budgetStatusLabel(row: EventBudgetRow): string {
@@ -58,7 +83,7 @@ export function budgetProgressBarClass(row: EventBudgetRow): string {
     return "bg-gray-300";
   }
 
-  return "bg-accent";
+  return "bg-mint";
 }
 
 export function formatBudgetRemaining(amount: string): string {

@@ -99,6 +99,28 @@ export function toBikramSambat(isoDate: string): string {
   return nepali.format("DD MMM");
 }
 
+function nepaliMonthName(isoDate: string): string {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  const nepali = NepaliDate.fromAD(new Date(year, month - 1, day));
+  return nepali.format("MMMM");
+}
+
+/** Bikram Sambat month range for a Gregorian month, e.g. "Asar – Shrawan". */
+export function formatNepaliMonthRange(year: number, month: number): string {
+  const firstIso = `${year}-${String(month + 1).padStart(2, "0")}-01`;
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const lastIso = `${year}-${String(month + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+
+  const startMonth = nepaliMonthName(firstIso);
+  const endMonth = nepaliMonthName(lastIso);
+
+  if (startMonth === endMonth) {
+    return startMonth;
+  }
+
+  return `${startMonth} – ${endMonth}`;
+}
+
 export function getFestivalsOnDate(isoDate: string): NepaliFestival[] {
   const seen = new Set<string>();
   const festivals: NepaliFestival[] = [];

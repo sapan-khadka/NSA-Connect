@@ -1,5 +1,8 @@
 import { formatFinanceCategory } from "../lib/finance-categories";
-import { formatCurrency, parseCurrencyAmount } from "../lib/format-currency";
+import {
+  formatCurrencyCompact,
+  parseCurrencyAmount,
+} from "../lib/format-currency";
 
 export type ExpenseCategoryRow = {
   category: string;
@@ -14,6 +17,14 @@ type ExpenseCategoryChartProps = {
   errorMessage: string | null;
 };
 
+const BAR_COLORS = [
+  "bg-primary",
+  "bg-accent",
+  "bg-olive",
+  "bg-gray-300",
+  "bg-mint",
+] as const;
+
 function barWidth(totalExpense: string, categoryExpense: string): number {
   const total = parseCurrencyAmount(totalExpense);
   const amount = parseCurrencyAmount(categoryExpense);
@@ -25,6 +36,10 @@ function barWidth(totalExpense: string, categoryExpense: string): number {
   return Math.max(4, Math.round((amount / total) * 100));
 }
 
+function barColor(index: number): string {
+  return BAR_COLORS[index % BAR_COLORS.length];
+}
+
 export function ExpenseCategoryChart({
   categories,
   totalExpense,
@@ -33,7 +48,7 @@ export function ExpenseCategoryChart({
 }: ExpenseCategoryChartProps) {
   if (isLoading) {
     return (
-      <div className="ds-card p-10 text-center text-label">
+      <div className="rounded-card border border-gray-200 bg-surface-card p-10 text-center text-label shadow-card">
         Loading expense categories...
       </div>
     );
@@ -41,23 +56,17 @@ export function ExpenseCategoryChart({
 
   if (errorMessage) {
     return (
-      <div
-        role="alert"
-        className="ds-alert-banner p-6"
-      >
+      <div role="alert" className="ds-alert-banner p-6">
         {errorMessage}
       </div>
     );
   }
 
   return (
-    <section className="ds-card p-6">
-      <div>
-        <h2 className="text-lg font-light tracking-subhead text-foreground">Spend by category</h2>
-        <p className="mt-1 text-sm text-label">
-          Expense totals grouped by category for the selected semester.
-        </p>
-      </div>
+    <section className="rounded-card border border-gray-200 bg-surface-card p-6 shadow-card">
+      <h2 className="text-base font-medium text-foreground">
+        Spend by category
+      </h2>
 
       {categories.length === 0 ? (
         <p className="mt-8 text-center text-sm text-label">
@@ -66,33 +75,30 @@ export function ExpenseCategoryChart({
       ) : (
         <div
           data-testid="expense-category-chart"
-          className="mt-8 space-y-5"
+          className="mt-6 space-y-5"
           role="img"
           aria-label="Expense bar chart by category"
         >
-          {categories.map((item) => {
+          {categories.map((item, index) => {
             const width = barWidth(totalExpense, item.total_expense);
 
             return (
               <div key={item.category}>
-                <div className="mb-2 flex items-center justify-between gap-4 text-sm">
-                  <span className="font-medium text-foreground">
+                <div className="mb-2 flex items-center justify-between gap-4">
+                  <span className="text-[13px] font-light text-foreground">
                     {formatFinanceCategory(item.category)}
                   </span>
-                  <span className="text-foreground">
-                    {formatCurrency(item.total_expense)}
+                  <span className="text-[13px] font-medium text-foreground">
+                    {formatCurrencyCompact(item.total_expense)}
                   </span>
                 </div>
-                <div className="h-4 rounded-full bg-gray-100">
+                <div className="h-2.5 rounded-full bg-gray-100">
                   <div
                     data-testid={`expense-bar-${item.category}`}
-                    className="h-4 rounded-full bg-accent transition-all"
+                    className={`h-2.5 rounded-full transition-all ${barColor(index)}`}
                     style={{ width: `${width}%` }}
                   />
                 </div>
-                <p className="mt-1 text-xs text-label">
-                  {item.entry_count} {item.entry_count === 1 ? "entry" : "entries"}
-                </p>
               </div>
             );
           })}

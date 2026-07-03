@@ -1,8 +1,8 @@
-from datetime import UTC, datetime
-from decimal import Decimal
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
+from app.lib.event_dates import EVENT_DATE_PAST_ERROR
 from conftest import auth_header, create_board_member, register_member, set_member_approved
 
 BOARD_REQUIRED_DETAIL = "Requires board role or higher"
@@ -114,3 +114,105 @@ def test_create_event_strips_name_and_description(client, board_member_headers):
     body = response.json()
     assert body["name"] == "Spring Social"
     assert body["description"] == "Food and games for members."
+
+
+def test_create_meeting_event_hides_from_photo_archive_by_default(
+    client,
+    board_member_headers,
+):
+    response = client.post(
+        "/api/v1/events",
+        json=_event_payload(
+            name="March Board Meeting",
+            event_type="meeting",
+            description="Monthly board meeting agenda and minutes.",
+        ),
+        headers=board_member_headers,
+    )
+
+    assert response.status_code == 201
+    assert response.json()["show_in_photo_archive"] is False
+
+
+def test_create_cultural_event_shows_in_photo_archive_by_default(
+    client,
+    board_member_headers,
+):
+    response = client.post(
+        "/api/v1/events",
+        json=_event_payload(),
+        headers=board_member_headers,
+    )
+
+    assert response.status_code == 201
+    assert response.json()["show_in_photo_archive"] is True
+
+
+def test_create_event_rejects_past_calendar_date(client, board_member_headers):
+    yesterday = datetime.now(UTC).date() - timedelta(days=1)
+    past_start = datetime(
+        yesterday.year,
+        yesterday.month,
+        yesterday.day,
+        18,
+        0,
+        tzinfo=UTC,
+    )
+
+    response = client.post(
+        "/api/v1/events",
+        json=_event_payload(starts_at=past_start.isoformat().replace("+00:00", "Z")),
+        headers=board_member_headers,
+    )
+
+    assert response.status_code == 422
+    assert EVENT_DATE_PAST_ERROR in response.text
+
+
+def test_create_meeting_rejects_past_calendar_date(client, board_member_headers):
+    yesterday = datetime.now(UTC).date() - timedelta(days=1)
+    past_start = datetime(
+        yesterday.year,
+        yesterday.month,
+        yesterday.day,
+        10,
+        0,
+        tzinfo=UTC,
+    )
+
+    response = client.post(
+        "/api/v1/events",
+        json=_event_payload(
+            name="Past Board Meeting",
+            event_type="meeting",
+            description="Should not be allowed.",
+            starts_at=past_start.isoformat().replace("+00:00", "Z"),
+        ),
+        headers=board_member_headers,
+    )
+
+    assert response.status_code == 422
+    assert EVENT_DATE_PAST_ERROR in response.text
+
+
+def test_create_event_allows_today_even_if_time_has_passed(client, board_member_headers):
+    today = datetime.now(UTC).date()
+    today_start = datetime(
+        today.year,
+        today.month,
+        today.day,
+        0,
+        1,
+        tzinfo=UTC,
+    )
+
+    response = client.post(
+        "/api/v1/events",
+        json=_event_payload(
+            name="Same-day Event",
+            starts_at=today_start.isoformat().replace("+00:00", "Z"),
+        ),
+        headers=board_member_headers,
+    )
+
+    assert response.status_code == 201

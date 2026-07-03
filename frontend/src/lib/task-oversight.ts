@@ -1,0 +1,93 @@
+import type { EventTaskResponse, TaskOverviewMember } from "./event-tasks-api";
+
+export type ActiveAssignmentsSort =
+  | "incomplete_first"
+  | "alphabetical"
+  | "completion_desc";
+
+export const ACTIVE_ASSIGNMENTS_SORT_OPTIONS: {
+  value: ActiveAssignmentsSort;
+  label: string;
+}[] = [
+  { value: "incomplete_first", label: "Incomplete first" },
+  { value: "alphabetical", label: "Alphabetical" },
+  { value: "completion_desc", label: "Completion % (high to low)" },
+];
+
+export function isOverdueOpenTask(task: EventTaskResponse): boolean {
+  return task.is_overdue && !task.is_complete;
+}
+
+export function countOverdueTasks(members: TaskOverviewMember[]): number {
+  return members.reduce(
+    (sum, row) => sum + row.tasks.filter(isOverdueOpenTask).length,
+    0,
+  );
+}
+
+export function countMemberOverdueTasks(member: TaskOverviewMember): number {
+  return member.tasks.filter(isOverdueOpenTask).length;
+}
+
+export function splitTaskOverviewMembers(members: TaskOverviewMember[]): {
+  active: TaskOverviewMember[];
+  unassigned: TaskOverviewMember[];
+} {
+  const active: TaskOverviewMember[] = [];
+  const unassigned: TaskOverviewMember[] = [];
+
+  for (const member of members) {
+    if (member.total > 0) {
+      active.push(member);
+    } else {
+      unassigned.push(member);
+    }
+  }
+
+  return { active, unassigned };
+}
+
+export function sortActiveMembers(
+  members: TaskOverviewMember[],
+  sort: ActiveAssignmentsSort,
+): TaskOverviewMember[] {
+  const copy = [...members];
+
+  switch (sort) {
+    case "alphabetical":
+      return copy.sort((left, right) =>
+        left.full_name.localeCompare(right.full_name),
+      );
+    case "completion_desc":
+      return copy.sort((left, right) => {
+        if (right.completion_percent !== left.completion_percent) {
+          return right.completion_percent - left.completion_percent;
+        }
+
+        return left.full_name.localeCompare(right.full_name);
+      });
+    case "incomplete_first":
+    default:
+      return copy.sort((left, right) => {
+        const overdueDelta =
+          countMemberOverdueTasks(right) - countMemberOverdueTasks(left);
+        if (overdueDelta !== 0) {
+          return overdueDelta;
+        }
+
+        if (left.completion_percent !== right.completion_percent) {
+          return left.completion_percent - right.completion_percent;
+        }
+
+        return left.full_name.localeCompare(right.full_name);
+      });
+  }
+}
+
+export function sortUnassignedMembers(
+  members: TaskOverviewMember[],
+): TaskOverviewMember[] {
+  return [...members].sort((left, right) =>
+    left.full_name.localeCompare(right.full_name),
+  );
+}

@@ -3,7 +3,10 @@ import { useSearchParams } from "react-router-dom";
 
 import { CreateEventForm } from "../components/CreateEventForm";
 import { EventDayPanel } from "../components/EventDayPanel";
-import { MonthlyCalendarGrid } from "../components/MonthlyCalendarGrid";
+import {
+  EventsCalendarPanel,
+  type CalendarViewMode,
+} from "../components/EventsCalendarPanel";
 import { useAuth } from "../context/useAuth";
 import { toLocalIsoDate, parseIsoDate } from "../lib/calendar";
 import { formatMonthQuery } from "../lib/calendar-events";
@@ -19,22 +22,29 @@ import {
 } from "../lib/events-api";
 import { isRoleAtLeast } from "../lib/roles";
 
+const UPCOMING_FETCH_LIMIT = 100;
+
 export function EventsPage() {
   const { member } = useAuth();
   const [searchParams] = useSearchParams();
   const today = new Date();
   const todayIso = toLocalIsoDate(today);
+  const [viewMode, setViewMode] = useState<CalendarViewMode>("month");
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   const [selectedDate, setSelectedDate] = useState<string | null>(todayIso);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [events, setEvents] = useState<EventResponse[]>([]);
+  const [yearEvents, setYearEvents] = useState<EventResponse[]>([]);
+  const [searchPool, setSearchPool] = useState<EventResponse[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<EventResponse[]>([]);
   const [upcomingLoading, setUpcomingLoading] = useState(true);
   const [eventDetail, setEventDetail] = useState<EventDetailResponse | null>(
     null,
   );
   const [loading, setLoading] = useState(true);
+  const [yearLoading, setYearLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
@@ -51,6 +61,7 @@ export function EventsPage() {
       setViewYear(parsed.getFullYear());
       setViewMonth(parsed.getMonth());
       setSelectedDate(dateParam);
+      setViewMode("month");
     }
 
     if (eventParam) {
@@ -68,7 +79,7 @@ export function EventsPage() {
       setUpcomingLoading(true);
 
       try {
-        const response = await fetchUpcomingEvents({ limit: 3 });
+        const response = await fetchUpcomingEvents({ limit: UPCOMING_FETCH_LIMIT });
         if (!cancelled) {
           setUpcomingEvents(response.events);
         }
@@ -84,6 +95,29 @@ export function EventsPage() {
     }
 
     void loadUpcoming();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSearchPool() {
+      try {
+        const response = await fetchEvents();
+        if (!cancelled) {
+          setSearchPool(response.events);
+        }
+      } catch {
+        if (!cancelled) {
+          setSearchPool([]);
+        }
+      }
+    }
+
+    void loadSearchPool();
 
     return () => {
       cancelled = true;
@@ -122,6 +156,62 @@ export function EventsPage() {
       cancelled = true;
     };
   }, [viewYear, viewMonth]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadYearEvents() {
+      setYearLoading(true);
+
+      try {
+        const response = await fetchEvents();
+        if (!cancelled) {
+          setYearEvents(
+            response.events.filter(
+              (event) => new Date(event.starts_at).getFullYear() === viewYear,
+            ),
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setYearEvents([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setYearLoading(false);
+        }
+      }
+    }
+
+    void loadYearEvents();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [viewYear]);
+
+  const searchResults = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) {
+      return [];
+    }
+
+    const seen = new Set<number>();
+    const combined = [...searchPool, ...upcomingEvents, ...events, ...yearEvents];
+    const matches: EventResponse[] = [];
+
+    for (const event of combined) {
+      if (seen.has(event.id)) {
+        continue;
+      }
+      seen.add(event.id);
+      if (event.name.toLowerCase().includes(query)) {
+        matches.push(event);
+      }
+    }
+
+    return matches.slice(0, 8);
+  }, [searchQuery, searchPool, upcomingEvents, events, yearEvents]);
 
   const selectedDayEvents = useMemo(() => {
     if (!selectedDate) {
@@ -207,6 +297,12 @@ export function EventsPage() {
       setUpcomingEvents((current) =>
         current.map((event) => applyRsvpStatus(event, status)),
       );
+      setYearEvents((current) =>
+        current.map((event) => applyRsvpStatus(event, status)),
+      );
+      setSearchPool((current) =>
+        current.map((event) => applyRsvpStatus(event, status)),
+      );
     },
     [],
   );
@@ -258,6 +354,16 @@ export function EventsPage() {
     setSelectedDate(isoDate);
   }
 
+  const navigateToEvent = useCallback((event: EventResponse) => {
+    const eventDate = new Date(event.starts_at);
+    setViewYear(eventDate.getFullYear());
+    setViewMonth(eventDate.getMonth());
+    setViewMode("month");
+    setSelectedDate(toLocalIsoDate(eventDate));
+    setSelectedEventId(event.id);
+    setSearchQuery("");
+  }, []);
+
   const handleEventCreated = useCallback(async (event: EventResponse) => {
     const eventDate = new Date(event.starts_at);
     const year = eventDate.getFullYear();
@@ -265,15 +371,30 @@ export function EventsPage() {
 
     setViewYear(year);
     setViewMonth(month);
+    setViewMode("month");
     setSelectedDate(toLocalIsoDate(eventDate));
     setSelectedEventId(event.id);
     setError(null);
 
     try {
-      const response = await fetchEvents({
-        month: formatMonthQuery(year, month),
+      const [monthResponse, allResponse] = await Promise.all([
+        fetchEvents({ month: formatMonthQuery(year, month) }),
+        fetchEvents(),
+      ]);
+      setEvents(monthResponse.events);
+      setSearchPool(allResponse.events);
+      setYearEvents(
+        allResponse.events.filter(
+          (item) => new Date(item.starts_at).getFullYear() === year,
+        ),
+      );
+      setUpcomingEvents((current) => {
+        const without = current.filter((item) => item.id !== event.id);
+        return [...without, event].sort(
+          (a, b) =>
+            new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
+        );
       });
-      setEvents(response.events);
     } catch {
       setEvents((current) =>
         [...current, event].sort(
@@ -284,25 +405,36 @@ export function EventsPage() {
     }
   }, []);
 
+  const calendarLoading = loading || (viewMode === "year" && yearLoading);
+
   return (
-    <div className="space-y-5">
+    <div className="-mx-1 rounded-2xl bg-[#F3F3F1] px-1 py-2 sm:px-2 sm:py-4">
       {canCreateEvents ? (
-        <CreateEventForm onCreated={(event) => void handleEventCreated(event)} />
+        <div className="mb-5">
+          <CreateEventForm onCreated={(event) => void handleEventCreated(event)} />
+        </div>
       ) : null}
 
-      {loading ? (
+      {calendarLoading ? (
         <p className="text-sm text-label">Loading events…</p>
       ) : null}
       {error ? <p className="ds-field-error">{error}</p> : null}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.75fr)_minmax(16rem,20rem)]">
-        <MonthlyCalendarGrid
+        <EventsCalendarPanel
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
           year={viewYear}
           month={viewMonth}
           onMonthChange={handleMonthChange}
           selectedDate={selectedDate}
           onSelectDate={handleSelectDate}
-          events={events}
+          monthEvents={events}
+          yearEvents={yearEvents}
+          searchQuery={searchQuery}
+          onSearchQueryChange={setSearchQuery}
+          searchResults={searchResults}
+          onSelectSearchResult={navigateToEvent}
         />
 
         <EventDayPanel
@@ -319,6 +451,7 @@ export function EventsPage() {
           }}
           upcomingEvents={upcomingEvents}
           upcomingLoading={upcomingLoading}
+          onSelectUpcomingEvent={navigateToEvent}
         />
       </div>
     </div>

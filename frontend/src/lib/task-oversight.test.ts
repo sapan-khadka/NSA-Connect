@@ -1,0 +1,173 @@
+import { describe, expect, it } from "vitest";
+
+import type { TaskOverviewMember } from "./event-tasks-api";
+import {
+  countOverdueTasks,
+  sortActiveMembers,
+  splitTaskOverviewMembers,
+} from "./task-oversight";
+
+function member(
+  overrides: Partial<TaskOverviewMember> & Pick<TaskOverviewMember, "member_id" | "full_name">,
+): TaskOverviewMember {
+  return {
+    role: "board",
+    position: "member",
+    total: 0,
+    completed: 0,
+    in_progress: 0,
+    todo: 0,
+    completion_percent: 0,
+    tasks: [],
+    ...overrides,
+  };
+}
+
+describe("task-oversight", () => {
+  it("splits members with and without assigned tasks", () => {
+    const members = [
+      member({ member_id: 1, full_name: "Alex", total: 2 }),
+      member({ member_id: 2, full_name: "Blair" }),
+      member({ member_id: 3, full_name: "Casey", total: 1 }),
+    ];
+
+    expect(splitTaskOverviewMembers(members)).toEqual({
+      active: [members[0], members[2]],
+      unassigned: [members[1]],
+    });
+  });
+
+  it("counts overdue open tasks across all members", () => {
+    const members = [
+      member({
+        member_id: 1,
+        full_name: "Alex",
+        total: 2,
+        tasks: [
+          {
+            id: 1,
+            event_id: 1,
+            event_name: "Dashain",
+            task_kind: "simple",
+            title: "Late task",
+            group_name: null,
+            description: "",
+            assignee_id: 1,
+            assignee_name: "Alex",
+            status: "todo",
+            due_date: null,
+            is_overdue: true,
+            is_complete: false,
+            checklist_items: [],
+            completion_note: null,
+            completion_photo_url: null,
+            completed_at: null,
+            created_by_id: 1,
+            created_at: "2026-03-18T12:00:00Z",
+          },
+          {
+            id: 2,
+            event_id: 1,
+            event_name: "Dashain",
+            task_kind: "simple",
+            title: "Done task",
+            group_name: null,
+            description: "",
+            assignee_id: 1,
+            assignee_name: "Alex",
+            status: "done",
+            due_date: null,
+            is_overdue: true,
+            is_complete: true,
+            checklist_items: [],
+            completion_note: null,
+            completion_photo_url: null,
+            completed_at: "2026-03-19T12:00:00Z",
+            created_by_id: 1,
+            created_at: "2026-03-18T12:00:00Z",
+          },
+        ],
+      }),
+    ];
+
+    expect(countOverdueTasks(members)).toBe(1);
+  });
+
+  it("sorts active members by overdue count then completion percent", () => {
+    const members = [
+      member({
+        member_id: 1,
+        full_name: "Complete",
+        total: 2,
+        completion_percent: 100,
+        tasks: [],
+      }),
+      member({
+        member_id: 2,
+        full_name: "Overdue",
+        total: 2,
+        completion_percent: 50,
+        tasks: [
+          {
+            id: 1,
+            event_id: 1,
+            event_name: "Dashain",
+            task_kind: "simple",
+            title: "Late",
+            group_name: null,
+            description: "",
+            assignee_id: 2,
+            assignee_name: "Overdue",
+            status: "todo",
+            due_date: null,
+            is_overdue: true,
+            is_complete: false,
+            checklist_items: [],
+            completion_note: null,
+            completion_photo_url: null,
+            completed_at: null,
+            created_by_id: 1,
+            created_at: "2026-03-18T12:00:00Z",
+          },
+        ],
+      }),
+      member({
+        member_id: 3,
+        full_name: "Behind",
+        total: 2,
+        completion_percent: 25,
+        tasks: [],
+      }),
+    ];
+
+    expect(
+      sortActiveMembers(members, "incomplete_first").map((row) => row.full_name),
+    ).toEqual(["Overdue", "Behind", "Complete"]);
+  });
+
+  it("sorts active members alphabetically and by completion percent", () => {
+    const members = [
+      member({
+        member_id: 1,
+        full_name: "Zoe",
+        total: 2,
+        completion_percent: 80,
+        tasks: [],
+      }),
+      member({
+        member_id: 2,
+        full_name: "Amy",
+        total: 2,
+        completion_percent: 20,
+        tasks: [],
+      }),
+    ];
+
+    expect(
+      sortActiveMembers(members, "alphabetical").map((row) => row.full_name),
+    ).toEqual(["Amy", "Zoe"]);
+    expect(
+      sortActiveMembers(members, "completion_desc").map((row) => row.full_name),
+    ).toEqual(["Zoe", "Amy"]);
+  });
+});

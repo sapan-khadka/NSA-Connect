@@ -25,7 +25,7 @@ describe("ExpenseCategoryChart", () => {
 
     expect(screen.getByText("Spend by category")).toBeInTheDocument();
     expect(screen.getByText("Food & beverage")).toBeInTheDocument();
-    expect(screen.getByText("$100.00")).toBeInTheDocument();
+    expect(screen.getByText("$100")).toBeInTheDocument();
     expect(screen.getByTestId("expense-bar-venue")).toHaveStyle({ width: "61%" });
     expect(screen.getByTestId("expense-bar-food_beverage")).toHaveStyle({
       width: "39%",

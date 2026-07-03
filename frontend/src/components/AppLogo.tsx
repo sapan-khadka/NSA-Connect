@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { HimalayanSilhouette } from "./NepaliDecor";
 import nsaLogo from "../assets/nsa-logo.png";
 
-type AppLogoSize = "sm" | "md" | "lg";
+type AppLogoSize = "nav" | "sm" | "md" | "lg";
 
 type AppLogoProps = {
   size?: AppLogoSize;
@@ -14,24 +14,50 @@ type AppLogoProps = {
   asLink?: boolean;
 };
 
+function NavMountainMark() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-6 w-6 shrink-0"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M3.5 18.5L9.25 9.5L12.75 14L16.25 8L20.5 18.5"
+        stroke="#023D54"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 const SIZE_STYLES: Record<
   AppLogoSize,
   { image: string; title: string; tagline: string; gap: string }
 > = {
+  nav: {
+    image: "",
+    title: "ds-nav-brand-wordmark",
+    tagline: "text-[10px] leading-tight",
+    gap: "gap-2.5",
+  },
   sm: {
-    image: "h-16 w-auto object-contain sm:h-[4.5rem]",
+    image: "h-16 w-auto shrink-0 object-contain sm:h-[4.5rem]",
     title: "text-base leading-tight",
     tagline: "text-[10px] leading-tight",
     gap: "gap-2.5",
   },
   md: {
-    image: "h-20 w-auto object-contain sm:h-[5.5rem]",
+    image: "h-20 w-auto shrink-0 object-contain sm:h-[5.5rem]",
     title: "text-xl leading-tight",
     tagline: "text-xs leading-tight",
     gap: "gap-3",
   },
   lg: {
-    image: "h-32 w-auto object-contain md:h-36 lg:h-40",
+    image: "h-32 w-auto shrink-0 object-contain md:h-36 lg:h-40",
     title: "text-3xl md:text-4xl leading-tight",
     tagline: "text-sm leading-tight",
     gap: "gap-4",
@@ -46,6 +72,7 @@ export function AppLogo({
   asLink = false,
 }: AppLogoProps) {
   const styles = SIZE_STYLES[size];
+  const isNavBrand = size === "nav";
 
   const content = (
     <div
@@ -55,19 +82,18 @@ export function AppLogo({
         className,
       ].join(" ")}
     >
-      <img
-        src={nsaLogo}
-        alt="Nepalese Students Association at SEMO"
-        className={[styles.image, "shrink-0"].join(" ")}
-      />
-      {showWordmark ? (
+      {isNavBrand ? (
+        <NavMountainMark />
+      ) : (
+        <img
+          src={nsaLogo}
+          alt="Nepalese Students Association at SEMO"
+          className={styles.image}
+        />
+      )}
+      {showWordmark || isNavBrand ? (
         <div className="min-w-0 text-left">
-          <p
-            className={[
-              "font-light tracking-headline text-foreground",
-              styles.title,
-            ].join(" ")}
-          >
+          <p className={isNavBrand ? styles.title : ["font-light tracking-headline text-foreground", styles.title].join(" ")}>
             NSA Connect
           </p>
           {showTagline ? (
@@ -89,7 +115,10 @@ export function AppLogo({
     return (
       <Link
         to="/"
-        className="rounded-lg transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+        className={[
+          "inline-flex shrink-0 items-center transition-opacity hover:opacity-80",
+          "rounded-sm focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent/35",
+        ].join(" ")}
       >
         {content}
       </Link>

@@ -1,9 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 
 import {
-  FINANCE_CATEGORY_LABELS,
+  CUSTOM_FINANCE_CATEGORY,
+  financeCategoryToFormValue,
   formatFinanceCategory,
+  resolveFinanceCategoryForSubmit,
+  validateCustomFinanceCategory,
 } from "../lib/finance-categories";
 import {
   deleteFinanceEntry,
@@ -12,6 +15,7 @@ import {
   type FinanceEntryResponse,
   type FinanceEntryType,
 } from "../lib/finance-api";
+import { FINANCE_CATEGORIES } from "../lib/finance-form";
 import { formatCurrency } from "../lib/format-currency";
 import { formatEventDateTime } from "../lib/format-datetime";
 
@@ -27,14 +31,13 @@ type FinanceEntryListProps = {
 type EditDraft = {
   entry_type: FinanceEntryType;
   category: string;
+  customCategory: string;
   amount: string;
   description: string;
 };
 
-const CATEGORY_OPTIONS = Object.keys(FINANCE_CATEGORY_LABELS);
-
 const editInputClassName =
-  "w-full rounded-md border border-gray-300 px-2 py-1 text-sm text-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
+  "w-full rounded-md border border-gray-200 px-2 py-1 text-sm font-light text-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/40";
 
 export function FinanceEntryList({
   semester,
@@ -52,6 +55,20 @@ export function FinanceEntryList({
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredEntries = useMemo(() => {
+    const normalized = searchQuery.trim().toLowerCase();
+    if (!normalized) {
+      return entries;
+    }
+
+    return entries.filter((entry) => {
+      const description = entry.description.toLowerCase();
+      const category = formatFinanceCategory(entry.category).toLowerCase();
+      return description.includes(normalized) || category.includes(normalized);
+    });
+  }, [entries, searchQuery]);
 
   useEffect(() => {
     let cancelled = false;
@@ -102,9 +119,11 @@ export function FinanceEntryList({
   function startEdit(entry: FinanceEntryResponse) {
     setActionError(null);
     setEditingId(entry.id);
+    const categoryValues = financeCategoryToFormValue(entry.category);
     setDraft({
       entry_type: entry.entry_type,
-      category: entry.category,
+      category: categoryValues.category,
+      customCategory: categoryValues.customCategory,
       amount: entry.amount,
       description: entry.description,
     });
@@ -137,6 +156,14 @@ export function FinanceEntryList({
       return;
     }
 
+    if (draft.category === CUSTOM_FINANCE_CATEGORY) {
+      const customError = validateCustomFinanceCategory(draft.customCategory);
+      if (customError) {
+        setActionError(customError);
+        return;
+      }
+    }
+
     setBusyId(entryId);
     setActionError(null);
     setActionNotice(null);
@@ -144,7 +171,10 @@ export function FinanceEntryList({
     try {
       await updateFinanceEntry(entryId, {
         entry_type: draft.entry_type,
-        category: draft.category,
+        category: resolveFinanceCategoryForSubmit(
+          draft.category,
+          draft.customCategory,
+        ),
         amount: trimmedAmount,
         description: draft.description.trim(),
       });
@@ -213,8 +243,20 @@ export function FinanceEntryList({
 
   return (
     <section className="ds-card p-6">
-      <div>
-        <h2 className="text-lg font-light tracking-subhead text-foreground">Recent transactions</h2>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <h2 className="text-base font-medium text-foreground">
+          Recent transactions
+        </h2>
+        <label className="min-w-[14rem] flex-1 text-sm text-label sm:max-w-xs">
+          <span className="sr-only">Search transactions</span>
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search description or category"
+            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-light text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/40"
+          />
+        </label>
       </div>
 
       {financeLocked ? (
@@ -258,7 +300,7 @@ export function FinanceEntryList({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {entries.map((entry) => {
+            {filteredEntries.map((entry) => {
               const isEditing = canManage && editingId === entry.id && draft;
               const isBusy = busyId === entry.id;
 
@@ -285,20 +327,38 @@ export function FinanceEntryList({
                       </select>
                     </td>
                     <td className="px-4 py-3">
-                      <select
-                        aria-label="Edit category"
-                        value={draft.category}
-                        onChange={(event) =>
-                          setDraft({ ...draft, category: event.target.value })
-                        }
-                        className={editInputClassName}
-                      >
-                        {CATEGORY_OPTIONS.map((category) => (
-                          <option key={category} value={category}>
-                            {formatFinanceCategory(category)}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="space-y-2">
+                        <select
+                          aria-label="Edit category"
+                          value={draft.category}
+                          onChange={(event) =>
+                            setDraft({ ...draft, category: event.target.value })
+                          }
+                          className={editInputClassName}
+                        >
+                          {FINANCE_CATEGORIES.map((category) => (
+                            <option key={category} value={category}>
+                              {formatFinanceCategory(category)}
+                            </option>
+                          ))}
+                          <option value={CUSTOM_FINANCE_CATEGORY}>Add your own…</option>
+                        </select>
+                        {draft.category === CUSTOM_FINANCE_CATEGORY ? (
+                          <input
+                            aria-label="Edit custom category"
+                            type="text"
+                            value={draft.customCategory}
+                            placeholder="Custom category"
+                            onChange={(event) =>
+                              setDraft({
+                                ...draft,
+                                customCategory: event.target.value,
+                              })
+                            }
+                            className={editInputClassName}
+                          />
+                        ) : null}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <input
@@ -410,13 +470,15 @@ export function FinanceEntryList({
                 </tr>
               );
             })}
-            {entries.length === 0 && (
+            {filteredEntries.length === 0 && (
               <tr>
                 <td
                   colSpan={columnCount}
                   className="px-4 py-8 text-center text-label"
                 >
-                  No transactions logged for this period.
+                  {entries.length === 0
+                    ? "No transactions logged for this period."
+                    : "No transactions match your search."}
                 </td>
               </tr>
             )}

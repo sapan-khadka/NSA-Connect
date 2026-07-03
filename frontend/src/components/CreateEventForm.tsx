@@ -9,6 +9,7 @@ import {
 import { EVENT_TYPE_LABELS, EVENT_TYPES } from "../lib/event-types";
 import {
   buildCreateEventPayload,
+  getMinEventDate,
   initialCreateEventValues,
   type CreateEventFormErrors,
   type CreateEventFormValues,
@@ -280,6 +281,7 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
               <input
                 id="event-date"
                 type="date"
+                min={getMinEventDate()}
                 value={values.event_date}
                 onChange={(event) => updateField("event_date", event.target.value)}
                 onBlur={() => validateField("event_date")}

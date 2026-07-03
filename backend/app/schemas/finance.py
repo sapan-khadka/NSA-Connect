@@ -4,7 +4,8 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.models.finance_entry import FinanceCategory, FinanceEntryType
+from app.lib.finance_categories import normalize_finance_category
+from app.models.finance_entry import FinanceEntryType
 
 if TYPE_CHECKING:
     from app.models.finance_entry import FinanceEntry
@@ -14,11 +15,16 @@ MAX_FINANCE_AMOUNT = Decimal("999999.99")
 
 class FinanceEntryCreateRequest(BaseModel):
     entry_type: FinanceEntryType
-    category: FinanceCategory
+    category: str = Field(min_length=2, max_length=64)
     amount: Decimal = Field(gt=Decimal("0"), le=MAX_FINANCE_AMOUNT)
     description: str = Field(default="", max_length=5000)
     receipt_url: str | None = Field(default=None, max_length=2048)
     event_id: int | None = None
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def validate_category(cls, value: str) -> str:
+        return normalize_finance_category(value)
 
     @field_validator("description", mode="before")
     @classmethod
@@ -48,11 +54,18 @@ class FinanceEntryCreateRequest(BaseModel):
 
 class FinanceEntryUpdateRequest(BaseModel):
     entry_type: FinanceEntryType | None = None
-    category: FinanceCategory | None = None
+    category: str | None = Field(default=None, min_length=2, max_length=64)
     amount: Decimal | None = Field(default=None, gt=Decimal("0"), le=MAX_FINANCE_AMOUNT)
     description: str | None = Field(default=None, max_length=5000)
     receipt_url: str | None = Field(default=None, max_length=2048)
     event_id: int | None = None
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def validate_category(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return normalize_finance_category(value)
 
     @field_validator("description", mode="before")
     @classmethod
@@ -87,7 +100,7 @@ class FinanceEntryResponse(BaseModel):
 
     id: int
     entry_type: FinanceEntryType
-    category: FinanceCategory
+    category: str
     amount: Decimal
     description: str
     receipt_url: str | None
@@ -148,7 +161,7 @@ class FinanceEventBudgetListResponse(BaseModel):
 
 
 class FinanceExpenseCategorySummary(BaseModel):
-    category: FinanceCategory
+    category: str
     total_expense: Decimal
     entry_count: int
 

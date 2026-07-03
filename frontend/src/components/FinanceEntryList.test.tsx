@@ -191,4 +191,33 @@ describe("FinanceEntryList management", () => {
 
     expect(mockedDelete).not.toHaveBeenCalled();
   });
+
+  it("filters transactions by description or category", async () => {
+    const user = userEvent.setup();
+    mockedFetch.mockResolvedValue({
+      entries: [
+        makeEntry({ id: 1, description: "Snacks", category: "food_beverage" }),
+        makeEntry({
+          id: 2,
+          description: "Hall rental",
+          category: "venue",
+          amount: "100.00",
+        }),
+      ],
+      total: 2,
+    });
+
+    render(<FinanceEntryList semester="all" refreshKey={0} />);
+
+    await waitFor(() => expect(screen.getByText("Snacks")).toBeInTheDocument());
+    expect(screen.getByText("Hall rental")).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole("searchbox", { name: "Search transactions" }),
+      "venue",
+    );
+
+    expect(screen.queryByText("Snacks")).not.toBeInTheDocument();
+    expect(screen.getByText("Hall rental")).toBeInTheDocument();
+  });
 });

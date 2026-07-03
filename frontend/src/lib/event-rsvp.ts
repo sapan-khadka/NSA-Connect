@@ -1,4 +1,4 @@
-import type { RsvpStatus } from "./events-api";
+import type { EventAttendeesResponse, RsvpStatus } from "./events-api";
 
 export function isEventUpcoming(startsAt: string): boolean {
   return new Date(startsAt) > new Date();
@@ -17,6 +17,12 @@ export function formatRsvpStatus(status: RsvpStatus | null): string {
     return RSVP_NO_RESPONSE_LABEL;
   }
   return RSVP_STATUS_LABELS[status];
+}
+
+export function formatCompactAttendeeSummary(
+  data: Pick<EventAttendeesResponse, "going_count" | "no_response_count">,
+): string {
+  return `${data.going_count} going · ${data.no_response_count} not yet responded`;
 }
 
 export function needsRsvpResponse(

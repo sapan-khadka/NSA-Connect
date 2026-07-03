@@ -70,7 +70,10 @@ const mockBudgetBreakdown = {
   ],
 };
 
-function renderFinancePage(role: MemberRole = "treasurer") {
+function renderFinancePage(
+  role: MemberRole = "treasurer",
+  initialEntry = "/finance",
+) {
   return render(
     <MockAuthProvider
       value={{
@@ -88,7 +91,7 @@ function renderFinancePage(role: MemberRole = "treasurer") {
         isAuthenticated: true,
       }}
     >
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[initialEntry]}>
         <FinancePage />
       </MemoryRouter>
     </MockAuthProvider>,
@@ -101,7 +104,7 @@ describe("FinancePage", () => {
     vi.clearAllMocks();
   });
 
-  it("shows event budget vs actual for board members", async () => {
+  it("shows event budgets for board members", async () => {
     const { fetchEventBudgetBreakdown, fetchExpenseByCategory, fetchFinanceSummary } =
       await import("../lib/finance-api");
     vi.mocked(fetchEventBudgetBreakdown).mockResolvedValue(mockBudgetBreakdown);
@@ -112,15 +115,16 @@ describe("FinancePage", () => {
     expect(await screen.findByText("Event budget tracking")).toBeInTheDocument();
     expect(screen.getByText("Spend by category")).toBeInTheDocument();
     expect(screen.getByTestId("expense-category-chart")).toBeInTheDocument();
-    expect(screen.getByTestId("event-budget-table")).toBeInTheDocument();
+    expect(screen.getByTestId("event-budget-list")).toBeInTheDocument();
     expect(screen.getByText("Dashain Celebration")).toBeInTheDocument();
-    expect(screen.getByText("Over budget")).toBeInTheDocument();
-    expect(screen.queryByTestId("finance-running-balance")).not.toBeInTheDocument();
+    expect(screen.getByText("108%")).toBeInTheDocument();
+    expect(screen.queryByTestId("finance-net-balance")).not.toBeInTheDocument();
     expect(fetchFinanceSummary).not.toHaveBeenCalled();
     expect(fetchExpenseByCategory).toHaveBeenCalledWith(undefined);
   });
 
-  it("shows running balance and budget breakdown for treasurer", async () => {
+  it("shows treasury overview and tabs for treasurer", async () => {
+    const user = userEvent.setup();
     const {
       fetchEventBudgetBreakdown,
       fetchExpenseByCategory,
@@ -149,15 +153,59 @@ describe("FinancePage", () => {
 
     renderFinancePage("treasurer");
 
-    expect(await screen.findByTestId("finance-running-balance")).toHaveTextContent(
+    expect(await screen.findByText("Treasury")).toBeInTheDocument();
+    expect(screen.getByText(/All time · updated/)).toBeInTheDocument();
+    expect(await screen.findByTestId("finance-net-balance-amount")).toHaveTextContent(
       "$260.00",
     );
-    expect(screen.getByRole("heading", { name: "Log transaction" })).toBeInTheDocument();
-    expect(screen.getByTestId("finance-entry-list")).toBeInTheDocument();
-    expect(screen.getByText("Event budget vs actual")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Overview" })).toBeInTheDocument();
+    expect(screen.getByText("Spend by category")).toBeInTheDocument();
+    expect(screen.getByText("Event budgets")).toBeInTheDocument();
+    expect(screen.queryByTestId("finance-entry-list")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Transactions" }));
+
+    expect(
+      screen.getByRole("button", { name: "+ Log transaction" }),
+    ).toBeInTheDocument();
+    expect(await screen.findByTestId("finance-entry-list")).toBeInTheDocument();
+    expect(screen.getByText("Transaction breakdown")).toBeInTheDocument();
     expect(fetchEventBudgetBreakdown).toHaveBeenCalledWith(undefined);
     expect(fetchExpenseByCategory).toHaveBeenCalledWith(undefined);
     expect(fetchFinanceSummary).toHaveBeenCalledWith(undefined);
+  });
+
+  it("opens the approvals tab from the tab query param", async () => {
+    const {
+      fetchEventBudgetBreakdown,
+      fetchExpenseByCategory,
+      fetchFinanceSummary,
+      fetchPendingFinanceChangeRequests,
+      fetchMyFinanceChangeRequests,
+    } = await import("../lib/finance-api");
+    vi.mocked(fetchEventBudgetBreakdown).mockResolvedValue(mockBudgetBreakdown);
+    vi.mocked(fetchExpenseByCategory).mockResolvedValue(mockExpenseCategories);
+    vi.mocked(fetchFinanceSummary).mockResolvedValue(mockSummary);
+    vi.mocked(fetchPendingFinanceChangeRequests).mockResolvedValue({
+      requests: [],
+      total: 0,
+    });
+    vi.mocked(fetchMyFinanceChangeRequests).mockResolvedValue({
+      requests: [],
+      total: 0,
+      summary: {
+        pending_count: 0,
+        recently_rejected_count: 0,
+        recently_approved_count: 0,
+      },
+    });
+
+    renderFinancePage("treasurer", "/finance?tab=approvals");
+
+    expect(
+      await screen.findByText("Pending finance approvals"),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("finance-net-balance")).not.toBeInTheDocument();
   });
 
   it("reloads charts when semester filter changes", async () => {
@@ -168,7 +216,7 @@ describe("FinancePage", () => {
     vi.mocked(fetchExpenseByCategory).mockResolvedValue(mockExpenseCategories);
 
     renderFinancePage("board");
-    await screen.findByTestId("event-budget-table");
+    await screen.findByTestId("event-budget-list");
 
     const semesterSelect = screen.getByRole("combobox", { name: "Semester" });
     const firstSemesterOption = semesterSelect.querySelectorAll("option")[1];

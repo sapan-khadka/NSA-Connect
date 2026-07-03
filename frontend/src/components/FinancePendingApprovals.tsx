@@ -80,10 +80,7 @@ export function FinancePendingApprovals({
 
   return (
     <section className="ds-card p-6">
-      <h2 className="text-lg font-light tracking-subhead text-foreground">Pending finance approvals</h2>
-      <p className="mt-1 text-sm text-label">
-        Treasurer and president must approve each other&apos;s edits and deletions.
-      </p>
+      <h2 className="text-base font-medium text-foreground">Pending finance approvals</h2>
 
       {error ? <p className="mt-3 ds-field-error">{error}</p> : null}
 
