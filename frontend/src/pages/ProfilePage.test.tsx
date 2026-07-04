@@ -84,12 +84,14 @@ describe("ProfilePage", () => {
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(() => {
-      expect(updateMyProfile).toHaveBeenCalledWith({
-        full_name: "New Name",
-        email: "test@semo.edu",
-        major: "Computer Science",
-        graduation_year: 2029,
-      });
+      expect(updateMyProfile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          full_name: "New Name",
+          email: "test@semo.edu",
+          major: "Computer Science",
+          graduation_year: 2029,
+        }),
+      );
     });
     expect(updateMember).toHaveBeenCalled();
     expect(

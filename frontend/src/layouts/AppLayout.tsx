@@ -12,6 +12,7 @@ import { useAuth } from "../context/useAuth";
 import { useLogout } from "../context/useLogout";
 import {
   canAccessFinance,
+  canBrowseMemberDirectory,
   canViewMemberDirectory,
 } from "../lib/roles";
 
@@ -22,13 +23,13 @@ export function AppLayout() {
   const { isAuthenticated, member } = useAuth();
   const logout = useLogout();
   const location = useLocation();
-  const showMemberDirectory = member ? canViewMemberDirectory(member.role) : false;
+  const showMemberAdmin = member ? canViewMemberDirectory(member.role) : false;
+  const showMembersNav = member ? canBrowseMemberDirectory(member.role) : false;
   const showFinance = member ? canAccessFinance(member.role) : false;
-  const showMeetingMinutes = showMemberDirectory;
-  const showAnnouncementEmail = showMemberDirectory;
+  const showMeetingMinutes = showMemberAdmin;
+  const showAnnouncementEmail = showMemberAdmin;
 
   const adminItems = [
-    ...(showMemberDirectory ? [{ label: "Members", to: "/members" }] : []),
     ...(showFinance ? [{ label: "Finance", to: "/finance" }] : []),
     ...(showMeetingMinutes
       ? [{ label: "Meeting minutes", to: "/board/meeting-minutes" }]
@@ -57,6 +58,9 @@ export function AppLayout() {
                   Home
                 </PrimaryNavLink>
                 <PrimaryNavLink to="/events/calendar">Events</PrimaryNavLink>
+                {showMembersNav ? (
+                  <PrimaryNavLink to="/members">Members</PrimaryNavLink>
+                ) : null}
                 <PrimaryNavLink to="/assistant">Assistant</PrimaryNavLink>
                 {adminItems.length > 0 ? (
                   <>

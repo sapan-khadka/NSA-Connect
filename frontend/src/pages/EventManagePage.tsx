@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
+import { EventInvitedParticipantsSection } from "../components/EventInvitedParticipantsSection";
 import { EventManageLogisticsSection } from "../components/EventManageLogisticsSection";
 import { EventManageScheduleFields } from "../components/EventManageScheduleFields";
 import { EventPhotoArchiveSetting } from "../components/EventPhotoArchiveSetting";
@@ -241,6 +242,13 @@ export function EventManagePage() {
       ) : (
         logisticsSection
       )}
+
+      {canViewBoard ? (
+        <EventInvitedParticipantsSection
+          eventId={numericEventId}
+          refreshKey={refreshKey}
+        />
+      ) : null}
     </div>
   );
 }

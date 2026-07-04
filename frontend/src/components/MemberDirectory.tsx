@@ -6,25 +6,19 @@ import { useAuth } from "../context/useAuth";
 import { memberMatchesSearch } from "../lib/member-search";
 import {
   fetchMembers,
-  updateMemberPosition,
-  updateMemberRole,
+  fetchTalentOptions,
 } from "../lib/members-api";
 import {
-  buildPositionHolders,
-  canPresidentPromoteMember,
-  formatPositionLabel,
-  isExclusiveMemberPosition,
-  type MemberPosition,
-  type PromotableBoardRole,
-} from "../lib/roles";
+  formatTalentFilterSummary,
+  MEMBER_TALENT_LABELS,
+  type MemberTalent,
+} from "../lib/member-talents";
+import { canViewMemberDirectory, isRoleAtLeast } from "../lib/roles";
 
-import { PositionBadge } from "./PositionBadge";
-import { PositionSelect } from "./PositionSelect";
-import { RoleBadge } from "./RoleBadge";
-import { RolePromotionSelect } from "./RolePromotionSelect";
-import { StatusBadge } from "./StatusBadge";
+import { InviteToEventModal } from "./InviteToEventModal";
+import { MemberDirectoryCard } from "./MemberDirectoryCard";
 
-const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
+const PAGE_SIZE_OPTIONS = [12, 24, 48] as const;
 const SEARCH_FETCH_PAGE_SIZE = 100;
 
 export function MemberDirectory() {
@@ -36,14 +30,16 @@ export function MemberDirectory() {
   const [totalPages, setTotalPages] = useState(0);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedTalents, setSelectedTalents] = useState<string[]>([]);
+  const [talentLabels, setTalentLabels] = useState<Record<string, string>>(
+    MEMBER_TALENT_LABELS,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [updatingMemberId, setUpdatingMemberId] = useState<number | null>(null);
-  const [updatingPositionId, setUpdatingPositionId] = useState<number | null>(
-    null,
-  );
+  const [inviteOpen, setInviteOpen] = useState(false);
 
-  const isPresident = currentMember?.role === "president";
+  const isBoard = currentMember ? isRoleAtLeast(currentMember.role, "board") : false;
+  const canInvite = isBoard && selectedTalents.length > 0;
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -53,6 +49,12 @@ export function MemberDirectory() {
 
     return () => window.clearTimeout(timeoutId);
   }, [search]);
+
+  useEffect(() => {
+    void fetchTalentOptions()
+      .then((response) => setTalentLabels(response.labels))
+      .catch(() => undefined);
+  }, []);
 
   const isSearching = debouncedSearch.trim().length > 0;
 
@@ -64,6 +66,7 @@ export function MemberDirectory() {
       const data = await fetchMembers({
         page: isSearching ? 1 : page,
         page_size: isSearching ? SEARCH_FETCH_PAGE_SIZE : pageSize,
+        talents: selectedTalents.length > 0 ? selectedTalents : undefined,
       });
       setMembers(data.members);
       setTotal(data.total);
@@ -73,7 +76,7 @@ export function MemberDirectory() {
     } finally {
       setIsLoading(false);
     }
-  }, [isSearching, page, pageSize]);
+  }, [isSearching, page, pageSize, selectedTalents]);
 
   useEffect(() => {
     void loadMembers();
@@ -89,101 +92,44 @@ export function MemberDirectory() {
     [debouncedSearch, isSearching, members],
   );
 
-  const positionHolders = useMemo(
-    () => buildPositionHolders(members),
-    [members],
-  );
+  const filterSummary =
+    selectedTalents.length > 0
+      ? formatTalentFilterSummary(selectedTalents, isSearching ? visibleMembers.length : total)
+      : null;
 
-  const resultSummary = isSearching
-    ? `${visibleMembers.length} match${visibleMembers.length === 1 ? "" : "es"}`
-    : `${total} member${total === 1 ? "" : "s"} total`;
-
-  function handlePageSizeChange(nextPageSize: number) {
-    setPageSize(nextPageSize);
+  function toggleTalent(talent: string) {
+    setSelectedTalents((current) =>
+      current.includes(talent)
+        ? current.filter((item) => item !== talent)
+        : [...current, talent],
+    );
     setPage(1);
   }
 
-  async function handleRoleChange(memberId: number, role: PromotableBoardRole) {
-    setUpdatingMemberId(memberId);
-    setError(null);
-
-    try {
-      const updatedMember = await updateMemberRole(memberId, { role });
-      setMembers((current) =>
-        current.map((member) =>
-          member.id === memberId ? updatedMember : member,
-        ),
-      );
-    } catch (updateError) {
-      setError(getApiErrorMessage(updateError));
-    } finally {
-      setUpdatingMemberId(null);
-    }
-  }
-
-  async function handlePositionChange(
-    memberId: number,
-    position: MemberPosition,
-  ) {
-    setUpdatingPositionId(memberId);
-    setError(null);
-
-    try {
-      const updatedMember = await updateMemberPosition(memberId, position);
-      setMembers((current) =>
-        current.map((member) => {
-          if (member.id === memberId) {
-            return updatedMember;
-          }
-          if (
-            position !== "member" &&
-            member.position === position &&
-            member.id !== memberId
-          ) {
-            return {
-              ...member,
-              position: "member",
-              role:
-                member.role === "president" || member.role === "treasurer"
-                  ? "board"
-                  : member.role,
-            };
-          }
-          if (
-            (position === "president" || position === "treasurer") &&
-            member.id !== memberId &&
-            (member.position === position ||
-              member.role === position)
-          ) {
-            return {
-              ...member,
-              position: "member",
-              role: "board",
-            };
-          }
-          return member;
-        }),
-      );
-    } catch (updateError) {
-      setError(getApiErrorMessage(updateError));
-    } finally {
-      setUpdatingPositionId(null);
-    }
+  function clearTalentFilter() {
+    setSelectedTalents([]);
+    setPage(1);
   }
 
   return (
     <section className="ds-card">
-      <div className="border-b border-gray-200 px-6 py-4">
+      <div className="border-b border-gray-200 px-6 py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h2 className="text-lg font-light tracking-subhead text-foreground">Member directory</h2>
-            <p className="mt-1 text-sm text-label">{resultSummary}</p>
-            {isPresident && (
+            <h2 className="text-lg font-light tracking-subhead text-foreground">
+              Member directory
+            </h2>
+            <p className="mt-1 text-sm text-label">
+              {filterSummary ??
+                `${isSearching ? visibleMembers.length : total} member${
+                  (isSearching ? visibleMembers.length : total) === 1 ? "" : "s"
+                }`}
+            </p>
+            {selectedTalents.length > 0 ? (
               <p className="mt-1 text-xs text-label">
-                Assign a position to set leadership roles. Use the access
-                dropdown only for general and board members without a position.
+                Talent filter uses any-match (OR) — members with at least one selected talent.
               </p>
-            )}
+            ) : null}
           </div>
 
           <label className="block w-full lg:max-w-sm">
@@ -192,128 +138,92 @@ export function MemberDirectory() {
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search by name, email, ID, major, role..."
+              placeholder="Search by name, major, interests..."
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-foreground placeholder:text-label focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
             />
           </label>
         </div>
-      </div>
 
-      {error && (
-        <div className="mx-6 mt-4 ds-alert-banner">
-          {error}
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {(Object.keys(talentLabels) as MemberTalent[]).map((talent) => {
+            const active = selectedTalents.includes(talent);
+            return (
+              <button
+                key={talent}
+                type="button"
+                aria-pressed={active}
+                onClick={() => toggleTalent(talent)}
+                className={[
+                  "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                  active
+                    ? "bg-primary text-white"
+                    : "border border-gray-200 bg-white text-label hover:text-foreground",
+                ].join(" ")}
+              >
+                {talentLabels[talent] ?? talent}
+              </button>
+            );
+          })}
+          {selectedTalents.length > 0 ? (
+            <button
+              type="button"
+              onClick={clearTalentFilter}
+              className="rounded-full px-3 py-1 text-xs font-medium text-accent hover:underline"
+            >
+              Clear filter
+            </button>
+          ) : null}
         </div>
-      )}
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-label">
-                Name
-              </th>
-              <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-label">
-                Email
-              </th>
-              <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-label">
-                Student ID
-              </th>
-              <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-label">
-                Major
-              </th>
-              <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-label">
-                Graduation
-              </th>
-              <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-label">
-                Access
-              </th>
-              <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-label">
-                Position
-              </th>
-              <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide text-label">
-                Status
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
-            {isLoading ? (
-              <tr>
-                <td colSpan={8} className="px-6 py-8 text-label">
-                  Loading members...
-                </td>
-              </tr>
-            ) : visibleMembers.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="px-6 py-8 text-label">
-                  {isSearching
-                    ? "No members match your search."
-                    : "No members found."}
-                </td>
-              </tr>
-            ) : (
-              visibleMembers.map((member) => (
-                <tr key={member.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 font-medium text-foreground">
-                    {member.full_name}
-                  </td>
-                  <td className="px-6 py-4 text-label">{member.email}</td>
-                  <td className="px-6 py-4 text-label">{member.student_id}</td>
-                  <td className="px-6 py-4 text-label">{member.major}</td>
-                  <td className="px-6 py-4 text-label">
-                    {member.graduation_year}
-                  </td>
-                  <td className="px-6 py-4">
-                    {isExclusiveMemberPosition(member.position) ? (
-                      <PositionBadge position={member.position} />
-                    ) : isPresident &&
-                      currentMember &&
-                      canPresidentPromoteMember(member, currentMember.id) ? (
-                      <RolePromotionSelect
-                        member={member}
-                        isUpdating={updatingMemberId === member.id}
-                        onRoleChange={handleRoleChange}
-                      />
-                    ) : (
-                      <RoleBadge role={member.role} />
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    {isPresident ? (
-                      <PositionSelect
-                        member={member}
-                        positionHolders={positionHolders}
-                        isUpdating={updatingPositionId === member.id}
-                        onPositionChange={handlePositionChange}
-                      />
-                    ) : (
-                      <span className="text-label">
-                        {formatPositionLabel(member.position)}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    <StatusBadge status={member.status} />
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+        {canInvite ? (
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={() => setInviteOpen(true)}
+              className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white"
+            >
+              Invite to event
+            </button>
+          </div>
+        ) : null}
       </div>
 
-      {!isSearching && totalPages > 0 && (
+      {error ? <div className="mx-6 mt-4 ds-alert-banner">{error}</div> : null}
+
+      <div className="grid gap-4 p-6 sm:grid-cols-2 xl:grid-cols-3">
+        {isLoading ? (
+          <p className="text-sm text-label">Loading members...</p>
+        ) : visibleMembers.length === 0 ? (
+          <p className="text-sm text-label">
+            {isSearching || selectedTalents.length > 0
+              ? "No members match your filters."
+              : "No members found."}
+          </p>
+        ) : (
+          visibleMembers.map((member) => (
+            <MemberDirectoryCard
+              key={member.id}
+              member={member}
+              to={`/members/${member.id}`}
+            />
+          ))
+        )}
+      </div>
+
+      {!isSearching && totalPages > 1 ? (
         <div className="flex flex-col gap-4 border-t border-gray-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-sm text-label">
             <label htmlFor="page-size" className="font-medium text-foreground">
-              Rows per page
+              Cards per page
             </label>
             <select
               id="page-size"
               value={pageSize}
-              onChange={(event) =>
-                handlePageSizeChange(Number(event.target.value))
-              }
-              className="rounded-md border border-gray-300 px-2 py-1 text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+              onChange={(event) => {
+                setPageSize(Number(event.target.value));
+                setPage(1);
+              }}
+              className="rounded-md border border-gray-300 px-2 py-1 text-sm text-foreground"
             >
               {PAGE_SIZE_OPTIONS.map((option) => (
                 <option key={option} value={option}>
@@ -331,7 +241,7 @@ export function MemberDirectory() {
               type="button"
               onClick={() => setPage((current) => Math.max(1, current - 1))}
               disabled={page <= 1 || isLoading}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-50"
             >
               Previous
             </button>
@@ -341,20 +251,19 @@ export function MemberDirectory() {
                 setPage((current) => Math.min(totalPages, current + 1))
               }
               disabled={page >= totalPages || isLoading}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-50"
             >
               Next
             </button>
           </div>
         </div>
-      )}
+      ) : null}
 
-      {isSearching && total > SEARCH_FETCH_PAGE_SIZE && (
-        <p className="border-t border-gray-200 px-6 py-3 text-xs text-label">
-          Search covers the first {SEARCH_FETCH_PAGE_SIZE} members. Refine your
-          query for more specific results.
-        </p>
-      )}
+      <InviteToEventModal
+        open={inviteOpen}
+        memberIds={visibleMembers.map((member) => member.id)}
+        onClose={() => setInviteOpen(false)}
+      />
     </section>
   );
 }

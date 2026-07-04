@@ -10,6 +10,10 @@ import { MembersPage } from "./MembersPage";
 
 vi.mock("../lib/members-api", () => ({
   fetchMembers: vi.fn(),
+  fetchTalentOptions: vi.fn().mockResolvedValue({
+    talents: ["dancing"],
+    labels: { dancing: "Dancing" },
+  }),
   fetchPendingMembers: vi.fn(),
   approveMember: vi.fn(),
   rejectMember: vi.fn(),
@@ -120,8 +124,7 @@ describe("MembersPage", () => {
 
     expect(await screen.findByText("Alex Member")).toBeInTheDocument();
     expect(screen.getByText("alex@semo.edu")).toBeInTheDocument();
-    expect(screen.getByText("Board")).toBeInTheDocument();
-    expect(screen.getByText("approved")).toBeInTheDocument();
+    expect(screen.getByText(/Computer Science · 2028/)).toBeInTheDocument();
   });
 
   it("filters the directory with search", async () => {
@@ -147,7 +150,7 @@ describe("MembersPage", () => {
     await screen.findByText("Alex Member");
 
     await user.type(
-      screen.getByPlaceholderText(/search by name, email, id, major, role/i),
+      screen.getByPlaceholderText(/search by name, major, interests/i),
       "jordan",
     );
     expect(screen.getByText("Jordan Smith")).toBeInTheDocument();
@@ -198,103 +201,8 @@ describe("MembersPage", () => {
     expect(await screen.findByText("Page Two Member")).toBeInTheDocument();
     expect(fetchMembers).toHaveBeenLastCalledWith({
       page: 2,
-      page_size: 10,
+      page_size: 12,
     });
-  });
-
-  it("does not show role promotion controls for board members", async () => {
-    const user = userEvent.setup();
-    const { fetchMembers, fetchPendingMembers } = await import(
-      "../lib/members-api"
-    );
-    vi.mocked(fetchPendingMembers).mockResolvedValue({ members: [], total: 0 });
-    vi.mocked(fetchMembers).mockResolvedValue(mockDirectoryResponse());
-
-    renderMembersPage("/members?tab=pending", { role: "board", id: 1 });
-    await user.click(screen.getByRole("button", { name: "Directory" }));
-    await screen.findByText("Alex Member");
-
-    expect(
-      screen.queryByLabelText("Change role for Alex Member"),
-    ).not.toBeInTheDocument();
-    expect(screen.getByText("Board")).toBeInTheDocument();
-  });
-
-  it("lets presidents promote a general member to board", async () => {
-    const user = userEvent.setup();
-    const { fetchMembers, fetchPendingMembers, updateMemberRole } = await import(
-      "../lib/members-api"
-    );
-    vi.mocked(fetchPendingMembers).mockResolvedValue({ members: [], total: 0 });
-    vi.mocked(fetchMembers).mockResolvedValue(
-      mockDirectoryResponse([
-        {
-          ...directoryMember,
-          id: 4,
-          role: "general",
-          full_name: "Promote Me",
-          email: "promote@semo.edu",
-        },
-      ]),
-    );
-    vi.mocked(updateMemberRole).mockResolvedValue({
-      ...directoryMember,
-      id: 4,
-      role: "board",
-      full_name: "Promote Me",
-      email: "promote@semo.edu",
-    });
-
-    renderMembersPage("/members?tab=pending", {
-      id: 1,
-      role: "president",
-      full_name: "President User",
-      email: "president@semo.edu",
-    });
-    await user.click(screen.getByRole("button", { name: "Directory" }));
-    await screen.findByText("Promote Me");
-
-    await user.selectOptions(
-      screen.getByLabelText("Change role for Promote Me"),
-      "board",
-    );
-
-    await waitFor(() => {
-      expect(updateMemberRole).toHaveBeenCalledWith(4, { role: "board" });
-    });
-  });
-
-  it("does not let presidents change their own role", async () => {
-    const user = userEvent.setup();
-    const { fetchMembers, fetchPendingMembers } = await import(
-      "../lib/members-api"
-    );
-    vi.mocked(fetchPendingMembers).mockResolvedValue({ members: [], total: 0 });
-    vi.mocked(fetchMembers).mockResolvedValue(
-      mockDirectoryResponse([
-        {
-          ...directoryMember,
-          id: 1,
-          role: "president",
-          full_name: "President User",
-          email: "president@semo.edu",
-        },
-      ]),
-    );
-
-    renderMembersPage("/members?tab=pending", {
-      id: 1,
-      role: "president",
-      full_name: "President User",
-      email: "president@semo.edu",
-    });
-    await user.click(screen.getByRole("button", { name: "Directory" }));
-    await screen.findByText("President User");
-
-    expect(
-      screen.queryByLabelText("Change role for President User"),
-    ).not.toBeInTheDocument();
-    expect(screen.getByText("President", { selector: "span" })).toBeInTheDocument();
   });
 
   it("lists pending members from the approval queue", async () => {

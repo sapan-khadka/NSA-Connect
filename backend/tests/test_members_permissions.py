@@ -30,11 +30,12 @@ def test_unauthenticated_request_gets_401_on_member_directory(client):
     assert response.status_code == 401
 
 
-def test_general_member_gets_403_on_member_directory(client, general_member_headers):
+def test_general_member_can_access_member_directory(client, general_member_headers):
     response = client.get("/api/v1/members", headers=general_member_headers)
 
-    assert response.status_code == 403
-    assert response.json()["detail"] == BOARD_REQUIRED_DETAIL
+    assert response.status_code == 200
+    assert "members" in response.json()
+    assert all(member["status"] == "approved" for member in response.json()["members"])
 
 
 def test_general_member_gets_403_on_pending_queue(client, general_member_headers):

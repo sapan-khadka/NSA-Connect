@@ -9,7 +9,7 @@ describe("AppLayout navigation", () => {
     cleanup();
   });
 
-  it("does not show Finance, Members, or Dashboard links for general members", () => {
+  it("shows Members for general members but keeps Finance in Admin for board only", () => {
     renderWithRouter(undefined, {
       initialEntries: ["/"],
       auth: {
@@ -19,7 +19,10 @@ describe("AppLayout navigation", () => {
     });
 
     expect(screen.queryByRole("link", { name: "Finance" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Members" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Members" })).toHaveAttribute(
+      "href",
+      "/members",
+    );
     expect(screen.queryByRole("link", { name: "Dashboard" })).not.toBeInTheDocument();
     const headerNav = within(screen.getByRole("banner"));
     expect(headerNav.getByRole("link", { name: "Events" })).toHaveAttribute(

@@ -15,6 +15,7 @@ import { MyTasksPage } from "./pages/MyTasksPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { MeetingMinutesPage } from "./pages/MeetingMinutesPage";
+import { MemberProfilePage } from "./pages/MemberProfilePage";
 import { MembersPage } from "./pages/MembersPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { PastEventsPage } from "./pages/PastEventsPage";
@@ -92,8 +93,16 @@ export const appRoutes: RouteObject[] = [
       {
         path: "members",
         element: (
-          <ProtectedRoute minRole="board">
+          <ProtectedRoute>
             <MembersPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "members/:memberId",
+        element: (
+          <ProtectedRoute>
+            <MemberProfilePage />
           </ProtectedRoute>
         ),
       },

@@ -1,12 +1,16 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
-
-from typing import Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.core.validators import SemoEmailStr, StudentIdStr
-from app.models.member import MemberPosition, MemberRole, MemberStatus
+from app.lib.member_talents import ALL_MEMBER_TALENTS, is_valid_talent
+from app.models.member import (
+    MemberPosition,
+    MemberRole,
+    MemberStatus,
+    ProfileFieldVisibility,
+)
 
 if TYPE_CHECKING:
     from app.models.member import Member
@@ -15,10 +19,6 @@ CURRENT_YEAR = datetime.now().year
 MAX_GRADUATION_YEAR = CURRENT_YEAR + 8
 
 SENSITIVE_MEMBER_FIELDS = frozenset({"password", "hashed_password"})
-
-# ---------------------------------------------------------------------------
-# Request schemas — validate input before it touches the database
-# ---------------------------------------------------------------------------
 
 
 class MemberCreateRequest(BaseModel):
@@ -44,6 +44,38 @@ class MemberProfileUpdateRequest(BaseModel):
         ge=CURRENT_YEAR,
         le=MAX_GRADUATION_YEAR,
     )
+    interests: str | None = Field(default=None, max_length=1000)
+    bio: str | None = Field(default=None, max_length=2000)
+    talents: list[str] | None = None
+    talent_other: str | None = Field(default=None, max_length=255)
+    phone: str | None = Field(default=None, max_length=32)
+    social_handle: str | None = Field(default=None, max_length=255)
+    email_visibility: ProfileFieldVisibility | None = None
+    phone_visibility: ProfileFieldVisibility | None = None
+    social_handle_visibility: ProfileFieldVisibility | None = None
+
+    @field_validator("interests", "bio", "talent_other", "phone", "social_handle", mode="before")
+    @classmethod
+    def strip_optional_text(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            stripped = value.strip()
+            return stripped or None
+        return value
+
+    @field_validator("talents")
+    @classmethod
+    def validate_talents(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        if not value:
+            return []
+        deduped: list[str] = []
+        for talent in value:
+            if talent not in deduped:
+                if not is_valid_talent(talent):
+                    raise ValueError(f"Invalid talent: {talent}")
+                deduped.append(talent)
+        return deduped
 
     @model_validator(mode="after")
     def require_at_least_one_field(self) -> "MemberProfileUpdateRequest":
@@ -54,9 +86,20 @@ class MemberProfileUpdateRequest(BaseModel):
                 self.email,
                 self.major,
                 self.graduation_year,
+                self.interests,
+                self.bio,
+                self.talents,
+                self.talent_other,
+                self.phone,
+                self.social_handle,
+                self.email_visibility,
+                self.phone_visibility,
+                self.social_handle_visibility,
             )
         ):
             raise ValueError("At least one profile field must be provided")
+        if self.talents and "other" in self.talents and not self.talent_other:
+            raise ValueError("Describe your other talent when selecting Other")
         return self
 
 
@@ -86,27 +129,25 @@ class MemberStatusUpdateRequest(BaseModel):
     status: MemberStatus
 
 
-# ---------------------------------------------------------------------------
-# Response schemas — explicit public API shape (never includes credentials)
-# ---------------------------------------------------------------------------
-
-
 class MemberResponse(BaseModel):
-    """Public member profile returned by the API.
-
-    Maps only safe fields from the database model. Passwords and hashes are
-    never accepted or emitted, even if present on the ORM instance.
-    """
-
     id: int
     full_name: str
-    email: SemoEmailStr
-    student_id: str
+    email: str | None = None
+    student_id: str | None = None
     major: str
     graduation_year: int
     role: MemberRole
     status: MemberStatus
     position: MemberPosition = MemberPosition.MEMBER
+    interests: str | None = None
+    bio: str | None = None
+    talents: list[str] = Field(default_factory=list)
+    talent_other: str | None = None
+    phone: str | None = None
+    social_handle: str | None = None
+    email_visibility: ProfileFieldVisibility = ProfileFieldVisibility.PUBLIC
+    phone_visibility: ProfileFieldVisibility = ProfileFieldVisibility.BOARD_ONLY
+    social_handle_visibility: ProfileFieldVisibility = ProfileFieldVisibility.BOARD_ONLY
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -114,6 +155,13 @@ class MemberResponse(BaseModel):
     @classmethod
     def default_missing_position(cls, value: Any) -> Any:
         return value if value is not None else MemberPosition.MEMBER
+
+    @field_validator("talents", mode="before")
+    @classmethod
+    def default_talents(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        return list(value)
 
     @model_validator(mode="before")
     @classmethod
@@ -127,21 +175,49 @@ class MemberResponse(BaseModel):
         return value
 
     @classmethod
-    def from_member(cls, member: "Member") -> "MemberResponse":
+    def from_member(
+        cls,
+        member: "Member",
+        *,
+        viewer: "Member | None" = None,
+    ) -> "MemberResponse":
+        is_self = viewer is not None and viewer.id == member.id
+        is_board = viewer is not None and viewer.has_role_at_least(MemberRole.BOARD)
+
+        def field_visible(visibility: ProfileFieldVisibility) -> bool:
+            if is_self or is_board:
+                return True
+            return visibility == ProfileFieldVisibility.PUBLIC
+
+        email = member.email if field_visible(member.email_visibility) else None
+        phone = member.phone if member.phone and field_visible(member.phone_visibility) else None
+        social_handle = (
+            member.social_handle
+            if member.social_handle and field_visible(member.social_handle_visibility)
+            else None
+        )
+        student_id = member.student_id if is_self or is_board else None
+
         return cls(
             id=member.id,
             full_name=member.full_name,
-            email=member.email,
-            student_id=member.student_id,
+            email=email,
+            student_id=student_id,
             major=member.major,
             graduation_year=member.graduation_year,
             role=member.role,
             status=member.status,
             position=member.position or MemberPosition.MEMBER,
+            interests=member.interests,
+            bio=member.bio,
+            talents=list(member.talents or []),
+            talent_other=member.talent_other,
+            phone=phone,
+            social_handle=social_handle,
+            email_visibility=member.email_visibility,
+            phone_visibility=member.phone_visibility,
+            social_handle_visibility=member.social_handle_visibility,
         )
-
-    def public_fields(self) -> set[str]:
-        return set(MemberResponse.model_fields.keys())
 
 
 class MemberListResponse(BaseModel):
@@ -155,3 +231,39 @@ class PaginatedMemberListResponse(BaseModel):
     page: int
     page_size: int
     total_pages: int
+
+
+class MemberTalentOptionsResponse(BaseModel):
+    talents: list[str]
+    labels: dict[str, str]
+
+
+class EventParticipantInvitationCreateRequest(BaseModel):
+    member_ids: list[int] = Field(min_length=1)
+
+
+class EventParticipantInvitationResponse(BaseModel):
+    id: int
+    event_id: int
+    member_id: int
+    member_name: str
+    invited_by_id: int
+    invited_by_name: str
+    created_at: datetime
+
+    @classmethod
+    def from_invitation(cls, invitation) -> "EventParticipantInvitationResponse":
+        return cls(
+            id=invitation.id,
+            event_id=invitation.event_id,
+            member_id=invitation.member_id,
+            member_name=invitation.member.full_name,
+            invited_by_id=invitation.invited_by_id,
+            invited_by_name=invitation.invited_by.full_name,
+            created_at=invitation.created_at,
+        )
+
+
+class EventParticipantInvitationListResponse(BaseModel):
+    invitations: list[EventParticipantInvitationResponse]
+    total: int

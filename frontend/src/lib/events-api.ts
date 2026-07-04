@@ -31,6 +31,7 @@ export type EventResponse = {
   budget: string;
   created_by_id: number;
   current_member_rsvp_status: RsvpStatus | null;
+  current_member_is_invited_participant?: boolean;
   finance_lock_at: string;
   is_finance_locked: boolean;
   is_past: boolean;
@@ -187,4 +188,46 @@ export async function fetchEventAttendees(
     `/v1/events/${eventId}/rsvps`,
   );
   return response.data;
+}
+
+export type EventParticipantInvitation = {
+  id: number;
+  event_id: number;
+  member_id: number;
+  member_name: string;
+  invited_by_id: number;
+  invited_by_name: string;
+  created_at: string;
+};
+
+export type EventParticipantInvitationListResponse = {
+  invitations: EventParticipantInvitation[];
+  total: number;
+};
+
+export async function fetchEventInvitedParticipants(
+  eventId: number,
+): Promise<EventParticipantInvitationListResponse> {
+  const response = await api.get<EventParticipantInvitationListResponse>(
+    `/v1/events/${eventId}/invited-participants`,
+  );
+  return response.data;
+}
+
+export async function inviteEventParticipants(
+  eventId: number,
+  memberIds: number[],
+): Promise<EventParticipantInvitationListResponse> {
+  const response = await api.post<EventParticipantInvitationListResponse>(
+    `/v1/events/${eventId}/invited-participants`,
+    { member_ids: memberIds },
+  );
+  return response.data;
+}
+
+export async function removeEventInvitedParticipant(
+  eventId: number,
+  memberId: number,
+): Promise<void> {
+  await api.delete(`/v1/events/${eventId}/invited-participants/${memberId}`);
 }

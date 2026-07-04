@@ -5,6 +5,11 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_member, require_board
 from app.models.event import EventType
 from app.models.member import Member
+from app.schemas.member import (
+    EventParticipantInvitationCreateRequest,
+    EventParticipantInvitationListResponse,
+    EventParticipantInvitationResponse,
+)
 from app.schemas.event import (
     EventAttendeesResponse,
     EventCreateRequest,
@@ -18,6 +23,12 @@ from app.schemas.event import (
 )
 from app.schemas.preptask import PrepTaskCreateRequest, PrepTaskResponse
 from app.schemas.volunteer import VolunteerSlotCreateRequest, VolunteerSlotResponse
+from app.services.event_invitation_service import (
+    invite_members_to_event,
+    is_member_invited_to_event,
+    list_event_participant_invitations,
+    remove_event_participant_invitation,
+)
 from app.services.event_service import (
     EventNotFoundError,
     create_event,
@@ -44,6 +55,7 @@ from app.services.rsvp_service import (
     rsvp_to_event,
     set_event_rsvp_status,
 )
+from app.services.member_service import MemberNotFoundError
 from app.services.volunteer_service import create_volunteer_slot_for_event
 from app.api.v1.event_meetings import router as event_meetings_router
 from app.api.v1.event_photos import router as event_photos_router
@@ -62,9 +74,11 @@ def _build_event_response(
     member_id: int,
 ) -> EventResponse:
     current_status = get_member_rsvp_status(db, event.id, member_id)
+    is_invited = is_member_invited_to_event(db, event.id, member_id)
     return EventResponse.from_event(
         event,
         current_member_rsvp_status=current_status,
+        current_member_is_invited_participant=is_invited,
     )
 
 
@@ -75,9 +89,11 @@ def _build_event_detail_response(
     member_id: int,
 ) -> EventDetailResponse:
     current_status = get_member_rsvp_status(db, event.id, member_id)
+    is_invited = is_member_invited_to_event(db, event.id, member_id)
     return EventDetailResponse.from_event(
         event,
         current_member_rsvp_status=current_status,
+        current_member_is_invited_participant=is_invited,
     )
 
 
@@ -247,6 +263,95 @@ def cancel_event_rsvp_endpoint(
         event_id=event_id,
         current_member_rsvp_status=None,
     )
+
+
+@router.get(
+    "/{event_id}/invited-participants",
+    response_model=EventParticipantInvitationListResponse,
+)
+def list_event_invited_participants_endpoint(
+    event_id: int,
+    _: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    try:
+        invitations = list_event_participant_invitations(db, event_id)
+    except EventNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        ) from None
+
+    return EventParticipantInvitationListResponse(
+        invitations=[
+            EventParticipantInvitationResponse.from_invitation(invitation)
+            for invitation in invitations
+        ],
+        total=len(invitations),
+    )
+
+
+@router.post(
+    "/{event_id}/invited-participants",
+    response_model=EventParticipantInvitationListResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def invite_event_participants_endpoint(
+    event_id: int,
+    data: EventParticipantInvitationCreateRequest,
+    current_member: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    try:
+        invitations = invite_members_to_event(
+            db,
+            event_id=event_id,
+            member_ids=data.member_ids,
+            invited_by_id=current_member.id,
+        )
+    except EventNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        ) from None
+    except MemberNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="One or more members were not found",
+        ) from None
+
+    return EventParticipantInvitationListResponse(
+        invitations=[
+            EventParticipantInvitationResponse.from_invitation(invitation)
+            for invitation in invitations
+        ],
+        total=len(invitations),
+    )
+
+
+@router.delete(
+    "/{event_id}/invited-participants/{member_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def remove_event_invited_participant_endpoint(
+    event_id: int,
+    member_id: int,
+    _: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    try:
+        remove_event_participant_invitation(
+            db,
+            event_id=event_id,
+            member_id=member_id,
+        )
+    except MemberNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invitation not found",
+        ) from None
+
+    return None
 
 
 @router.get("/{event_id}/rsvps", response_model=EventAttendeesResponse)

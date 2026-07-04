@@ -1,6 +1,6 @@
 from enum import StrEnum
 
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, Text, JSON
 from sqlalchemy import Enum as SqlEnum
 
 from app.models.base import Base
@@ -24,6 +24,11 @@ class MemberStatus(StrEnum):
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
+
+
+class ProfileFieldVisibility(StrEnum):
+    PUBLIC = "public"
+    BOARD_ONLY = "board_only"
 
 
 class MemberPosition(StrEnum):
@@ -87,6 +92,39 @@ class Member(Base):
         ),
         default=MemberPosition.MEMBER,
         server_default=MemberPosition.MEMBER.value,
+        nullable=False,
+    )
+    interests = Column(Text, nullable=True)
+    bio = Column(Text, nullable=True)
+    talents = Column(JSON, nullable=False, default=list, server_default="[]")
+    talent_other = Column(String(255), nullable=True)
+    phone = Column(String(32), nullable=True)
+    social_handle = Column(String(255), nullable=True)
+    email_visibility = Column(
+        SqlEnum(
+            ProfileFieldVisibility,
+            values_callable=lambda values: [value.value for value in values],
+        ),
+        default=ProfileFieldVisibility.PUBLIC,
+        server_default=ProfileFieldVisibility.PUBLIC.value,
+        nullable=False,
+    )
+    phone_visibility = Column(
+        SqlEnum(
+            ProfileFieldVisibility,
+            values_callable=lambda values: [value.value for value in values],
+        ),
+        default=ProfileFieldVisibility.BOARD_ONLY,
+        server_default=ProfileFieldVisibility.BOARD_ONLY.value,
+        nullable=False,
+    )
+    social_handle_visibility = Column(
+        SqlEnum(
+            ProfileFieldVisibility,
+            values_callable=lambda values: [value.value for value in values],
+        ),
+        default=ProfileFieldVisibility.BOARD_ONLY,
+        server_default=ProfileFieldVisibility.BOARD_ONLY.value,
         nullable=False,
     )
 

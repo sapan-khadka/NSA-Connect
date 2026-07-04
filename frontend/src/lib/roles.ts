@@ -36,9 +36,14 @@ export function canAccessFinance(role: MemberRole): boolean {
   return isRoleAtLeast(role, "board");
 }
 
-/** Matches GET /v1/members and the /members route (board+). */
+/** Matches board-only member admin (pending approvals, role/position controls). */
 export function canViewMemberDirectory(role: MemberRole): boolean {
   return isRoleAtLeast(role, "board");
+}
+
+/** All approved members can browse the networking directory. */
+export function canBrowseMemberDirectory(_role: MemberRole): boolean {
+  return true;
 }
 
 export function formatRoleLabel(role: MemberRole): string {

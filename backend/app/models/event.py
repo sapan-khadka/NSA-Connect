@@ -52,6 +52,11 @@ class Event(Base):
         cascade="all, delete-orphan",
         order_by="EventTask.created_at",
     )
+    participant_invitations = relationship(
+        "EventParticipantInvitation",
+        back_populates="event",
+        cascade="all, delete-orphan",
+    )
     meeting_record = relationship(
         "MeetingRecord",
         back_populates="event",

@@ -5,6 +5,14 @@ import { createMockMember, renderWithRouter } from "../test/test-utils";
 
 vi.mock("../lib/members-api", () => ({
   fetchPendingMembers: vi.fn().mockResolvedValue({ members: [], total: 3 }),
+  fetchMembers: vi.fn().mockResolvedValue({
+    members: [],
+    total: 0,
+    page: 1,
+    page_size: 12,
+    total_pages: 0,
+  }),
+  fetchTalentOptions: vi.fn().mockResolvedValue({ talents: [], labels: {} }),
 }));
 
 vi.mock("../lib/finance-api", () => ({
@@ -129,13 +137,12 @@ describe("protected route redirects", () => {
       expect(fetchPendingMembers).toHaveBeenCalled();
     });
     expect(
-      await screen.findByText("Pending signups"),
+      await screen.findByText(/member signups waiting for approval/i),
     ).toBeInTheDocument();
-    expect(await screen.findByText("3")).toBeInTheDocument();
   });
 
-  it("blocks general members from /members", async () => {
-    const { router } = renderWithRouter(undefined, {
+  it("allows general members to browse /members", async () => {
+    renderWithRouter(undefined, {
       initialEntries: ["/members"],
       auth: {
         member: createMockMember("general"),
@@ -143,10 +150,7 @@ describe("protected route redirects", () => {
       },
     });
 
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/");
-    });
-    expect(screen.queryByText("Member directory")).not.toBeInTheDocument();
+    expect(await screen.findByText("Member directory")).toBeInTheDocument();
   });
 
   it("allows board members to view /finance budget tracking", async () => {

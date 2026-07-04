@@ -38,7 +38,7 @@ def register(data: MemberCreateRequest, db: Session = Depends(get_db)):
             detail="Student ID already registered",
         ) from None
 
-    return MemberResponse.from_member(member)
+    return MemberResponse.from_member(member, viewer=member)
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -67,6 +67,6 @@ def login(data: MemberLoginRequest, db: Session = Depends(get_db)):
 
 @router.get("/me", response_model=MemberResponse)
 def me(current_member: Member = Depends(get_current_member)):
-    return MemberResponse.from_member(current_member)
+    return MemberResponse.from_member(current_member, viewer=current_member)
 
 # TODO: POST /logout — invalidate session / token

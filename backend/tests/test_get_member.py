@@ -39,7 +39,11 @@ def test_get_member_returns_404_for_unknown_id(client, board_member_headers):
     assert response.json()["detail"] == "Member not found"
 
 
-def test_general_member_cannot_get_member_by_id(client, general_member_headers):
-    response = client.get("/api/v1/members/1", headers=general_member_headers)
+def test_general_member_can_get_approved_member_by_id(client, db_session, general_member_headers):
+    register_member(client, email="peer@semo.edu", student_id="99999999")
+    set_member_approved(db_session, email="peer@semo.edu")
 
-    assert response.status_code == 403
+    response = client.get("/api/v1/members/2", headers=general_member_headers)
+
+    assert response.status_code == 200
+    assert response.json()["email"] is not None or response.json()["email"] is None

@@ -233,6 +233,11 @@ export function EventDetailPage() {
         </p>
 
         <div className="mt-5">
+          {event.current_member_is_invited_participant ? (
+            <p className="mb-3 inline-flex rounded-full bg-[#EEF4FF] px-3 py-1 text-sm text-[#1B4B8A]">
+              You&apos;ve been invited to participate
+            </p>
+          ) : null}
           <EventRsvpButton
             currentStatus={event.current_member_rsvp_status}
             canRsvp={isEventUpcoming(event.starts_at)}

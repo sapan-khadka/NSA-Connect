@@ -1,4 +1,4 @@
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password, verify_password
@@ -66,6 +66,7 @@ def create_member(db: Session, data: MemberCreateRequest) -> Member:
         hashed_password=hash_password(data.password),
         role=MemberRole.GENERAL,
         status=MemberStatus.PENDING,
+        talents=[],
     )
     db.add(member)
     db.commit()
@@ -105,10 +106,15 @@ def list_members_paginated(
     page: int = 1,
     page_size: int = 20,
     status: MemberStatus | None = None,
+    talents: list[str] | None = None,
 ) -> tuple[list[Member], int]:
     filters = []
     if status is not None:
         filters.append(Member.status == status)
+
+    if talents:
+        talent_filters = [Member.talents.contains([talent]) for talent in talents]
+        filters.append(or_(*talent_filters))
 
     total = db.scalar(select(func.count()).select_from(Member).where(*filters)) or 0
     offset = (page - 1) * page_size
@@ -116,7 +122,7 @@ def list_members_paginated(
         db.scalars(
             select(Member)
             .where(*filters)
-            .order_by(Member.id)
+            .order_by(Member.full_name.asc(), Member.id.asc())
             .offset(offset)
             .limit(page_size)
         ).all()
@@ -290,6 +296,35 @@ def update_member_profile(
 
     if data.graduation_year is not None:
         member.graduation_year = data.graduation_year
+
+    if data.interests is not None:
+        member.interests = data.interests
+
+    if data.bio is not None:
+        member.bio = data.bio
+
+    if data.talents is not None:
+        member.talents = data.talents
+        if "other" not in data.talents:
+            member.talent_other = None
+
+    if data.talent_other is not None:
+        member.talent_other = data.talent_other
+
+    if data.phone is not None:
+        member.phone = data.phone
+
+    if data.social_handle is not None:
+        member.social_handle = data.social_handle
+
+    if data.email_visibility is not None:
+        member.email_visibility = data.email_visibility
+
+    if data.phone_visibility is not None:
+        member.phone_visibility = data.phone_visibility
+
+    if data.social_handle_visibility is not None:
+        member.social_handle_visibility = data.social_handle_visibility
 
     db.commit()
     db.refresh(member)

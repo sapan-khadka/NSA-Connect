@@ -66,6 +66,7 @@ class EventResponse(BaseModel):
     budget: Decimal
     created_by_id: int
     current_member_rsvp_status: RsvpStatus | None = None
+    current_member_is_invited_participant: bool = False
     finance_lock_at: datetime
     is_finance_locked: bool
     is_past: bool
@@ -78,6 +79,7 @@ class EventResponse(BaseModel):
         event: "Event",
         *,
         current_member_rsvp_status: RsvpStatus | None = None,
+        current_member_is_invited_participant: bool = False,
     ) -> "EventResponse":
         return cls(
             id=event.id,
@@ -90,6 +92,7 @@ class EventResponse(BaseModel):
             budget=Decimal(event.budget),
             created_by_id=event.created_by_id,
             current_member_rsvp_status=current_member_rsvp_status,
+            current_member_is_invited_participant=current_member_is_invited_participant,
             finance_lock_at=get_event_finance_lock_at(event),
             is_finance_locked=is_event_finance_locked(event),
             is_past=not event.is_upcoming,
@@ -157,10 +160,12 @@ class EventDetailResponse(EventResponse):
         event: "Event",
         *,
         current_member_rsvp_status: RsvpStatus | None = None,
+        current_member_is_invited_participant: bool = False,
     ) -> "EventDetailResponse":
         base = EventResponse.from_event(
             event,
             current_member_rsvp_status=current_member_rsvp_status,
+            current_member_is_invited_participant=current_member_is_invited_participant,
         )
         return cls(
             **base.model_dump(),

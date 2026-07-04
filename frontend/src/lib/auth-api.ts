@@ -1,6 +1,7 @@
 import { isAxiosError } from "axios";
 
 import type { MemberPosition, MemberRole } from "./roles";
+import type { MemberTalent, ProfileFieldVisibility } from "./member-talents";
 
 import api from "./api";
 import { normalizeSemoEmail, normalizeStudentId } from "./validation";
@@ -37,13 +38,22 @@ export type RegisterRequest = {
 export type MemberResponse = {
   id: number;
   full_name: string;
-  email: string;
-  student_id: string;
+  email: string | null;
+  student_id: string | null;
   major: string;
   graduation_year: number;
   role: MemberRole;
   status: string;
   position: MemberPosition;
+  interests?: string | null;
+  bio?: string | null;
+  talents?: MemberTalent[] | string[];
+  talent_other?: string | null;
+  phone?: string | null;
+  social_handle?: string | null;
+  email_visibility?: ProfileFieldVisibility;
+  phone_visibility?: ProfileFieldVisibility;
+  social_handle_visibility?: ProfileFieldVisibility;
 };
 
 export async function fetchCurrentMember(): Promise<MemberResponse> {
