@@ -9,7 +9,7 @@ type HomeProfileCardProps = {
 
 export function HomeProfileCard({ member }: HomeProfileCardProps) {
   return (
-    <HomeCard>
+    <HomeCard className="self-start">
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-lg font-light tracking-subhead text-foreground">Your profile</h2>
         <ArrowLink to="/profile">Edit profile</ArrowLink>

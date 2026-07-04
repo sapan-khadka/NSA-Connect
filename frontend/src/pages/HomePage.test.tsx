@@ -1,4 +1,5 @@
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -12,6 +13,7 @@ vi.mock("../lib/events-api", async () => {
   return {
     ...actual,
     fetchUpcomingEvents: vi.fn(),
+    fetchEvents: vi.fn().mockResolvedValue({ events: [], total: 0 }),
     fetchEventAttendees: vi.fn(),
     updateEventRsvp: vi.fn(),
     rsvpToEvent: vi.fn(),
@@ -205,12 +207,21 @@ describe("HomePage", () => {
       }),
     ).toBeInTheDocument();
     expect(screen.getByText("Test User")).toHaveClass("text-foreground");
-    expect(screen.queryByRole("navigation", { name: "Shortcuts" })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("navigation", { name: "Finance quick actions" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "+ Log transaction" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Review approvals/ })).toHaveAttribute(
+      "href",
+      "/finance?tab=approvals",
+    );
 
     expect(await screen.findByLabelText("Activity")).toBeInTheDocument();
     expect(screen.getByText("1 assigned task past due")).toBeInTheDocument();
     expect(screen.getByText("2 member signups waiting for approval")).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: /Review/ })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: /Review ›/ })).toHaveLength(2);
 
     expect(screen.getByText("Your work")).toBeInTheDocument();
     expect(screen.getByText("Print flyers")).toBeInTheDocument();
@@ -261,6 +272,9 @@ describe("HomePage", () => {
     );
 
     expect(screen.queryByText("Next board meeting")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("navigation", { name: "Finance quick actions" }),
+    ).not.toBeInTheDocument();
     expect(mockedMeetings).not.toHaveBeenCalled();
   });
 
@@ -475,5 +489,34 @@ describe("HomePage", () => {
       "href",
       "/events/photos",
     );
+  });
+
+  it("opens the log transaction modal for treasurer users", async () => {
+    const user = userEvent.setup();
+    mockedUpcoming.mockResolvedValue({ events: [sampleEvent], total: 1 });
+    mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
+    mockedPendingMembers.mockResolvedValue({ members: [], total: 0 });
+    mockedFinancePending.mockResolvedValue({ requests: [], total: 1 });
+    mockedMyFinanceSummary.mockResolvedValue({
+      pending_count: 0,
+      recently_rejected_count: 0,
+      recently_approved_count: 0,
+    });
+    mockedMeetings.mockResolvedValue({ meetings: [], total: 0 });
+
+    render(
+      <MemoryRouter>
+        <MockAuthProvider value={{ member: createMockMember("treasurer") }}>
+          <HomePage />
+        </MockAuthProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "+ Log transaction" }),
+    );
+
+    expect(screen.getByRole("dialog", { name: "Log transaction" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Amount")).toBeInTheDocument();
   });
 });

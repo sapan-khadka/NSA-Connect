@@ -60,4 +60,37 @@ describe("LogFinanceEntryForm", () => {
     );
     expect(onCreated).toHaveBeenCalled();
   });
+
+  it("submits from standalone presentation without expand step", async () => {
+    const user = userEvent.setup();
+    const { createFinanceEntry } = await import("../lib/finance-api");
+    const onCreated = vi.fn();
+    vi.mocked(createFinanceEntry).mockResolvedValue({
+      id: 1,
+      entry_type: "expense",
+      category: "food_beverage",
+      amount: "12.00",
+      description: "Snacks",
+      receipt_url: null,
+      event_id: null,
+      created_by_id: 1,
+      created_at: "2030-01-01T00:00:00Z",
+    });
+
+    render(
+      <LogFinanceEntryForm
+        eventOptions={[]}
+        onCreated={onCreated}
+        presentation="standalone"
+        idPrefix="test"
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Amount"), "12");
+    await user.type(screen.getByLabelText("Description"), "Snacks");
+    await user.click(screen.getByRole("button", { name: "Log transaction" }));
+
+    expect(createFinanceEntry).toHaveBeenCalled();
+    expect(onCreated).toHaveBeenCalled();
+  });
 });

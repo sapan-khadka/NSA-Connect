@@ -13,12 +13,15 @@ import { Link } from "react-router-dom";
 
 import { EventRsvpButton } from "../components/EventRsvpButton";
 import { CoverBanner } from "../components/CoverBanner";
+import { HomeFinanceQuickActions } from "../components/HomeFinanceQuickActions";
 import { HomeHeroBrand } from "../components/AppLogo";
 import { HomeProfileCard } from "../components/HomeProfileCard";
+import { LogFinanceEntryForm } from "../components/LogFinanceEntryForm";
 import { RecentMemoriesStrip } from "../components/RecentMemoriesStrip";
 import { ArrowLink } from "../components/ui/ArrowLink";
 import { EmptyState } from "../components/ui/EmptyState";
 import { HomeCard } from "../components/ui/HomeCard";
+import { Modal } from "../components/ui/Modal";
 import { SectionLabel } from "../components/ui/SectionLabel";
 import { useAuth } from "../context/useAuth";
 import type { MemberResponse } from "../lib/auth-api";
@@ -28,11 +31,13 @@ import { EVENT_TYPE_BADGE_CLASS, EVENT_TYPE_LABELS } from "../lib/event-types";
 import { applyRsvpStatus, formatCompactAttendeeSummary } from "../lib/event-rsvp";
 import {
   fetchEventAttendees,
+  fetchEvents,
   fetchUpcomingEvents,
   updateEventRsvp,
   type EventResponse,
   type RsvpStatus,
 } from "../lib/events-api";
+import { isEventFinanceEditable } from "../lib/event-finance";
 import { fetchPendingFinanceChangeRequests, fetchMyFinanceChangeRequestSummary } from "../lib/finance-api";
 import { formatEventDateTime } from "../lib/format-datetime";
 import {
@@ -51,6 +56,7 @@ import { fetchMeetings, type MeetingSummary } from "../lib/meetings-api";
 import { fetchRecentMemories, type RecentMemoriesPreview } from "../lib/recent-memories";
 import {
   canAccessFinance,
+  canManageTreasury,
   canViewMemberDirectory,
   canViewTaskOversight,
   isRoleAtLeast,
@@ -127,22 +133,20 @@ function ActivityRow({
         <div className="min-w-0 flex-1">
           <p
             className={
-              isRecent
-                ? "text-sm text-label"
-                : activity.tone === "urgent"
-                  ? "text-sm font-medium text-foreground"
-                  : "text-sm text-label"
+              !isRecent && activity.tone === "urgent"
+                ? "text-sm font-medium text-foreground"
+                : "text-sm text-foreground"
             }
           >
             {activity.message}
           </p>
           {isRecent ? (
-            <p className="mt-1 text-xs text-label/80">{RECENT_ACTIVITY_FOOTNOTE}</p>
+            <p className="mt-1 text-xs text-label">{RECENT_ACTIVITY_FOOTNOTE}</p>
           ) : null}
         </div>
         <ArrowLink
           to={activity.to}
-          className={isRecent ? "shrink-0 whitespace-nowrap text-label" : "shrink-0 whitespace-nowrap"}
+          className="shrink-0 whitespace-nowrap"
         >
           {activity.actionLabel}
         </ArrowLink>
@@ -248,8 +252,15 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
   const [recentMemories, setRecentMemories] = useState<RecentMemoriesPreview | null>(
     null,
   );
+  const [financePendingCount, setFinancePendingCount] = useState(0);
+  const [financeEventOptions, setFinanceEventOptions] = useState<
+    Array<{ id: number; name: string }>
+  >([]);
+  const [isLogTransactionOpen, setIsLogTransactionOpen] = useState(false);
+  const [homeRefreshKey, setHomeRefreshKey] = useState(0);
 
   const isBoardMember = isRoleAtLeast(member.role, "board");
+  const showFinanceQuickActions = canManageTreasury(member.role);
   const quickLinks = buildQuickLinks(member);
   const tasksPath = getMyTasksPath(member.role);
 
@@ -271,14 +282,14 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
           ? fetchPendingMembers().catch(() => ({ members: [], total: 0 }))
           : Promise.resolve(null);
 
-        const financePendingPromise = isRoleAtLeast(member.role, "treasurer")
+        const financePendingPromise = showFinanceQuickActions
           ? fetchPendingFinanceChangeRequests().catch(() => ({
               requests: [],
               total: 0,
             }))
           : Promise.resolve(null);
 
-        const myFinanceRequestsPromise = isRoleAtLeast(member.role, "treasurer")
+        const myFinanceRequestsPromise = showFinanceQuickActions
           ? fetchMyFinanceChangeRequestSummary().catch(() => ({
               pending_count: 0,
               recently_rejected_count: 0,
@@ -332,6 +343,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
         );
         setNextBoardMeeting(nextMeeting);
         setMeetingAttendeeSummary(attendeeSummary);
+        setFinancePendingCount(financePending?.total ?? 0);
       } catch (caught) {
         if (!cancelled) {
           setLoadError(getApiErrorMessage(caught));
@@ -348,7 +360,41 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
     return () => {
       cancelled = true;
     };
-  }, [isBoardMember, member]);
+  }, [isBoardMember, member, showFinanceQuickActions, homeRefreshKey]);
+
+  useEffect(() => {
+    if (!showFinanceQuickActions) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadFinanceEventOptions() {
+      try {
+        const response = await fetchEvents();
+        if (!cancelled) {
+          setFinanceEventOptions(
+            response.events
+              .filter((event) => isEventFinanceEditable(event))
+              .map((event) => ({
+                id: event.id,
+                name: event.name,
+              })),
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setFinanceEventOptions([]);
+        }
+      }
+    }
+
+    void loadFinanceEventOptions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showFinanceQuickActions, homeRefreshKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -401,7 +447,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <CoverBanner />
 
       <div>
@@ -414,14 +460,21 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
         </p>
       </div>
 
+      {showFinanceQuickActions ? (
+        <HomeFinanceQuickActions
+          pendingApprovalCount={financePendingCount}
+          onLogTransaction={() => setIsLogTransactionOpen(true)}
+        />
+      ) : null}
+
       {loadError ? (
         <div role="alert" className="ds-alert-banner">
           {loadError}
         </div>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-        <section aria-label="Activity" className="ds-card p-4 sm:p-5">
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+        <section aria-label="Activity" className="ds-card self-start p-4">
           <h2 className="ds-section-label">Activity</h2>
 
           {isLoading ? (
@@ -457,7 +510,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
           ) : null}
         </section>
 
-        <HomeCard padding="sm">
+        <HomeCard padding="sm" className="self-start">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-base font-medium text-foreground">
               {member.role === "general" ? "Assigned work" : "Your work"}
@@ -524,11 +577,11 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
       <div
         className={
           isBoardMember && nextBoardMeeting
-            ? "grid items-start gap-6 lg:grid-cols-2"
-            : "grid gap-6"
+            ? "grid items-start gap-5 lg:grid-cols-2"
+            : "grid items-start gap-5"
         }
       >
-        <HomeCard padding="sm">
+        <HomeCard padding="sm" className="self-start">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-base font-medium text-foreground">Up next</h2>
             <ArrowLink to="/events/calendar">Full calendar</ArrowLink>
@@ -579,7 +632,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
         </HomeCard>
 
         {isBoardMember && nextBoardMeeting ? (
-          <HomeCard padding="sm">
+          <HomeCard padding="sm" className="self-start">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-base font-medium text-foreground">
@@ -605,11 +658,11 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
         ) : null}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)]">
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)]">
         <HomeProfileCard member={member} />
 
         {quickLinks.length > 0 ? (
-          <HomeCard padding="sm">
+          <HomeCard padding="sm" className="self-start">
             <h2 className="text-base font-medium text-foreground">
               More for your role
             </h2>
@@ -625,6 +678,24 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
       </div>
 
       {recentMemories ? <RecentMemoriesStrip memories={recentMemories} /> : null}
+
+      <Modal
+        open={isLogTransactionOpen}
+        title="Log transaction"
+        onClose={() => setIsLogTransactionOpen(false)}
+      >
+        {isLogTransactionOpen ? (
+          <LogFinanceEntryForm
+            presentation="standalone"
+            idPrefix="home-log-transaction"
+            eventOptions={financeEventOptions}
+            onCreated={() => {
+              setIsLogTransactionOpen(false);
+              setHomeRefreshKey((current) => current + 1);
+            }}
+          />
+        ) : null}
+      </Modal>
     </div>
   );
 }

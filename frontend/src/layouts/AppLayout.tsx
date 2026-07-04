@@ -26,7 +26,6 @@ export function AppLayout() {
   const showFinance = member ? canAccessFinance(member.role) : false;
   const showMeetingMinutes = showMemberDirectory;
   const showAnnouncementEmail = showMemberDirectory;
-  const isWidePage = location.pathname.startsWith("/events");
 
   const adminItems = [
     ...(showMemberDirectory ? [{ label: "Members", to: "/members" }] : []),
@@ -88,12 +87,7 @@ export function AppLayout() {
         </nav>
       </header>
 
-      <main
-        className={[
-          "mx-auto w-full px-6 py-8",
-          isWidePage ? "max-w-7xl" : "max-w-6xl",
-        ].join(" ")}
-      >
+      <main className="mx-auto w-full max-w-7xl px-6 py-8">
         <Outlet />
       </main>
     </div>
