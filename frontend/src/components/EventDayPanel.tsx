@@ -91,13 +91,13 @@ function UpcomingEventsSidebar({
                 {UPCOMING_GROUP_LABELS[group]}
               </h3>
             </div>
-            <ul className="mt-2 max-h-48 space-y-2 overflow-y-auto pl-0.5">
+            <ul className="mt-2 space-y-2 pl-0.5">
               {groupEvents.map((event) => (
                 <li key={event.id}>
                   <button
                     type="button"
                     onClick={() => onSelectEvent?.(event)}
-                    className="flex w-full items-center gap-2 text-left text-sm hover:opacity-80"
+                    className="events-upcoming-event-card text-sm"
                   >
                     <span
                       aria-hidden="true"
@@ -146,9 +146,11 @@ export function EventDayPanel({
       aria-label="Event details"
       className="space-y-4 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto"
     >
-      <div className="events-sidebar-card p-5">
-        <h2 className="text-base font-medium text-foreground">Upcoming</h2>
-        <div className="mt-4">
+      <div className="events-upcoming-panel p-5">
+        <div className="relative z-10">
+          <h2 className="text-base font-medium text-foreground">Upcoming</h2>
+        </div>
+        <div className="events-upcoming-panel-scroll mt-4">
           <UpcomingEventsSidebar
             events={upcomingEvents}
             loading={upcomingLoading}

@@ -52,10 +52,14 @@ describe("EventDayPanel", () => {
     expect(
       screen.getByText(/Select a day on the calendar/i),
     ).toBeInTheDocument();
-    expect(screen.getByText("Coming up")).toBeInTheDocument();
+    expect(screen.getByText("Upcoming")).toBeInTheDocument();
+    expect(document.querySelector(".events-upcoming-panel")).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Dashain Celebration" }),
-    ).toHaveAttribute("href", "/events/1");
+      document.querySelector(".events-upcoming-panel-scroll"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Dashain Celebration/i }),
+    ).toBeInTheDocument();
   });
 
   it("shows event title, badge, time, and RSVP controls for a selected day", () => {

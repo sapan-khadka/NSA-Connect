@@ -199,6 +199,103 @@
       0 10px 26px rgba(0, 0, 0, 0.06);
   }
 
+  .events-upcoming-panel {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    border: 1px solid #e7ebf1;
+    background: linear-gradient(160deg, #ffffff, #fbfcfe, #f6f9fd);
+    box-shadow: 0 8px 28px rgba(27, 75, 138, 0.1);
+    animation: upcoming-panel-glow 5s ease-in-out infinite;
+  }
+
+  .events-upcoming-panel::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 40%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.85),
+      transparent
+    );
+    transform: skewX(-18deg) translateX(-150%);
+    animation: upcoming-panel-sheen 6s ease-in-out infinite;
+  }
+
+  .events-upcoming-panel-scroll {
+    position: relative;
+    z-index: 10;
+    max-height: min(32rem, calc(100vh - 14rem));
+    overflow-y: auto;
+  }
+
+  .events-upcoming-event-card {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 10px;
+    border: 1px solid rgba(231, 235, 241, 0.65);
+    background: rgba(255, 255, 255, 0.7);
+    padding: 0.5rem 0.625rem;
+    text-align: left;
+    transition:
+      background-color 200ms ease,
+      box-shadow 200ms ease,
+      transform 200ms ease;
+  }
+
+  .events-upcoming-event-card:hover {
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 2px 8px rgba(27, 75, 138, 0.08);
+    transform: translateY(-1px);
+  }
+
+  @keyframes upcoming-panel-sheen {
+    0% {
+      transform: skewX(-18deg) translateX(-150%);
+    }
+
+    100% {
+      transform: skewX(-18deg) translateX(350%);
+    }
+  }
+
+  @keyframes upcoming-panel-glow {
+    0%,
+    100% {
+      box-shadow: 0 8px 28px rgba(27, 75, 138, 0.1);
+    }
+
+    50% {
+      box-shadow: 0 10px 34px rgba(27, 75, 138, 0.16);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .events-upcoming-panel {
+      animation: none;
+      box-shadow: 0 8px 28px rgba(27, 75, 138, 0.12);
+    }
+
+    .events-upcoming-panel::before {
+      animation: none;
+      opacity: 0;
+    }
+
+    .events-upcoming-event-card:hover {
+      transform: none;
+    }
+  }
+
   .btn-primary {
     @apply inline-flex items-center justify-center rounded-pill bg-primary px-5 py-2 text-sm text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60;
     font-weight: 500;
