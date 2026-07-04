@@ -43,7 +43,9 @@ export function MemberDirectoryCard({ member, to }: MemberDirectoryCardProps) {
                 </li>
               ))}
             </ul>
-          ) : null}
+          ) : (
+            <p className="mt-3 text-xs text-label">No talents listed</p>
+          )}
           {contactLine ? (
             <p className="mt-3 truncate text-sm text-foreground">{contactLine}</p>
           ) : (

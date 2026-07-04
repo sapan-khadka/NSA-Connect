@@ -1,4 +1,5 @@
-from sqlalchemy import func, or_, select
+from sqlalchemy import cast, func, or_, select
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password, verify_password
@@ -100,6 +101,15 @@ def list_members_by_status(db: Session, status: MemberStatus | None = None) -> l
     return list(db.scalars(query.order_by(Member.id)).all())
 
 
+def _member_has_talent_filters(db: Session, talents: list[str]):
+    dialect = db.get_bind().dialect.name
+    if dialect == "postgresql":
+        return [
+            cast(Member.talents, JSONB).contains([talent]) for talent in talents
+        ]
+    return [Member.talents.contains([talent]) for talent in talents]
+
+
 def list_members_paginated(
     db: Session,
     *,
@@ -113,7 +123,7 @@ def list_members_paginated(
         filters.append(Member.status == status)
 
     if talents:
-        talent_filters = [Member.talents.contains([talent]) for talent in talents]
+        talent_filters = _member_has_talent_filters(db, talents)
         filters.append(or_(*talent_filters))
 
     total = db.scalar(select(func.count()).select_from(Member).where(*filters)) or 0

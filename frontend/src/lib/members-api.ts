@@ -33,15 +33,41 @@ export async function fetchTalentOptions(): Promise<TalentOptionsResponse> {
   return response.data;
 }
 
+export type FetchMembersParams = {
+  page?: number;
+  page_size?: number;
+  status?: string;
+  talents?: string[];
+};
+
+function serializeMembersQueryParams(params: FetchMembersParams): string {
+  const searchParams = new URLSearchParams();
+
+  if (params.page !== undefined) {
+    searchParams.append("page", String(params.page));
+  }
+  if (params.page_size !== undefined) {
+    searchParams.append("page_size", String(params.page_size));
+  }
+  if (params.status) {
+    searchParams.append("status", params.status);
+  }
+  if (params.talents?.length) {
+    for (const talent of params.talents) {
+      searchParams.append("talents", talent);
+    }
+  }
+
+  return searchParams.toString();
+}
+
 export async function fetchMembers(
   params: FetchMembersParams = {},
 ): Promise<PaginatedMembersResponse> {
-  const response = await api.get<PaginatedMembersResponse>("/v1/members", {
-    params: {
-      ...params,
-      talents: params.talents?.length ? params.talents : undefined,
-    },
-  });
+  const query = serializeMembersQueryParams(params);
+  const response = await api.get<PaginatedMembersResponse>(
+    query ? `/v1/members?${query}` : "/v1/members",
+  );
   return response.data;
 }
 

@@ -10,6 +10,7 @@ import {
 } from "../lib/members-api";
 import {
   formatTalentFilterSummary,
+  memberHasAnyTalent,
   MEMBER_TALENT_LABELS,
   type MemberTalent,
 } from "../lib/member-talents";
@@ -82,19 +83,29 @@ export function MemberDirectory() {
     void loadMembers();
   }, [loadMembers]);
 
-  const visibleMembers = useMemo(
-    () =>
-      isSearching
-        ? members.filter((member) =>
-            memberMatchesSearch(member, debouncedSearch),
-          )
-        : members,
-    [debouncedSearch, isSearching, members],
-  );
+  const visibleMembers = useMemo(() => {
+    let result = members;
+
+    if (selectedTalents.length > 0) {
+      result = result.filter((member) =>
+        memberHasAnyTalent(member, selectedTalents),
+      );
+    }
+
+    if (isSearching) {
+      result = result.filter((member) =>
+        memberMatchesSearch(member, debouncedSearch),
+      );
+    }
+
+    return result;
+  }, [debouncedSearch, isSearching, members, selectedTalents]);
+
+  const filteredCount = isSearching ? visibleMembers.length : total;
 
   const filterSummary =
     selectedTalents.length > 0
-      ? formatTalentFilterSummary(selectedTalents, isSearching ? visibleMembers.length : total)
+      ? formatTalentFilterSummary(selectedTalents, filteredCount, talentLabels)
       : null;
 
   function toggleTalent(talent: string) {
@@ -121,9 +132,7 @@ export function MemberDirectory() {
             </h2>
             <p className="mt-1 text-sm text-label">
               {filterSummary ??
-                `${isSearching ? visibleMembers.length : total} member${
-                  (isSearching ? visibleMembers.length : total) === 1 ? "" : "s"
-                }`}
+                `${filteredCount} member${filteredCount === 1 ? "" : "s"}`}
             </p>
             {selectedTalents.length > 0 ? (
               <p className="mt-1 text-xs text-label">
@@ -195,9 +204,11 @@ export function MemberDirectory() {
           <p className="text-sm text-label">Loading members...</p>
         ) : visibleMembers.length === 0 ? (
           <p className="text-sm text-label">
-            {isSearching || selectedTalents.length > 0
-              ? "No members match your filters."
-              : "No members found."}
+            {selectedTalents.length > 0 && !isSearching
+              ? "No members have this talent yet."
+              : isSearching
+                ? "No members match your search."
+                : "No members found."}
           </p>
         ) : (
           visibleMembers.map((member) => (

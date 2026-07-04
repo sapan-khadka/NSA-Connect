@@ -101,11 +101,16 @@ def test_talent_filter_uses_any_match(client, db_session):
     filtered = client.get(
         "/api/v1/members",
         headers=headers,
-        params=[("talents", "dancing"), ("talents", "cooking")],
+        params=[("talents", "dancing")],
     )
     assert filtered.status_code == 200
-    names = {item["full_name"] for item in filtered.json()["members"]}
-    assert len(names) >= 1
+    body = filtered.json()
+    assert body["total"] == 1
+    assert len(body["members"]) == 1
+    assert body["members"][0]["talents"] == ["dancing"]
+
+    unfiltered = client.get("/api/v1/members", headers=headers)
+    assert unfiltered.json()["total"] >= 2
 
 
 def test_board_can_edit_other_member_profile(client, db_session):

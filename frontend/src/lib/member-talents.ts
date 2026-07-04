@@ -40,18 +40,35 @@ export function formatTalentLabel(talent: string, talentOther?: string | null): 
   return talent;
 }
 
+export function memberHasAnyTalent(
+  member: { talents?: string[] | null },
+  selectedTalents: string[],
+): boolean {
+  if (selectedTalents.length === 0) {
+    return true;
+  }
+  const memberTalents = member.talents ?? [];
+  return selectedTalents.some((talent) => memberTalents.includes(talent));
+}
+
 export function formatTalentFilterSummary(
   selectedTalents: string[],
   count: number,
+  labels: Record<string, string> = MEMBER_TALENT_LABELS,
 ): string {
   if (selectedTalents.length === 0) {
     return "";
   }
+
+  const talentLabels = selectedTalents.map((talent) =>
+    labels[talent] ?? formatTalentLabel(talent),
+  );
+
   if (selectedTalents.length === 1) {
-    const label = formatTalentLabel(selectedTalents[0]).toLowerCase();
-    return `Showing ${count} member${count === 1 ? "" : "s"} who can ${label}`;
+    return `Showing ${count} member${count === 1 ? "" : "s"} · ${talentLabels[0]}`;
   }
-  return `Showing ${count} member${count === 1 ? "" : "s"} with selected talents (any match)`;
+
+  return `Showing ${count} member${count === 1 ? "" : "s"} · ${talentLabels.join(", ")}`;
 }
 
 export function getMemberInitials(fullName: string): string {
