@@ -1,0 +1,349 @@
+import { useEffect, useState, type FormEvent } from "react";
+import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
+
+import { useAuth } from "../context/useAuth";
+import { getApiErrorMessage } from "../lib/auth-api";
+import {
+  checkInGuestToEvent,
+  checkInToEvent,
+  type EventCheckInResult,
+  type EventGuestCheckInResult,
+  type GuestAffiliationType,
+} from "../lib/event-checkin-api";
+
+type PageMode = "choose" | "guest-form" | "member-result" | "guest-result";
+
+export function EventCheckInPage() {
+  const { eventId } = useParams();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const { isAuthenticated, isLoading } = useAuth();
+  const numericEventId = Number(eventId);
+  const token = searchParams.get("token") ?? "";
+
+  const [mode, setMode] = useState<PageMode>("choose");
+  const [memberResult, setMemberResult] = useState<EventCheckInResult | null>(null);
+  const [guestResult, setGuestResult] = useState<EventGuestCheckInResult | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [guestName, setGuestName] = useState("");
+  const [affiliationType, setAffiliationType] = useState<GuestAffiliationType | "">("");
+  const [relatedMemberName, setRelatedMemberName] = useState("");
+
+  useEffect(() => {
+    if (isLoading || !isAuthenticated) {
+      return;
+    }
+    if (!Number.isFinite(numericEventId) || !token) {
+      setErrorMessage("This check-in link is invalid.");
+      return;
+    }
+
+    let cancelled = false;
+
+    async function submitMemberCheckIn() {
+      setSubmitting(true);
+      setErrorMessage(null);
+      try {
+        const response = await checkInToEvent(numericEventId, token);
+        if (!cancelled) {
+          setMemberResult(response);
+          setMode("member-result");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setErrorMessage(getApiErrorMessage(error));
+        }
+      } finally {
+        if (!cancelled) {
+          setSubmitting(false);
+        }
+      }
+    }
+
+    void submitMemberCheckIn();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, isLoading, numericEventId, token]);
+
+  if (!token || !Number.isFinite(numericEventId)) {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 py-10">
+        <div className="ds-alert-banner p-6" role="alert">
+          This check-in link is invalid.
+        </div>
+        <Link to="/" className="ds-link">
+          Back to home
+        </Link>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="py-16 text-center text-sm text-label">
+        Checking your session…
+      </div>
+    );
+  }
+
+  if (isAuthenticated && submitting && mode === "choose") {
+    return (
+      <div className="py-16 text-center text-sm text-label">
+        Checking you in…
+      </div>
+    );
+  }
+
+  if (isAuthenticated && errorMessage && mode === "choose") {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 py-10">
+        <div className="ds-alert-banner p-6" role="alert">
+          {errorMessage}
+        </div>
+        <Link to={`/events/${numericEventId}`} className="ds-link">
+          View event
+        </Link>
+      </div>
+    );
+  }
+
+  if (isAuthenticated && memberResult) {
+    const isSuccess = memberResult.status === "checked_in";
+
+    return (
+      <div className="mx-auto max-w-lg py-10">
+        <section className="ds-card p-8 text-center">
+          <p
+            className={[
+              "text-5xl",
+              isSuccess ? "text-accent" : "text-label",
+            ].join(" ")}
+            aria-hidden
+          >
+            {isSuccess ? "✓" : "•"}
+          </p>
+          <h1 className="mt-4 text-2xl font-light tracking-headline text-foreground">
+            {isSuccess ? "You're checked in!" : "Already checked in"}
+          </h1>
+          <p className="mt-3 text-sm text-label">{memberResult.event_name}</p>
+          <p className="mt-6 text-sm leading-relaxed text-foreground">
+            {memberResult.message}
+          </p>
+          {memberResult.checked_in_at ? (
+            <p className="mt-2 text-xs text-label">
+              Checked in at {new Date(memberResult.checked_in_at).toLocaleString()}
+            </p>
+          ) : null}
+        </section>
+
+        <div className="mt-6 text-center">
+          <Link to={`/events/${numericEventId}`} className="ds-link">
+            View event details
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (guestResult) {
+    return (
+      <div className="mx-auto max-w-lg py-10">
+        <section className="ds-card p-8 text-center">
+          <p className="text-5xl text-accent" aria-hidden>
+            ✓
+          </p>
+          <h1 className="mt-4 text-2xl font-light tracking-headline text-foreground">
+            You&apos;re checked in!
+          </h1>
+          <p className="mt-3 text-sm text-label">{guestResult.event_name}</p>
+          <p className="mt-6 text-sm leading-relaxed text-foreground">
+            {guestResult.message}
+          </p>
+          <p className="mt-2 text-xs text-label">
+            Checked in at {new Date(guestResult.checked_in_at).toLocaleString()}
+          </p>
+        </section>
+      </div>
+    );
+  }
+
+  async function handleGuestSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const trimmedName = guestName.trim();
+    if (!trimmedName) {
+      setErrorMessage("Please enter your name.");
+      return;
+    }
+
+    setSubmitting(true);
+    setErrorMessage(null);
+    try {
+      const response = await checkInGuestToEvent(numericEventId, {
+        token,
+        guest_name: trimmedName,
+        affiliation_type: affiliationType || null,
+        related_member_name:
+          affiliationType === "guest_of_member" && relatedMemberName.trim()
+            ? relatedMemberName.trim()
+            : null,
+      });
+      setGuestResult(response);
+      setMode("guest-result");
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const loginRedirect = `${location.pathname}${location.search}`;
+
+  if (mode === "guest-form") {
+    return (
+      <div className="mx-auto max-w-lg py-10">
+        <section className="ds-card p-8">
+          <h1 className="text-2xl font-light tracking-headline text-foreground">
+            Guest check-in
+          </h1>
+          <p className="mt-2 text-sm text-label">
+            Enter your name to check in. Affiliation details are optional.
+          </p>
+
+          {errorMessage ? (
+            <p className="mt-4 text-sm text-overdue" role="alert">
+              {errorMessage}
+            </p>
+          ) : null}
+
+          <form className="mt-6 space-y-5" onSubmit={(event) => void handleGuestSubmit(event)}>
+            <label className="block">
+              <span className="text-sm font-medium text-foreground">
+                Name <span className="text-overdue">*</span>
+              </span>
+              <input
+                type="text"
+                value={guestName}
+                onChange={(event) => setGuestName(event.target.value)}
+                required
+                autoFocus
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                placeholder="Your full name"
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-medium text-foreground">
+                I&apos;m attending as… <span className="text-label">(optional)</span>
+              </span>
+              <select
+                value={affiliationType}
+                onChange={(event) => {
+                  const value = event.target.value as GuestAffiliationType | "";
+                  setAffiliationType(value);
+                  if (value !== "guest_of_member") {
+                    setRelatedMemberName("");
+                  }
+                }}
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+              >
+                <option value="">Skip — no affiliation</option>
+                <option value="guest_of_member">Guest of a member</option>
+                <option value="faculty_staff">Faculty/Staff</option>
+              </select>
+            </label>
+
+            {affiliationType === "guest_of_member" ? (
+              <label className="block">
+                <span className="text-sm font-medium text-foreground">
+                  Member name <span className="text-label">(optional)</span>
+                </span>
+                <input
+                  type="text"
+                  value={relatedMemberName}
+                  onChange={(event) => setRelatedMemberName(event.target.value)}
+                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  placeholder="Which member invited you?"
+                />
+              </label>
+            ) : null}
+
+            <div className="flex flex-wrap gap-3 pt-2">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="rounded-full bg-accent px-5 py-2 text-sm text-white disabled:opacity-60"
+              >
+                {submitting ? "Checking in…" : "Check in"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("choose");
+                  setErrorMessage(null);
+                }}
+                className="rounded-full border border-gray-200 px-5 py-2 text-sm text-label"
+              >
+                Back
+              </button>
+            </div>
+          </form>
+        </section>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-lg py-10">
+      <section className="ds-card p-8">
+        <h1 className="text-2xl font-light tracking-headline text-foreground">
+          Event check-in
+        </h1>
+        <p className="mt-2 text-sm text-label">
+          Choose how you&apos;d like to check in for this event.
+        </p>
+
+        <div className="mt-8 space-y-4">
+          <Link
+            to="/login"
+            state={{ from: loginRedirect }}
+            className="flex w-full items-center justify-between rounded-xl border border-gray-200 px-5 py-4 text-left hover:border-accent"
+          >
+            <span>
+              <span className="block text-sm font-medium text-foreground">
+                Log in to check in as a member
+              </span>
+              <span className="mt-1 block text-xs text-label">
+                For NSA Connect members with an account
+              </span>
+            </span>
+            <span aria-hidden className="text-label">
+              →
+            </span>
+          </Link>
+
+          <button
+            type="button"
+            onClick={() => setMode("guest-form")}
+            className="flex w-full items-center justify-between rounded-xl border border-gray-200 px-5 py-4 text-left hover:border-accent"
+          >
+            <span>
+              <span className="block text-sm font-medium text-foreground">
+                Check in as a guest
+              </span>
+              <span className="mt-1 block text-xs text-label">
+                For faculty, guests, and visitors without an account
+              </span>
+            </span>
+            <span aria-hidden className="text-label">
+              →
+            </span>
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}

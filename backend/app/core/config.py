@@ -143,4 +143,18 @@ def get_settings() -> Settings:
     return Settings()
 
 
+def get_frontend_url() -> str:
+    """Return FRONTEND_URL, preferring live process env then a fresh Settings read.
+
+    Avoids stale values from the module-level cached `settings` object when
+    backend/.env changes on disk (Docker volume mount) without a process restart.
+    """
+    import os
+
+    from_env = os.environ.get("FRONTEND_URL", "").strip()
+    if from_env:
+        return from_env.rstrip("/")
+    return Settings().FRONTEND_URL.rstrip("/")
+
+
 settings = get_settings()

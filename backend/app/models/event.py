@@ -34,6 +34,7 @@ class Event(Base):
     location = Column(String(255), nullable=True)
     budget = Column(Numeric(10, 2), nullable=False)
     show_in_photo_archive = Column(Boolean, nullable=False, default=True)
+    checkin_token = Column(String(64), nullable=True)
     created_by_id = Column(Integer, ForeignKey("members.id"), nullable=False)
     rsvps = relationship(
         "EventRsvp",
@@ -73,6 +74,18 @@ class Event(Base):
         back_populates="event",
         cascade="all, delete-orphan",
         order_by="EventPhoto.created_at",
+    )
+    check_ins = relationship(
+        "EventCheckIn",
+        back_populates="event",
+        cascade="all, delete-orphan",
+        order_by="EventCheckIn.checked_in_at",
+    )
+    guest_check_ins = relationship(
+        "EventGuestCheckIn",
+        back_populates="event",
+        cascade="all, delete-orphan",
+        order_by="EventGuestCheckIn.checked_in_at",
     )
 
     @property

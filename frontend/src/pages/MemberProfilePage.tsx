@@ -30,10 +30,11 @@ import {
   canPresidentPromoteMember,
   canViewMemberDirectory,
   formatPositionLabel,
-  isExclusiveMemberPosition,
   isRoleAtLeast,
+  type MemberPosition,
   type PromotableBoardRole,
 } from "../lib/roles";
+import { getMembershipAdminErrorMessage } from "../lib/membership-admin-errors";
 
 export function MemberProfilePage() {
   const { memberId } = useParams();
@@ -113,29 +114,33 @@ export function MemberProfilePage() {
     }
   }
 
-  async function handleRoleChange(role: PromotableBoardRole) {
+  async function handleRoleChange(_memberId: number, role: PromotableBoardRole) {
     if (!profile) return;
     setUpdatingRole(true);
+    setError(null);
+    setSuccessMessage(null);
     try {
       const updated = await updateMemberRole(profile.id, { role });
       setProfile(updated);
       setValues(memberToProfileFormValues(updated));
     } catch (caught) {
-      setError(getApiErrorMessage(caught));
+      setError(getMembershipAdminErrorMessage(caught));
     } finally {
       setUpdatingRole(false);
     }
   }
 
-  async function handlePositionChange(position: Parameters<typeof updateMemberPosition>[1]) {
+  async function handlePositionChange(_memberId: number, position: MemberPosition) {
     if (!profile) return;
     setUpdatingPosition(true);
+    setError(null);
+    setSuccessMessage(null);
     try {
       const updated = await updateMemberPosition(profile.id, position);
       setProfile(updated);
       setValues(memberToProfileFormValues(updated));
     } catch (caught) {
-      setError(getApiErrorMessage(caught));
+      setError(getMembershipAdminErrorMessage(caught));
     } finally {
       setUpdatingPosition(false);
     }
@@ -284,24 +289,37 @@ export function MemberProfilePage() {
           <h2 className="text-lg font-light tracking-subhead text-foreground">
             Membership admin
           </h2>
-          <div className="mt-4 flex flex-wrap items-center gap-4">
-            {isExclusiveMemberPosition(profile.position) ? (
-              <RoleBadge role={profile.role} size="md" />
-            ) : canPresidentPromoteMember(profile, currentMember.id) ? (
-              <RolePromotionSelect
-                member={profile}
-                isUpdating={updatingRole}
-                onRoleChange={handleRoleChange}
-              />
-            ) : (
-              <RoleBadge role={profile.role} size="md" />
-            )}
-            <PositionSelect
-              member={profile}
-              positionHolders={positionHolders}
-              isUpdating={updatingPosition}
-              onPositionChange={handlePositionChange}
-            />
+          <div className="mt-4 flex flex-wrap items-start gap-6">
+            <div className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-label">
+                Access level
+              </p>
+              {canPresidentPromoteMember(profile, currentMember.id) ? (
+                <RolePromotionSelect
+                  member={profile}
+                  isUpdating={updatingRole}
+                  onRoleChange={handleRoleChange}
+                />
+              ) : (
+                <RoleBadge role={profile.role} size="md" />
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-label">
+                Board position
+              </p>
+              {profile.role === "general" ? (
+                <p className="text-sm text-foreground">Member</p>
+              ) : (
+                <PositionSelect
+                  member={profile}
+                  positionHolders={positionHolders}
+                  isUpdating={updatingPosition}
+                  onPositionChange={handlePositionChange}
+                />
+              )}
+            </div>
           </div>
         </section>
       ) : null}

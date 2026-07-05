@@ -13,6 +13,7 @@ import { Link } from "react-router-dom";
 
 import { EventRsvpButton } from "../components/EventRsvpButton";
 import { CoverBanner } from "../components/CoverBanner";
+import { HomeAnnouncementsSection } from "../components/HomeAnnouncementsSection";
 import { HomeFinanceQuickActions } from "../components/HomeFinanceQuickActions";
 import { HomeHeroBrand } from "../components/AppLogo";
 import { HomeProfileCard } from "../components/HomeProfileCard";
@@ -466,6 +467,8 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
           onLogTransaction={() => setIsLogTransactionOpen(true)}
         />
       ) : null}
+
+      <HomeAnnouncementsSection />
 
       {loadError ? (
         <div role="alert" className="ds-alert-banner">

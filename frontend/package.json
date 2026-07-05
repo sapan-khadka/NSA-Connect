@@ -19,6 +19,7 @@
     "nepali-date-converter": "^3.4.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
+    "react-qr-code": "^2.2.0",
     "react-router-dom": "^6.30.4"
   },
   "devDependencies": {

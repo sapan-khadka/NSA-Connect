@@ -11,6 +11,7 @@ function formatSummary(summary: NotificationCheckSummary): string {
     `Event reminders: ${summary.event_reminders.sent} sent`,
     `RSVP nudges: ${summary.rsvp_nudges.sent} sent`,
     `Task due reminders: ${summary.task_due_reminders.sent} sent`,
+    `Dues reminders: ${summary.dues_reminders.sent} sent`,
   ];
   return parts.join(" · ");
 }

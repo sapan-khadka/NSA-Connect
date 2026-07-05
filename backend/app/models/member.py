@@ -145,6 +145,18 @@ class Member(Base):
         default=True,
         server_default="true",
     )
+    notify_dues_reminders = Column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
+    )
+    notify_announcements = Column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
+    )
 
     @property
     def is_approved(self) -> bool:

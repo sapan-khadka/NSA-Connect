@@ -59,10 +59,12 @@ from app.services.member_service import MemberNotFoundError
 from app.services.volunteer_service import create_volunteer_slot_for_event
 from app.api.v1.event_meetings import router as event_meetings_router
 from app.api.v1.event_photos import router as event_photos_router
+from app.api.v1.event_checkin import router as event_checkin_router
 
 router = APIRouter(prefix="/events", tags=["events"])
 router.include_router(event_photos_router)
 router.include_router(event_meetings_router)
+router.include_router(event_checkin_router)
 
 MONTH_QUERY_PATTERN = r"^(19|20)\d{2}-(0[1-9]|1[0-2])$"
 

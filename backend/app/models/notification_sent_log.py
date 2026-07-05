@@ -13,6 +13,8 @@ class NotificationType(StrEnum):
     RSVP_NUDGE = "rsvp_nudge"
     TASK_DUE_REMINDER = "task_due_reminder"
     TASK_ASSIGNED = "task_assigned"
+    DUES_REMINDER = "dues_reminder"
+    ANNOUNCEMENT = "announcement"
 
 
 SCHEDULED_NOTIFICATION_TYPES = frozenset(
@@ -20,6 +22,7 @@ SCHEDULED_NOTIFICATION_TYPES = frozenset(
         NotificationType.EVENT_REMINDER,
         NotificationType.RSVP_NUDGE,
         NotificationType.TASK_DUE_REMINDER,
+        NotificationType.DUES_REMINDER,
     },
 )
 
@@ -38,6 +41,8 @@ class NotificationSentLog(Base):
     )
     event_id = Column(Integer, ForeignKey("events.id"), nullable=True, index=True)
     event_task_id = Column(Integer, ForeignKey("event_tasks.id"), nullable=True, index=True)
+    announcement_id = Column(Integer, ForeignKey("announcements.id"), nullable=True, index=True)
+    semester = Column(String(16), nullable=True, index=True)
     recipient_email = Column(String(255), nullable=False)
     success = Column(Boolean, nullable=False, default=True)
     error_message = Column(Text, nullable=True)
@@ -50,3 +55,4 @@ class NotificationSentLog(Base):
     member = relationship("Member")
     event = relationship("Event")
     event_task = relationship("EventTask")
+    announcement = relationship("Announcement")

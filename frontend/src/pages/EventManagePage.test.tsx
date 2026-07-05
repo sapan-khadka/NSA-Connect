@@ -22,12 +22,26 @@ vi.mock("../components/EventInvitedParticipantsSection", () => ({
   ),
 }));
 
+vi.mock("../components/EventCheckInPanel", () => ({
+  EventCheckInPanel: () => <div data-testid="event-checkin-panel">Check-in</div>,
+}));
+
+vi.mock("../components/EventAttendanceSummaryPanel", () => ({
+  EventAttendanceSummaryPanel: () => (
+    <div data-testid="event-attendance-summary">Attendance summary</div>
+  ),
+}));
+
 vi.mock("../lib/events-api", () => ({
   fetchEvent: vi.fn(),
 }));
 
 vi.mock("../lib/event-tasks-api", () => ({
   fetchEventTasks: vi.fn(),
+}));
+
+vi.mock("../lib/event-checkin-api", () => ({
+  fetchEventAttendanceSummary: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock("../lib/finance-api", () => ({

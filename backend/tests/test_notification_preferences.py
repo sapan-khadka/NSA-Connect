@@ -31,6 +31,8 @@ def test_notification_preferences_default_to_on(client, member_headers, db_sessi
     assert member.notify_event_reminders is True
     assert member.notify_rsvp_nudges is True
     assert member.notify_task_reminders is True
+    assert member.notify_dues_reminders is True
+    assert member.notify_announcements is True
 
     response = client.get("/api/v1/notifications/preferences", headers=member_headers)
     assert response.status_code == 200
@@ -38,6 +40,8 @@ def test_notification_preferences_default_to_on(client, member_headers, db_sessi
         "event_reminders": True,
         "rsvp_nudges": True,
         "task_reminders": True,
+        "dues_reminders": True,
+        "announcements": True,
     }
 
 
@@ -52,6 +56,8 @@ def test_member_can_update_own_notification_preferences(client, member_headers):
         "event_reminders": False,
         "rsvp_nudges": True,
         "task_reminders": False,
+        "dues_reminders": True,
+        "announcements": True,
     }
 
     fetched = client.get("/api/v1/notifications/preferences", headers=member_headers)

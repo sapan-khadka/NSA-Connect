@@ -11,6 +11,8 @@ _PREFERENCE_FIELD_MAP = {
     "event_reminders": "notify_event_reminders",
     "rsvp_nudges": "notify_rsvp_nudges",
     "task_reminders": "notify_task_reminders",
+    "dues_reminders": "notify_dues_reminders",
+    "announcements": "notify_announcements",
 }
 
 
@@ -19,6 +21,8 @@ def preferences_from_member(member: Member) -> NotificationPreferencesResponse:
         event_reminders=member.notify_event_reminders,
         rsvp_nudges=member.notify_rsvp_nudges,
         task_reminders=member.notify_task_reminders,
+        dues_reminders=member.notify_dues_reminders,
+        announcements=member.notify_announcements,
     )
 
 

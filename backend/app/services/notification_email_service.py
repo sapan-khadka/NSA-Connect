@@ -18,6 +18,18 @@ def build_tasks_url() -> str:
     return f"{_frontend_base_url()}/events/tasks"
 
 
+def build_profile_url() -> str:
+    return f"{_frontend_base_url()}/profile"
+
+
+def build_announcements_url() -> str:
+    return f"{_frontend_base_url()}/announcements"
+
+
+def format_currency_amount(amount) -> str:
+    return f"${float(amount):,.2f}"
+
+
 def format_event_datetime(value: datetime) -> str:
     dt = value.astimezone(UTC) if value.tzinfo else value.replace(tzinfo=UTC)
     hour = dt.strftime("%I").lstrip("0") or "12"
@@ -135,6 +147,56 @@ def send_task_due_reminder_email(
     return send_resend_email(
         to_email=to_email,
         subject=f"Due tomorrow: {task_title}",
+        body=body,
+    )
+
+
+def send_dues_reminder_email(
+    *,
+    to_email: str,
+    full_name: str,
+    semester: str,
+    amount_outstanding,
+) -> str:
+    from app.lib.semester import format_semester_label
+
+    semester_label = format_semester_label(semester)
+    amount_label = format_currency_amount(amount_outstanding)
+    body = (
+        f"Hi {full_name},\n\n"
+        f"Friendly reminder: you have {amount_label} in membership dues "
+        f"outstanding for {semester_label}.\n\n"
+        "When you're ready to pay, contact the NSA treasurer — Venmo and cash "
+        "are both accepted.\n\n"
+        f"View your profile: {build_profile_url()}\n\n"
+        "— NSA Connect"
+    )
+    return send_resend_email(
+        to_email=to_email,
+        subject=f"Dues reminder: {semester_label}",
+        body=body,
+    )
+
+
+def send_announcement_email(
+    *,
+    to_email: str,
+    full_name: str,
+    announcement_title: str,
+    announcement_body: str,
+    author_name: str,
+) -> str:
+    body = (
+        f"Hi {full_name},\n\n"
+        f"New announcement from {author_name}:\n\n"
+        f"{announcement_title}\n\n"
+        f"{announcement_body}\n\n"
+        f"View all announcements: {build_announcements_url()}\n\n"
+        "— NSA Connect"
+    )
+    return send_resend_email(
+        to_email=to_email,
+        subject=f"Announcement: {announcement_title}",
         body=body,
     )
 

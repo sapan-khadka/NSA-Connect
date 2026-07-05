@@ -223,6 +223,108 @@ def test_task_due_reminder_sends_to_assignee(mock_send, db_session):
     mock_send.assert_called_once()
 
 
+@patch("app.services.notification_email_service.send_resend_email")
+def test_dues_reminder_sends_to_unpaid_members(mock_send, db_session, approved_member):
+    from decimal import Decimal
+
+    from app.models.member_dues import MemberDues
+
+    mock_send.return_value = "email_1"
+    as_of = datetime(2026, 7, 1, 12, 0, tzinfo=UTC)
+    semester = "2026-summer"
+
+    db_session.add(
+        MemberDues(
+            member_id=approved_member.id,
+            semester=semester,
+            amount_owed=Decimal("25.00"),
+            amount_paid=Decimal("0"),
+        ),
+    )
+    db_session.commit()
+
+    summary = run_scheduled_notification_checks(db_session, as_of=as_of)
+
+    assert summary["dues_reminders"]["sent"] == 1
+    mock_send.assert_called_once()
+    body = mock_send.call_args.kwargs["body"]
+    assert approved_member.full_name in body
+    assert "$25.00" in body
+
+
+@patch("app.services.notification_email_service.send_resend_email")
+def test_dues_reminder_respects_preferences(mock_send, db_session, approved_member):
+    from decimal import Decimal
+
+    from app.models.member_dues import MemberDues
+
+    mock_send.return_value = "email_1"
+    approved_member.notify_dues_reminders = False
+    db_session.add(
+        MemberDues(
+            member_id=approved_member.id,
+            semester="2026-summer",
+            amount_owed=Decimal("25.00"),
+            amount_paid=Decimal("0"),
+        ),
+    )
+    db_session.commit()
+
+    as_of = datetime(2026, 7, 1, 12, 0, tzinfo=UTC)
+    summary = run_scheduled_notification_checks(db_session, as_of=as_of)
+
+    assert summary["dues_reminders"]["sent"] == 0
+    mock_send.assert_not_called()
+
+
+@patch("app.services.notification_email_service.send_resend_email")
+def test_dues_reminder_does_not_resend_for_same_semester(mock_send, db_session, approved_member):
+    from decimal import Decimal
+
+    from app.models.member_dues import MemberDues
+
+    mock_send.return_value = "email_1"
+    db_session.add(
+        MemberDues(
+            member_id=approved_member.id,
+            semester="2026-summer",
+            amount_owed=Decimal("25.00"),
+            amount_paid=Decimal("0"),
+        ),
+    )
+    db_session.commit()
+
+    as_of = datetime(2026, 7, 1, 12, 0, tzinfo=UTC)
+    run_scheduled_notification_checks(db_session, as_of=as_of)
+    run_scheduled_notification_checks(db_session, as_of=as_of)
+
+    assert mock_send.call_count == 1
+
+
+@patch("app.services.notification_email_service.send_resend_email")
+def test_dues_reminder_uses_remaining_balance_for_partial(mock_send, db_session, approved_member):
+    from decimal import Decimal
+
+    from app.models.member_dues import MemberDues
+
+    mock_send.return_value = "email_1"
+    db_session.add(
+        MemberDues(
+            member_id=approved_member.id,
+            semester="2026-summer",
+            amount_owed=Decimal("30.00"),
+            amount_paid=Decimal("10.00"),
+        ),
+    )
+    db_session.commit()
+
+    as_of = datetime(2026, 7, 1, 12, 0, tzinfo=UTC)
+    summary = run_scheduled_notification_checks(db_session, as_of=as_of)
+
+    assert summary["dues_reminders"]["sent"] == 1
+    assert "$20.00" in mock_send.call_args.kwargs["body"]
+
+
 def test_run_check_endpoint_is_board_only(client, db_session):
     register_member(client)
     set_member_approved(db_session)
@@ -243,6 +345,7 @@ def test_run_check_endpoint_runs_scan(mock_run, client, db_session):
         "event_reminders": {"candidates": 0, "sent": 0, "skipped": 0},
         "rsvp_nudges": {"candidates": 0, "sent": 0, "skipped": 0},
         "task_due_reminders": {"candidates": 0, "sent": 0, "skipped": 0},
+        "dues_reminders": {"candidates": 0, "sent": 0, "skipped": 0},
     }
 
     response = client.post(

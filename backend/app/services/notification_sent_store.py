@@ -21,6 +21,7 @@ def scheduled_notification_already_sent(
     notification_type: NotificationType,
     event_id: int | None = None,
     event_task_id: int | None = None,
+    semester: str | None = None,
 ) -> bool:
     if notification_type not in SCHEDULED_NOTIFICATION_TYPES:
         return False
@@ -35,6 +36,8 @@ def scheduled_notification_already_sent(
         query = query.where(NotificationSentLog.event_id == event_id)
     if event_task_id is not None:
         query = query.where(NotificationSentLog.event_task_id == event_task_id)
+    if semester is not None:
+        query = query.where(NotificationSentLog.semester == semester)
 
     return db.scalar(query.limit(1)) is not None
 
@@ -47,6 +50,8 @@ def record_notification_send(
     success: bool,
     event_id: int | None = None,
     event_task_id: int | None = None,
+    announcement_id: int | None = None,
+    semester: str | None = None,
     error_message: str | None = None,
 ) -> NotificationSentLog:
     log_entry = NotificationSentLog(
@@ -54,6 +59,8 @@ def record_notification_send(
         notification_type=notification_type,
         event_id=event_id,
         event_task_id=event_task_id,
+        announcement_id=announcement_id,
+        semester=semester,
         recipient_email=member.email,
         success=success,
         error_message=error_message,
@@ -75,21 +82,23 @@ def record_notification_send(
 
     if success:
         logger.info(
-            "Notification sent type=%s member_id=%s email=%s event_id=%s event_task_id=%s",
+            "Notification sent type=%s member_id=%s email=%s event_id=%s event_task_id=%s semester=%s",
             notification_type.value,
             member.id,
             member.email,
             event_id,
             event_task_id,
+            semester,
         )
     else:
         logger.error(
-            "Notification failed type=%s member_id=%s email=%s event_id=%s event_task_id=%s error=%s",
+            "Notification failed type=%s member_id=%s email=%s event_id=%s event_task_id=%s semester=%s error=%s",
             notification_type.value,
             member.id,
             member.email,
             event_id,
             event_task_id,
+            semester,
             error_message,
         )
 

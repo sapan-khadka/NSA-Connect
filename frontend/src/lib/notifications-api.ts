@@ -4,6 +4,8 @@ export type NotificationPreferences = {
   event_reminders: boolean;
   rsvp_nudges: boolean;
   task_reminders: boolean;
+  dues_reminders: boolean;
+  announcements: boolean;
 };
 
 export type NotificationPreferencesUpdate = Partial<NotificationPreferences>;
@@ -25,6 +27,7 @@ export type NotificationCheckSummary = {
   event_reminders: NotificationCheckStats;
   rsvp_nudges: NotificationCheckStats;
   task_due_reminders: NotificationCheckStats;
+  dues_reminders: NotificationCheckStats;
 };
 
 export async function fetchNotificationPreferences(): Promise<NotificationPreferences> {

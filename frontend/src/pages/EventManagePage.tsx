@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
+import { EventCheckInPanel } from "../components/EventCheckInPanel";
+import { EventAttendanceSummaryPanel } from "../components/EventAttendanceSummaryPanel";
 import { EventDeleteSection } from "../components/EventDeleteSection";
 import { EventInvitedParticipantsSection } from "../components/EventInvitedParticipantsSection";
 import { EventManageLogisticsSection } from "../components/EventManageLogisticsSection";
@@ -10,6 +12,7 @@ import { MeetingRecordSection } from "../components/MeetingRecordSection";
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage } from "../lib/auth-api";
 import { fetchEvent, type EventDetailResponse } from "../lib/events-api";
+import { fetchEventAttendanceSummary, type EventAttendanceSummary } from "../lib/event-checkin-api";
 import { fetchEventTasks, type EventTaskResponse } from "../lib/event-tasks-api";
 import { EVENT_TYPE_BADGE_CLASS, EVENT_TYPE_LABELS } from "../lib/event-types";
 import { fetchAssignableMembers } from "../lib/members-api";
@@ -39,6 +42,8 @@ export function EventManagePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ManageTab>("meeting");
+  const [attendanceSummary, setAttendanceSummary] =
+    useState<EventAttendanceSummary | null>(null);
 
   const canViewBoard = member ? isRoleAtLeast(member.role, "board") : false;
   const canViewTreasury = member ? isRoleAtLeast(member.role, "treasurer") : false;
@@ -127,6 +132,34 @@ export function EventManagePage() {
       cancelled = true;
     };
   }, [canManageTasks]);
+
+  useEffect(() => {
+    if (!canViewBoard || !Number.isFinite(numericEventId)) {
+      setAttendanceSummary(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadSummary() {
+      try {
+        const summary = await fetchEventAttendanceSummary(numericEventId);
+        if (!cancelled) {
+          setAttendanceSummary(summary);
+        }
+      } catch {
+        if (!cancelled) {
+          setAttendanceSummary(null);
+        }
+      }
+    }
+
+    void loadSummary();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canViewBoard, numericEventId, refreshKey]);
 
   if (isLoading) {
     return <p className="text-sm text-label">Loading event…</p>;
@@ -249,6 +282,14 @@ export function EventManagePage() {
           eventId={numericEventId}
           refreshKey={refreshKey}
         />
+      ) : null}
+
+      {canViewBoard ? (
+        <EventCheckInPanel eventId={numericEventId} eventName={event.name} />
+      ) : null}
+
+      {canViewBoard && attendanceSummary ? (
+        <EventAttendanceSummaryPanel summary={attendanceSummary} />
       ) : null}
 
       {canViewBoard ? (

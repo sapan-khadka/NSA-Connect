@@ -29,6 +29,16 @@ const PREFERENCE_OPTIONS: {
     label: "Task assigned/due reminders",
     description: "Alerts when tasks are assigned to you or coming due.",
   },
+  {
+    key: "dues_reminders",
+    label: "Dues reminders",
+    description: "Friendly reminders when semester membership dues are outstanding.",
+  },
+  {
+    key: "announcements",
+    label: "Announcements",
+    description: "Board broadcasts and club-wide updates.",
+  },
 ];
 
 export function NotificationPreferencesSection() {

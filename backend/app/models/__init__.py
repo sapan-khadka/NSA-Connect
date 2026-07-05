@@ -1,6 +1,9 @@
 from app.models.base import Base
 from app.models.constitutional_chunk import ConstitutionalChunk
 from app.models.event import Event, EventType
+from app.models.announcement import Announcement, AnnouncementCategory
+from app.models.event_checkin import EventCheckIn
+from app.models.event_guest_checkin import EventGuestCheckIn, GuestAffiliationType
 from app.models.event_participant_invitation import EventParticipantInvitation
 from app.models.event_photo import EventPhoto
 from app.models.event_rsvp import EventRsvp, RsvpStatus
@@ -30,9 +33,14 @@ from app.models.reminder import PrepTaskReminder, ReminderType
 from app.models.volunteer import VolunteerSignup, VolunteerSlot
 
 __all__ = [
+    "Announcement",
+    "AnnouncementCategory",
     "Base",
     "ConstitutionalChunk",
     "Event",
+    "EventCheckIn",
+    "EventGuestCheckIn",
+    "GuestAffiliationType",
     "EventParticipantInvitation",
     "EventPhoto",
     "EventRsvp",

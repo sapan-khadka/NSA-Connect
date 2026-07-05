@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { EventAttendeesPanel } from "../components/EventAttendeesPanel";
+import { EventAttendanceSummaryPanel } from "../components/EventAttendanceSummaryPanel";
 import { canCreateEventTasks } from "../lib/event-finance";
 import { EventFinanceCloseoutBanner } from "../components/EventFinanceCloseoutBanner";
 import { EventRsvpButton } from "../components/EventRsvpButton";
@@ -21,6 +22,10 @@ import {
   type EventDetailResponse,
   type RsvpStatus,
 } from "../lib/events-api";
+import {
+  fetchEventAttendanceSummary,
+  type EventAttendanceSummary,
+} from "../lib/event-checkin-api";
 import { fetchAssignableMembers } from "../lib/members-api";
 import type { MemberResponse } from "../lib/auth-api";
 import {
@@ -50,6 +55,8 @@ export function EventDetailPage() {
   );
   const [attendeesLoading, setAttendeesLoading] = useState(false);
   const [attendeesError, setAttendeesError] = useState<string | null>(null);
+  const [attendanceSummary, setAttendanceSummary] =
+    useState<EventAttendanceSummary | null>(null);
 
   const canViewBoard = member ? isRoleAtLeast(member.role, "board") : false;
   const canManageTasks = member
@@ -107,6 +114,34 @@ export function EventDetailPage() {
   useEffect(() => {
     void loadAttendees();
   }, [loadAttendees]);
+
+  useEffect(() => {
+    if (!canViewBoard || !event?.is_past || !Number.isFinite(numericEventId)) {
+      setAttendanceSummary(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadSummary() {
+      try {
+        const summary = await fetchEventAttendanceSummary(numericEventId);
+        if (!cancelled) {
+          setAttendanceSummary(summary);
+        }
+      } catch {
+        if (!cancelled) {
+          setAttendanceSummary(null);
+        }
+      }
+    }
+
+    void loadSummary();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canViewBoard, event?.is_past, numericEventId]);
 
   useEffect(() => {
     if (!canManageTasks) {
@@ -264,6 +299,10 @@ export function EventDetailPage() {
             error={attendeesError}
           />
         </HomeCard>
+      ) : null}
+
+      {canViewBoard && event.is_past && attendanceSummary ? (
+        <EventAttendanceSummaryPanel summary={attendanceSummary} />
       ) : null}
 
       <EventFinanceCloseoutBanner event={event} />

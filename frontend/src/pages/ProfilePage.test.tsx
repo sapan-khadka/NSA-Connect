@@ -17,6 +17,8 @@ vi.mock("../lib/notifications-api", () => ({
     event_reminders: true,
     rsvp_nudges: true,
     task_reminders: true,
+    dues_reminders: true,
+    announcements: true,
   }),
   updateNotificationPreferences: vi.fn(),
   sendTestEmail: vi.fn(),

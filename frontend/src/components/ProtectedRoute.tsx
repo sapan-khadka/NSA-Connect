@@ -33,7 +33,8 @@ export function ProtectedRoute({
   }
 
   if (!isAuthenticated || !member) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+    const redirectTarget = `${location.pathname}${location.search}`;
+    return <Navigate to="/login" replace state={{ from: redirectTarget }} />;
   }
 
   if (roles && !roles.includes(member.role)) {

@@ -198,6 +198,10 @@ def update_member_board_role(db: Session, member_id: int, role: MemberRole) -> M
     if role == MemberRole.GENERAL and member.role != MemberRole.BOARD:
         raise InvalidMemberRoleError("Only board members can be demoted to general")
 
+    if role == MemberRole.GENERAL and member.role != MemberRole.GENERAL:
+        if member.position in EXCLUSIVE_MEMBER_POSITIONS:
+            member.position = MemberPosition.MEMBER
+
     member.role = role
     db.commit()
     db.refresh(member)

@@ -29,3 +29,25 @@ def semester_date_range(semester: str) -> tuple[datetime, datetime]:
         raise InvalidSemesterError(f"Unknown semester term: {term}")
 
     return start, end
+
+
+def get_current_semester_slug(as_of: datetime | None = None) -> str:
+    """Return the active semester slug (e.g. 2026-spring) for a given UTC datetime."""
+    dt = as_of or datetime.now(UTC)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=UTC)
+    else:
+        dt = dt.astimezone(UTC)
+
+    year = dt.year
+    month = dt.month
+    if month <= 5:
+        return f"{year}-spring"
+    if month <= 7:
+        return f"{year}-summer"
+    return f"{year}-fall"
+
+
+def format_semester_label(semester: str) -> str:
+    year, term = semester.rsplit("-", 1)
+    return f"{term.capitalize()} {year}"

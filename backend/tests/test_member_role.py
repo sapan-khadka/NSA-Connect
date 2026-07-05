@@ -120,3 +120,26 @@ def test_cannot_assign_treasurer_or_president_role(client, db_session):
 
     assert treasurer_response.status_code == 422
     assert president_response.status_code == 422
+
+
+def test_demoting_to_general_clears_exclusive_position(client, db_session):
+    from app.models.member import MemberPosition
+
+    register_member(client, email="member@semo.edu", student_id="11111111")
+    set_member_approved(db_session, email="member@semo.edu")
+    member = db_session.scalar(select(Member).where(Member.email == "member@semo.edu"))
+    member.role = MemberRole.BOARD
+    member.position = MemberPosition.SECRETARY
+    db_session.commit()
+    create_president_member(db_session)
+
+    response = client.patch(
+        "/api/v1/members/1/role",
+        headers=auth_header(client, email="president@semo.edu"),
+        json={"role": "general"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["role"] == "general"
+    assert body["position"] == "member"

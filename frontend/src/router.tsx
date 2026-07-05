@@ -4,8 +4,10 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppLayout } from "./layouts/AppLayout";
 import { EventsHubLayout } from "./layouts/EventsHubLayout";
 import { BoardTasksPage } from "./pages/BoardTasksPage";
+import { AnnouncementsPage } from "./pages/AnnouncementsPage";
 import { AiAssistantPage } from "./pages/AiAssistantPage";
 import { AnnouncementEmailPage } from "./pages/AnnouncementEmailPage";
+import { EventCheckInPage } from "./pages/EventCheckInPage";
 import { EventManagePage } from "./pages/EventManagePage";
 import { EventDetailPage } from "./pages/EventDetailPage";
 import { EventPhotoAlbumPage } from "./pages/EventPhotoAlbumPage";
@@ -34,6 +36,14 @@ export const appRoutes: RouteObject[] = [
       { index: true, element: <HomePage /> },
       { path: "login", element: <LoginPage /> },
       { path: "register", element: <RegisterPage /> },
+      {
+        path: "announcements",
+        element: (
+          <ProtectedRoute>
+            <AnnouncementsPage />
+          </ProtectedRoute>
+        ),
+      },
       {
         path: "profile",
         element: (
@@ -113,6 +123,10 @@ export const appRoutes: RouteObject[] = [
             <FinancePage />
           </ProtectedRoute>
         ),
+      },
+      {
+        path: "events/:eventId/checkin",
+        element: <EventCheckInPage />,
       },
       {
         path: "events",

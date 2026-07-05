@@ -57,6 +57,7 @@ export function AppLayout() {
                 <PrimaryNavLink to="/" end>
                   Home
                 </PrimaryNavLink>
+                <PrimaryNavLink to="/announcements">Announcements</PrimaryNavLink>
                 <PrimaryNavLink to="/events/calendar">Events</PrimaryNavLink>
                 {showMembersNav ? (
                   <PrimaryNavLink to="/members">Members</PrimaryNavLink>
