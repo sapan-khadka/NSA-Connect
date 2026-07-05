@@ -1,4 +1,7 @@
 import pytest
+from unittest.mock import patch
+
+from app.integrations.resend_client import ResendDeliveryError
 
 from conftest import (
     auth_header,
@@ -81,6 +84,31 @@ def test_president_can_create_and_assign_task(
     assert body["assignee_name"] == board_member.full_name
     assert body["status"] == "todo"
     assert body["event_name"] == "Dashain Celebration"
+
+
+@patch("app.services.notification_email_service.send_resend_email")
+def test_create_task_succeeds_when_assignment_email_fails(
+    mock_send,
+    client,
+    president_headers,
+    board_member,
+):
+    mock_send.side_effect = ResendDeliveryError(
+        "You can only send testing emails to your own email address (sapankhadka110@gmail.com)."
+    )
+
+    event = _create_event(client, president_headers)
+    response = _create_task(
+        client,
+        president_headers,
+        event["id"],
+        title="Print flyers",
+        assignee_id=board_member.id,
+    )
+
+    assert response.status_code == 201
+    assert response.json()["assignee_id"] == board_member.id
+    mock_send.assert_called_once()
 
 
 def test_plain_board_member_cannot_create_task(

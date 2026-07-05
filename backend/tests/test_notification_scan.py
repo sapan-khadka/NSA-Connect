@@ -4,6 +4,7 @@ from unittest.mock import patch
 import pytest
 from sqlalchemy import select
 
+from app.integrations.resend_client import ResendDeliveryError
 from app.models.event import Event, EventType
 from app.models.event_rsvp import EventRsvp, RsvpStatus
 from app.models.event_task import EventTask, EventTaskKind, EventTaskStatus
@@ -71,6 +72,51 @@ def test_event_reminder_sends_to_going_and_maybe(mock_send, db_session, approved
     summary = run_scheduled_notification_checks(db_session, as_of=as_of)
 
     assert summary["event_reminders"]["sent"] == 2
+    assert mock_send.call_count == 2
+
+
+@patch("app.services.notification_email_service.send_resend_email")
+def test_one_failed_send_does_not_stop_other_event_reminders(
+    mock_send,
+    db_session,
+    approved_member,
+):
+    board = create_board_member(db_session, email="board@semo.edu")
+    mock_send.side_effect = [
+        ResendDeliveryError("sandbox restriction"),
+        "email_2",
+    ]
+
+    as_of = datetime(2026, 7, 1, 12, 0, tzinfo=UTC)
+    event = _create_event(
+        db_session,
+        starts_at=as_of + timedelta(hours=24),
+        creator_id=board.id,
+    )
+
+    db_session.add(
+        EventRsvp(
+            event_id=event.id,
+            member_id=approved_member.id,
+            status=RsvpStatus.GOING,
+            created_at=as_of,
+            updated_at=as_of,
+        ),
+    )
+    db_session.add(
+        EventRsvp(
+            event_id=event.id,
+            member_id=board.id,
+            status=RsvpStatus.MAYBE,
+            created_at=as_of,
+            updated_at=as_of,
+        ),
+    )
+    db_session.commit()
+
+    summary = run_scheduled_notification_checks(db_session, as_of=as_of)
+
+    assert summary["event_reminders"]["sent"] == 1
     assert mock_send.call_count == 2
 
 

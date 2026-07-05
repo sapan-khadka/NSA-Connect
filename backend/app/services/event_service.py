@@ -1,12 +1,13 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import extract, func, select, update
+from sqlalchemy import delete, extract, func, or_, select, update
 from sqlalchemy.orm import Session, selectinload
 
 from app.lib.event_photo_archive import default_show_in_photo_archive
 from app.models.event import Event, EventType
 from app.models.event_task import EventTask
 from app.models.finance_entry import FinanceEntry
+from app.models.notification_sent_log import NotificationSentLog
 from app.schemas.event import EventCreateRequest, EventPatchRequest
 
 
@@ -40,6 +41,14 @@ def delete_event(db: Session, event_id: int) -> None:
     if event is None:
         raise EventNotFoundError
 
+    task_ids = list(
+        db.scalars(select(EventTask.id).where(EventTask.event_id == event_id)).all(),
+    )
+    log_conditions = [NotificationSentLog.event_id == event_id]
+    if task_ids:
+        log_conditions.append(NotificationSentLog.event_task_id.in_(task_ids))
+    db.execute(delete(NotificationSentLog).where(or_(*log_conditions)))
+
     # Preserve financial records: unlink any finance entries from the event
     # rather than deleting them, so treasury history stays intact.
     db.execute(
@@ -48,7 +57,7 @@ def delete_event(db: Session, event_id: int) -> None:
         .values(event_id=None),
     )
 
-    # Finance entries are unlinked above. RSVPs, volunteer slots, and event tasks
+    # RSVPs, volunteer slots, event tasks, participant invitations, and photos
     # cascade automatically when the event is deleted.
     db.delete(event)
     db.commit()

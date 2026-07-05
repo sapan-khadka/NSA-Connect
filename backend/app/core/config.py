@@ -43,6 +43,13 @@ class Settings(BaseSettings):
         default="NSA Connect <onboarding@resend.dev>",
         description="From address for Resend notification emails",
     )
+    EMAIL_TEST_OVERRIDE_RECIPIENT: str = Field(
+        default="",
+        description=(
+            "When set, all Resend notification emails are delivered to this address "
+            "instead of the real recipient (dev/testing only). Leave unset in production."
+        ),
+    )
 
     PREP_TASK_DUE_SOON_DAYS: int = Field(
         default=3,

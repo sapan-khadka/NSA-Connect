@@ -59,9 +59,19 @@ def record_notification_send(
         error_message=error_message,
         sent_at=datetime.now(UTC),
     )
-    db.add(log_entry)
-    db.commit()
-    db.refresh(log_entry)
+    try:
+        db.add(log_entry)
+        db.commit()
+        db.refresh(log_entry)
+    except Exception:
+        db.rollback()
+        logger.exception(
+            "Failed to persist notification log type=%s member_id=%s email=%s",
+            notification_type.value,
+            member.id,
+            member.email,
+        )
+        return log_entry
 
     if success:
         logger.info(

@@ -1,3 +1,4 @@
+import logging
 from collections import defaultdict
 from datetime import UTC, datetime
 
@@ -24,6 +25,9 @@ from app.schemas.event_task import (
     TaskOverviewResponse,
 )
 from app.services.event_service import EventNotFoundError
+from app.services.notification_scan_service import notify_task_assigned_if_enabled
+
+logger = logging.getLogger(__name__)
 
 BOARD_ROLES = (MemberRole.BOARD, MemberRole.TREASURER, MemberRole.PRESIDENT)
 
@@ -146,7 +150,15 @@ def _maybe_notify_new_assignee(
     if assignee is None:
         return
 
-    notify_task_assigned_if_enabled(db, task=task, assignee=assignee)
+    try:
+        notify_task_assigned_if_enabled(db, task=task, assignee=assignee)
+    except Exception:
+        logger.exception(
+            "Task assigned notification failed task_id=%s assignee_id=%s email=%s",
+            task.id,
+            assignee.id,
+            assignee.email,
+        )
 
 
 def create_simple_event_task(

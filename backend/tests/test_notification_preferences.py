@@ -97,6 +97,7 @@ def test_send_resend_email_uses_api_key_from_settings(mock_settings, mock_send):
 
     mock_settings.RESEND_API_KEY = "re_test_key"
     mock_settings.RESEND_FROM_EMAIL = "NSA Connect <onboarding@resend.dev>"
+    mock_settings.EMAIL_TEST_OVERRIDE_RECIPIENT = ""
     mock_send.return_value = "email_abc"
 
     email_id = send_resend_email(
@@ -129,6 +130,58 @@ def test_send_resend_email_fails_without_api_key(mock_settings):
             subject="Test",
             body="Hello",
         )
+
+
+@patch("app.services.resend_email_service.send_email")
+@patch("app.services.resend_email_service.settings")
+def test_send_resend_email_redirects_when_test_override_set(mock_settings, mock_send):
+    from app.services.resend_email_service import send_resend_email
+
+    mock_settings.RESEND_API_KEY = "re_test_key"
+    mock_settings.RESEND_FROM_EMAIL = "NSA Connect <onboarding@resend.dev>"
+    mock_settings.EMAIL_TEST_OVERRIDE_RECIPIENT = "sapankhadka110@gmail.com"
+    mock_send.return_value = "email_abc"
+
+    send_resend_email(
+        to_email="mukesh@semo.edu",
+        subject="Task assigned: Buy supplies",
+        body="Hi Mukesh,\n\nYou've been assigned a task.",
+    )
+
+    mock_send.assert_called_once_with(
+        api_key="re_test_key",
+        from_email="NSA Connect <onboarding@resend.dev>",
+        to_email="sapankhadka110@gmail.com",
+        subject="Task assigned: Buy supplies",
+        body="Hi Mukesh,\n\nYou've been assigned a task.",
+        body_format="text",
+    )
+
+
+@patch("app.services.resend_email_service.send_email")
+@patch("app.services.resend_email_service.settings")
+def test_send_resend_email_skips_redirect_when_override_unset(mock_settings, mock_send):
+    from app.services.resend_email_service import send_resend_email
+
+    mock_settings.RESEND_API_KEY = "re_test_key"
+    mock_settings.RESEND_FROM_EMAIL = "NSA Connect <onboarding@resend.dev>"
+    mock_settings.EMAIL_TEST_OVERRIDE_RECIPIENT = ""
+    mock_send.return_value = "email_abc"
+
+    send_resend_email(
+        to_email="mukesh@semo.edu",
+        subject="Task assigned: Buy supplies",
+        body="Hi Mukesh,\n\nYou've been assigned a task.",
+    )
+
+    mock_send.assert_called_once_with(
+        api_key="re_test_key",
+        from_email="NSA Connect <onboarding@resend.dev>",
+        to_email="mukesh@semo.edu",
+        subject="Task assigned: Buy supplies",
+        body="Hi Mukesh,\n\nYou've been assigned a task.",
+        body_format="text",
+    )
 
 
 @patch("app.api.v1.notifications.send_test_email")

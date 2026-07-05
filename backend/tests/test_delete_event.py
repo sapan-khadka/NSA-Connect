@@ -1,4 +1,5 @@
 import pytest
+from sqlalchemy import select
 
 from conftest import (
     auth_header,
@@ -125,3 +126,80 @@ def test_general_member_cannot_delete_event(
     )
     assert response.status_code == 403
     assert response.json()["detail"] == BOARD_REQUIRED_DETAIL
+
+
+def test_delete_event_cleans_up_notification_logs_rsvps_and_invitations(
+    client,
+    board_member_headers,
+    db_session,
+):
+    from datetime import UTC, datetime
+
+    from app.models.event_participant_invitation import EventParticipantInvitation
+    from app.models.event_rsvp import EventRsvp, RsvpStatus
+    from app.models.member import Member
+    from app.models.notification_sent_log import NotificationSentLog, NotificationType
+
+    event = _create_event(client, board_member_headers)
+    event_id = event["id"]
+    board = db_session.scalar(select(Member).where(Member.email == "board@semo.edu"))
+    assert board is not None
+
+    db_session.add(
+        EventRsvp(
+            event_id=event_id,
+            member_id=board.id,
+            status=RsvpStatus.GOING,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        ),
+    )
+    db_session.add(
+        EventParticipantInvitation(
+            event_id=event_id,
+            member_id=board.id,
+            invited_by_id=board.id,
+            created_at=datetime.now(UTC),
+        ),
+    )
+    db_session.add(
+        NotificationSentLog(
+            member_id=board.id,
+            notification_type=NotificationType.EVENT_REMINDER,
+            event_id=event_id,
+            recipient_email=board.email,
+            success=True,
+            sent_at=datetime.now(UTC),
+        ),
+    )
+    db_session.commit()
+
+    response = client.delete(
+        f"/api/v1/events/{event_id}",
+        headers=board_member_headers,
+    )
+    assert response.status_code == 204
+
+    assert (
+        db_session.scalar(
+            select(EventRsvp).where(
+                EventRsvp.event_id == event_id,
+                EventRsvp.member_id == board.id,
+            ),
+        )
+        is None
+    )
+    assert (
+        db_session.scalar(
+            select(EventParticipantInvitation).where(
+                EventParticipantInvitation.event_id == event_id,
+            ),
+        )
+        is None
+    )
+    assert (
+        db_session.scalar(
+            select(NotificationSentLog).where(NotificationSentLog.event_id == event_id),
+        )
+        is None
+    )

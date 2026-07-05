@@ -16,6 +16,12 @@ vi.mock("../components/FinanceEntryList", () => ({
   ),
 }));
 
+vi.mock("../components/EventInvitedParticipantsSection", () => ({
+  EventInvitedParticipantsSection: () => (
+    <div data-testid="event-invited-participants">Invited participants</div>
+  ),
+}));
+
 vi.mock("../lib/events-api", () => ({
   fetchEvent: vi.fn(),
 }));
@@ -159,6 +165,9 @@ describe("EventManagePage", () => {
     expect(screen.getByText("Event budget")).toBeInTheDocument();
     expect(screen.getByTestId("event-task-manager")).toBeInTheDocument();
     expect(screen.queryByTestId("finance-entry-list")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Delete event" }),
+    ).toBeInTheDocument();
   });
 
   it("shows meeting tools on the Meeting tab for meeting events", async () => {

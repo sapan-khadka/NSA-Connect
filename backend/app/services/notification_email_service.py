@@ -148,3 +148,5 @@ def deliver_notification_email(
         return True, None
     except ResendDeliveryError as exc:
         return False, str(exc)
+    except Exception as exc:
+        return False, str(exc)

@@ -66,17 +66,29 @@ def _send_and_log(
     event_task_id: int | None,
     send_callable,
 ) -> bool:
-    success, error_message = deliver_notification_email(send_callable=send_callable)
-    record_notification_send(
-        db,
-        member=member,
-        notification_type=notification_type,
-        success=success,
-        event_id=event_id,
-        event_task_id=event_task_id,
-        error_message=error_message,
-    )
-    return success
+    try:
+        success, error_message = deliver_notification_email(send_callable=send_callable)
+        record_notification_send(
+            db,
+            member=member,
+            notification_type=notification_type,
+            success=success,
+            event_id=event_id,
+            event_task_id=event_task_id,
+            error_message=error_message,
+        )
+        return success
+    except Exception:
+        logger.exception(
+            "Unexpected error sending notification type=%s member_id=%s email=%s "
+            "event_id=%s event_task_id=%s",
+            notification_type.value,
+            member.id,
+            member.email,
+            event_id,
+            event_task_id,
+        )
+        return False
 
 
 def notify_task_assigned_if_enabled(

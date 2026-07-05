@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
+import { EventDeleteSection } from "../components/EventDeleteSection";
 import { EventInvitedParticipantsSection } from "../components/EventInvitedParticipantsSection";
 import { EventManageLogisticsSection } from "../components/EventManageLogisticsSection";
 import { EventManageScheduleFields } from "../components/EventManageScheduleFields";
@@ -248,6 +249,10 @@ export function EventManagePage() {
           eventId={numericEventId}
           refreshKey={refreshKey}
         />
+      ) : null}
+
+      {canViewBoard ? (
+        <EventDeleteSection eventId={numericEventId} eventName={event.name} />
       ) : null}
     </div>
   );
