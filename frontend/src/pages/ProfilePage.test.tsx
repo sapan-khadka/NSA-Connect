@@ -12,6 +12,17 @@ vi.mock("../lib/members-api", () => ({
   updateMyProfile: vi.fn(),
 }));
 
+vi.mock("../lib/notifications-api", () => ({
+  fetchNotificationPreferences: vi.fn().mockResolvedValue({
+    event_reminders: true,
+    rsvp_nudges: true,
+    task_reminders: true,
+  }),
+  updateNotificationPreferences: vi.fn(),
+  sendTestEmail: vi.fn(),
+  runNotificationCheck: vi.fn(),
+}));
+
 const mockMember = {
   id: 1,
   full_name: "Test User",

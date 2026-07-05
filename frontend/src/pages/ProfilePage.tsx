@@ -1,6 +1,9 @@
 import { useEffect, useState, type FormEvent } from "react";
 
+import { AdminNotificationCheckButton } from "../components/AdminNotificationCheckButton";
+import { AdminTestEmailButton } from "../components/AdminTestEmailButton";
 import { ChangePasswordForm } from "../components/ChangePasswordForm";
+import { NotificationPreferencesSection } from "../components/NotificationPreferencesSection";
 import {
   MemberProfileForm,
   memberToProfileFormValues,
@@ -10,6 +13,8 @@ import {
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage } from "../lib/auth-api";
 import { fetchMyProfile, updateMyProfile } from "../lib/members-api";
+import { isRoleAtLeast } from "../lib/roles";
+import { MemberDuesStatus } from "../components/MemberDuesStatus";
 import { RoleBadge } from "../components/RoleBadge";
 import { StatusBadge } from "../components/StatusBadge";
 
@@ -55,6 +60,8 @@ export function ProfilePage() {
     return null;
   }
 
+  const canSendTestEmail = isRoleAtLeast(member.role, "board");
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!values) {
@@ -90,6 +97,7 @@ export function ProfilePage() {
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <RoleBadge role={member.role} size="md" />
           <StatusBadge status={member.status} />
+          <MemberDuesStatus />
         </div>
       </section>
 
@@ -133,6 +141,15 @@ export function ProfilePage() {
           </button>
         </div>
       </form>
+
+      <NotificationPreferencesSection />
+
+      {canSendTestEmail ? (
+        <>
+          <AdminTestEmailButton />
+          <AdminNotificationCheckButton />
+        </>
+      ) : null}
 
       <ChangePasswordForm />
     </div>

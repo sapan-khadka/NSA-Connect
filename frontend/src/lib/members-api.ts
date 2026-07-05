@@ -33,13 +33,6 @@ export async function fetchTalentOptions(): Promise<TalentOptionsResponse> {
   return response.data;
 }
 
-export type FetchMembersParams = {
-  page?: number;
-  page_size?: number;
-  status?: string;
-  talents?: string[];
-};
-
 function serializeMembersQueryParams(params: FetchMembersParams): string {
   const searchParams = new URLSearchParams();
 

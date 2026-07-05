@@ -60,6 +60,8 @@ services:
       dockerfile: Dockerfile
     container_name: nsa-connect-celery-worker
     restart: unless-stopped
+    env_file:
+      - ./backend/.env
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/nsa_connect
       REDIS_URL: redis://redis:6379/0
@@ -80,6 +82,8 @@ services:
       dockerfile: Dockerfile
     container_name: nsa-connect-celery-beat
     restart: unless-stopped
+    env_file:
+      - ./backend/.env
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/nsa_connect
       REDIS_URL: redis://redis:6379/0
@@ -95,4 +99,4 @@ services:
     command: celery -A app.celery_app beat --loglevel=info
 
 volumes:
-  postgres_data:
+  postgres_data: 

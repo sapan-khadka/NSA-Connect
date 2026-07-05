@@ -16,9 +16,9 @@ celery_app.conf.update(
     task_track_started=True,
     task_default_queue="default",
     beat_schedule={
-        "scan-prep-tasks-due-soon": {
-            "task": "prep_tasks.scan_due_soon",
-            "schedule": crontab(hour=9, minute=0),
+        "run-scheduled-notification-checks": {
+            "task": "notifications.run_scheduled_checks",
+            "schedule": crontab(minute="*/30"),
         },
     },
 )
@@ -27,4 +27,5 @@ celery_app.autodiscover_tasks(["app.tasks"])
 
 # Ensure custom tasks are registered when the worker process loads the app.
 import app.tasks.email_tasks  # noqa: E402, F401
+import app.tasks.notification_tasks  # noqa: E402, F401
 import app.tasks.prep_task_tasks  # noqa: E402, F401

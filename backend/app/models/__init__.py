@@ -16,6 +16,13 @@ from app.models.finance_change_request import (
     FinanceChangeStatus,
 )
 from app.models.finance_entry import FinanceCategory, FinanceEntry, FinanceEntryType
+from app.models.member_dues import (
+    DuesPaymentMethod,
+    DuesStatus,
+    MemberDues,
+    SemesterDuesSettings,
+)
+from app.models.notification_sent_log import NotificationSentLog, NotificationType
 from app.models.member import Member, MemberPosition, MemberRole, MemberStatus
 from app.models.meeting import MeetingAttendance, MeetingRecord
 from app.models.preptask import PrepTaskGroup, PrepTaskGroupItem
@@ -41,6 +48,12 @@ __all__ = [
     "FinanceChangeStatus",
     "FinanceEntry",
     "FinanceEntryType",
+    "DuesPaymentMethod",
+    "DuesStatus",
+    "MemberDues",
+    "SemesterDuesSettings",
+    "NotificationSentLog",
+    "NotificationType",
     "Member",
     "MemberRole",
     "MemberStatus",

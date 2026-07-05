@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { useSearchParams } from "react-router-dom";
 
+import { DuesDashboard } from "../components/DuesDashboard";
 import { EventBudgetBreakdown } from "../components/EventBudgetBreakdown";
 import { ExpenseCategoryChart } from "../components/ExpenseCategoryChart";
 import { FinanceEntryList } from "../components/FinanceEntryList";
@@ -34,6 +35,7 @@ import {
 } from "../lib/finance-routes";
 import {
   formatSemesterLabel,
+  getCurrentSemesterSlug,
   getRecentSemesterOptions,
 } from "../lib/semester";
 
@@ -62,6 +64,7 @@ type FinanceTabId = FinanceTab;
 const FINANCE_TABS: { id: FinanceTabId; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "transactions", label: "Transactions" },
+  { id: "dues", label: "Dues" },
   { id: "approvals", label: "Approvals" },
 ];
 
@@ -347,6 +350,8 @@ export function FinancePage() {
     summaryState.status === "ready" ? summaryState.summary : null;
   const semesterLabel = semesterFilterLabel(semester);
   const updatedLabel = lastUpdated ? formatUpdatedLabel(lastUpdated) : "—";
+  const duesSemester =
+    semester === "all" ? getCurrentSemesterSlug() : semester;
 
   return (
     <div className="space-y-6">
@@ -473,6 +478,21 @@ export function FinancePage() {
             onChanged={handleApprovalsChanged}
           />
           <FinanceMyChangeRequests refreshKey={refreshKey} />
+        </div>
+      ) : null}
+
+      {canViewTreasury && activeTab === "dues" ? (
+        <div className="space-y-4">
+          {semester === "all" ? (
+            <p className="text-sm text-label">
+              Showing dues for {formatSemesterLabel(duesSemester)}. Choose a semester above to switch terms.
+            </p>
+          ) : null}
+          <DuesDashboard
+            semester={duesSemester}
+            refreshKey={refreshKey}
+            onChanged={() => setRefreshKey((current) => current + 1)}
+          />
         </div>
       ) : null}
     </div>

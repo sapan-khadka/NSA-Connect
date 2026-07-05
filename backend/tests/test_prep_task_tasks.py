@@ -9,11 +9,11 @@ def test_celery_registers_prep_task_due_soon_scan():
     assert "prep_tasks.scan_due_soon" in celery_app.tasks
 
 
-def test_celery_beat_schedules_daily_prep_task_scan():
-    schedule = celery_app.conf.beat_schedule["scan-prep-tasks-due-soon"]
+def test_celery_beat_schedules_notification_scan_every_30_minutes():
+    schedule = celery_app.conf.beat_schedule["run-scheduled-notification-checks"]
 
-    assert schedule["task"] == "prep_tasks.scan_due_soon"
-    assert str(schedule["schedule"]) == "<crontab: 0 9 * * * (m/h/dM/MY/d)>"
+    assert schedule["task"] == "notifications.run_scheduled_checks"
+    assert "*/30" in str(schedule["schedule"])
 
 
 @patch("app.tasks.prep_task_tasks.scan_and_notify_prep_tasks_due_soon")

@@ -1,6 +1,6 @@
 from enum import StrEnum
 
-from sqlalchemy import Column, Integer, String, Text, JSON
+from sqlalchemy import Boolean, Column, Integer, String, Text, JSON
 from sqlalchemy import Enum as SqlEnum
 
 from app.models.base import Base
@@ -126,6 +126,24 @@ class Member(Base):
         default=ProfileFieldVisibility.BOARD_ONLY,
         server_default=ProfileFieldVisibility.BOARD_ONLY.value,
         nullable=False,
+    )
+    notify_event_reminders = Column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
+    )
+    notify_rsvp_nudges = Column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
+    )
+    notify_task_reminders = Column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
     )
 
     @property

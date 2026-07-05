@@ -35,6 +35,14 @@ class Settings(BaseSettings):
         default="",
         description="SendGrid API key for transactional email",
     )
+    RESEND_API_KEY: str = Field(
+        default="",
+        description="Resend API key for notification emails",
+    )
+    RESEND_FROM_EMAIL: str = Field(
+        default="NSA Connect <onboarding@resend.dev>",
+        description="From address for Resend notification emails",
+    )
 
     PREP_TASK_DUE_SOON_DAYS: int = Field(
         default=3,

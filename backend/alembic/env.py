@@ -12,6 +12,8 @@ import app.models.constitutional_chunk  # noqa: F401
 import app.models.event  # noqa: F401
 import app.models.event_photo  # noqa: F401
 import app.models.finance_entry  # noqa: F401
+import app.models.member_dues  # noqa: F401
+import app.models.notification_sent_log  # noqa: F401
 import app.models.member  # noqa: F401
 import app.models.preptask  # noqa: F401
 import app.models.volunteer  # noqa: F401

@@ -2,6 +2,7 @@ import { RoleBadge } from "./RoleBadge";
 import { ArrowLink } from "./ui/ArrowLink";
 import { HomeCard } from "./ui/HomeCard";
 import type { MemberResponse } from "../lib/auth-api";
+import { MemberDuesStatus } from "./MemberDuesStatus";
 
 type HomeProfileCardProps = {
   member: MemberResponse;
@@ -15,6 +16,9 @@ export function HomeProfileCard({ member }: HomeProfileCardProps) {
         <ArrowLink to="/profile">Edit profile</ArrowLink>
       </div>
       <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <MemberDuesStatus />
+        </div>
         <div>
           <dt className="text-label">Email</dt>
           <dd className="font-medium text-foreground">{member.email}</dd>

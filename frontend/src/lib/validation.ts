@@ -6,6 +6,20 @@ export function normalizeSemoEmail(value: string): string {
   return value.toLowerCase().trim();
 }
 
+export function validateEmailAddress(value: string): string | null {
+  const email = value.trim().toLowerCase();
+
+  if (!email) {
+    return "Email is required";
+  }
+
+  if (!EMAIL_PATTERN.test(email)) {
+    return "Enter a valid email address";
+  }
+
+  return null;
+}
+
 export function validateSemoEmail(value: string): string | null {
   const email = normalizeSemoEmail(value);
 

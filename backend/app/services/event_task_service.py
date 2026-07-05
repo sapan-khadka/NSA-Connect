@@ -133,6 +133,22 @@ def _load_tasks_for_event(db: Session, event_id: int) -> list[EventTask]:
     )
 
 
+def _maybe_notify_new_assignee(
+    db: Session,
+    task: EventTask,
+    *,
+    assignee_id: int | None,
+) -> None:
+    if assignee_id is None:
+        return
+
+    assignee = db.get(Member, assignee_id)
+    if assignee is None:
+        return
+
+    notify_task_assigned_if_enabled(db, task=task, assignee=assignee)
+
+
 def create_simple_event_task(
     db: Session,
     event_id: int,
@@ -163,6 +179,8 @@ def create_simple_event_task(
 
     reloaded = _load_task(db, task.id)
     assert reloaded is not None
+    if data.assignee_id is not None:
+        _maybe_notify_new_assignee(db, reloaded, assignee_id=data.assignee_id)
     return reloaded
 
 
@@ -211,6 +229,8 @@ def create_checklist_event_task(
 
     reloaded = _load_task(db, task.id)
     assert reloaded is not None
+    if data.assignee_id is not None:
+        _maybe_notify_new_assignee(db, reloaded, assignee_id=data.assignee_id)
     return reloaded
 
 
@@ -260,6 +280,7 @@ def update_event_task(
         raise EventTaskForbiddenError
 
     updates = data.model_dump(exclude_unset=True)
+    previous_assignee_id = task.assignee_id
 
     if not is_board and (MANAGER_ONLY_FIELDS & updates.keys()):
         raise EventTaskForbiddenError
@@ -290,6 +311,12 @@ def update_event_task(
 
     reloaded = _load_task(db, task_id)
     assert reloaded is not None
+    if (
+        "assignee_id" in updates
+        and reloaded.assignee_id is not None
+        and reloaded.assignee_id != previous_assignee_id
+    ):
+        _maybe_notify_new_assignee(db, reloaded, assignee_id=reloaded.assignee_id)
     return reloaded
 
 
