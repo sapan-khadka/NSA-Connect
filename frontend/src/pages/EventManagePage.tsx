@@ -9,6 +9,7 @@ import { EventVolunteersSection } from "../components/EventVolunteersSection";
 import { EventFeedbackSection } from "../components/EventFeedbackSection";
 import { EventManageLogisticsSection } from "../components/EventManageLogisticsSection";
 import { EventManageScheduleFields } from "../components/EventManageScheduleFields";
+import { EventMeetingVisibilitySetting } from "../components/EventMeetingVisibilitySetting";
 import { EventPhotoArchiveSetting } from "../components/EventPhotoArchiveSetting";
 import { MeetingRecordSection } from "../components/MeetingRecordSection";
 import { canCreateEventTasks } from "../lib/event-finance";
@@ -253,6 +254,12 @@ export function EventManagePage() {
       {canViewBoard ? (
         <>
           <EventManageScheduleFields event={event} onUpdated={setEvent} />
+          {isMeetingEvent ? (
+            <EventMeetingVisibilitySetting
+              event={event}
+              onUpdated={setEvent}
+            />
+          ) : null}
           <EventPhotoArchiveSetting
             event={event}
             onUpdated={setEvent}

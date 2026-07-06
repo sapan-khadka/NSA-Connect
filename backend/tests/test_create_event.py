@@ -132,6 +132,7 @@ def test_create_meeting_event_hides_from_photo_archive_by_default(
 
     assert response.status_code == 201
     assert response.json()["show_in_photo_archive"] is False
+    assert response.json()["meeting_visibility"] == "board_only"
 
 
 def test_create_cultural_event_shows_in_photo_archive_by_default(

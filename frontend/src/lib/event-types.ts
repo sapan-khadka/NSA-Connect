@@ -8,6 +8,8 @@ export const EVENT_TYPES = [
 
 export type EventType = (typeof EVENT_TYPES)[number];
 
+export type MeetingVisibility = "board_only" | "public";
+
 export const EVENT_TYPE_LABELS: Record<EventType, string> = {
   cultural: "Cultural",
   meeting: "Meeting",

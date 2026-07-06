@@ -16,6 +16,11 @@ class EventType(StrEnum):
     SERVICE = "service"
 
 
+class MeetingVisibility(StrEnum):
+    BOARD_ONLY = "board_only"
+    PUBLIC = "public"
+
+
 class Event(Base):
     __tablename__ = "events"
 
@@ -34,6 +39,13 @@ class Event(Base):
     location = Column(String(255), nullable=True)
     budget = Column(Numeric(10, 2), nullable=False)
     show_in_photo_archive = Column(Boolean, nullable=False, default=True)
+    meeting_visibility = Column(
+        SqlEnum(
+            MeetingVisibility,
+            values_callable=lambda values: [value.value for value in values],
+        ),
+        nullable=True,
+    )
     checkin_token = Column(String(64), nullable=True)
     created_by_id = Column(Integer, ForeignKey("members.id"), nullable=False)
     rsvps = relationship(

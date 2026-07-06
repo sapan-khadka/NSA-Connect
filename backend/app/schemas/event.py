@@ -11,7 +11,7 @@ from app.lib.event_finance import (
     is_event_finance_grace_period,
     is_event_finance_locked,
 )
-from app.models.event import EventType
+from app.models.event import EventType, MeetingVisibility
 from app.models.event_rsvp import RsvpStatus
 
 if TYPE_CHECKING:
@@ -31,6 +31,7 @@ class EventCreateRequest(BaseModel):
     event_type: EventType
     description: str = Field(min_length=1, max_length=5000)
     budget: Decimal = Field(ge=Decimal("0"), le=MAX_EVENT_BUDGET)
+    meeting_visibility: MeetingVisibility | None = None
 
     @field_validator("name", "description", mode="before")
     @classmethod
@@ -54,6 +55,12 @@ class EventCreateRequest(BaseModel):
             raise ValueError("Budget must have at most 2 decimal places")
         return normalized
 
+    @model_validator(mode="after")
+    def default_meeting_visibility(self) -> "EventCreateRequest":
+        if self.event_type == EventType.MEETING and self.meeting_visibility is None:
+            self.meeting_visibility = MeetingVisibility.BOARD_ONLY
+        return self
+
 
 class EventResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -74,6 +81,7 @@ class EventResponse(BaseModel):
     is_past: bool
     is_finance_grace_period: bool
     show_in_photo_archive: bool
+    meeting_visibility: MeetingVisibility | None = None
 
     @classmethod
     def from_event(
@@ -100,12 +108,14 @@ class EventResponse(BaseModel):
             is_past=not event.is_upcoming,
             is_finance_grace_period=is_event_finance_grace_period(event),
             show_in_photo_archive=event.show_in_photo_archive,
+            meeting_visibility=event.meeting_visibility,
         )
 
 
 class EventPatchRequest(BaseModel):
     show_in_photo_archive: bool | None = None
     starts_at: datetime | None = None
+    meeting_visibility: MeetingVisibility | None = None
 
     @field_validator("starts_at")
     @classmethod
@@ -119,7 +129,11 @@ class EventPatchRequest(BaseModel):
 
     @model_validator(mode="after")
     def at_least_one_field(self) -> "EventPatchRequest":
-        if self.show_in_photo_archive is None and self.starts_at is None:
+        if (
+            self.show_in_photo_archive is None
+            and self.starts_at is None
+            and self.meeting_visibility is None
+        ):
             raise ValueError("At least one field must be provided")
         return self
 

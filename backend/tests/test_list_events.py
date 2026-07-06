@@ -60,6 +60,7 @@ def test_list_events_returns_all_when_no_filters(client, board_member_headers, g
         starts_at="2030-07-10T18:00:00+00:00",
         event_type="meeting",
         description="Monthly board check-in.",
+        meeting_visibility="public",
     )
 
     response = client.get("/api/v1/events", headers=general_member_headers)
@@ -88,6 +89,7 @@ def test_list_events_filters_by_month(client, board_member_headers, general_memb
         starts_at="2030-07-10T18:00:00+00:00",
         event_type="meeting",
         description="Monthly board check-in.",
+        meeting_visibility="public",
     )
 
     response = client.get(
@@ -117,6 +119,7 @@ def test_list_events_filters_by_type(client, board_member_headers, general_membe
         starts_at="2030-06-20T18:00:00+00:00",
         event_type="meeting",
         description="Monthly board check-in.",
+        meeting_visibility="public",
     )
 
     response = client.get(
@@ -150,6 +153,7 @@ def test_list_events_filters_by_month_and_type(
         starts_at="2030-06-20T18:00:00+00:00",
         event_type="meeting",
         description="Monthly board check-in.",
+        meeting_visibility="public",
     )
     _create_event(
         client,
@@ -158,6 +162,7 @@ def test_list_events_filters_by_month_and_type(
         starts_at="2030-07-10T18:00:00+00:00",
         event_type="meeting",
         description="Summer planning session.",
+        meeting_visibility="public",
     )
 
     response = client.get(

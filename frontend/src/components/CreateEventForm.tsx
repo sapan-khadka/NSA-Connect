@@ -246,6 +246,50 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
               ) : null}
             </div>
 
+            {values.event_type === "meeting" ? (
+              <div className="sm:col-span-2">
+                <span className="block text-sm font-medium text-foreground">
+                  Meeting visibility
+                </span>
+                <div className="mt-2 space-y-2">
+                  <label className="flex items-start gap-2 text-sm text-foreground">
+                    <input
+                      type="radio"
+                      name="meeting-visibility"
+                      value="board_only"
+                      checked={values.meeting_visibility === "board_only"}
+                      onChange={() =>
+                        updateField("meeting_visibility", "board_only")
+                      }
+                      className="mt-0.5 h-4 w-4 border-gray-300 text-accent focus:ring-accent"
+                    />
+                    <span>
+                      Closed (board only)
+                      <span className="mt-0.5 block text-label">
+                        Hidden from general members on the calendar and in emails.
+                      </span>
+                    </span>
+                  </label>
+                  <label className="flex items-start gap-2 text-sm text-foreground">
+                    <input
+                      type="radio"
+                      name="meeting-visibility"
+                      value="public"
+                      checked={values.meeting_visibility === "public"}
+                      onChange={() => updateField("meeting_visibility", "public")}
+                      className="mt-0.5 h-4 w-4 border-gray-300 text-accent focus:ring-accent"
+                    />
+                    <span>
+                      Open (all members)
+                      <span className="mt-0.5 block text-label">
+                        Visible to every approved member like other events.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+            ) : null}
+
             <div>
               <label
                 htmlFor="event-budget"

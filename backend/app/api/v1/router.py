@@ -14,6 +14,7 @@ from app.api.v1.me import router as me_router
 from app.api.v1.members import router as members_router
 from app.api.v1.slots import router as slots_router
 from app.api.v1.tasks import router as tasks_router
+from app.api.v1.reports import router as reports_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -28,6 +29,7 @@ api_router.include_router(event_suggestions_router)
 api_router.include_router(event_tasks_router)
 api_router.include_router(slots_router)
 api_router.include_router(tasks_router)
+api_router.include_router(reports_router)
 api_router.include_router(finance_router)
 api_router.include_router(dues_router)
 api_router.include_router(notifications_router)

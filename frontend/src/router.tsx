@@ -26,6 +26,8 @@ import { MeetingDetailPage } from "./pages/MeetingDetailPage";
 import { PhotoArchivePage } from "./pages/PhotoArchivePage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { RegisterPage } from "./pages/RegisterPage";
+import { ReportDetailPage } from "./pages/ReportDetailPage";
+import { ReportsPage } from "./pages/ReportsPage";
 import { TaskOversightPage } from "./pages/TaskOversightPage";
 
 export const appRoutes: RouteObject[] = [
@@ -113,6 +115,22 @@ export const appRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute>
             <MemberProfilePage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "reports",
+        element: (
+          <ProtectedRoute>
+            <ReportsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "reports/:reportId",
+        element: (
+          <ProtectedRoute>
+            <ReportDetailPage />
           </ProtectedRoute>
         ),
       },

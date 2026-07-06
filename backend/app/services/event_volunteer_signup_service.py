@@ -10,7 +10,7 @@ from app.schemas.event_volunteer_signup import (
     EventVolunteerSignupMemberResponse,
     EventVolunteerSignupResponse,
 )
-from app.services.event_service import EventNotFoundError
+from app.services.event_service import EventNotFoundError, ensure_member_can_access_event
 from app.services.rsvp_service import EventNotUpcomingError
 
 
@@ -51,9 +51,9 @@ def volunteer_for_event(
     member_id: int,
     data: EventVolunteerSignupCreateRequest,
 ) -> EventVolunteerSignup:
+    ensure_member_can_access_event(db, event_id, member_id)
     event = db.get(Event, event_id)
-    if event is None:
-        raise EventNotFoundError
+    assert event is not None
     _ensure_event_is_upcoming(event)
 
     note = _normalize_note(data.note)
@@ -82,9 +82,9 @@ def withdraw_volunteer_signup(
     event_id: int,
     member_id: int,
 ) -> None:
+    ensure_member_can_access_event(db, event_id, member_id)
     event = db.get(Event, event_id)
-    if event is None:
-        raise EventNotFoundError
+    assert event is not None
     _ensure_event_is_upcoming(event)
 
     signup = get_member_volunteer_signup(db, event_id=event_id, member_id=member_id)

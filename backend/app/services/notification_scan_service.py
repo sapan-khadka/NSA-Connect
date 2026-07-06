@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.lib.semester import get_current_semester_slug
+from app.lib.event_visibility import event_visible_to_member
 from app.models.event import Event
 from app.models.event_rsvp import EventRsvp, RsvpStatus
 from app.models.event_task import EventTask, EventTaskKind, EventTaskStatus
@@ -157,6 +158,8 @@ def _process_event_reminders(db: Session, *, as_of: datetime) -> dict[str, int]:
             member = rsvp.member
             if member is None or member.status != MemberStatus.APPROVED:
                 continue
+            if not event_visible_to_member(event, member):
+                continue
 
             stats["candidates"] += 1
 
@@ -232,6 +235,8 @@ def _process_rsvp_nudges(db: Session, *, as_of: datetime) -> dict[str, int]:
 
         for member in approved_members:
             if member.id in responded_member_ids:
+                continue
+            if not event_visible_to_member(event, member):
                 continue
 
             stats["candidates"] += 1

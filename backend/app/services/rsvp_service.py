@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.models.event import Event
 from app.models.event_rsvp import EventRsvp, RsvpStatus
 from app.models.member import Member, MemberRole, MemberStatus
-from app.services.event_service import EventNotFoundError
+from app.services.event_service import EventNotFoundError, ensure_member_can_access_event
 
 
 class EventNotUpcomingError(Exception):
@@ -63,9 +63,9 @@ def set_event_rsvp_status(
     member_id: int,
     status: RsvpStatus,
 ) -> RsvpStatus:
+    ensure_member_can_access_event(db, event_id, member_id)
     event = db.get(Event, event_id)
-    if event is None:
-        raise EventNotFoundError
+    assert event is not None
     if not event.is_upcoming:
         raise EventNotUpcomingError
 
@@ -96,9 +96,9 @@ def set_event_rsvp_status(
 
 
 def rsvp_to_event(db: Session, event_id: int, member_id: int) -> RsvpStatus:
+    ensure_member_can_access_event(db, event_id, member_id)
     event = db.get(Event, event_id)
-    if event is None:
-        raise EventNotFoundError
+    assert event is not None
     if not event.is_upcoming:
         raise EventNotUpcomingError
 
@@ -115,9 +115,7 @@ def rsvp_to_event(db: Session, event_id: int, member_id: int) -> RsvpStatus:
 
 
 def cancel_event_rsvp(db: Session, event_id: int, member_id: int) -> None:
-    event = db.get(Event, event_id)
-    if event is None:
-        raise EventNotFoundError
+    ensure_member_can_access_event(db, event_id, member_id)
 
     rsvp = db.scalar(
         select(EventRsvp).where(

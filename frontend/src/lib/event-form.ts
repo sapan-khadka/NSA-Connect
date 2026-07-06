@@ -1,4 +1,4 @@
-import type { EventType } from "./event-types";
+import type { EventType, MeetingVisibility } from "./event-types";
 import { EVENT_TYPES } from "./event-types";
 import { toLocalIsoDate } from "./calendar";
 
@@ -39,6 +39,7 @@ export type CreateEventFormValues = {
   event_date: string;
   event_time: string;
   budget: string;
+  meeting_visibility: MeetingVisibility;
 };
 
 export type CreateEventFormErrors = Partial<
@@ -54,6 +55,7 @@ export const initialCreateEventValues: CreateEventFormValues = {
   event_date: "",
   event_time: "18:00",
   budget: "",
+  meeting_visibility: "board_only",
 };
 
 /** Build a timezone-aware ISO string from local date and time inputs. */
@@ -173,5 +175,8 @@ export function buildCreateEventPayload(values: CreateEventFormValues) {
     event_type: values.event_type,
     starts_at: combineDateAndTime(values.event_date, values.event_time),
     budget: formatBudgetForSubmit(values.budget),
+    ...(values.event_type === "meeting"
+      ? { meeting_visibility: values.meeting_visibility }
+      : {}),
   };
 }

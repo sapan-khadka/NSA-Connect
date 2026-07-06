@@ -1,5 +1,5 @@
 import api from "./api";
-import type { EventType } from "./event-types";
+import type { EventType, MeetingVisibility } from "./event-types";
 
 export type PrepTaskChecklistItemResponse = {
   id: number;
@@ -20,6 +20,8 @@ export type PrepTaskResponse = {
 
 export type RsvpStatus = "going" | "maybe" | "not_going";
 
+export type { MeetingVisibility } from "./event-types";
+
 export type EventResponse = {
   id: number;
   name: string;
@@ -37,6 +39,7 @@ export type EventResponse = {
   is_past: boolean;
   is_finance_grace_period: boolean;
   show_in_photo_archive: boolean;
+  meeting_visibility: MeetingVisibility | null;
 };
 
 export type EventDetailResponse = EventResponse & {
@@ -146,6 +149,7 @@ export type CreateEventRequest = {
   event_type: EventType;
   description: string;
   budget: string;
+  meeting_visibility?: MeetingVisibility | null;
 };
 
 export async function createEvent(
@@ -181,6 +185,7 @@ export async function fetchEvent(eventId: number): Promise<EventDetailResponse> 
 export type EventPatchRequest = {
   show_in_photo_archive?: boolean;
   starts_at?: string;
+  meeting_visibility?: MeetingVisibility;
 };
 
 export async function patchEvent(

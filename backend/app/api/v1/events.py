@@ -42,7 +42,7 @@ from app.services.event_service import (
     EventNotFoundError,
     create_event,
     delete_event,
-    get_event_with_prep_tasks,
+    get_event_with_prep_tasks_for_member,
     list_events,
     list_past_events,
     list_upcoming_events,
@@ -154,7 +154,12 @@ def list_events_endpoint(
     current_member: Member = Depends(get_current_member),
     db: Session = Depends(get_db),
 ):
-    events, total = list_events(db, month=month, event_type=event_type)
+    events, total = list_events(
+        db,
+        month=month,
+        event_type=event_type,
+        viewer=current_member,
+    )
     return EventListResponse(
         events=[
             _build_event_response(db, event, member_id=current_member.id)
@@ -170,7 +175,7 @@ def list_upcoming_events_endpoint(
     current_member: Member = Depends(get_current_member),
     db: Session = Depends(get_db),
 ):
-    events, total = list_upcoming_events(db, limit=limit)
+    events, total = list_upcoming_events(db, limit=limit, viewer=current_member)
     return EventListResponse(
         events=[
             _build_event_response(db, event, member_id=current_member.id)
@@ -187,7 +192,12 @@ def list_past_events_endpoint(
     current_member: Member = Depends(get_current_member),
     db: Session = Depends(get_db),
 ):
-    events, total = list_past_events(db, limit=limit, offset=offset)
+    events, total = list_past_events(
+        db,
+        limit=limit,
+        offset=offset,
+        viewer=current_member,
+    )
     return EventListResponse(
         events=[
             _build_event_response(db, event, member_id=current_member.id)
@@ -204,7 +214,11 @@ def get_event_endpoint(
     db: Session = Depends(get_db),
 ):
     try:
-        event = get_event_with_prep_tasks(db, event_id)
+        event = get_event_with_prep_tasks_for_member(
+            db,
+            event_id,
+            viewer=current_member,
+        )
     except EventNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -662,6 +676,11 @@ def patch_event_endpoint(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Event not found",
+        ) from None
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
         ) from None
 
     return _build_event_response(db, event, member_id=current_member.id)

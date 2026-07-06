@@ -1,6 +1,6 @@
 from app.models.base import Base
 from app.models.constitutional_chunk import ConstitutionalChunk
-from app.models.event import Event, EventType
+from app.models.event import Event, EventType, MeetingVisibility
 from app.models.announcement import Announcement, AnnouncementCategory
 from app.models.event_checkin import EventCheckIn
 from app.models.event_suggestion import EventSuggestion, EventSuggestionStatus
@@ -34,6 +34,7 @@ from app.models.meeting import MeetingAttendance, MeetingRecord
 from app.models.preptask import PrepTaskGroup, PrepTaskGroupItem
 from app.models.reminder import PrepTaskReminder, ReminderType
 from app.models.volunteer import VolunteerSignup, VolunteerSlot
+from app.models.semester_report import ReportRangeType, SemesterReport
 
 __all__ = [
     "Announcement",
@@ -57,6 +58,7 @@ __all__ = [
     "EventTaskKind",
     "EventTaskStatus",
     "EventType",
+    "MeetingVisibility",
     "FinanceCategory",
     "FinanceChangeAction",
     "FinanceChangeRequest",
@@ -78,6 +80,8 @@ __all__ = [
     "PrepTaskGroupItem",
     "PrepTaskReminder",
     "ReminderType",
+    "ReportRangeType",
+    "SemesterReport",
     "VolunteerSignup",
     "VolunteerSlot",
 ]

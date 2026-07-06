@@ -155,12 +155,13 @@ def test_cannot_rsvp_to_past_event(
     from datetime import UTC, datetime
     from decimal import Decimal
 
-    from app.models.event import Event, EventType
+    from app.models.event import Event, EventType, MeetingVisibility
 
     event = Event(
         title="Past Event",
         description="Already happened.",
         event_type=EventType.MEETING,
+        meeting_visibility=MeetingVisibility.PUBLIC,
         starts_at=datetime(2020, 1, 1, 18, 0, tzinfo=UTC),
         budget=Decimal("0.00"),
         created_by_id=2,

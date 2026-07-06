@@ -11,7 +11,7 @@ from app.schemas.event_feedback import (
     EventFeedbackMemberResponse,
     EventFeedbackResponse,
 )
-from app.services.event_service import EventNotFoundError
+from app.services.event_service import EventNotFoundError, ensure_member_can_access_event
 
 
 class EventNotPastError(Exception):
@@ -51,9 +51,9 @@ def submit_event_feedback(
     member_id: int,
     data: EventFeedbackCreateRequest,
 ) -> EventFeedback:
+    ensure_member_can_access_event(db, event_id, member_id)
     event = db.get(Event, event_id)
-    if event is None:
-        raise EventNotFoundError
+    assert event is not None
     _ensure_event_is_past(event)
 
     comment = _normalize_comment(data.comment)

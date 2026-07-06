@@ -6,10 +6,16 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models.event import Event, EventType
+from app.lib.event_visibility import (
+    apply_event_visibility_filter,
+    event_visible_to_member,
+)
 from app.models.member import Member, MemberRole, MemberStatus
+from app.models.event import Event, EventType
 from app.services.event_service import EventNotFoundError, get_event_with_tasks
 from app.models.event_task import EventTaskKind
+
+
 from app.services.finance_service import get_finance_summary
 
 
@@ -161,17 +167,24 @@ def _require_role(member: Member, minimum_role: MemberRole) -> None:
         )
 
 
-def _list_upcoming_events(db: Session, tool_input: dict[str, Any]) -> str:
+def _list_upcoming_events(
+    db: Session,
+    member: Member,
+    tool_input: dict[str, Any],
+) -> str:
     limit = int(tool_input.get("limit") or 10)
     limit = max(1, min(limit, 20))
     now = datetime.now(UTC)
 
-    events = db.scalars(
+    query = (
         select(Event)
         .where(Event.starts_at >= now)
         .order_by(Event.starts_at.asc())
-        .limit(limit),
-    ).all()
+        .limit(limit)
+    )
+    query = apply_event_visibility_filter(query, member)
+
+    events = db.scalars(query).all()
 
     return _tool_result(
         [
@@ -188,7 +201,11 @@ def _list_upcoming_events(db: Session, tool_input: dict[str, Any]) -> str:
     )
 
 
-def _search_events(db: Session, tool_input: dict[str, Any]) -> str:
+def _search_events(
+    db: Session,
+    member: Member,
+    tool_input: dict[str, Any],
+) -> str:
     keyword = str(tool_input.get("keyword", "")).strip()
     if not keyword:
         raise ChatToolValidationError("keyword is required")
@@ -201,6 +218,7 @@ def _search_events(db: Session, tool_input: dict[str, Any]) -> str:
     if event_type:
         query = query.where(Event.event_type == EventType(event_type))
 
+    query = apply_event_visibility_filter(query, member)
     events = db.scalars(
         query.order_by(Event.starts_at.asc()).limit(limit),
     ).all()
@@ -218,10 +236,14 @@ def _search_events(db: Session, tool_input: dict[str, Any]) -> str:
     )
 
 
-def _get_event_details(db: Session, tool_input: dict[str, Any]) -> str:
+def _get_event_details(
+    db: Session,
+    member: Member,
+    tool_input: dict[str, Any],
+) -> str:
     event_id = int(tool_input["event_id"])
     event = db.get(Event, event_id)
-    if event is None:
+    if event is None or not event_visible_to_member(event, member):
         raise EventNotFoundError
 
     return _tool_result(
@@ -312,11 +334,11 @@ def execute_chat_tool(
 ) -> str:
     try:
         if tool_name == "list_upcoming_events":
-            return _list_upcoming_events(db, tool_input)
+            return _list_upcoming_events(db, member, tool_input)
         if tool_name == "search_events":
-            return _search_events(db, tool_input)
+            return _search_events(db, member, tool_input)
         if tool_name == "get_event_details":
-            return _get_event_details(db, tool_input)
+            return _get_event_details(db, member, tool_input)
         if tool_name == "get_event_prep_tasks":
             return _get_event_prep_tasks(db, member, tool_input)
         if tool_name == "get_member_counts":

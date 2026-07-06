@@ -51,3 +51,35 @@ def get_current_semester_slug(as_of: datetime | None = None) -> str:
 def format_semester_label(semester: str) -> str:
     year, term = semester.rsplit("-", 1)
     return f"{term.capitalize()} {year}"
+
+
+def semesters_overlapping_range(
+    period_start: datetime,
+    period_end: datetime,
+) -> list[str]:
+    """Return semester slugs whose [start, end) bounds overlap [period_start, period_end)."""
+    if period_start.tzinfo is None:
+        period_start = period_start.replace(tzinfo=UTC)
+    else:
+        period_start = period_start.astimezone(UTC)
+    if period_end.tzinfo is None:
+        period_end = period_end.replace(tzinfo=UTC)
+    else:
+        period_end = period_end.astimezone(UTC)
+
+    start_year = period_start.year - 1
+    end_year = period_end.year + 1
+    terms = ("spring", "summer", "fall")
+    overlapping: list[str] = []
+
+    for year in range(start_year, end_year + 1):
+        for term in terms:
+            slug = f"{year}-{term}"
+            try:
+                sem_start, sem_end = semester_date_range(slug)
+            except InvalidSemesterError:
+                continue
+            if sem_start < period_end and sem_end > period_start:
+                overlapping.append(slug)
+
+    return overlapping

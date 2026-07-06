@@ -63,6 +63,9 @@ export function AppLayout() {
                   <PrimaryNavLink to="/members">Members</PrimaryNavLink>
                 ) : null}
                 <PrimaryNavLink to="/assistant">Assistant</PrimaryNavLink>
+                {isAuthenticated ? (
+                  <PrimaryNavLink to="/reports">Reports</PrimaryNavLink>
+                ) : null}
                 {adminItems.length > 0 ? (
                   <>
                     <NavDivider />
