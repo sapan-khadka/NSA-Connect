@@ -14,8 +14,10 @@ export type LoginRequest = {
 
 export type TokenResponse = {
   access_token: string;
+  refresh_token: string;
   token_type: string;
   expires_at: string;
+  refresh_expires_at: string;
 };
 
 export async function loginMember(data: LoginRequest): Promise<TokenResponse> {

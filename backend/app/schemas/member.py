@@ -3,6 +3,10 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.core.password_validation import (
+    PASSWORD_MAX_LENGTH,
+    PASSWORD_MIN_LENGTH,
+)
 from app.core.validators import SemoEmailStr, StudentIdStr
 from app.lib.member_talents import ALL_MEMBER_TALENTS, is_valid_talent
 from app.models.member import (
@@ -24,7 +28,7 @@ SENSITIVE_MEMBER_FIELDS = frozenset({"password", "hashed_password"})
 class MemberCreateRequest(BaseModel):
     full_name: str = Field(min_length=1, max_length=255)
     email: SemoEmailStr
-    password: str = Field(min_length=8, max_length=128)
+    password: str = Field(min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH)
     student_id: StudentIdStr
     major: str = Field(min_length=1, max_length=255)
     graduation_year: int = Field(ge=CURRENT_YEAR, le=MAX_GRADUATION_YEAR)
@@ -110,7 +114,7 @@ class MemberLoginRequest(BaseModel):
 
 class MemberPasswordChangeRequest(BaseModel):
     current_password: str = Field(min_length=1, max_length=128)
-    new_password: str = Field(min_length=8, max_length=128)
+    new_password: str = Field(min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH)
 
 
 class MemberRoleUpdateRequest(BaseModel):

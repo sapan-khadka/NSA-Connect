@@ -1,5 +1,15 @@
 export const SEMO_EMAIL_DOMAIN = "semo.edu";
 
+import {
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+  getPasswordHint,
+  validatePasswordStrength,
+  type PasswordValidationContext,
+} from "./password-validation";
+
+export { getPasswordHint, PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH };
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function normalizeSemoEmail(value: string): string {
@@ -51,8 +61,8 @@ export function validateLoginPassword(value: string): string | null {
   return null;
 }
 
-export const REGISTER_PASSWORD_MIN_LENGTH = 8;
-export const REGISTER_PASSWORD_MAX_LENGTH = 128;
+export const REGISTER_PASSWORD_MIN_LENGTH = PASSWORD_MIN_LENGTH;
+export const REGISTER_PASSWORD_MAX_LENGTH = PASSWORD_MAX_LENGTH;
 export const STUDENT_ID_PATTERN = /^[A-Za-z0-9]{6,20}$/;
 
 export function normalizeStudentId(value: string): string {
@@ -83,16 +93,11 @@ export function validateFullName(value: string): string | null {
   return null;
 }
 
-export function validateRegisterPassword(value: string): string | null {
-  if (value.length < REGISTER_PASSWORD_MIN_LENGTH) {
-    return "Password must be at least 8 characters";
-  }
-
-  if (value.length > REGISTER_PASSWORD_MAX_LENGTH) {
-    return "Password must be at most 128 characters";
-  }
-
-  return null;
+export function validateRegisterPassword(
+  value: string,
+  context: PasswordValidationContext = {},
+): string | null {
+  return validatePasswordStrength(value, context);
 }
 
 export function validateStudentId(value: string): string | null {
@@ -195,6 +200,17 @@ export function validateRegisterForm(
   for (const field of Object.keys(registerValidators) as Array<
     keyof RegisterFormValues
   >) {
+    if (field === "password") {
+      const error = validateRegisterPassword(values.password, {
+        email: values.email,
+        fullName: values.full_name,
+      });
+      if (error) {
+        errors.password = error;
+      }
+      continue;
+    }
+
     const error = registerValidators[field](values[field]);
     if (error) {
       errors[field] = error;
@@ -207,7 +223,15 @@ export function validateRegisterForm(
 export function validateRegisterField(
   field: keyof RegisterFormValues,
   value: string,
+  values?: RegisterFormValues,
 ): string | null {
+  if (field === "password") {
+    return validateRegisterPassword(value, {
+      email: values?.email,
+      fullName: values?.full_name,
+    });
+  }
+
   return registerValidators[field](value);
 }
 

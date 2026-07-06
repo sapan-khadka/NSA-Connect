@@ -24,6 +24,7 @@ class Settings(BaseSettings):
         description="Secret key for signing JWT tokens",
     )
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 14
 
     EMAIL_ENABLED: bool = False
     EMAIL_FROM: str = "NSA Connect <noreply@semo.edu>"

@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from "react";
 
+import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage } from "../lib/auth-api";
 import { changeMyPassword } from "../lib/members-api";
+import { getPasswordHint, validatePasswordStrength } from "../lib/password-validation";
 import {
   validateLoginPassword,
-  validateRegisterPassword,
 } from "../lib/validation";
 
 const inputClassName =
@@ -16,7 +17,13 @@ type PasswordFormErrors = {
   confirm_password?: string;
 };
 
-export function ChangePasswordForm() {
+type ChangePasswordFormProps = {
+  email?: string;
+  fullName?: string;
+};
+
+export function ChangePasswordForm({ email, fullName }: ChangePasswordFormProps) {
+  const { updateSessionTokens } = useAuth();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -28,7 +35,10 @@ export function ChangePasswordForm() {
   function validateForm(): PasswordFormErrors {
     const errors: PasswordFormErrors = {};
     const currentError = validateLoginPassword(currentPassword);
-    const newError = validateRegisterPassword(newPassword);
+    const newError = validatePasswordStrength(newPassword, {
+      email,
+      fullName,
+    });
 
     if (currentError) {
       errors.current_password = currentError;
@@ -64,10 +74,11 @@ export function ChangePasswordForm() {
     setSuccessMessage(null);
 
     try {
-      await changeMyPassword({
+      const tokens = await changeMyPassword({
         current_password: currentPassword,
         new_password: newPassword,
       });
+      updateSessionTokens(tokens);
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -86,8 +97,8 @@ export function ChangePasswordForm() {
     >
       <h2 className="text-lg font-light tracking-subhead text-foreground">Change password</h2>
       <p className="mt-1 text-sm text-label">
-        Use at least 8 characters. You will stay signed in after updating your
-        password.
+        {getPasswordHint()} You will stay signed in on this device; other
+        sessions will be signed out.
       </p>
 
       {serverError ? (
@@ -158,6 +169,9 @@ export function ChangePasswordForm() {
             }}
             className={inputClassName}
           />
+          <p className="mt-1 text-xs text-label">
+            {newPassword ? `${newPassword.length} characters` : getPasswordHint()}
+          </p>
           {fieldErrors.new_password ? (
             <p className="mt-1 ds-field-error">{fieldErrors.new_password}</p>
           ) : null}

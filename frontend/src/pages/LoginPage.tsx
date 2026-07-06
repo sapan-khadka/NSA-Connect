@@ -67,8 +67,8 @@ export function LoginPage() {
     setIsPendingApproval(false);
 
     try {
-      const token = await loginMember(values);
-      const member = await login(token.access_token);
+      const tokens = await loginMember(values);
+      const member = await login(tokens);
       navigate(redirectPath ?? getDashboardPath(member.role), { replace: true });
     } catch (error) {
       if (isPendingApprovalError(error)) {

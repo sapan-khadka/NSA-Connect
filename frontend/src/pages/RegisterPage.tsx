@@ -5,6 +5,7 @@ import { getApiErrorMessage, registerMember } from "../lib/auth-api";
 import {
   SEMO_EMAIL_DOMAIN,
   getGraduationYearOptions,
+  getPasswordHint,
   validateRegisterField,
   validateRegisterForm,
   type RegisterFormErrors,
@@ -42,7 +43,7 @@ export function RegisterPage() {
   }
 
   function validateField(field: keyof RegisterFormValues) {
-    const error = validateRegisterField(field, values[field]);
+    const error = validateRegisterField(field, values[field], values);
 
     setFieldErrors((current) => ({
       ...current,
@@ -269,9 +270,15 @@ export function RegisterPage() {
             onChange={(event) => updateField("password", event.target.value)}
             onBlur={() => validateField("password")}
             aria-invalid={fieldErrors.password ? true : undefined}
-            aria-describedby={fieldErrors.password ? "password-error" : undefined}
+            aria-describedby="password-hint password-error"
             className={inputClassName}
           />
+          <p id="password-hint" className="mt-1 text-xs text-label">
+            {getPasswordHint()}
+            {values.password
+              ? ` (${values.password.length} characters)`
+              : ""}
+          </p>
           {fieldErrors.password && (
             <p id="password-error" className="mt-1 ds-field-error">
               {fieldErrors.password}

@@ -5,8 +5,11 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_member, require_board, require_president
+from app.core.password_validation import WeakPasswordError
+from app.core.security import create_token_pair
 from app.lib.member_talents import ALL_MEMBER_TALENTS, MEMBER_TALENT_LABELS
 from app.models.member import Member, MemberRole, MemberStatus
+from app.schemas.auth import TokenResponse
 from app.schemas.member import (
     MemberBoardRoleUpdateRequest,
     MemberListResponse,
@@ -109,7 +112,7 @@ def update_my_profile(
     return MemberResponse.from_member(member, viewer=current_member)
 
 
-@router.post("/me/password", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/me/password", response_model=TokenResponse)
 def change_my_password(
     data: MemberPasswordChangeRequest,
     current_member: Member = Depends(get_current_member),
@@ -127,6 +130,31 @@ def change_my_password(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Current password is incorrect",
         ) from None
+    except WeakPasswordError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from None
+
+    member = get_member_by_id(db, current_member.id)
+    (
+        access_token,
+        expires_at,
+        refresh_token,
+        refresh_expires_at,
+    ) = create_token_pair(
+        member_id=member.id,
+        email=member.email,
+        role=member.role.value,
+        token_version=member.token_version,
+    )
+
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        expires_at=expires_at,
+        refresh_expires_at=refresh_expires_at,
+    )
 
 
 @router.get("/assignees", response_model=MemberListResponse)

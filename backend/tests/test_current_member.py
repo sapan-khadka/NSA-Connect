@@ -73,6 +73,8 @@ def test_me_rejects_expired_token(client, db_session):
         "member_id": 1,
         "email": "sapan@semo.edu",
         "role": "general",
+        "tv": 1,
+        "typ": "access",
         "exp": datetime.now(UTC) - timedelta(minutes=1),
     }
     expired_token = jwt.encode(
@@ -97,6 +99,7 @@ def test_me_rejects_unapproved_member_with_valid_token(client, db_session):
         member_id=1,
         email="sapan@semo.edu",
         role="general",
+        token_version=1,
     )
 
     response = client.get(
@@ -145,6 +148,7 @@ def test_members_me_rejects_unapproved_member(client, db_session):
         member_id=1,
         email="sapan@semo.edu",
         role="general",
+        token_version=1,
     )
 
     response = client.get(
@@ -168,16 +172,17 @@ def test_members_me_password_changes_password(client, db_session):
         headers=headers,
         json={
             "current_password": "securepass123",
-            "new_password": "brandnewpass",
+            "new_password": "river-canyon-9",
         },
     )
 
-    assert response.status_code == 204
+    assert response.status_code == 200
+    assert "access_token" in response.json()
 
     old_login = _login(client)
     assert old_login.status_code == 401
 
-    new_login = _login(client, password="brandnewpass")
+    new_login = _login(client, password="river-canyon-9")
     assert new_login.status_code == 200
 
 
@@ -192,7 +197,7 @@ def test_members_me_password_rejects_wrong_current_password(client, db_session):
         headers={"Authorization": f"Bearer {token}"},
         json={
             "current_password": "wrongpassword",
-            "new_password": "brandnewpass",
+            "new_password": "river-canyon-9",
         },
     )
 
@@ -212,16 +217,17 @@ def test_members_me_password_changes_password(client, db_session):
         headers=headers,
         json={
             "current_password": "securepass123",
-            "new_password": "brandnewpass",
+            "new_password": "river-canyon-9",
         },
     )
 
-    assert response.status_code == 204
+    assert response.status_code == 200
+    assert "access_token" in response.json()
 
     old_login = _login(client)
     assert old_login.status_code == 401
 
-    new_login = _login(client, password="brandnewpass")
+    new_login = _login(client, password="river-canyon-9")
     assert new_login.status_code == 200
 
 
@@ -236,7 +242,7 @@ def test_members_me_password_rejects_wrong_current_password(client, db_session):
         headers={"Authorization": f"Bearer {token}"},
         json={
             "current_password": "wrongpassword",
-            "new_password": "brandnewpass",
+            "new_password": "river-canyon-9",
         },
     )
 

@@ -151,7 +151,10 @@ export function ProfilePage() {
         </>
       ) : null}
 
-      <ChangePasswordForm />
+      <ChangePasswordForm
+        email={member?.email ?? undefined}
+        fullName={member?.full_name}
+      />
     </div>
   );
 }

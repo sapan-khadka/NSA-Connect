@@ -2,6 +2,7 @@ from sqlalchemy import cast, func, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Session
 
+from app.core.password_validation import validate_password_strength
 from app.core.security import hash_password, verify_password
 from app.models.member import (
     EXCLUSIVE_AUTH_ROLES,
@@ -57,6 +58,12 @@ def create_member(db: Session, data: MemberCreateRequest) -> Member:
     )
     if existing_student_id:
         raise StudentIdAlreadyExistsError
+
+    validate_password_strength(
+        data.password,
+        email=data.email,
+        full_name=data.full_name,
+    )
 
     member = Member(
         full_name=data.full_name,
@@ -170,6 +177,7 @@ def reject_member(db: Session, member_id: int) -> Member:
     if member.status != MemberStatus.PENDING:
         raise InvalidMemberStatusError("Only pending members can be rejected")
     member.status = MemberStatus.REJECTED
+    member.token_version = (member.token_version or 1) + 1
     db.commit()
     db.refresh(member)
     return member
@@ -357,5 +365,12 @@ def change_member_password(
     if not verify_password(current_password, member.hashed_password):
         raise InvalidCurrentPasswordError
 
+    validate_password_strength(
+        new_password,
+        email=member.email,
+        full_name=member.full_name,
+    )
+
     member.hashed_password = hash_password(new_password)
+    member.token_version = (member.token_version or 1) + 1
     db.commit()

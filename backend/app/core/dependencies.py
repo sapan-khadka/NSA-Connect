@@ -1,10 +1,9 @@
-import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import decode_access_token
+from app.core.security import InvalidTokenError, decode_access_token
 from app.models.member import Member, MemberPosition, MemberRole
 
 security = HTTPBearer()
@@ -16,7 +15,7 @@ def get_current_member(
 ) -> Member:
     try:
         payload = decode_access_token(credentials.credentials)
-    except jwt.InvalidTokenError as exc:
+    except InvalidTokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
@@ -44,6 +43,14 @@ def get_current_member(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token payload",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token_version = payload.get("tv")
+    if token_version != member.token_version:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

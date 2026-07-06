@@ -110,8 +110,10 @@ describe("LoginPage", () => {
 
     vi.mocked(loginMember).mockResolvedValue({
       access_token: "jwt-token",
+      refresh_token: "refresh-token",
       token_type: "bearer",
       expires_at: "2026-12-31T00:00:00Z",
+      refresh_expires_at: "2027-01-14T00:00:00Z",
     });
 
     const user = userEvent.setup();

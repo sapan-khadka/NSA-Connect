@@ -1,5 +1,5 @@
 import api from "./api";
-import type { MemberResponse } from "./auth-api";
+import type { MemberResponse, TokenResponse } from "./auth-api";
 import type { MemberPosition } from "./roles";
 import type { MemberTalent, ProfileFieldVisibility } from "./member-talents";
 
@@ -129,13 +129,18 @@ export async function updateMemberProfile(
   return response.data;
 }
 
+import type { TokenResponse } from "./auth-api";
+
 export type ChangePasswordRequest = {
   current_password: string;
   new_password: string;
 };
 
-export async function changeMyPassword(data: ChangePasswordRequest): Promise<void> {
-  await api.post("/v1/members/me/password", data);
+export async function changeMyPassword(
+  data: ChangePasswordRequest,
+): Promise<TokenResponse> {
+  const response = await api.post<TokenResponse>("/v1/members/me/password", data);
+  return response.data;
 }
 
 export type UpdateMemberRoleRequest = {

@@ -157,6 +157,7 @@ class Member(Base):
         default=True,
         server_default="true",
     )
+    token_version = Column(Integer, nullable=False, default=1, server_default="1")
 
     @property
     def is_approved(self) -> bool:
