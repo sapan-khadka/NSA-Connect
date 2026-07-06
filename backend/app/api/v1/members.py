@@ -1,11 +1,13 @@
 import math
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.dependencies import get_current_member, require_board, require_president
 from app.core.password_validation import WeakPasswordError
+from app.core.rate_limit import change_password_key, limit
 from app.core.security import create_token_pair
 from app.lib.member_talents import ALL_MEMBER_TALENTS, MEMBER_TALENT_LABELS
 from app.models.member import Member, MemberRole, MemberStatus
@@ -113,7 +115,12 @@ def update_my_profile(
 
 
 @router.post("/me/password", response_model=TokenResponse)
+@limit(
+    f"{settings.RATE_LIMIT_CHANGE_PASSWORD_MAX}/{settings.RATE_LIMIT_CHANGE_PASSWORD_WINDOW_SECONDS}second",
+    key_func=change_password_key,
+)
 def change_my_password(
+    request: Request,
     data: MemberPasswordChangeRequest,
     current_member: Member = Depends(get_current_member),
     db: Session = Depends(get_db),

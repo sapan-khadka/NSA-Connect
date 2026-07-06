@@ -9,6 +9,7 @@ from zipstream import ZIP_DEFLATED, ZipStream
 
 from app.models.event import Event
 from app.models.event_photo import EventPhoto
+from app.models.member import Member
 from app.services.event_photo_service import list_event_photos
 from app.services.event_service import EventNotFoundError
 from app.services.local_event_photo_storage import resolve_event_photo_fetch_url
@@ -41,8 +42,10 @@ def build_album_zip_filename(event: Event) -> str:
 def iter_event_photo_album_zip(
     db: Session,
     event_id: int,
+    *,
+    viewer: Member,
 ) -> tuple[Iterator[bytes], str]:
-    event, photos = list_event_photos(db, event_id)
+    event, photos = list_event_photos(db, event_id, viewer=viewer)
     if not photos:
         raise EventPhotoAlbumEmptyError("No photos to download")
 

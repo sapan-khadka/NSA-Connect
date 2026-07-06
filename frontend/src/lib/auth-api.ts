@@ -64,6 +64,35 @@ export async function fetchCurrentMember(): Promise<MemberResponse> {
   return response.data;
 }
 
+export type PasswordResetRequestResponse = {
+  message: string;
+};
+
+export async function requestPasswordReset(
+  email: string,
+): Promise<PasswordResetRequestResponse> {
+  const response = await api.post<PasswordResetRequestResponse>(
+    "/v1/auth/password-reset/request",
+    { email: normalizeSemoEmail(email) },
+  );
+  return response.data;
+}
+
+export type PasswordResetConfirmRequest = {
+  token: string;
+  new_password: string;
+};
+
+export async function confirmPasswordReset(
+  data: PasswordResetConfirmRequest,
+): Promise<PasswordResetRequestResponse> {
+  const response = await api.post<PasswordResetRequestResponse>(
+    "/v1/auth/password-reset/confirm",
+    data,
+  );
+  return response.data;
+}
+
 export async function registerMember(data: RegisterRequest): Promise<MemberResponse> {
   const response = await api.post<MemberResponse>("/v1/auth/register", {
     full_name: data.full_name.trim(),
@@ -105,6 +134,13 @@ export function getApiErrorMessage(error: unknown): string {
       return detail;
     }
     return "This feature is temporarily unavailable. Try again later.";
+  }
+
+  if (error.response.status === 429) {
+    if (typeof detail === "string" && detail.trim()) {
+      return detail;
+    }
+    return "Too many requests — please try again in a few minutes.";
   }
 
   if (typeof detail === "string") {

@@ -6,6 +6,7 @@ from app.core.dependencies import get_current_member
 from app.models.member import Member
 from app.schemas.volunteer import VolunteerSignupResponse
 from app.tasks.email_tasks import send_volunteer_task_assigned_email_task
+from app.services.event_service import EventNotFoundError
 from app.services.volunteer_service import (
     AlreadySignedUpError,
     VolunteerSlotFullError,
@@ -28,6 +29,11 @@ def signup_for_volunteer_slot_endpoint(
 ):
     try:
         signup, slot = signup_for_volunteer_slot(db, slot_id, current_member.id)
+    except EventNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Volunteer slot not found",
+        ) from None
     except VolunteerSlotNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

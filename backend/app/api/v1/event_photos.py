@@ -38,10 +38,10 @@ router = APIRouter(tags=["event-photos"])
 def list_photo_albums_endpoint(
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
-    _: Member = Depends(get_current_member),
+    current_member: Member = Depends(get_current_member),
     db: Session = Depends(get_db),
 ):
-    albums, total = list_photo_albums(db, limit=limit, offset=offset)
+    albums, total = list_photo_albums(db, viewer=current_member, limit=limit, offset=offset)
     return PhotoAlbumListResponse(
         albums=[PhotoAlbumSummary(**album) for album in albums],
         total=total,
@@ -55,7 +55,7 @@ def list_event_photos_endpoint(
     db: Session = Depends(get_db),
 ):
     try:
-        event, photos = list_event_photos(db, event_id)
+        event, photos = list_event_photos(db, event_id, viewer=current_member)
     except EventNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -116,11 +116,15 @@ async def upload_event_photo_endpoint(
 @router.post("/{event_id}/photos/download")
 def download_event_photo_album_endpoint(
     event_id: int,
-    _: Member = Depends(get_current_member),
+    current_member: Member = Depends(get_current_member),
     db: Session = Depends(get_db),
 ):
     try:
-        zip_stream, zip_filename = iter_event_photo_album_zip(db, event_id)
+        zip_stream, zip_filename = iter_event_photo_album_zip(
+            db,
+            event_id,
+            viewer=current_member,
+        )
     except EventNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

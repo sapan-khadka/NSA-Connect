@@ -177,6 +177,32 @@ def _name_tokens(full_name: str) -> list[str]:
     ]
 
 
+def _is_all_digits(password: str) -> bool:
+    return password.isdigit()
+
+
+def _has_low_character_variety(password: str) -> bool:
+    return len(set(password.lower())) <= 3
+
+
+def _contains_trivial_sequence(password: str, *, min_run: int = 6) -> bool:
+    lowered = password.lower()
+    sequences = (
+        "0123456789",
+        "9876543210",
+        "abcdefghijklmnopqrstuvwxyz",
+        "zyxwvutsrqponmlkjihgfedcba",
+        "qwertyuiop",
+        "asdfghjkl",
+        "zxcvbnm",
+    )
+    for sequence in sequences:
+        for start in range(len(sequence) - min_run + 1):
+            if sequence[start : start + min_run] in lowered:
+                return True
+    return False
+
+
 def validate_password_strength(
     password: str,
     *,
@@ -190,6 +216,19 @@ def validate_password_strength(
         raise WeakPasswordError("Password must be at most 128 characters")
 
     lowered = password.lower()
+
+    if _is_all_digits(password):
+        raise WeakPasswordError("Password cannot be only numbers")
+
+    if _has_low_character_variety(password):
+        raise WeakPasswordError(
+            "Password is too repetitive — use a mix of different characters"
+        )
+
+    if _contains_trivial_sequence(password):
+        raise WeakPasswordError(
+            "Password cannot use simple keyboard or number sequences"
+        )
 
     if lowered in COMMON_PASSWORDS:
         raise WeakPasswordError(

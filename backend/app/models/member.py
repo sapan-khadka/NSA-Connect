@@ -2,6 +2,7 @@ from enum import StrEnum
 
 from sqlalchemy import Boolean, Column, Integer, String, Text, JSON
 from sqlalchemy import Enum as SqlEnum
+from sqlalchemy.orm import relationship
 
 from app.models.base import Base
 
@@ -158,6 +159,12 @@ class Member(Base):
         server_default="true",
     )
     token_version = Column(Integer, nullable=False, default=1, server_default="1")
+
+    password_reset_tokens = relationship(
+        "PasswordResetToken",
+        back_populates="member",
+        cascade="all, delete-orphan",
+    )
 
     @property
     def is_approved(self) -> bool:

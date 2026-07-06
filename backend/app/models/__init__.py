@@ -30,6 +30,7 @@ from app.models.member_dues import (
 )
 from app.models.notification_sent_log import NotificationSentLog, NotificationType
 from app.models.member import Member, MemberPosition, MemberRole, MemberStatus
+from app.models.password_reset_token import PasswordResetToken
 from app.models.meeting import MeetingAttendance, MeetingRecord
 from app.models.preptask import PrepTaskGroup, PrepTaskGroupItem
 from app.models.reminder import PrepTaskReminder, ReminderType
@@ -74,6 +75,7 @@ __all__ = [
     "Member",
     "MemberRole",
     "MemberStatus",
+    "PasswordResetToken",
     "MeetingAttendance",
     "MeetingRecord",
     "PrepTaskGroup",

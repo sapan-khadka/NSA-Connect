@@ -1,7 +1,7 @@
 import io
 from dataclasses import dataclass
 
-from PyPDF2 import PdfReader
+from pypdf import PdfReader
 
 ALLOWED_PDF_CONTENT_TYPE = "application/pdf"
 PDF_MAGIC_BYTES = b"%PDF"

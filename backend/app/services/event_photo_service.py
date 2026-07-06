@@ -7,6 +7,7 @@ from app.integrations.cloudinary_client import (
     CloudinaryUploadError,
     delete_cloudinary_asset,
 )
+from app.lib.event_visibility import apply_event_visibility_filter, event_visible_to_member
 from app.models.event import Event
 from app.models.event_photo import EventPhoto
 from app.models.member import Member, MemberRole
@@ -39,10 +40,16 @@ def can_delete_event_photo(member: Member, photo: EventPhoto) -> bool:
 def list_photo_albums(
     db: Session,
     *,
+    viewer: Member,
     limit: int = 50,
     offset: int = 0,
 ) -> tuple[list[dict], int]:
-    events, total = _list_photo_archive_events(db, limit=limit, offset=offset)
+    events, total = _list_photo_archive_events(
+        db,
+        viewer=viewer,
+        limit=limit,
+        offset=offset,
+    )
 
     if not events:
         return [], total
@@ -86,9 +93,14 @@ def list_photo_albums(
     return albums, total
 
 
-def list_event_photos(db: Session, event_id: int) -> tuple[Event, list[EventPhoto]]:
+def list_event_photos(
+    db: Session,
+    event_id: int,
+    *,
+    viewer: Member,
+) -> tuple[Event, list[EventPhoto]]:
     event = db.scalar(select(Event).where(Event.id == event_id))
-    if event is None:
+    if event is None or not event_visible_to_member(event, viewer):
         raise EventNotFoundError
 
     photos = list(
@@ -110,7 +122,7 @@ def create_event_photo(
     upload_result: CloudinaryEventPhotoResult,
 ) -> EventPhoto:
     event = db.scalar(select(Event).where(Event.id == event_id))
-    if event is None:
+    if event is None or not event_visible_to_member(event, uploaded_by):
         raise EventNotFoundError
 
     photo = EventPhoto(
@@ -194,14 +206,17 @@ def delete_event_photo(
 def _list_photo_archive_events(
     db: Session,
     *,
+    viewer: Member,
     limit: int,
     offset: int,
 ) -> tuple[list[Event], int]:
     query = select(Event).where(Event.show_in_photo_archive.is_(True))
-    count_query = (
+    query = apply_event_visibility_filter(query, viewer)
+    count_query = apply_event_visibility_filter(
         select(func.count())
         .select_from(Event)
-        .where(Event.show_in_photo_archive.is_(True))
+        .where(Event.show_in_photo_archive.is_(True)),
+        viewer,
     )
     total = db.scalar(count_query) or 0
     events = db.scalars(

@@ -8,6 +8,23 @@ from conftest import (
 )
 
 
+def test_register_rejects_all_digit_password(client):
+    response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "full_name": "Sapan Khadka",
+            "email": "other1@semo.edu",
+            "password": "111222333",
+            "student_id": "11111111",
+            "major": "Computer Science",
+            "graduation_year": 2028,
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Password cannot be only numbers"
+
+
 def test_register_rejects_common_password(client):
     response = client.post(
         "/api/v1/auth/register",
@@ -59,6 +76,24 @@ def test_change_password_rejects_short_password(client, db_session):
     )
 
     assert response.status_code == 422
+
+
+def test_change_password_rejects_all_digit_password(client, db_session):
+    register_member(client)
+    set_member_approved(db_session)
+    headers = auth_header(client)
+
+    response = client.post(
+        "/api/v1/members/me/password",
+        headers=headers,
+        json={
+            "current_password": "securepass123",
+            "new_password": "111222333",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Password cannot be only numbers"
 
 
 def test_change_password_rejects_common_password(client, db_session):

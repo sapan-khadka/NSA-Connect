@@ -129,8 +129,6 @@ export async function updateMemberProfile(
   return response.data;
 }
 
-import type { TokenResponse } from "./auth-api";
-
 export type ChangePasswordRequest = {
   current_password: string;
   new_password: string;

@@ -9,7 +9,7 @@ from app.schemas.volunteer import (
     MemberVolunteerSignupResponse,
     VolunteerSlotCreateRequest,
 )
-from app.services.event_service import EventNotFoundError
+from app.services.event_service import EventNotFoundError, ensure_member_can_access_event
 
 
 class VolunteerSlotNotFoundError(Exception):
@@ -65,6 +65,8 @@ def signup_for_volunteer_slot(
     slot = _get_slot_with_signups(db, slot_id)
     if slot is None:
         raise VolunteerSlotNotFoundError
+
+    ensure_member_can_access_event(db, slot.event_id, member_id)
 
     existing = db.scalar(
         select(VolunteerSignup.id).where(

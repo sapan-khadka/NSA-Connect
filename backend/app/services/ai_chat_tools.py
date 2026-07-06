@@ -268,6 +268,8 @@ def _get_event_prep_tasks(
     _require_role(member, MemberRole.BOARD)
     event_id = int(tool_input["event_id"])
     event = get_event_with_tasks(db, event_id)
+    if not event_visible_to_member(event, member):
+        raise EventNotFoundError
     checklist_tasks = [
         task for task in event.event_tasks if task.task_kind == EventTaskKind.CHECKLIST
     ]

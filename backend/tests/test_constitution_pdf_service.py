@@ -58,7 +58,7 @@ def test_extract_text_rejects_oversized_pdf():
 def test_extract_text_rejects_pdf_with_no_extractable_text():
     from io import BytesIO
 
-    from PyPDF2 import PdfWriter
+    from pypdf import PdfWriter
 
     writer = PdfWriter()
     writer.add_blank_page(width=612, height=792)

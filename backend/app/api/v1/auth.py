@@ -1,11 +1,26 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.dependencies import get_current_member
+from app.core.rate_limit import (
+    AppRateLimitExceeded,
+    check_login_account_failures,
+    check_password_reset_email_limit,
+    clear_login_failures,
+    limit,
+    record_login_failure,
+)
 from app.core.security import InvalidTokenError, create_token_pair, decode_refresh_token
 from app.models.member import Member
-from app.schemas.auth import RefreshTokenRequest, TokenResponse
+from app.schemas.auth import (
+    PasswordResetConfirmRequest,
+    PasswordResetRequest,
+    PasswordResetRequestResponse,
+    RefreshTokenRequest,
+    TokenResponse,
+)
 from app.schemas.member import MemberCreateRequest, MemberLoginRequest, MemberResponse
 from app.core.password_validation import WeakPasswordError
 from app.services.member_service import (
@@ -16,6 +31,13 @@ from app.services.member_service import (
     authenticate_member,
     create_member,
 )
+from app.services.password_reset_service import (
+    PASSWORD_RESET_INVALID_TOKEN_MESSAGE,
+    PASSWORD_RESET_REQUEST_MESSAGE,
+    InvalidPasswordResetTokenError,
+    request_password_reset,
+    reset_password_with_token,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -25,7 +47,12 @@ router = APIRouter(prefix="/auth", tags=["auth"])
     response_model=MemberResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def register(data: MemberCreateRequest, db: Session = Depends(get_db)):
+@limit(f"{settings.RATE_LIMIT_REGISTER_IP_MAX}/hour")
+def register(
+    request: Request,
+    data: MemberCreateRequest,
+    db: Session = Depends(get_db),
+):
     try:
         member = create_member(db, data)
     except MemberAlreadyExistsError:
@@ -48,10 +75,24 @@ def register(data: MemberCreateRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(data: MemberLoginRequest, db: Session = Depends(get_db)):
+@limit(f"{settings.RATE_LIMIT_LOGIN_IP_MAX}/minute")
+def login(
+    request: Request,
+    data: MemberLoginRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        check_login_account_failures(data.email)
+    except AppRateLimitExceeded as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=exc.detail,
+        ) from None
+
     try:
         member = authenticate_member(db, data.email, data.password)
     except InvalidCredentialsError:
+        record_login_failure(data.email)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
@@ -61,6 +102,8 @@ def login(data: MemberLoginRequest, db: Session = Depends(get_db)):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Member account is not approved",
         ) from None
+
+    clear_login_failures(data.email)
 
     (
         access_token,
@@ -152,3 +195,49 @@ def refresh_tokens(data: RefreshTokenRequest, db: Session = Depends(get_db)):
 @router.get("/me", response_model=MemberResponse)
 def me(current_member: Member = Depends(get_current_member)):
     return MemberResponse.from_member(current_member, viewer=current_member)
+
+
+@router.post("/password-reset/request", response_model=PasswordResetRequestResponse)
+@limit(f"{settings.RATE_LIMIT_PASSWORD_RESET_IP_MAX}/hour")
+def password_reset_request(
+    request: Request,
+    data: PasswordResetRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        check_password_reset_email_limit(data.email)
+    except AppRateLimitExceeded as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=exc.detail,
+        ) from None
+
+    request_password_reset(db, data.email)
+    return PasswordResetRequestResponse(message=PASSWORD_RESET_REQUEST_MESSAGE)
+
+
+@router.post("/password-reset/confirm")
+def password_reset_confirm(
+    data: PasswordResetConfirmRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        reset_password_with_token(
+            db,
+            raw_token=data.token,
+            new_password=data.new_password,
+        )
+    except InvalidPasswordResetTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=PASSWORD_RESET_INVALID_TOKEN_MESSAGE,
+        ) from None
+    except WeakPasswordError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from None
+
+    return {
+        "message": "Password updated. You can sign in with your new password.",
+    }

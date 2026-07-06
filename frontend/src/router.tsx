@@ -14,6 +14,7 @@ import { EventPhotoAlbumPage } from "./pages/EventPhotoAlbumPage";
 import { EventSuggestionsPage } from "./pages/EventSuggestionsPage";
 import { EventsPage } from "./pages/EventsPage";
 import { FinancePage } from "./pages/FinancePage";
+import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { MeetingMinutesPage } from "./pages/MeetingMinutesPage";
@@ -26,6 +27,7 @@ import { MeetingDetailPage } from "./pages/MeetingDetailPage";
 import { PhotoArchivePage } from "./pages/PhotoArchivePage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { RegisterPage } from "./pages/RegisterPage";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { ReportDetailPage } from "./pages/ReportDetailPage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { TaskOversightPage } from "./pages/TaskOversightPage";
@@ -37,6 +39,8 @@ export const appRoutes: RouteObject[] = [
     children: [
       { index: true, element: <HomePage /> },
       { path: "login", element: <LoginPage /> },
+      { path: "forgot-password", element: <ForgotPasswordPage /> },
+      { path: "reset-password", element: <ResetPasswordPage /> },
       { path: "register", element: <RegisterPage /> },
       {
         path: "announcements",

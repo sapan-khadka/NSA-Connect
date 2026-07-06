@@ -8,7 +8,7 @@ import httpx
 from sqlalchemy import select
 
 from app.integrations.cloudinary_client import CloudinaryEventPhotoResult
-from app.models.event import Event, EventType
+from app.models.event import Event, EventType, MeetingVisibility
 from app.models.event_photo import EventPhoto
 from app.models.member import Member
 from conftest import (
@@ -163,6 +163,7 @@ def test_patch_show_in_photo_archive_includes_meeting_in_albums(
         starts_at=datetime(2020, 4, 1, 18, tzinfo=UTC),
         budget=Decimal("0.00"),
         show_in_photo_archive=False,
+        meeting_visibility=MeetingVisibility.PUBLIC,
         created_by_id=board_member.id,
     )
     db_session.add(meeting)

@@ -166,6 +166,11 @@ export function LoginPage() {
               {fieldErrors.password}
             </p>
           )}
+          <p className="mt-2 text-right text-sm">
+            <Link to="/forgot-password" className="font-medium text-accent">
+              Forgot password?
+            </Link>
+          </p>
         </div>
 
         <button

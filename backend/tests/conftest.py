@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import engine, get_db
+from app.core.config import settings
+import app.models.password_reset_token  # noqa: F401 — register table for create_all
 from app.main import app
 from app.models.base import Base
 from app.models.member import Member, MemberStatus
@@ -76,6 +78,17 @@ def block_external_integrations():
             "celery_apply_async": celery_apply_async,
             "cloudinary_upload_receipt": cloudinary_upload_receipt,
         }
+
+
+@pytest.fixture(autouse=True)
+def disable_rate_limits_outside_rate_limit_tests(monkeypatch, request):
+    if request.module.__name__.endswith("test_rate_limits"):
+        return
+
+    from app.core import rate_limit as rate_limit_module
+
+    monkeypatch.setattr(settings, "RATE_LIMIT_ENABLED", False)
+    rate_limit_module.limiter.enabled = False
 
 
 @pytest.fixture

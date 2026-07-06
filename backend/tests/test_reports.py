@@ -120,7 +120,7 @@ def test_general_member_cannot_generate_report(
     assert response.status_code == 403
 
 
-def test_all_members_can_view_generated_report(
+def test_general_member_cannot_view_generated_report(
     client,
     board_member_headers,
     general_member_headers,
@@ -133,12 +133,39 @@ def test_all_members_can_view_generated_report(
     report_id = create_response.json()["id"]
 
     list_response = client.get("/api/v1/reports", headers=general_member_headers)
+    assert list_response.status_code == 403
+
+    detail_response = client.get(
+        f"/api/v1/reports/{report_id}",
+        headers=general_member_headers,
+    )
+    assert detail_response.status_code == 403
+
+    pdf_response = client.get(
+        f"/api/v1/reports/{report_id}/pdf",
+        headers=general_member_headers,
+    )
+    assert pdf_response.status_code == 403
+
+
+def test_board_member_can_view_generated_report(
+    client,
+    board_member_headers,
+):
+    create_response = client.post(
+        "/api/v1/reports",
+        json={"range_type": "semester", "semester": "2026-spring"},
+        headers=board_member_headers,
+    )
+    report_id = create_response.json()["id"]
+
+    list_response = client.get("/api/v1/reports", headers=board_member_headers)
     assert list_response.status_code == 200
     assert list_response.json()["total"] == 1
 
     detail_response = client.get(
         f"/api/v1/reports/{report_id}",
-        headers=general_member_headers,
+        headers=board_member_headers,
     )
     assert detail_response.status_code == 200
     assert detail_response.json()["id"] == report_id
@@ -147,7 +174,6 @@ def test_all_members_can_view_generated_report(
 def test_report_pdf_download(
     client,
     board_member_headers,
-    general_member_headers,
 ):
     create_response = client.post(
         "/api/v1/reports",
@@ -158,7 +184,7 @@ def test_report_pdf_download(
 
     pdf_response = client.get(
         f"/api/v1/reports/{report_id}/pdf",
-        headers=general_member_headers,
+        headers=board_member_headers,
     )
     assert pdf_response.status_code == 200
     assert pdf_response.headers["content-type"] == "application/pdf"

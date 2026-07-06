@@ -1,8 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.dependencies import get_current_member, require_board
+from app.core.rate_limit import (
+    guest_checkin_event_key,
+    guest_checkin_global_key,
+    limit,
+)
 from app.models.event import Event
 from app.models.event_guest_checkin import GuestAffiliationType
 from app.models.member import Member
@@ -157,7 +163,16 @@ def check_in_to_event_endpoint(
 
 
 @router.post("/{event_id}/checkin/guest", response_model=EventGuestCheckInResultResponse)
+@limit(
+    f"{settings.RATE_LIMIT_GUEST_CHECKIN_GLOBAL_IP_MAX}/{settings.RATE_LIMIT_GUEST_CHECKIN_GLOBAL_IP_WINDOW_SECONDS}second",
+    key_func=guest_checkin_global_key,
+)
+@limit(
+    f"{settings.RATE_LIMIT_GUEST_CHECKIN_EVENT_IP_MAX}/{settings.RATE_LIMIT_GUEST_CHECKIN_EVENT_IP_WINDOW_SECONDS}second",
+    key_func=guest_checkin_event_key,
+)
 def check_in_guest_to_event_endpoint(
+    request: Request,
     event_id: int,
     data: EventGuestCheckInRequest,
     db: Session = Depends(get_db),

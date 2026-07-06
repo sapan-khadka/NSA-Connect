@@ -168,6 +168,37 @@ function nameTokens(fullName: string): string[] {
   return matches.filter((token) => token.length >= 3).map((token) => token.toLowerCase());
 }
 
+function isAllDigits(password: string): boolean {
+  return /^\d+$/.test(password);
+}
+
+function hasLowCharacterVariety(password: string): boolean {
+  return new Set(password.toLowerCase()).size <= 3;
+}
+
+function containsTrivialSequence(password: string, minRun = 6): boolean {
+  const lowered = password.toLowerCase();
+  const sequences = [
+    "0123456789",
+    "9876543210",
+    "abcdefghijklmnopqrstuvwxyz",
+    "zyxwvutsrqponmlkjihgfedcba",
+    "qwertyuiop",
+    "asdfghjkl",
+    "zxcvbnm",
+  ];
+
+  for (const sequence of sequences) {
+    for (let start = 0; start <= sequence.length - minRun; start += 1) {
+      if (lowered.includes(sequence.slice(start, start + minRun))) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 export function validatePasswordStrength(
   password: string,
   context: PasswordValidationContext = {},
@@ -181,6 +212,18 @@ export function validatePasswordStrength(
   }
 
   const lowered = password.toLowerCase();
+
+  if (isAllDigits(password)) {
+    return "Password cannot be only numbers";
+  }
+
+  if (hasLowCharacterVariety(password)) {
+    return "Password is too repetitive — use a mix of different characters";
+  }
+
+  if (containsTrivialSequence(password)) {
+    return "Password cannot use simple keyboard or number sequences";
+  }
 
   if (COMMON_PASSWORDS.has(lowered)) {
     return "This password is too common — choose something more unique";
@@ -203,5 +246,5 @@ export function validatePasswordStrength(
 }
 
 export function getPasswordHint(): string {
-  return "Use at least 8 characters. Avoid common passwords and don't include your name or email.";
+  return "Use at least 8 characters with varied characters. Avoid numbers-only, repeated patterns, and common passwords.";
 }

@@ -30,9 +30,11 @@ redis==5.2.1
 cloudinary==1.44.2
 anthropic==0.112.0
 pgvector==0.4.2
-PyPDF2==3.0.1
+pypdf==5.9.0
 tiktoken==0.13.0
 openai==1.109.1
 httpx==0.28.1
 zipstream-ng==1.9.2
 fpdf2==2.8.3
+slowapi==0.1.10
+fakeredis==2.33.0

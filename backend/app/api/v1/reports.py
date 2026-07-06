@@ -25,7 +25,7 @@ router = APIRouter(prefix="/reports", tags=["reports"])
 
 @router.get("", response_model=ReportListResponse)
 def list_reports_endpoint(
-    _: Member = Depends(get_current_member),
+    _: Member = Depends(require_board),
     db: Session = Depends(get_db),
 ):
     reports = list_reports(db)
@@ -65,7 +65,7 @@ def generate_report_endpoint(
 @router.get("/{report_id}", response_model=ReportDetailResponse)
 def get_report_endpoint(
     report_id: int,
-    _: Member = Depends(get_current_member),
+    _: Member = Depends(require_board),
     db: Session = Depends(get_db),
 ):
     try:
@@ -92,7 +92,7 @@ def get_report_endpoint(
 @router.get("/{report_id}/pdf")
 def download_report_pdf_endpoint(
     report_id: int,
-    _: Member = Depends(get_current_member),
+    _: Member = Depends(require_board),
     db: Session = Depends(get_db),
 ):
     try:

@@ -26,6 +26,38 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 14
 
+    RATE_LIMIT_STORAGE_URI: str = Field(
+        default="",
+        description="Redis URI for rate limits; defaults to REDIS_URL when empty",
+    )
+    RATE_LIMIT_TRUST_PROXY_HEADERS: bool = Field(
+        default=False,
+        description=(
+            "Trust X-Forwarded-For for client IP only behind a trusted reverse proxy"
+        ),
+    )
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_LOGIN_IP_MAX: int = 10
+    RATE_LIMIT_LOGIN_IP_WINDOW_SECONDS: int = 60
+    RATE_LIMIT_LOGIN_ACCOUNT_FAILURES_MAX: int = 10
+    RATE_LIMIT_LOGIN_ACCOUNT_FAILURES_WINDOW_SECONDS: int = 900
+    RATE_LIMIT_REGISTER_IP_MAX: int = 5
+    RATE_LIMIT_REGISTER_IP_WINDOW_SECONDS: int = 3600
+    RATE_LIMIT_CHANGE_PASSWORD_MAX: int = 5
+    RATE_LIMIT_CHANGE_PASSWORD_WINDOW_SECONDS: int = 900
+    RATE_LIMIT_GUEST_CHECKIN_EVENT_IP_MAX: int = 5
+    RATE_LIMIT_GUEST_CHECKIN_EVENT_IP_WINDOW_SECONDS: int = 3600
+    RATE_LIMIT_GUEST_CHECKIN_GLOBAL_IP_MAX: int = 30
+    RATE_LIMIT_GUEST_CHECKIN_GLOBAL_IP_WINDOW_SECONDS: int = 60
+    RATE_LIMIT_GLOBAL_MAX: int = 120
+    RATE_LIMIT_GLOBAL_WINDOW_SECONDS: int = 60
+    RATE_LIMIT_PASSWORD_RESET_EMAIL_MAX: int = 3
+    RATE_LIMIT_PASSWORD_RESET_EMAIL_WINDOW_SECONDS: int = 3600
+    RATE_LIMIT_PASSWORD_RESET_IP_MAX: int = 10
+    RATE_LIMIT_PASSWORD_RESET_IP_WINDOW_SECONDS: int = 3600
+
+    PASSWORD_RESET_EXPIRE_MINUTES: int = 45
+
     EMAIL_ENABLED: bool = False
     EMAIL_FROM: str = "NSA Connect <noreply@semo.edu>"
     FRONTEND_URL: str = Field(
@@ -137,6 +169,10 @@ class Settings(BaseSettings):
     @property
     def is_development(self) -> bool:
         return self.ENVIRONMENT == "development"
+
+    @property
+    def rate_limit_storage_uri(self) -> str:
+        return self.RATE_LIMIT_STORAGE_URI or self.REDIS_URL
 
 
 @lru_cache
