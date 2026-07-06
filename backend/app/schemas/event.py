@@ -18,6 +18,8 @@ if TYPE_CHECKING:
     from app.models.event import Event
 
 from app.models.event_task import EventTaskKind
+from app.schemas.event_volunteer_signup import EventVolunteerSignupResponse
+from app.schemas.event_feedback import EventFeedbackResponse
 from app.schemas.preptask import PrepTaskResponse
 
 MAX_EVENT_BUDGET = Decimal("999999.99")
@@ -153,6 +155,8 @@ class EventListResponse(BaseModel):
 
 class EventDetailResponse(EventResponse):
     prep_tasks: list[PrepTaskResponse]
+    current_member_volunteer_signup: EventVolunteerSignupResponse | None = None
+    current_member_feedback: EventFeedbackResponse | None = None
 
     @classmethod
     def from_event(
@@ -161,6 +165,8 @@ class EventDetailResponse(EventResponse):
         *,
         current_member_rsvp_status: RsvpStatus | None = None,
         current_member_is_invited_participant: bool = False,
+        current_member_volunteer_signup: EventVolunteerSignupResponse | None = None,
+        current_member_feedback: EventFeedbackResponse | None = None,
     ) -> "EventDetailResponse":
         base = EventResponse.from_event(
             event,
@@ -174,4 +180,6 @@ class EventDetailResponse(EventResponse):
                 for task in event.event_tasks
                 if task.task_kind == EventTaskKind.CHECKLIST
             ],
+            current_member_volunteer_signup=current_member_volunteer_signup,
+            current_member_feedback=current_member_feedback,
         )

@@ -5,10 +5,13 @@ import { EventCheckInPanel } from "../components/EventCheckInPanel";
 import { EventAttendanceSummaryPanel } from "../components/EventAttendanceSummaryPanel";
 import { EventDeleteSection } from "../components/EventDeleteSection";
 import { EventInvitedParticipantsSection } from "../components/EventInvitedParticipantsSection";
+import { EventVolunteersSection } from "../components/EventVolunteersSection";
+import { EventFeedbackSection } from "../components/EventFeedbackSection";
 import { EventManageLogisticsSection } from "../components/EventManageLogisticsSection";
 import { EventManageScheduleFields } from "../components/EventManageScheduleFields";
 import { EventPhotoArchiveSetting } from "../components/EventPhotoArchiveSetting";
 import { MeetingRecordSection } from "../components/MeetingRecordSection";
+import { canCreateEventTasks } from "../lib/event-finance";
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage } from "../lib/auth-api";
 import { fetchEvent, type EventDetailResponse } from "../lib/events-api";
@@ -20,6 +23,10 @@ import { fetchEventBudgetForEvent } from "../lib/finance-api";
 import type { MemberResponse } from "../lib/auth-api";
 import type { FinanceEventBudgetSummary } from "../lib/finance-api";
 import { formatEventDateTime } from "../lib/format-datetime";
+import {
+  buildVolunteerTaskDraft,
+  type EventTaskDraft,
+} from "../lib/event-task-draft";
 import {
   canManageEventTasks,
   isRoleAtLeast,
@@ -44,6 +51,7 @@ export function EventManagePage() {
   const [activeTab, setActiveTab] = useState<ManageTab>("meeting");
   const [attendanceSummary, setAttendanceSummary] =
     useState<EventAttendanceSummary | null>(null);
+  const [taskDraft, setTaskDraft] = useState<EventTaskDraft | null>(null);
 
   const canViewBoard = member ? isRoleAtLeast(member.role, "board") : false;
   const canViewTreasury = member ? isRoleAtLeast(member.role, "treasurer") : false;
@@ -190,8 +198,30 @@ export function EventManagePage() {
       assignableMembers={assignableMembers}
       refreshKey={refreshKey}
       onRefresh={() => setRefreshKey((current) => current + 1)}
+      taskDraft={taskDraft}
+      onTaskDraftApplied={() => setTaskDraft(null)}
     />
   );
+
+  function handleConvertVolunteerToTask(
+    signup: Parameters<typeof buildVolunteerTaskDraft>[1],
+  ) {
+    if (!event) {
+      return;
+    }
+
+    if (isMeetingEvent) {
+      setActiveTab("logistics");
+    }
+
+    setTaskDraft(buildVolunteerTaskDraft(event.name, signup));
+
+    window.requestAnimationFrame(() => {
+      document
+        .getElementById("event-tasks-section")
+        ?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    });
+  }
 
   return (
     <div className="space-y-6">
@@ -227,6 +257,20 @@ export function EventManagePage() {
             event={event}
             onUpdated={setEvent}
           />
+          <EventVolunteersSection
+            eventId={numericEventId}
+            refreshKey={refreshKey}
+            eventName={event.name}
+            canAssignTasks={canManageTasks && canCreateEventTasks(event)}
+            onConvertToTask={handleConvertVolunteerToTask}
+          />
+          {event.is_past ? (
+            <EventFeedbackSection
+              eventId={numericEventId}
+              eventName={event.name}
+              refreshKey={refreshKey}
+            />
+          ) : null}
         </>
       ) : null}
 

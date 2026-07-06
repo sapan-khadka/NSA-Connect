@@ -124,7 +124,7 @@ def task_overview_endpoint(
 )
 async def upload_task_photo_endpoint(
     file: UploadFile = File(...),
-    _: Member = Depends(require_board),
+    _: Member = Depends(get_current_member),
 ):
     file_bytes = await file.read()
 

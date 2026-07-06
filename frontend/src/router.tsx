@@ -14,7 +14,6 @@ import { EventPhotoAlbumPage } from "./pages/EventPhotoAlbumPage";
 import { EventSuggestionsPage } from "./pages/EventSuggestionsPage";
 import { EventsPage } from "./pages/EventsPage";
 import { FinancePage } from "./pages/FinancePage";
-import { MyTasksPage } from "./pages/MyTasksPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { MeetingMinutesPage } from "./pages/MeetingMinutesPage";
@@ -67,7 +66,7 @@ export const appRoutes: RouteObject[] = [
       },
       {
         path: "member/tasks",
-        element: <Navigate to="/events/volunteer" replace />,
+        element: <Navigate to="/events/tasks" replace />,
       },
       {
         path: "board",
@@ -178,11 +177,7 @@ export const appRoutes: RouteObject[] = [
           },
           {
             path: "volunteer",
-            element: (
-              <ProtectedRoute roles={["general"]}>
-                <MyTasksPage />
-              </ProtectedRoute>
-            ),
+            element: <Navigate to="/events/tasks" replace />,
           },
           {
             path: ":eventId/manage",

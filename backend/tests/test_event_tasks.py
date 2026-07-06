@@ -139,7 +139,7 @@ def test_event_manager_position_can_create_task(
     assert response.status_code == 201
 
 
-def test_create_task_with_invalid_assignee_returns_400(
+def test_create_task_with_general_member_assignee(
     client,
     db_session,
     president_headers,
@@ -153,9 +153,97 @@ def test_create_task_with_invalid_assignee_returns_400(
         client,
         president_headers,
         event["id"],
+        title="Decoration help",
+        description="i can help with the decoration.",
         assignee_id=general["id"],
     )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["assignee_id"] == general["id"]
+    assert body["assignee_name"] == general["full_name"]
+
+
+def test_create_task_with_invalid_assignee_returns_400(
+    client,
+    president_headers,
+):
+    event = _create_event(client, president_headers)
+    response = _create_task(
+        client,
+        president_headers,
+        event["id"],
+        assignee_id=99999,
+    )
     assert response.status_code == 400
+
+
+def test_general_member_can_list_and_update_assigned_tasks(
+    client,
+    db_session,
+    president_headers,
+):
+    register_member(client, email="general@semo.edu", student_id="44444444")
+    set_member_approved(db_session, email="general@semo.edu")
+    general_headers = auth_header(client, email="general@semo.edu")
+    general = client.get("/api/v1/members/me", headers=general_headers).json()
+
+    event = _create_event(client, president_headers)
+    task = _create_task(
+        client,
+        president_headers,
+        event["id"],
+        title="Help with tihar",
+        description="i can help with the decoration.",
+        assignee_id=general["id"],
+    ).json()
+
+    mine = client.get("/api/v1/event-tasks/mine", headers=general_headers)
+    assert mine.status_code == 200
+    assert mine.json()["total"] == 1
+    assert mine.json()["tasks"][0]["title"] == "Help with tihar"
+
+    in_progress = client.patch(
+        f"/api/v1/event-tasks/{task['id']}",
+        json={"status": "in_progress"},
+        headers=general_headers,
+    )
+    assert in_progress.status_code == 200
+    assert in_progress.json()["status"] == "in_progress"
+
+    done = client.patch(
+        f"/api/v1/event-tasks/{task['id']}",
+        json={"status": "done"},
+        headers=general_headers,
+    )
+    assert done.status_code == 200
+    assert done.json()["status"] == "done"
+
+
+def test_general_member_cannot_update_other_members_task(
+    client,
+    db_session,
+    president_headers,
+    board_member,
+):
+    register_member(client, email="other@semo.edu", student_id="55555555")
+    set_member_approved(db_session, email="other@semo.edu")
+    other_headers = auth_header(client, email="other@semo.edu")
+
+    event = _create_event(client, president_headers)
+    task = _create_task(
+        client,
+        president_headers,
+        event["id"],
+        assignee_id=board_member.id,
+    ).json()
+
+    response = client.patch(
+        f"/api/v1/event-tasks/{task['id']}",
+        json={"status": "in_progress"},
+        headers=other_headers,
+    )
+    assert response.status_code == 403
 
 
 def test_mine_returns_only_assigned_tasks(
@@ -304,6 +392,74 @@ def test_overview_reports_completion(
     assert board_row["total"] == 1
     assert board_row["completed"] == 1
     assert board_row["completion_percent"] == 100
+
+
+def test_overview_includes_general_member_volunteer_tasks(
+    client,
+    db_session,
+    president_headers,
+):
+    register_member(client, email="volunteer@semo.edu", student_id="44444444")
+    set_member_approved(db_session, email="volunteer@semo.edu")
+    general_headers = auth_header(client, email="volunteer@semo.edu")
+    general = client.get("/api/v1/members/me", headers=general_headers).json()
+
+    event = _create_event(client, president_headers)
+    _create_task(
+        client,
+        president_headers,
+        event["id"],
+        title="Help with tihar",
+        description="i can help with the decoration.",
+        assignee_id=general["id"],
+    )
+
+    overview = client.get(
+        "/api/v1/event-tasks/overview",
+        headers=president_headers,
+    ).json()
+
+    general_row = next(
+        row for row in overview["members"] if row["member_id"] == general["id"]
+    )
+    assert general_row["total"] == 1
+    assert general_row["role"] == "general"
+    assert general_row["tasks"][0]["title"] == "Help with tihar"
+
+
+def test_overview_marks_volunteer_signup_on_assigned_tasks(
+    client,
+    db_session,
+    president_headers,
+):
+    register_member(client, email="volunteer@semo.edu", student_id="55555555")
+    set_member_approved(db_session, email="volunteer@semo.edu")
+    general_headers = auth_header(client, email="volunteer@semo.edu")
+    general = client.get("/api/v1/members/me", headers=general_headers).json()
+
+    event = _create_event(client, president_headers, name="tihar")
+    client.post(
+        f"/api/v1/events/{event['id']}/volunteer-signup",
+        headers=general_headers,
+        json={"note": "i can help with the decoration."},
+    )
+    _create_task(
+        client,
+        president_headers,
+        event["id"],
+        title="Help with tihar",
+        assignee_id=general["id"],
+    )
+
+    overview = client.get(
+        "/api/v1/event-tasks/overview",
+        headers=president_headers,
+    ).json()
+
+    general_row = next(
+        row for row in overview["members"] if row["member_id"] == general["id"]
+    )
+    assert general_row["tasks"][0]["assignee_has_volunteer_signup"] is True
 
 
 def test_task_manager_can_delete_task(

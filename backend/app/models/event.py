@@ -87,6 +87,18 @@ class Event(Base):
         cascade="all, delete-orphan",
         order_by="EventGuestCheckIn.checked_in_at",
     )
+    volunteer_signups = relationship(
+        "EventVolunteerSignup",
+        back_populates="event",
+        cascade="all, delete-orphan",
+        order_by="EventVolunteerSignup.created_at",
+    )
+    feedback_entries = relationship(
+        "EventFeedback",
+        back_populates="event",
+        cascade="all, delete-orphan",
+        order_by="EventFeedback.created_at.desc()",
+    )
 
     @property
     def is_upcoming(self) -> bool:

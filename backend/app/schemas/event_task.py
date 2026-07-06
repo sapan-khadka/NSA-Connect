@@ -171,9 +171,15 @@ class EventTaskResponse(BaseModel):
     completed_at: datetime | None
     created_by_id: int | None
     created_at: datetime
+    assignee_has_volunteer_signup: bool = False
 
     @classmethod
-    def from_task(cls, task: "EventTask") -> "EventTaskResponse":
+    def from_task(
+        cls,
+        task: "EventTask",
+        *,
+        assignee_has_volunteer_signup: bool = False,
+    ) -> "EventTaskResponse":
         return cls(
             id=task.id,
             event_id=task.event_id,
@@ -197,6 +203,7 @@ class EventTaskResponse(BaseModel):
             completed_at=task.completed_at,
             created_by_id=task.created_by_id,
             created_at=task.created_at,
+            assignee_has_volunteer_signup=assignee_has_volunteer_signup,
         )
 
 
@@ -222,6 +229,8 @@ class TaskOverviewMember(BaseModel):
         cls,
         member: "Member",
         tasks: list["EventTask"],
+        *,
+        volunteer_signup_pairs: set[tuple[int, int]] | None = None,
     ) -> "TaskOverviewMember":
         completed = sum(1 for task in tasks if task.status == EventTaskStatus.DONE)
         in_progress = sum(
@@ -240,7 +249,17 @@ class TaskOverviewMember(BaseModel):
             in_progress=in_progress,
             todo=todo,
             completion_percent=percent,
-            tasks=[EventTaskResponse.from_task(task) for task in tasks],
+            tasks=[
+                EventTaskResponse.from_task(
+                    task,
+                    assignee_has_volunteer_signup=(
+                        volunteer_signup_pairs is not None
+                        and task.assignee_id is not None
+                        and (task.assignee_id, task.event_id) in volunteer_signup_pairs
+                    ),
+                )
+                for task in tasks
+            ],
         )
 
 

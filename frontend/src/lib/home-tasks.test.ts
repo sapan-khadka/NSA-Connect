@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { EventTaskResponse } from "./event-tasks-api";
 import {
   getTaskDisplayName,
+  getMyTasksPath,
   summarizeMyTasks,
 } from "./home-tasks";
 
@@ -66,5 +67,11 @@ describe("home-tasks", () => {
     expect(summary.openCount).toBe(3);
     expect(summary.overdueCount).toBe(1);
     expect(summary.nextTask?.title).toBe("Late task");
+  });
+
+  it("routes every member role to the shared kanban tasks page", () => {
+    expect(getMyTasksPath("general")).toBe("/events/tasks");
+    expect(getMyTasksPath("board")).toBe("/events/tasks");
+    expect(getMyTasksPath("president")).toBe("/events/tasks");
   });
 });

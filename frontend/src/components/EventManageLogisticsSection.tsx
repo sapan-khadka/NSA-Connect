@@ -6,6 +6,7 @@ import { canCreateEventTasks } from "../lib/event-finance";
 import type { FinanceEventBudgetSummary } from "../lib/finance-api";
 import type { EventTaskResponse } from "../lib/event-tasks-api";
 import type { EventDetailResponse } from "../lib/events-api";
+import type { EventTaskDraft } from "../lib/event-task-draft";
 import {
   budgetProgressBarClass,
   budgetStatusClass,
@@ -26,6 +27,8 @@ type EventManageLogisticsSectionProps = {
   assignableMembers: MemberResponse[];
   refreshKey: number;
   onRefresh: () => void;
+  taskDraft?: EventTaskDraft | null;
+  onTaskDraftApplied?: () => void;
 };
 
 export function EventManageLogisticsSection({
@@ -39,6 +42,8 @@ export function EventManageLogisticsSection({
   assignableMembers,
   refreshKey,
   onRefresh,
+  taskDraft = null,
+  onTaskDraftApplied,
 }: EventManageLogisticsSectionProps) {
   const total = tasks.length;
   const completed = tasks.filter((task) => task.status === "done").length;
@@ -133,6 +138,8 @@ export function EventManageLogisticsSection({
             canAssignChecklist={canViewBoard}
             assignableMembers={assignableMembers}
             refreshKey={refreshKey}
+            taskDraft={taskDraft}
+            onTaskDraftApplied={onTaskDraftApplied}
           />
         </div>
       ) : null}

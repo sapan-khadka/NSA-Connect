@@ -41,6 +41,51 @@ export type EventResponse = {
 
 export type EventDetailResponse = EventResponse & {
   prep_tasks: PrepTaskResponse[];
+  current_member_volunteer_signup: EventVolunteerSignup | null;
+  current_member_feedback: EventFeedback | null;
+};
+
+export type EventFeedback = {
+  id: number;
+  event_id: number;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+};
+
+export type EventFeedbackMember = {
+  id: number;
+  member_id: number;
+  full_name: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+};
+
+export type EventFeedbackListResponse = {
+  feedback: EventFeedbackMember[];
+  total: number;
+  average_rating: number;
+};
+
+export type EventVolunteerSignup = {
+  id: number;
+  event_id: number;
+  note: string | null;
+  created_at: string;
+};
+
+export type EventVolunteerSignupMember = {
+  id: number;
+  member_id: number;
+  full_name: string;
+  note: string | null;
+  created_at: string;
+};
+
+export type EventVolunteerSignupListResponse = {
+  signups: EventVolunteerSignupMember[];
+  total: number;
 };
 
 export type EventRsvpStatusResponse = {
@@ -230,4 +275,48 @@ export async function removeEventInvitedParticipant(
   memberId: number,
 ): Promise<void> {
   await api.delete(`/v1/events/${eventId}/invited-participants/${memberId}`);
+}
+
+export async function volunteerForEvent(
+  eventId: number,
+  note?: string | null,
+): Promise<EventVolunteerSignup> {
+  const response = await api.post<EventVolunteerSignup>(
+    `/v1/events/${eventId}/volunteer-signup`,
+    { note: note ?? null },
+  );
+  return response.data;
+}
+
+export async function withdrawVolunteerSignup(eventId: number): Promise<void> {
+  await api.delete(`/v1/events/${eventId}/volunteer-signup`);
+}
+
+export async function fetchEventVolunteerSignups(
+  eventId: number,
+): Promise<EventVolunteerSignupListResponse> {
+  const response = await api.get<EventVolunteerSignupListResponse>(
+    `/v1/events/${eventId}/volunteer-signups`,
+  );
+  return response.data;
+}
+
+export async function submitEventFeedback(
+  eventId: number,
+  data: { rating: number; comment?: string | null },
+): Promise<EventFeedback> {
+  const response = await api.post<EventFeedback>(
+    `/v1/events/${eventId}/feedback`,
+    data,
+  );
+  return response.data;
+}
+
+export async function fetchEventFeedback(
+  eventId: number,
+): Promise<EventFeedbackListResponse> {
+  const response = await api.get<EventFeedbackListResponse>(
+    `/v1/events/${eventId}/feedback`,
+  );
+  return response.data;
 }

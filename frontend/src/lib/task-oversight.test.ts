@@ -1,11 +1,38 @@
 import { describe, expect, it } from "vitest";
 
-import type { TaskOverviewMember } from "./event-tasks-api";
+import type { EventTaskResponse, TaskOverviewMember } from "./event-tasks-api";
 import {
   countOverdueTasks,
+  filterOverviewMembersByAssigneeCategory,
   sortActiveMembers,
   splitTaskOverviewMembers,
 } from "./task-oversight";
+
+function task(
+  overrides: Partial<EventTaskResponse> & Pick<EventTaskResponse, "id" | "title">,
+): EventTaskResponse {
+  return {
+    event_id: 1,
+    event_name: "Dashain",
+    task_kind: "simple",
+    group_name: null,
+    description: "",
+    assignee_id: 1,
+    assignee_name: "Alex",
+    status: "todo",
+    due_date: null,
+    is_overdue: false,
+    is_complete: false,
+    checklist_items: [],
+    completion_note: null,
+    completion_photo_url: null,
+    completed_at: null,
+    created_by_id: 1,
+    created_at: "2026-03-18T12:00:00Z",
+    assignee_has_volunteer_signup: false,
+    ...overrides,
+  };
+}
 
 function member(
   overrides: Partial<TaskOverviewMember> & Pick<TaskOverviewMember, "member_id" | "full_name">,
@@ -169,5 +196,58 @@ describe("task-oversight", () => {
     expect(
       sortActiveMembers(members, "completion_desc").map((row) => row.full_name),
     ).toEqual(["Zoe", "Amy"]);
+  });
+
+  it("filters overview members by assignee category", () => {
+    const members: TaskOverviewMember[] = [
+      member({
+        member_id: 1,
+        full_name: "Board User",
+        role: "board",
+        total: 1,
+        tasks: [task({ id: 1, title: "Book venue" })],
+      }),
+      member({
+        member_id: 2,
+        full_name: "apsana",
+        role: "general",
+        total: 2,
+        tasks: [
+          task({
+            id: 2,
+            title: "Help with tihar",
+            assignee_has_volunteer_signup: true,
+          }),
+          task({
+            id: 3,
+            title: "Other task",
+            assignee_has_volunteer_signup: false,
+          }),
+        ],
+      }),
+    ];
+
+    expect(
+      filterOverviewMembersByAssigneeCategory(members, "board").map(
+        (row) => row.full_name,
+      ),
+    ).toEqual(["Board User"]);
+    expect(
+      filterOverviewMembersByAssigneeCategory(members, "general").map(
+        (row) => row.full_name,
+      ),
+    ).toEqual(["apsana"]);
+    expect(
+      filterOverviewMembersByAssigneeCategory(members, "volunteers"),
+    ).toEqual([
+      expect.objectContaining({
+        full_name: "apsana",
+        total: 1,
+        tasks: [expect.objectContaining({ title: "Help with tihar" })],
+      }),
+    ]);
+    expect(filterOverviewMembersByAssigneeCategory(members, "all")).toEqual(
+      members,
+    );
   });
 });

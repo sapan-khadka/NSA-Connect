@@ -14,7 +14,7 @@ import {
 import { vi } from "vitest";
 
 import type { MemberResponse } from "../lib/auth-api";
-import type { EventResponse } from "../lib/events-api";
+import type { EventDetailResponse, EventResponse } from "../lib/events-api";
 import type { MemberRole } from "../lib/roles";
 import { AuthContext, type AuthContextValue } from "../context/auth-context";
 import { appRoutes } from "../router";
@@ -56,6 +56,18 @@ export function createMockEventResponse(
     is_past: false,
     is_finance_grace_period: false,
     show_in_photo_archive: true,
+    ...overrides,
+  };
+}
+
+export function createMockEventDetailResponse(
+  overrides: Partial<EventDetailResponse> = {},
+): EventDetailResponse {
+  return {
+    ...createMockEventResponse(overrides),
+    prep_tasks: [],
+    current_member_volunteer_signup: null,
+    current_member_feedback: null,
     ...overrides,
   };
 }

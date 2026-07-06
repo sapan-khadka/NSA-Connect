@@ -15,6 +15,7 @@ from app.models.event_task import (
     checklist_items_from_labels,
     sync_checklist_status,
 )
+from app.models.event_volunteer_signup import EventVolunteerSignup
 from app.models.member import Member, MemberPosition, MemberRole, MemberStatus
 from app.models.preptask import PrepTaskGroup
 from app.schemas.event_task import (
@@ -43,7 +44,7 @@ class EventTaskForbiddenError(Exception):
 
 
 class InvalidEventTaskAssigneeError(Exception):
-    """Assignee must be an approved board member or higher."""
+    """Assignee must be an approved member (board+ for checklist tasks)."""
 
 
 class PrepTaskGroupNotFoundError(Exception):
@@ -69,13 +70,18 @@ def is_task_manager(member: Member) -> bool:
     }
 
 
-def _validate_assignee(db: Session, assignee_id: int | None) -> None:
+def _validate_assignee(
+    db: Session,
+    assignee_id: int | None,
+    *,
+    require_board_role: bool = True,
+) -> None:
     if assignee_id is None:
         return
     assignee = db.get(Member, assignee_id)
     if assignee is None or assignee.status != MemberStatus.APPROVED:
         raise InvalidEventTaskAssigneeError
-    if not assignee.has_role_at_least(MemberRole.BOARD):
+    if require_board_role and not assignee.has_role_at_least(MemberRole.BOARD):
         raise InvalidEventTaskAssigneeError
 
 
@@ -174,7 +180,7 @@ def create_simple_event_task(
     if not event.is_upcoming:
         raise EventTaskCreationClosedError
 
-    _validate_assignee(db, data.assignee_id)
+    _validate_assignee(db, data.assignee_id, require_board_role=False)
 
     task = EventTask(
         event_id=event_id,
@@ -298,7 +304,12 @@ def update_event_task(
         raise EventTaskForbiddenError
 
     if "assignee_id" in updates:
-        _validate_assignee(db, updates["assignee_id"])
+        require_board_role = task.task_kind != EventTaskKind.SIMPLE
+        _validate_assignee(
+            db,
+            updates["assignee_id"],
+            require_board_role=require_board_role,
+        )
         task.assignee_id = updates["assignee_id"]
 
     for field in ("title", "description", "due_date", "completion_note", "completion_photo_url"):
@@ -403,9 +414,35 @@ def get_task_overview(db: Session) -> TaskOverviewResponse:
     for task in tasks:
         tasks_by_assignee[task.assignee_id].append(task)
 
+    volunteer_signup_pairs = {
+        (signup.member_id, signup.event_id)
+        for signup in db.scalars(select(EventVolunteerSignup)).all()
+    }
+
+    board_member_ids = {member.id for member in board_members}
+    volunteer_ids = {
+        assignee_id
+        for assignee_id in tasks_by_assignee
+        if assignee_id is not None and assignee_id not in board_member_ids
+    }
+
+    volunteer_members: list[Member] = []
+    if volunteer_ids:
+        volunteer_members = list(
+            db.scalars(
+                select(Member)
+                .where(Member.id.in_(volunteer_ids))
+                .order_by(Member.full_name.asc()),
+            ).all(),
+        )
+
     members = [
-        TaskOverviewMember.build(member, tasks_by_assignee.get(member.id, []))
-        for member in board_members
+        TaskOverviewMember.build(
+            member,
+            tasks_by_assignee.get(member.id, []),
+            volunteer_signup_pairs=volunteer_signup_pairs,
+        )
+        for member in [*board_members, *volunteer_members]
     ]
 
     total_tasks = len(tasks)

@@ -42,6 +42,7 @@ function taskFixture(
     is_overdue: boolean;
     is_complete: boolean;
     completion_note: string | null;
+    assignee_has_volunteer_signup: boolean;
   }> = {},
 ) {
   return {
@@ -64,6 +65,7 @@ function taskFixture(
     completed_at: "2026-03-19T12:00:00Z",
     created_by_id: 1,
     created_at: "2026-03-18T12:00:00Z",
+    assignee_has_volunteer_signup: overrides.assignee_has_volunteer_signup ?? false,
   };
 }
 
@@ -235,7 +237,7 @@ describe("TaskOversightPage", () => {
 
     renderPage("president", "member");
 
-    const sortSelect = await screen.findByRole("combobox");
+    const sortSelect = await screen.findByRole("combobox", { name: "Sort by" });
     await userEvent.selectOptions(sortSelect, "alphabetical");
 
     const activeSection = screen
@@ -246,5 +248,69 @@ describe("TaskOversightPage", () => {
       .map((heading) => heading.textContent);
 
     expect(activeNames).toEqual(["Amy", "Zoe"]);
+  });
+
+  it("filters active assignments by assignee category", async () => {
+    const user = userEvent.setup();
+    mockedOverview.mockResolvedValue({
+      total_tasks: 3,
+      completed_tasks: 1,
+      members: [
+        {
+          member_id: 5,
+          full_name: "Board Member",
+          role: "board",
+          position: "event_manager",
+          total: 1,
+          completed: 1,
+          in_progress: 0,
+          todo: 0,
+          completion_percent: 100,
+          tasks: [taskFixture({ id: 1, title: "Book venue" })],
+        },
+        {
+          member_id: 6,
+          full_name: "apsana",
+          role: "general",
+          position: "member",
+          total: 2,
+          completed: 1,
+          in_progress: 0,
+          todo: 1,
+          completion_percent: 50,
+          tasks: [
+            taskFixture({
+              id: 2,
+              title: "Help with tihar",
+              status: "todo",
+              is_complete: false,
+              completion_note: null,
+              assignee_has_volunteer_signup: true,
+            }),
+            taskFixture({
+              id: 3,
+              title: "Other task",
+              status: "done",
+              completion_note: null,
+              assignee_has_volunteer_signup: false,
+            }),
+          ],
+        },
+      ],
+    });
+
+    renderPage("president", "member");
+
+    expect(await screen.findByText("Board Member")).toBeInTheDocument();
+    expect(screen.getByText("apsana")).toBeInTheDocument();
+
+    const assigneeSelect = screen.getByRole("combobox", { name: /Assignee/i });
+    await user.selectOptions(assigneeSelect, "volunteers");
+
+    expect(screen.queryByText("Board Member")).not.toBeInTheDocument();
+    expect(screen.getByText("apsana")).toBeInTheDocument();
+    expect(screen.getByText("Help with tihar")).toBeInTheDocument();
+    expect(screen.queryByText("Other task")).not.toBeInTheDocument();
+    expect(screen.getByText("0/1 done (0%)")).toBeInTheDocument();
   });
 });

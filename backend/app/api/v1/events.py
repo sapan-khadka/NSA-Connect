@@ -21,7 +21,16 @@ from app.schemas.event import (
     EventRsvpStatusResponse,
     EventRsvpUpdateRequest,
 )
-from app.schemas.preptask import PrepTaskCreateRequest, PrepTaskResponse
+from app.schemas.event_volunteer_signup import (
+    EventVolunteerSignupCreateRequest,
+    EventVolunteerSignupListResponse,
+    EventVolunteerSignupResponse,
+)
+from app.schemas.event_feedback import (
+    EventFeedbackCreateRequest,
+    EventFeedbackListResponse,
+    EventFeedbackResponse,
+)
 from app.schemas.volunteer import VolunteerSlotCreateRequest, VolunteerSlotResponse
 from app.services.event_invitation_service import (
     invite_members_to_event,
@@ -56,6 +65,22 @@ from app.services.rsvp_service import (
     set_event_rsvp_status,
 )
 from app.services.member_service import MemberNotFoundError
+from app.schemas.preptask import PrepTaskCreateRequest, PrepTaskResponse
+from app.services.event_volunteer_signup_service import (
+    NotVolunteeredError,
+    get_member_volunteer_signup,
+    list_event_volunteer_signups,
+    to_member_response,
+    volunteer_for_event,
+    withdraw_volunteer_signup,
+)
+from app.services.event_feedback_service import (
+    EventNotPastError,
+    get_member_event_feedback,
+    list_event_feedback,
+    submit_event_feedback,
+    to_member_response as to_feedback_response,
+)
 from app.services.volunteer_service import create_volunteer_slot_for_event
 from app.api.v1.event_meetings import router as event_meetings_router
 from app.api.v1.event_photos import router as event_photos_router
@@ -92,10 +117,26 @@ def _build_event_detail_response(
 ) -> EventDetailResponse:
     current_status = get_member_rsvp_status(db, event.id, member_id)
     is_invited = is_member_invited_to_event(db, event.id, member_id)
+    volunteer_signup = get_member_volunteer_signup(
+        db,
+        event_id=event.id,
+        member_id=member_id,
+    )
+    member_feedback = get_member_event_feedback(
+        db,
+        event_id=event.id,
+        member_id=member_id,
+    )
     return EventDetailResponse.from_event(
         event,
         current_member_rsvp_status=current_status,
         current_member_is_invited_participant=is_invited,
+        current_member_volunteer_signup=(
+            to_member_response(volunteer_signup) if volunteer_signup is not None else None
+        ),
+        current_member_feedback=(
+            to_feedback_response(member_feedback) if member_feedback is not None else None
+        ),
     )
 
 
@@ -265,6 +306,139 @@ def cancel_event_rsvp_endpoint(
         event_id=event_id,
         current_member_rsvp_status=None,
     )
+
+
+@router.post(
+    "/{event_id}/volunteer-signup",
+    response_model=EventVolunteerSignupResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def volunteer_for_event_endpoint(
+    event_id: int,
+    data: EventVolunteerSignupCreateRequest,
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    try:
+        signup = volunteer_for_event(
+            db,
+            event_id=event_id,
+            member_id=current_member.id,
+            data=data,
+        )
+    except EventNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        ) from None
+    except EventNotUpcomingError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Volunteer signups are closed for past events",
+        ) from None
+
+    return to_member_response(signup)
+
+
+@router.delete("/{event_id}/volunteer-signup", status_code=status.HTTP_204_NO_CONTENT)
+def withdraw_volunteer_signup_endpoint(
+    event_id: int,
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    try:
+        withdraw_volunteer_signup(
+            db,
+            event_id=event_id,
+            member_id=current_member.id,
+        )
+    except EventNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        ) from None
+    except EventNotUpcomingError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Volunteer signups are closed for past events",
+        ) from None
+    except NotVolunteeredError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Volunteer signup not found",
+        ) from None
+
+    return None
+
+
+@router.get(
+    "/{event_id}/volunteer-signups",
+    response_model=EventVolunteerSignupListResponse,
+)
+def list_event_volunteer_signups_endpoint(
+    event_id: int,
+    _: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    try:
+        signups = list_event_volunteer_signups(db, event_id)
+    except EventNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        ) from None
+
+    return EventVolunteerSignupListResponse(signups=signups, total=len(signups))
+
+
+@router.post(
+    "/{event_id}/feedback",
+    response_model=EventFeedbackResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def submit_event_feedback_endpoint(
+    event_id: int,
+    data: EventFeedbackCreateRequest,
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    try:
+        feedback = submit_event_feedback(
+            db,
+            event_id=event_id,
+            member_id=current_member.id,
+            data=data,
+        )
+    except EventNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        ) from None
+    except EventNotPastError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Feedback is only available after an event has taken place",
+        ) from None
+
+    return to_feedback_response(feedback)
+
+
+@router.get(
+    "/{event_id}/feedback",
+    response_model=EventFeedbackListResponse,
+)
+def list_event_feedback_endpoint(
+    event_id: int,
+    _: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    try:
+        return list_event_feedback(db, event_id)
+    except EventNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        ) from None
 
 
 @router.get(

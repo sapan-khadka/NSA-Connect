@@ -214,7 +214,7 @@ describe("protected route redirects", () => {
     ).toBeInTheDocument();
   });
 
-  it("redirects /member/tasks to /events/volunteer for general members", async () => {
+  it("redirects /member/tasks to /events/tasks for general members", async () => {
     const { router } = renderWithRouter(undefined, {
       initialEntries: ["/member/tasks"],
       auth: {
@@ -224,12 +224,28 @@ describe("protected route redirects", () => {
     });
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/events/volunteer");
+      expect(router.state.location.pathname).toBe("/events/tasks");
     });
-    expect(await screen.findByText("No volunteer tasks yet")).toBeInTheDocument();
+    expect(
+      await screen.findByText("No tasks assigned to you yet"),
+    ).toBeInTheDocument();
   });
 
-  it("redirects board members from /member/tasks to home via volunteer guard", async () => {
+  it("redirects /events/volunteer to /events/tasks", async () => {
+    const { router } = renderWithRouter(undefined, {
+      initialEntries: ["/events/volunteer"],
+      auth: {
+        member: createMockMember("general"),
+        isAuthenticated: true,
+      },
+    });
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/events/tasks");
+    });
+  });
+
+  it("redirects board members from /member/tasks to /events/tasks", async () => {
     const { router } = renderWithRouter(undefined, {
       initialEntries: ["/member/tasks"],
       auth: {
@@ -239,8 +255,10 @@ describe("protected route redirects", () => {
     });
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/");
+      expect(router.state.location.pathname).toBe("/events/tasks");
     });
-    expect(screen.queryByText("No volunteer tasks yet")).not.toBeInTheDocument();
+    expect(
+      await screen.findByText("No tasks assigned to you yet"),
+    ).toBeInTheDocument();
   });
 });

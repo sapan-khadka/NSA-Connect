@@ -12,6 +12,7 @@ vi.mock("../lib/event-tasks-api", async () => {
   return {
     ...actual,
     fetchEventTasks: vi.fn(),
+    fetchMyEventTasks: vi.fn(),
     createEventTask: vi.fn(),
     updateEventTask: vi.fn(),
     deleteEventTask: vi.fn(),
@@ -23,11 +24,13 @@ import {
   createEventTask,
   deleteEventTask,
   fetchEventTasks,
+  fetchMyEventTasks,
   updateEventTask,
 } from "../lib/event-tasks-api";
 import { EventTaskManager } from "./EventTaskManager";
 
 const mockedFetch = vi.mocked(fetchEventTasks);
+const mockedFetchMine = vi.mocked(fetchMyEventTasks);
 const mockedCreate = vi.mocked(createEventTask);
 const mockedUpdate = vi.mocked(updateEventTask);
 const mockedDelete = vi.mocked(deleteEventTask);
@@ -40,6 +43,18 @@ const boardMember: MemberResponse = {
   major: "Admin",
   graduation_year: 2028,
   role: "board",
+  status: "approved",
+  position: "member",
+};
+
+const generalMember: MemberResponse = {
+  id: 6,
+  full_name: "apsana",
+  email: "apsana@semo.edu",
+  student_id: "12345678",
+  major: "CS",
+  graduation_year: 2028,
+  role: "general",
   status: "approved",
   position: "member",
 };
@@ -116,6 +131,53 @@ describe("EventTaskManager", () => {
     expect(
       screen.queryByRole("button", { name: "+ Add task" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows assigned simple tasks for a general member", async () => {
+    mockedFetchMine.mockResolvedValue({
+      tasks: [
+        makeTask({
+          id: 21,
+          event_id: 10,
+          title: "Help with tihar",
+          status: "in_progress",
+          assignee_id: 6,
+          assignee_name: "apsana",
+        }),
+      ],
+      total: 1,
+    });
+
+    renderManager({ member: generalMember });
+
+    await waitFor(() => expect(mockedFetchMine).toHaveBeenCalled());
+    expect(mockedFetch).not.toHaveBeenCalled();
+    expect(await screen.findByText("Help with tihar")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "In progress" })).toBeInTheDocument();
+  });
+
+  it("opens the add form pre-filled from a volunteer task draft", async () => {
+    mockedFetch.mockResolvedValue({ tasks: [], total: 0 });
+
+    renderManager({
+      canManageSimple: true,
+      taskDraft: {
+        title: "Help with tihar",
+        description: "i can help with the decoration.",
+        assigneeId: 6,
+        assigneeName: "apsana",
+      },
+      onTaskDraftApplied: vi.fn(),
+    });
+
+    await waitFor(() => expect(mockedFetch).toHaveBeenCalled());
+
+    expect(screen.getByLabelText("Title")).toHaveValue("Help with tihar");
+    expect(screen.getByLabelText(/Details/)).toHaveValue(
+      "i can help with the decoration.",
+    );
+    expect(screen.getByLabelText("Assign to")).toHaveValue("6");
+    expect(screen.getByRole("option", { name: "apsana" })).toBeInTheDocument();
   });
 
   it("creates a task when a manager submits the form", async () => {

@@ -31,6 +31,6 @@ export function summarizeMyTasks(tasks: EventTaskResponse[]): MyTasksSummary {
   };
 }
 
-export function getMyTasksPath(role: MemberRole): string {
-  return role === "general" ? "/events/volunteer" : "/events/tasks";
+export function getMyTasksPath(_role: MemberRole): string {
+  return "/events/tasks";
 }

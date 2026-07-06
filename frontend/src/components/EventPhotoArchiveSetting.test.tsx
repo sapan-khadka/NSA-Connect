@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { EventPhotoArchiveSetting } from "./EventPhotoArchiveSetting";
-import { createMockEventResponse } from "../test/test-utils";
+import { createMockEventDetailResponse } from "../test/test-utils";
 
 vi.mock("../lib/events-api", () => ({
   patchEvent: vi.fn(),
@@ -11,10 +11,7 @@ vi.mock("../lib/events-api", () => ({
 
 import { patchEvent } from "../lib/events-api";
 
-const mockEvent = {
-  ...createMockEventResponse({ show_in_photo_archive: true }),
-  prep_tasks: [],
-};
+const mockEvent = createMockEventDetailResponse({ show_in_photo_archive: true });
 
 describe("EventPhotoArchiveSetting", () => {
   afterEach(() => {

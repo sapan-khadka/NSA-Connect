@@ -19,11 +19,15 @@ import {
 } from "../lib/roles";
 import {
   ACTIVE_ASSIGNMENTS_SORT_OPTIONS,
+  ASSIGNEE_CATEGORY_FILTER_OPTIONS,
   countOverdueTasks,
+  filterOverviewMembersByAssigneeCategory,
   sortActiveMembers,
   sortUnassignedMembers,
   splitTaskOverviewMembers,
+  shouldShowUnassignedBoardMembers,
   type ActiveAssignmentsSort,
+  type AssigneeCategoryFilter,
 } from "../lib/task-oversight";
 
 const STATUS_LABELS: Record<EventTaskStatus, string> = {
@@ -111,6 +115,8 @@ export function TaskOversightPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeSort, setActiveSort] =
     useState<ActiveAssignmentsSort>("incomplete_first");
+  const [assigneeFilter, setAssigneeFilter] =
+    useState<AssigneeCategoryFilter>("all");
 
   const allowed = member
     ? canViewTaskOversight(member.role, member.position)
@@ -160,11 +166,17 @@ export function TaskOversightPage() {
         };
       }
 
-      const { active, unassigned } = splitTaskOverviewMembers(overview.members);
+      const filteredMembers = filterOverviewMembersByAssigneeCategory(
+        overview.members,
+        assigneeFilter,
+      );
+      const { active, unassigned } = splitTaskOverviewMembers(filteredMembers);
 
       return {
         activeMembers: sortActiveMembers(active, activeSort),
-        unassignedMembers: sortUnassignedMembers(unassigned),
+        unassignedMembers: shouldShowUnassignedBoardMembers(assigneeFilter)
+          ? sortUnassignedMembers(unassigned)
+          : [],
         overdueCount: countOverdueTasks(overview.members),
         completePercent:
           overview.total_tasks > 0
@@ -173,7 +185,7 @@ export function TaskOversightPage() {
               )
             : 0,
       };
-    }, [overview, activeSort]);
+    }, [overview, activeSort, assigneeFilter]);
 
   if (!member) {
     return null;
@@ -236,32 +248,57 @@ export function TaskOversightPage() {
                   Active assignments
                 </h2>
                 <p className="mt-1 text-sm text-label">
-                  {activeMembers.length} board member
+                  {activeMembers.length} member
                   {activeMembers.length === 1 ? "" : "s"} with assigned tasks
                 </p>
               </div>
 
-              <label className="text-sm text-label">
-                Sort by
-                <select
-                  value={activeSort}
-                  onChange={(event) =>
-                    setActiveSort(event.target.value as ActiveAssignmentsSort)
-                  }
-                  className="ml-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-                >
-                  {ACTIVE_ASSIGNMENTS_SORT_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="text-sm text-label">
+                  Assignee
+                  <select
+                    aria-label="Assignee"
+                    value={assigneeFilter}
+                    onChange={(event) =>
+                      setAssigneeFilter(
+                        event.target.value as AssigneeCategoryFilter,
+                      )
+                    }
+                    className="ml-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                  >
+                    {ASSIGNEE_CATEGORY_FILTER_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="text-sm text-label">
+                  Sort by
+                  <select
+                    aria-label="Sort by"
+                    value={activeSort}
+                    onChange={(event) =>
+                      setActiveSort(event.target.value as ActiveAssignmentsSort)
+                    }
+                    className="ml-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                  >
+                    {ACTIVE_ASSIGNMENTS_SORT_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
             </div>
 
             {activeMembers.length === 0 ? (
               <p className="text-sm text-label">
-                No board members currently have assigned tasks.
+                {assigneeFilter === "all"
+                  ? "No members currently have assigned tasks."
+                  : "No members match this assignee filter."}
               </p>
             ) : (
               <div className="space-y-6">

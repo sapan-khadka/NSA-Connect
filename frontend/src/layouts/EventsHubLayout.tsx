@@ -16,7 +16,7 @@ function buildEventsTabs(member: NonNullable<ReturnType<typeof useAuth>["member"
   const tabs: EventsTab[] = [{ label: "Calendar", to: "/events/calendar" }];
 
   tabs.push({
-    label: member.role === "general" ? "Assigned tasks" : "My tasks",
+    label: "My tasks",
     to: "/events/tasks",
   });
 

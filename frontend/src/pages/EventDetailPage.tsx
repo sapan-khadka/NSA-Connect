@@ -6,6 +6,8 @@ import { EventAttendanceSummaryPanel } from "../components/EventAttendanceSummar
 import { canCreateEventTasks } from "../lib/event-finance";
 import { EventFinanceCloseoutBanner } from "../components/EventFinanceCloseoutBanner";
 import { EventRsvpButton } from "../components/EventRsvpButton";
+import { EventVolunteerSignupPanel } from "../components/EventVolunteerSignupPanel";
+import { EventFeedbackPanel } from "../components/EventFeedbackPanel";
 import { EventTaskManager } from "../components/EventTaskManager";
 import { ArrowLink } from "../components/ui/ArrowLink";
 import { HomeCard } from "../components/ui/HomeCard";
@@ -36,6 +38,7 @@ import {
   canManageEventTasks,
   isRoleAtLeast,
 } from "../lib/roles";
+import { fetchMyEventTasks } from "../lib/event-tasks-api";
 
 export function EventDetailPage() {
   const { eventId } = useParams();
@@ -57,13 +60,18 @@ export function EventDetailPage() {
   const [attendeesError, setAttendeesError] = useState<string | null>(null);
   const [attendanceSummary, setAttendanceSummary] =
     useState<EventAttendanceSummary | null>(null);
+  const [hasMyTasksForEvent, setHasMyTasksForEvent] = useState(false);
 
   const canViewBoard = member ? isRoleAtLeast(member.role, "board") : false;
   const canManageTasks = member
     ? canManageEventTasks(member.role, member.position)
     : false;
+  const isGeneralMember = member?.role === "general";
   const showTasksExpanded =
-    canManageTasks || canViewBoard || member?.role !== "general";
+    canManageTasks ||
+    canViewBoard ||
+    !isGeneralMember ||
+    hasMyTasksForEvent;
 
   const loadEvent = useCallback(async () => {
     if (!Number.isFinite(numericEventId)) {
@@ -170,6 +178,36 @@ export function EventDetailPage() {
       cancelled = true;
     };
   }, [canManageTasks]);
+
+  useEffect(() => {
+    if (!isGeneralMember || !Number.isFinite(numericEventId)) {
+      setHasMyTasksForEvent(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadMyTasks() {
+      try {
+        const response = await fetchMyEventTasks();
+        if (!cancelled) {
+          setHasMyTasksForEvent(
+            response.tasks.some((task) => task.event_id === numericEventId),
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setHasMyTasksForEvent(false);
+        }
+      }
+    }
+
+    void loadMyTasks();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isGeneralMember, numericEventId, taskRefreshKey]);
 
   async function handleRsvpStatusChange(status: RsvpStatus) {
     if (!event) {
@@ -279,6 +317,34 @@ export function EventDetailPage() {
             loading={rsvpLoading}
             onStatusChange={(status) => void handleRsvpStatusChange(status)}
           />
+          <div className="mt-3">
+            <EventVolunteerSignupPanel
+              eventId={event.id}
+              canVolunteer={isEventUpcoming(event.starts_at)}
+              signup={event.current_member_volunteer_signup}
+              onSignupChange={(signup) =>
+                setEvent((current) =>
+                  current
+                    ? { ...current, current_member_volunteer_signup: signup }
+                    : current,
+                )
+              }
+            />
+          </div>
+          <div className="mt-3">
+            <EventFeedbackPanel
+              eventId={event.id}
+              canSubmitFeedback={!isEventUpcoming(event.starts_at)}
+              feedback={event.current_member_feedback}
+              onFeedbackChange={(feedback) =>
+                setEvent((current) =>
+                  current
+                    ? { ...current, current_member_feedback: feedback }
+                    : current,
+                )
+              }
+            />
+          </div>
         </div>
 
         {event.event_type === "meeting" && canViewBoard ? (
@@ -327,11 +393,26 @@ export function EventDetailPage() {
             refreshKey={taskRefreshKey}
           />
         ) : (
-          <details className="rounded-lg border border-gray-200 bg-surface-muted/40 p-3">
+          <details
+            className="rounded-lg border border-gray-200 bg-surface-muted/40 p-3"
+            open={hasMyTasksForEvent || undefined}
+          >
             <summary className="cursor-pointer text-sm font-medium text-foreground">
-              Tasks & volunteer
+              {hasMyTasksForEvent ? "Your assigned tasks" : "Tasks & volunteer"}
             </summary>
-            <div className="mt-3">
+            <div className="mt-3 space-y-3">
+              {hasMyTasksForEvent ? (
+                <p className="text-sm text-label">
+                  Update status here or on{" "}
+                  <Link
+                    to="/events/tasks"
+                    className="font-medium text-accent hover:underline"
+                  >
+                    My tasks
+                  </Link>{" "}
+                  for the full board view.
+                </p>
+              ) : null}
               <EventTaskManager
                 key={`${event.id}-${taskRefreshKey}`}
                 eventId={event.id}

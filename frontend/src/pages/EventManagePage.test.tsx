@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { MockAuthProvider, createMockEventResponse } from "../test/test-utils";
+import { MockAuthProvider, createMockEventDetailResponse } from "../test/test-utils";
 import { EventManagePage } from "./EventManagePage";
 
 vi.mock("../components/EventTaskManager", () => ({
@@ -34,6 +34,7 @@ vi.mock("../components/EventAttendanceSummaryPanel", () => ({
 
 vi.mock("../lib/events-api", () => ({
   fetchEvent: vi.fn(),
+  fetchEventVolunteerSignups: vi.fn().mockResolvedValue({ total: 0, signups: [] }),
 }));
 
 vi.mock("../lib/event-tasks-api", () => ({
@@ -58,16 +59,19 @@ vi.mock("../components/MeetingRecordSection", () => ({
   ),
 }));
 
-const mockEvent = {
-  ...createMockEventResponse({
-    id: 1,
-    name: "Dashain Celebration",
-    budget: "500.00",
-    current_member_rsvp_status: null,
-    show_in_photo_archive: true,
-  }),
-  prep_tasks: [],
-};
+vi.mock("../components/EventVolunteersSection", () => ({
+  EventVolunteersSection: () => (
+    <div data-testid="event-volunteers-section">Volunteers</div>
+  ),
+}));
+
+const mockEvent = createMockEventDetailResponse({
+  id: 1,
+  name: "Dashain Celebration",
+  budget: "500.00",
+  current_member_rsvp_status: null,
+  show_in_photo_archive: true,
+});
 
 function renderPage(role: "board" | "treasurer" = "board") {
   return render(
@@ -178,6 +182,7 @@ describe("EventManagePage", () => {
     expect(screen.getByText("1/2 done (50%)")).toBeInTheDocument();
     expect(screen.getByText("Event budget")).toBeInTheDocument();
     expect(screen.getByTestId("event-task-manager")).toBeInTheDocument();
+    expect(screen.getByTestId("event-volunteers-section")).toBeInTheDocument();
     expect(screen.queryByTestId("finance-entry-list")).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Delete event" }),

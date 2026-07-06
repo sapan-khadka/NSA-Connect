@@ -71,8 +71,8 @@ export function GeneralDashboardPage() {
               </Link>
             </li>
             <li>
-              <Link to="/events/volunteer" className="font-medium text-accent">
-                My volunteer tasks
+              <Link to="/events/tasks" className="font-medium text-accent">
+                My assigned tasks
               </Link>
             </li>
           </ul>

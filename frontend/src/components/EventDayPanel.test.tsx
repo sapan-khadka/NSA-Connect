@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi, type ReactElement } from "vitest";
 
 import { EventDayPanel } from "./EventDayPanel";
 import type { EventDetailResponse, EventResponse } from "../lib/events-api";
-import { createMockEventResponse } from "../test/test-utils";
+import { createMockEventDetailResponse, createMockEventResponse } from "../test/test-utils";
 
 const dayEvent: EventResponse = createMockEventResponse({
   id: 1,
@@ -14,10 +14,9 @@ const dayEvent: EventResponse = createMockEventResponse({
   created_by_id: 2,
 });
 
-const eventDetail: EventDetailResponse = {
+const eventDetail: EventDetailResponse = createMockEventDetailResponse({
   ...dayEvent,
-  prep_tasks: [],
-};
+});
 
 const panelProps = {
   rsvpLoading: false,

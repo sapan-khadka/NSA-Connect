@@ -2,7 +2,7 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  createMockEventResponse,
+  createMockEventDetailResponse,
   createMockMember,
   renderWithRouter,
 } from "../test/test-utils";
@@ -28,15 +28,12 @@ import { fetchEvent, fetchEventAttendees } from "../lib/events-api";
 const mockedFetchEvent = vi.mocked(fetchEvent);
 const mockedFetchEventAttendees = vi.mocked(fetchEventAttendees);
 
-const sampleEvent = {
-  ...createMockEventResponse({
-    id: 7,
-    name: "Spring Social",
-    location: "University Center",
-    starts_at: "2030-06-15T18:00:00+00:00",
-  }),
-  prep_tasks: [],
-};
+const sampleEvent = createMockEventDetailResponse({
+  id: 7,
+  name: "Spring Social",
+  location: "University Center",
+  starts_at: "2030-06-15T18:00:00+00:00",
+});
 
 describe("EventDetailPage", () => {
   afterEach(() => {

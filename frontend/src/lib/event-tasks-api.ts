@@ -32,6 +32,7 @@ export type EventTaskResponse = {
   completed_at: string | null;
   created_by_id: number | null;
   created_at: string;
+  assignee_has_volunteer_signup?: boolean;
 };
 
 export type EventTaskListResponse = {

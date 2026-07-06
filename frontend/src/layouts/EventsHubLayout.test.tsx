@@ -20,7 +20,9 @@ vi.mock("../lib/events-api", () => ({
     is_finance_locked: false,
     is_past: false,
     is_finance_grace_period: false,
+    show_in_photo_archive: true,
     prep_tasks: [],
+    current_member_volunteer_signup: null,
   }),
 }));
 
@@ -46,7 +48,7 @@ describe("EventsHubLayout", () => {
     cleanup();
   });
 
-  it("shows Calendar and Assigned tasks tabs for general members", async () => {
+  it("shows Calendar and My tasks tabs for general members", async () => {
     renderWithRouter(undefined, {
       initialEntries: ["/events/calendar"],
       auth: {
@@ -59,7 +61,7 @@ describe("EventsHubLayout", () => {
       "href",
       "/events/calendar",
     );
-    expect(screen.getByRole("link", { name: "Assigned tasks" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "My tasks" })).toHaveAttribute(
       "href",
       "/events/tasks",
     );

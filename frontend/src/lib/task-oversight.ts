@@ -1,9 +1,12 @@
 import type { EventTaskResponse, TaskOverviewMember } from "./event-tasks-api";
+import { isMemberRole, isRoleAtLeast, type MemberRole } from "./roles";
 
 export type ActiveAssignmentsSort =
   | "incomplete_first"
   | "alphabetical"
   | "completion_desc";
+
+export type AssigneeCategoryFilter = "all" | "board" | "general" | "volunteers";
 
 export const ACTIVE_ASSIGNMENTS_SORT_OPTIONS: {
   value: ActiveAssignmentsSort;
@@ -13,6 +16,89 @@ export const ACTIVE_ASSIGNMENTS_SORT_OPTIONS: {
   { value: "alphabetical", label: "Alphabetical" },
   { value: "completion_desc", label: "Completion % (high to low)" },
 ];
+
+export const ASSIGNEE_CATEGORY_FILTER_OPTIONS: {
+  value: AssigneeCategoryFilter;
+  label: string;
+}[] = [
+  { value: "all", label: "All assignees" },
+  { value: "board", label: "Board members" },
+  { value: "general", label: "General members" },
+  { value: "volunteers", label: "Volunteers" },
+];
+
+export function isBoardAssigneeRole(role: string): boolean {
+  return isMemberRole(role) && isRoleAtLeast(role, "board");
+}
+
+export function taskMatchesAssigneeCategoryFilter(
+  task: EventTaskResponse,
+  memberRole: string,
+  filter: AssigneeCategoryFilter,
+): boolean {
+  if (filter === "all") {
+    return true;
+  }
+
+  if (filter === "board") {
+    return isBoardAssigneeRole(memberRole);
+  }
+
+  if (filter === "general") {
+    return memberRole === "general";
+  }
+
+  return task.assignee_has_volunteer_signup === true;
+}
+
+function recomputeMemberTaskStats(
+  member: TaskOverviewMember,
+  tasks: EventTaskResponse[],
+): TaskOverviewMember {
+  const completed = tasks.filter((task) => task.status === "done").length;
+  const in_progress = tasks.filter((task) => task.status === "in_progress").length;
+  const todo = tasks.filter((task) => task.status === "todo").length;
+  const total = tasks.length;
+
+  return {
+    ...member,
+    tasks,
+    total,
+    completed,
+    in_progress,
+    todo,
+    completion_percent: total > 0 ? Math.round((completed / total) * 100) : 0,
+  };
+}
+
+export function filterOverviewMembersByAssigneeCategory(
+  members: TaskOverviewMember[],
+  filter: AssigneeCategoryFilter,
+): TaskOverviewMember[] {
+  if (filter === "all") {
+    return members;
+  }
+
+  return members
+    .map((member) => {
+      const tasks = member.tasks.filter((task) =>
+        taskMatchesAssigneeCategoryFilter(task, member.role, filter),
+      );
+
+      if (tasks.length === 0) {
+        return null;
+      }
+
+      return recomputeMemberTaskStats(member, tasks);
+    })
+    .filter((member): member is TaskOverviewMember => member !== null);
+}
+
+export function shouldShowUnassignedBoardMembers(
+  filter: AssigneeCategoryFilter,
+): boolean {
+  return filter === "all" || filter === "board";
+}
 
 export function isOverdueOpenTask(task: EventTaskResponse): boolean {
   return task.is_overdue && !task.is_complete;

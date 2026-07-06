@@ -14,12 +14,14 @@ import {
   createEventTask,
   deleteEventTask,
   fetchEventTasks,
+  fetchMyEventTasks,
   updateEventTask,
   updateEventTaskChecklistItem,
   type EventTaskResponse,
   type EventTaskStatus,
 } from "../lib/event-tasks-api";
 import type { PrepTaskResponse } from "../lib/events-api";
+import type { EventTaskDraft } from "../lib/event-task-draft";
 import { prepTaskToEventTask, eventTaskToPrepTask } from "../lib/task-adapters";
 import { isRoleAtLeast } from "../lib/roles";
 import {
@@ -41,6 +43,8 @@ type EventTaskManagerProps = {
   fallbackChecklistTasks?: PrepTaskResponse[];
   onFallbackTasksChange?: (tasks: PrepTaskResponse[]) => void;
   refreshKey?: number;
+  taskDraft?: EventTaskDraft | null;
+  onTaskDraftApplied?: () => void;
 };
 
 const STATUS_LABELS: Record<EventTaskStatus, string> = {
@@ -262,6 +266,8 @@ export function EventTaskManager({
   fallbackChecklistTasks = EMPTY_FALLBACK_CHECKLIST,
   onFallbackTasksChange,
   refreshKey = 0,
+  taskDraft = null,
+  onTaskDraftApplied,
 }: EventTaskManagerProps) {
   const [tasks, setTasks] = useState<EventTaskResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -271,14 +277,39 @@ export function EventTaskManager({
   const [togglingItemId, setTogglingItemId] = useState<number | null>(null);
   const [assigningTaskId, setAssigningTaskId] = useState<number | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const addFormRef = useRef<HTMLFormElement>(null);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [draftAssigneeName, setDraftAssigneeName] = useState<string | null>(null);
 
   const canFetchAll = member ? isRoleAtLeast(member.role, "board") : false;
+
+  const assigneeOptions = (() => {
+    const options = [...assignableMembers];
+    if (
+      assigneeId &&
+      !options.some((candidate) => String(candidate.id) === assigneeId)
+    ) {
+      options.push({
+        id: Number(assigneeId),
+        full_name: draftAssigneeName ?? "Selected member",
+        email: null,
+        student_id: null,
+        major: "",
+        graduation_year: 2028,
+        role: "general",
+        status: "approved",
+        position: "member",
+      });
+    }
+    return options.sort((left, right) =>
+      left.full_name.localeCompare(right.full_name),
+    );
+  })();
 
   const syncFallbackTasks = useCallback(
     (nextTasks: EventTaskResponse[]) => {
@@ -308,11 +339,29 @@ export function EventTaskManager({
             setTasks(response.tasks);
           }
         } else {
-          const mapped = fallbackChecklistTasks.map((task) =>
-            prepTaskToEventTask(task, { id: eventId, name: eventName }),
+          const mappedChecklist = fallbackChecklistTasks
+            .filter(
+              (task) => !member || task.assignee_id === member.id,
+            )
+            .map((task) =>
+              prepTaskToEventTask(task, { id: eventId, name: eventName }),
+            );
+
+          let assignedForEvent: EventTaskResponse[] = [];
+          if (member) {
+            const mine = await fetchMyEventTasks();
+            assignedForEvent = mine.tasks.filter(
+              (task) => task.event_id === eventId,
+            );
+          }
+
+          const assignedIds = new Set(assignedForEvent.map((task) => task.id));
+          const checklistExtras = mappedChecklist.filter(
+            (task) => !assignedIds.has(task.id),
           );
+
           if (!cancelled) {
-            setTasks(mapped);
+            setTasks([...assignedForEvent, ...checklistExtras]);
           }
         }
       } catch (error) {
@@ -332,7 +381,45 @@ export function EventTaskManager({
     return () => {
       cancelled = true;
     };
-  }, [canFetchAll, eventId, eventName, refreshKey, fallbackChecklistTasks]);
+  }, [
+    canFetchAll,
+    eventId,
+    eventName,
+    member,
+    refreshKey,
+    fallbackChecklistTasks,
+  ]);
+
+  useEffect(() => {
+    if (!taskDraft) {
+      return;
+    }
+
+    setTitle(taskDraft.title);
+    setDescription(taskDraft.description);
+    setAssigneeId(String(taskDraft.assigneeId));
+    setDraftAssigneeName(taskDraft.assigneeName);
+    setDueDate("");
+    setShowAddForm(true);
+    setActionError(null);
+    onTaskDraftApplied?.();
+
+    window.requestAnimationFrame(() => {
+      addFormRef.current?.scrollIntoView?.({
+        behavior: "smooth",
+        block: "center",
+      });
+    });
+  }, [taskDraft, onTaskDraftApplied]);
+
+  function resetAddForm() {
+    setTitle("");
+    setDescription("");
+    setAssigneeId("");
+    setDraftAssigneeName(null);
+    setDueDate("");
+    setShowAddForm(false);
+  }
 
   function canToggleChecklist(task: EventTaskResponse): boolean {
     if (!member) {
@@ -363,11 +450,7 @@ export function EventTaskManager({
         due_date: dueDate ? new Date(dueDate).toISOString() : null,
       });
       setTasks((current) => [...current, created]);
-      setTitle("");
-      setDescription("");
-      setAssigneeId("");
-      setDueDate("");
-      setShowAddForm(false);
+      resetAddForm();
     } catch (error) {
       setActionError(getApiErrorMessage(error));
     } finally {
@@ -495,7 +578,7 @@ export function EventTaskManager({
   const simpleTasks = tasks.filter((task) => task.task_kind === "simple");
   const progress = calcEventTasksProgress(tasks);
   const completionSummary = calcTaskCompletionSummary(tasks);
-  const showSection = canFetchAll || checklistTasks.length > 0;
+  const showSection = canFetchAll || tasks.length > 0;
   const allowCreateTasks = canManageSimple && canCreateTasks;
 
   if (!showSection) {
@@ -503,7 +586,7 @@ export function EventTaskManager({
   }
 
   return (
-    <section aria-label="Event tasks">
+    <section aria-label="Event tasks" id="event-tasks-section">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-baseline gap-2">
           <h2 className="text-lg font-light tracking-subhead text-foreground">
@@ -541,6 +624,7 @@ export function EventTaskManager({
 
       {allowCreateTasks && showAddForm ? (
         <form
+          ref={addFormRef}
           onSubmit={(event) => void handleCreate(event)}
           className="mt-3 space-y-2 ds-card p-3"
         >
@@ -548,7 +632,7 @@ export function EventTaskManager({
             <p className="text-xs font-medium text-label">New task</p>
             <button
               type="button"
-              onClick={() => setShowAddForm(false)}
+              onClick={resetAddForm}
               className="text-xs font-medium text-label transition-colors hover:text-foreground"
             >
               Cancel
@@ -602,7 +686,7 @@ export function EventTaskManager({
                 className="mt-1 w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-accent focus:outline-none"
               >
                 <option value="">Unassigned</option>
-                {assignableMembers.map((candidate) => (
+                {assigneeOptions.map((candidate) => (
                   <option key={candidate.id} value={candidate.id}>
                     {candidate.full_name}
                   </option>
