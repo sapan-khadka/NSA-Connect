@@ -1,5 +1,6 @@
 import axios from "axios";
 
+import { logApiError } from "./api-error";
 import { getAccessToken, notifyUnauthorized } from "./auth-token";
 
 const api = axios.create({
@@ -25,6 +26,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       notifyUnauthorized();
     }
+
+    logApiError(error);
 
     return Promise.reject(error);
   },

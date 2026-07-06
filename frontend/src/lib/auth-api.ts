@@ -3,6 +3,7 @@ import { isAxiosError } from "axios";
 import type { MemberPosition, MemberRole } from "./roles";
 import type { MemberTalent, ProfileFieldVisibility } from "./member-talents";
 
+import { logApiError } from "./api-error";
 import api from "./api";
 import { normalizeSemoEmail, normalizeStudentId } from "./validation";
 
@@ -80,6 +81,7 @@ export function getApiErrorMessage(error: unknown): string {
   }
 
   if (!isAxiosError(error)) {
+    logApiError(error);
     return "Something went wrong. Please try again.";
   }
 

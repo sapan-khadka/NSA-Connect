@@ -64,7 +64,11 @@ def get_announcement_endpoint(
     return _to_response(announcement)
 
 
-@router.post("", response_model=AnnouncementResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=AnnouncementResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 def create_announcement_endpoint(
     data: AnnouncementCreateRequest,
     current_member: Member = Depends(require_board),

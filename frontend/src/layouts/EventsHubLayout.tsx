@@ -21,6 +21,7 @@ function buildEventsTabs(member: NonNullable<ReturnType<typeof useAuth>["member"
   });
 
   tabs.push({ label: "Photo archive", to: "/events/photos" });
+  tabs.push({ label: "Suggestions", to: "/events/suggestions" });
 
   if (canViewMemberDirectory(member.role)) {
     tabs.push({ label: "Board meetings", to: "/events/meetings" });

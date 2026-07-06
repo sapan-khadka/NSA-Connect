@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { CreateEventForm } from "../components/CreateEventForm";
 import { EventDayPanel } from "../components/EventDayPanel";
@@ -409,6 +409,21 @@ export function EventsPage() {
 
   return (
     <div className="-mx-1 rounded-2xl bg-[#F3F3F1] px-1 py-2 sm:px-2 sm:py-4">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3">
+        <div>
+          <p className="text-sm font-medium text-foreground">Have an event idea?</p>
+          <p className="text-xs text-label">
+            Share suggestions for the board to review when planning.
+          </p>
+        </div>
+        <Link
+          to="/events/suggestions"
+          className="rounded-full border border-gray-200 px-4 py-2 text-sm text-foreground hover:border-accent"
+        >
+          Suggest an event
+        </Link>
+      </div>
+
       {canCreateEvents ? (
         <div className="mb-5">
           <CreateEventForm onCreated={(event) => void handleEventCreated(event)} />

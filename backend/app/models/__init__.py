@@ -3,6 +3,7 @@ from app.models.constitutional_chunk import ConstitutionalChunk
 from app.models.event import Event, EventType
 from app.models.announcement import Announcement, AnnouncementCategory
 from app.models.event_checkin import EventCheckIn
+from app.models.event_suggestion import EventSuggestion, EventSuggestionStatus
 from app.models.event_guest_checkin import EventGuestCheckIn, GuestAffiliationType
 from app.models.event_participant_invitation import EventParticipantInvitation
 from app.models.event_photo import EventPhoto
@@ -39,6 +40,8 @@ __all__ = [
     "ConstitutionalChunk",
     "Event",
     "EventCheckIn",
+    "EventSuggestion",
+    "EventSuggestionStatus",
     "EventGuestCheckIn",
     "GuestAffiliationType",
     "EventParticipantInvitation",

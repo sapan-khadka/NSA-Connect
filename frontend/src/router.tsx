@@ -11,6 +11,7 @@ import { EventCheckInPage } from "./pages/EventCheckInPage";
 import { EventManagePage } from "./pages/EventManagePage";
 import { EventDetailPage } from "./pages/EventDetailPage";
 import { EventPhotoAlbumPage } from "./pages/EventPhotoAlbumPage";
+import { EventSuggestionsPage } from "./pages/EventSuggestionsPage";
 import { EventsPage } from "./pages/EventsPage";
 import { FinancePage } from "./pages/FinancePage";
 import { MyTasksPage } from "./pages/MyTasksPage";
@@ -138,6 +139,7 @@ export const appRoutes: RouteObject[] = [
         children: [
           { index: true, element: <Navigate to="calendar" replace /> },
           { path: "calendar", element: <EventsPage /> },
+          { path: "suggestions", element: <EventSuggestionsPage /> },
           { path: "upcoming", element: <Navigate to="/events/calendar" replace /> },
           { path: "tasks", element: <BoardTasksPage /> },
           { path: "photos", element: <PhotoArchivePage /> },
