@@ -16,11 +16,12 @@ def test_settings_from_env(monkeypatch):
     monkeypatch.setenv("DEBUG", "false")
 
     get_settings.cache_clear()
-    settings = get_settings()
+    try:
+        settings = get_settings()
 
-    assert settings.APP_NAME == "Test API"
-    assert settings.ENVIRONMENT == "production"
-    assert settings.DEBUG is False
-    assert settings.is_development is False
-
-    get_settings.cache_clear()
+        assert settings.APP_NAME == "Test API"
+        assert settings.ENVIRONMENT == "production"
+        assert settings.DEBUG is False
+        assert settings.is_development is False
+    finally:
+        get_settings.cache_clear()

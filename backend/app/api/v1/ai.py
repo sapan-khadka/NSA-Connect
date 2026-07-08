@@ -29,6 +29,7 @@ from app.services.ai_checklist_service import (
     AIDisabledError,
     generate_event_checklist,
 )
+from app.core.safe_messages import GENERIC_AI_UNAVAILABLE
 from app.services.ai_minutes_service import (
     AIMinutesSummaryError,
     summarize_meeting_minutes,
@@ -57,10 +58,10 @@ def generate_checklist_endpoint(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="AI features are disabled",
         ) from None
-    except AIChecklistGenerationError as exc:
+    except AIChecklistGenerationError:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=str(exc),
+            detail=GENERIC_AI_UNAVAILABLE,
         ) from None
 
 
@@ -86,10 +87,10 @@ def draft_announcement_email_endpoint(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="AI features are disabled",
         ) from None
-    except AIAnnouncementDraftError as exc:
+    except AIAnnouncementDraftError:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=str(exc),
+            detail=GENERIC_AI_UNAVAILABLE,
         ) from None
 
 
@@ -112,10 +113,10 @@ def summarize_minutes_endpoint(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="AI features are disabled",
         ) from None
-    except AIMinutesSummaryError as exc:
+    except AIMinutesSummaryError:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=str(exc),
+            detail=GENERIC_AI_UNAVAILABLE,
         ) from None
 
 
@@ -136,10 +137,10 @@ def chat_stream_endpoint(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="AI features are disabled",
         ) from None
-    except AIChatError as exc:
+    except AIChatError:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=str(exc),
+            detail=GENERIC_AI_UNAVAILABLE,
         ) from None
 
     return StreamingResponse(
@@ -174,8 +175,8 @@ def chat_endpoint(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="AI features are disabled",
         ) from None
-    except AIChatError as exc:
+    except AIChatError:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=str(exc),
+            detail=GENERIC_AI_UNAVAILABLE,
         ) from None

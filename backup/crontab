@@ -1,0 +1,2 @@
+# Daily backup at 03:00 UTC (supercronic uses standard cron syntax)
+0 3 * * * /backup/scripts/backup.sh >> /backups/backup.log 2>&1

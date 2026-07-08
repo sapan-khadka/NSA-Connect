@@ -1,4 +1,5 @@
 import { getAccessToken } from "./auth-token";
+import { GENERIC_CLIENT_ERROR } from "./api-error";
 
 export type ChatHistoryMessage = {
   role: "user" | "assistant";
@@ -109,10 +110,10 @@ export async function streamChatMessage(
   });
 
   if (!response.ok) {
-    let detail = "Failed to reach AI assistant";
+    let detail = GENERIC_CLIENT_ERROR;
     try {
       const body = (await response.json()) as { detail?: string };
-      if (body.detail) {
+      if (typeof body.detail === "string" && body.detail.trim()) {
         detail = body.detail;
       }
     } catch {

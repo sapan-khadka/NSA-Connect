@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import { useSearchParams } from "react-router-dom";
+
+import { getApiErrorMessage } from "../lib/api-error";
 
 import { DuesDashboard } from "../components/DuesDashboard";
 import { EventBudgetBreakdown } from "../components/EventBudgetBreakdown";
@@ -218,21 +219,12 @@ export function FinancePage() {
           return;
         }
 
-        if (axios.isAxiosError(error)) {
-          const detail = error.response?.data?.detail;
-          setExpenseCategoryState({
-            status: "error",
-            message:
-              typeof detail === "string"
-                ? detail
-                : "Unable to load expense categories.",
-          });
-          return;
-        }
-
         setExpenseCategoryState({
           status: "error",
-          message: "Unable to load expense categories.",
+          message: getApiErrorMessage(
+            error,
+            "Unable to load expense categories.",
+          ),
         });
       }
     }
@@ -264,21 +256,12 @@ export function FinancePage() {
           return;
         }
 
-        if (axios.isAxiosError(error)) {
-          const detail = error.response?.data?.detail;
-          setBudgetState({
-            status: "error",
-            message:
-              typeof detail === "string"
-                ? detail
-                : "Unable to load event budget breakdown.",
-          });
-          return;
-        }
-
         setBudgetState({
           status: "error",
-          message: "Unable to load event budget breakdown.",
+          message: getApiErrorMessage(
+            error,
+            "Unable to load event budget breakdown.",
+          ),
         });
       }
     }
@@ -315,21 +298,9 @@ export function FinancePage() {
           return;
         }
 
-        if (axios.isAxiosError(error)) {
-          const detail = error.response?.data?.detail;
-          setSummaryState({
-            status: "error",
-            message:
-              typeof detail === "string"
-                ? detail
-                : "Unable to load finance summary.",
-          });
-          return;
-        }
-
         setSummaryState({
           status: "error",
-          message: "Unable to load finance summary.",
+          message: getApiErrorMessage(error, "Unable to load finance summary."),
         });
       }
     }

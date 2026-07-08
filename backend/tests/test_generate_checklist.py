@@ -112,7 +112,10 @@ def test_generate_checklist_returns_502_for_invalid_ai_response(
         )
 
     assert response.status_code == 502
-    assert response.json()["detail"] == "Anthropic returned invalid JSON"
+    from app.core.safe_messages import GENERIC_AI_UNAVAILABLE
+
+    assert response.json()["detail"] == GENERIC_AI_UNAVAILABLE
+    assert "anthropic" not in response.text.lower()
 
 
 def test_generate_checklist_requires_event_name(client, board_member_headers):

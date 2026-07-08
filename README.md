@@ -26,7 +26,10 @@ Handles member registration and approvals, role-based access, events with prep t
 
 ```
 NSA-Connect/
-├── docker-compose.yml       # Postgres, Redis, backend, Celery worker/beat
+├── docker-compose.yml       # Postgres, Redis, backend, Celery worker/beat, db-backup
+├── BACKUPS.md               # Database backup & restore runbook
+├── backup/                  # Automated PostgreSQL backup system
+├── backups/                 # Local backup artifacts (gitignored)
 ├── backend/
 │   ├── app/                 # FastAPI application
 │   ├── alembic/             # Database migrations

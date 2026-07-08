@@ -12,6 +12,7 @@ from app.schemas.meeting import (
     MeetingMinutesResponse,
     MeetingNotesUpdateRequest,
 )
+from app.core.safe_messages import GENERIC_AI_UNAVAILABLE
 from app.services.ai_minutes_service import (
     AIDisabledError,
     AIMinutesSummaryError,
@@ -133,10 +134,10 @@ def summarize_meeting_for_event_endpoint(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="AI features are disabled",
         ) from None
-    except AIMinutesSummaryError as exc:
+    except AIMinutesSummaryError:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=str(exc),
+            detail=GENERIC_AI_UNAVAILABLE,
         ) from None
 
     return save_meeting_summary(

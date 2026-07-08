@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 
+import { getApiErrorMessage } from "../lib/api-error";
 import {
   CUSTOM_FINANCE_CATEGORY,
   financeCategoryToFormValue,
@@ -91,17 +91,9 @@ export function FinanceEntryList({
           return;
         }
 
-        if (axios.isAxiosError(error)) {
-          const detail = error.response?.data?.detail;
-          setErrorMessage(
-            typeof detail === "string"
-              ? detail
-              : "Unable to load finance entries.",
-          );
-          return;
-        }
-
-        setErrorMessage("Unable to load finance entries.");
+        setErrorMessage(
+          getApiErrorMessage(error, "Unable to load finance entries."),
+        );
       } finally {
         if (!cancelled) {
           setIsLoading(false);
@@ -133,16 +125,6 @@ export function FinanceEntryList({
     setEditingId(null);
     setDraft(null);
     setActionError(null);
-  }
-
-  function getApiErrorDetail(error: unknown, fallback: string): string {
-    if (axios.isAxiosError(error)) {
-      const detail = error.response?.data?.detail;
-      if (typeof detail === "string") {
-        return detail;
-      }
-    }
-    return fallback;
   }
 
   async function saveEdit(entryId: number) {
@@ -184,7 +166,7 @@ export function FinanceEntryList({
       );
       onChanged?.();
     } catch (error) {
-      setActionError(getApiErrorDetail(error, "Unable to update entry."));
+      setActionError(getApiErrorMessage(error, "Unable to update entry."));
     } finally {
       setBusyId(null);
     }
@@ -214,7 +196,7 @@ export function FinanceEntryList({
       );
       onChanged?.();
     } catch (error) {
-      setActionError(getApiErrorDetail(error, "Unable to delete entry."));
+      setActionError(getApiErrorMessage(error, "Unable to delete entry."));
     } finally {
       setBusyId(null);
     }

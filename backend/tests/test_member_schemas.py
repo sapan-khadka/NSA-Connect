@@ -105,7 +105,7 @@ def test_member_response_from_model():
 
     assert response.id == 1
     assert response.email == "sapan@semo.edu"
-    assert response.public_fields().isdisjoint(SENSITIVE_MEMBER_FIELDS)
+    assert SENSITIVE_MEMBER_FIELDS.isdisjoint(response.model_dump().keys())
 
 
 def test_member_response_model_dump_never_includes_sensitive_fields():

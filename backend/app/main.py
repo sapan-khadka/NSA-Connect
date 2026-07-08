@@ -1,17 +1,25 @@
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
 from slowapi.middleware import SlowAPIMiddleware
+from sqlalchemy.exc import IntegrityError
 
 from app.api.v1.health import router as health_router
 from app.api.v1.router import api_router
 from app.core.config import settings
+from app.core.exception_handlers import (
+    exception_group_handler,
+    integrity_error_handler,
+    unhandled_exception_handler,
+)
 from app.core.rate_limit import AppRateLimitExceeded, limiter
 from app.core.rate_limit_handlers import (
     app_rate_limit_exceeded_handler,
     slowapi_rate_limit_exceeded_handler,
 )
+from app.core.validation_errors import request_validation_exception_handler
 from app.lifespan import lifespan
 from app.middleware.global_rate_limit import GlobalRateLimitMiddleware
 from app.services.local_event_photo_storage import (
@@ -28,6 +36,10 @@ app = FastAPI(
 )
 
 app.state.limiter = limiter
+app.add_exception_handler(RequestValidationError, request_validation_exception_handler)
+app.add_exception_handler(IntegrityError, integrity_error_handler)
+app.add_exception_handler(ExceptionGroup, exception_group_handler)
+app.add_exception_handler(Exception, unhandled_exception_handler)
 app.add_exception_handler(AppRateLimitExceeded, app_rate_limit_exceeded_handler)
 app.add_exception_handler(RateLimitExceeded, slowapi_rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)

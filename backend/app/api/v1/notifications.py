@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_member, require_board
+from app.core.safe_messages import GENERIC_EMAIL_SEND_FAILED
 from app.integrations.resend_client import ResendDeliveryError
 from app.models.member import Member
 from app.schemas.notification_preferences import (
@@ -45,11 +46,11 @@ def send_test_email_endpoint(
 ):
     try:
         email_id = send_test_email(to_email=str(payload.to_email))
-    except ResendDeliveryError as exc:
+    except ResendDeliveryError:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to send test email: {exc}",
-        ) from exc
+            detail=GENERIC_EMAIL_SEND_FAILED,
+        ) from None
 
     return {
         "success": True,

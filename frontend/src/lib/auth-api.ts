@@ -3,7 +3,7 @@ import { isAxiosError } from "axios";
 import type { MemberPosition, MemberRole } from "./roles";
 import type { MemberTalent, ProfileFieldVisibility } from "./member-talents";
 
-import { logApiError } from "./api-error";
+import { getApiErrorMessage as resolveApiErrorMessage, GENERIC_CLIENT_ERROR } from "./api-error";
 import api from "./api";
 import { normalizeSemoEmail, normalizeStudentId } from "./validation";
 
@@ -106,60 +106,13 @@ export async function registerMember(data: RegisterRequest): Promise<MemberRespo
   return response.data;
 }
 
+export { GENERIC_CLIENT_ERROR };
+
 export function getApiErrorMessage(error: unknown): string {
   if (isPendingApprovalError(error)) {
     return "";
   }
-
-  if (!isAxiosError(error)) {
-    logApiError(error);
-    return "Something went wrong. Please try again.";
-  }
-
-  if (!error.response) {
-    return "Cannot reach the server. Make sure the backend is running on port 8000.";
-  }
-
-  const detail = error.response?.data?.detail;
-
-  if (error.response.status === 502) {
-    if (typeof detail === "string" && detail.trim()) {
-      return detail;
-    }
-    return "Cannot reach the server. Make sure the backend is running on port 8000.";
-  }
-
-  if (error.response.status === 503) {
-    if (typeof detail === "string" && detail.trim()) {
-      return detail;
-    }
-    return "This feature is temporarily unavailable. Try again later.";
-  }
-
-  if (error.response.status === 429) {
-    if (typeof detail === "string" && detail.trim()) {
-      return detail;
-    }
-    return "Too many requests — please try again in a few minutes.";
-  }
-
-  if (typeof detail === "string") {
-    return detail;
-  }
-
-  if (Array.isArray(detail)) {
-    return detail
-      .map((item) => {
-        if (typeof item === "object" && item !== null && "msg" in item) {
-          return String(item.msg);
-        }
-
-        return "Invalid input";
-      })
-      .join(" ");
-  }
-
-  return "Something went wrong. Please try again.";
+  return resolveApiErrorMessage(error);
 }
 
 const PENDING_APPROVAL_DETAIL = "Member account is not approved";

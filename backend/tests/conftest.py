@@ -21,6 +21,58 @@ VALID_GRADUATION_YEAR = 2028
 BAD_DOMAIN_EMAIL = "sapan@gmail.com"
 
 
+def _test_settings(base_settings):
+    return base_settings.model_copy(
+        update={
+            "DEBUG": False,
+            "CLOUDINARY_CLOUD_NAME": "test-cloud",
+            "CLOUDINARY_API_KEY": "test-key",
+            "CLOUDINARY_API_SECRET": "test-secret",
+            "AI_ENABLED": False,
+            "OPENAI_API_KEY": "test-openai-key",
+        }
+    )
+
+
+@pytest.fixture(autouse=True)
+def reset_settings_cache(monkeypatch, request):
+    """Keep module-level settings and get_settings() in sync across tests."""
+    if request.node.name == "test_settings_from_env":
+        yield
+        return
+
+    import app.core.config as config_module
+    from app.integrations.openai_client import reset_openai_client
+
+    config_module.get_settings.cache_clear()
+    reset_openai_client()
+    test_settings = _test_settings(config_module.get_settings())
+    config_module.settings = test_settings
+
+    for module_path in (
+        "app.services.receipt_upload_service",
+        "app.services.event_photo_upload_service",
+        "app.services.event_photo_service",
+        "app.services.local_event_photo_storage",
+        "app.services.email_service",
+        "app.services.constitution_ingest_service",
+        "app.services.constitution_search_service",
+    ):
+        monkeypatch.setattr(f"{module_path}.settings", test_settings)
+
+    monkeypatch.setattr(config_module, "get_settings", lambda: test_settings)
+    monkeypatch.setattr(
+        "app.services.embedding_service.get_settings",
+        lambda: test_settings,
+    )
+    monkeypatch.setattr(
+        "app.integrations.openai_client.get_settings",
+        lambda: test_settings,
+    )
+    monkeypatch.setattr(app, "debug", test_settings.DEBUG)
+    yield
+
+
 @pytest.fixture(autouse=True)
 def block_external_integrations():
     """Never hit Redis, Celery brokers, SendGrid, Anthropic, or OpenAI during tests."""
@@ -52,11 +104,6 @@ def block_external_integrations():
         patch("celery.app.task.Task.apply_async") as celery_apply_async,
         patch("app.services.email_service.settings.EMAIL_ENABLED", False),
         patch("app.services.receipt_upload_service.upload_receipt") as cloudinary_upload_receipt,
-        patch("app.core.config.settings.CLOUDINARY_CLOUD_NAME", "test-cloud"),
-        patch("app.core.config.settings.CLOUDINARY_API_KEY", "test-key"),
-        patch("app.core.config.settings.CLOUDINARY_API_SECRET", "test-secret"),
-        patch("app.core.config.settings.AI_ENABLED", False),
-        patch("app.core.config.settings.OPENAI_API_KEY", "test-openai-key"),
     ):
         sendgrid_client.return_value.send.return_value = sendgrid_response
         from app.integrations.cloudinary_client import CloudinaryUploadResult

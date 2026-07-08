@@ -30,3 +30,7 @@ frontend/.env
 
 # Local dev uploads (Cloudinary bypass)
 backend/dev_uploads/
+
+# Database backups (never commit)
+backups/
+backup/.env

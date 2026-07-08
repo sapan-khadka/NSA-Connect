@@ -73,7 +73,9 @@ def list_members(
             detail="Only board members can filter by status",
         )
 
-    effective_status = status if status is not None else MemberStatus.APPROVED
+    effective_status = status
+    if effective_status is None and not current_member.has_role_at_least(MemberRole.BOARD):
+        effective_status = MemberStatus.APPROVED
 
     members, total = list_members_paginated(
         db,

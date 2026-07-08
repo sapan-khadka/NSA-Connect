@@ -11,6 +11,10 @@ from app.schemas.constitution import (
     ConstitutionSearchResponse,
     ConstitutionSearchResult,
 )
+from app.core.safe_messages import (
+    GENERIC_EMBEDDING_UNAVAILABLE,
+    GENERIC_PDF_PROCESSING_ERROR,
+)
 from app.services.constitution_chunk_service import ConstitutionChunkingError
 from app.services.constitution_ingest_service import ingest_constitution_pdf
 from app.services.constitution_pdf_service import (
@@ -53,20 +57,20 @@ async def upload_constitution_pdf_endpoint(
     except (
         ConstitutionPdfExtractionError,
         ConstitutionChunkingError,
-    ) as exc:
+    ):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail=str(exc),
-        ) from exc
+            detail=GENERIC_PDF_PROCESSING_ERROR,
+        ) from None
     except EmbeddingsNotConfiguredError:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Embedding generation is not configured",
         ) from None
-    except EmbeddingGenerationError as exc:
+    except EmbeddingGenerationError:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=str(exc),
+            detail=GENERIC_EMBEDDING_UNAVAILABLE,
         ) from None
 
     return ConstitutionPdfExtractResponse(
@@ -110,10 +114,10 @@ def search_constitution_endpoint(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Embedding generation is not configured",
         ) from None
-    except EmbeddingGenerationError as exc:
+    except EmbeddingGenerationError:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=str(exc),
+            detail=GENERIC_EMBEDDING_UNAVAILABLE,
         ) from None
 
     return ConstitutionSearchResponse(

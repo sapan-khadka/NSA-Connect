@@ -203,4 +203,7 @@ def test_test_email_endpoint_returns_resend_error_message(mock_send, client, boa
     )
 
     assert response.status_code == 502
-    assert "Failed to send test email" in response.json()["detail"]
+    from app.core.safe_messages import GENERIC_EMAIL_SEND_FAILED
+
+    assert response.json()["detail"] == GENERIC_EMAIL_SEND_FAILED
+    assert "invalid api key" not in response.text.lower()

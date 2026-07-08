@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 
-import {
+import { getApiErrorMessage } from "../lib/api-error";
   DUES_PAYMENT_METHODS,
   DUES_STATUS_FILTERS,
   duesStatusLabel,
@@ -104,12 +103,7 @@ function MarkPaidModal({
       onSaved();
       onClose();
     } catch (submitError) {
-      if (axios.isAxiosError(submitError)) {
-        const detail = submitError.response?.data?.detail;
-        setError(typeof detail === "string" ? detail : "Unable to mark dues as paid.");
-      } else {
-        setError("Unable to mark dues as paid.");
-      }
+      setError(getApiErrorMessage(submitError, "Unable to mark dues as paid."));
     } finally {
       setIsSubmitting(false);
     }
@@ -209,12 +203,7 @@ function EditAmountModal({
       onSaved();
       onClose();
     } catch (submitError) {
-      if (axios.isAxiosError(submitError)) {
-        const detail = submitError.response?.data?.detail;
-        setError(typeof detail === "string" ? detail : "Unable to update amount.");
-      } else {
-        setError("Unable to update amount.");
-      }
+      setError(getApiErrorMessage(submitError, "Unable to update amount."));
     } finally {
       setIsSubmitting(false);
     }
@@ -310,19 +299,9 @@ export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboard
           return;
         }
 
-        if (axios.isAxiosError(error)) {
-          const detail = error.response?.data?.detail;
-          setDashboardState({
-            status: "error",
-            message:
-              typeof detail === "string" ? detail : "Unable to load dues dashboard.",
-          });
-          return;
-        }
-
         setDashboardState({
           status: "error",
-          message: "Unable to load dues dashboard.",
+          message: getApiErrorMessage(error, "Unable to load dues dashboard."),
         });
       }
     }
@@ -359,14 +338,9 @@ export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboard
       setSettingsMessage(`Default dues set to ${formatCurrency(settings.default_amount)} for ${semesterLabel}.`);
       onChanged();
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const detail = error.response?.data?.detail;
-        setSettingsMessage(
-          typeof detail === "string" ? detail : "Unable to save default amount.",
-        );
-      } else {
-        setSettingsMessage("Unable to save default amount.");
-      }
+      setSettingsMessage(
+        getApiErrorMessage(error, "Unable to save default amount."),
+      );
     } finally {
       setIsSavingDefault(false);
     }
@@ -383,14 +357,9 @@ export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboard
       );
       onChanged();
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const detail = error.response?.data?.detail;
-        setActionMessage(
-          typeof detail === "string" ? detail : "Unable to generate dues records.",
-        );
-      } else {
-        setActionMessage("Unable to generate dues records.");
-      }
+      setActionMessage(
+        getApiErrorMessage(error, "Unable to generate dues records."),
+      );
     } finally {
       setIsGenerating(false);
     }
@@ -404,14 +373,9 @@ export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboard
       await markDuesUnpaid(record.id);
       onChanged();
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const detail = error.response?.data?.detail;
-        setActionMessage(
-          typeof detail === "string" ? detail : "Unable to mark dues unpaid.",
-        );
-      } else {
-        setActionMessage("Unable to mark dues unpaid.");
-      }
+      setActionMessage(
+        getApiErrorMessage(error, "Unable to mark dues unpaid."),
+      );
     } finally {
       setBusyRecordId(null);
     }

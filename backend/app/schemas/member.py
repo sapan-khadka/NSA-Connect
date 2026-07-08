@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
 from app.core.password_validation import (
     PASSWORD_MAX_LENGTH,
@@ -167,6 +167,23 @@ class MemberResponse(BaseModel):
             return []
         return list(value)
 
+    @field_validator(
+        "email_visibility",
+        "phone_visibility",
+        "social_handle_visibility",
+        mode="before",
+    )
+    @classmethod
+    def default_visibility(cls, value: Any, info: ValidationInfo) -> ProfileFieldVisibility:
+        if value is not None:
+            return value
+        defaults = {
+            "email_visibility": ProfileFieldVisibility.PUBLIC,
+            "phone_visibility": ProfileFieldVisibility.BOARD_ONLY,
+            "social_handle_visibility": ProfileFieldVisibility.BOARD_ONLY,
+        }
+        return defaults[info.field_name]
+
     @model_validator(mode="before")
     @classmethod
     def strip_sensitive_fields(cls, value: Any) -> Any:
@@ -188,16 +205,26 @@ class MemberResponse(BaseModel):
         is_self = viewer is not None and viewer.id == member.id
         is_board = viewer is not None and viewer.has_role_at_least(MemberRole.BOARD)
 
+        email_visibility = (
+            member.email_visibility or ProfileFieldVisibility.PUBLIC
+        )
+        phone_visibility = (
+            member.phone_visibility or ProfileFieldVisibility.BOARD_ONLY
+        )
+        social_handle_visibility = (
+            member.social_handle_visibility or ProfileFieldVisibility.BOARD_ONLY
+        )
+
         def field_visible(visibility: ProfileFieldVisibility) -> bool:
             if is_self or is_board:
                 return True
             return visibility == ProfileFieldVisibility.PUBLIC
 
-        email = member.email if field_visible(member.email_visibility) else None
-        phone = member.phone if member.phone and field_visible(member.phone_visibility) else None
+        email = member.email if field_visible(email_visibility) else None
+        phone = member.phone if member.phone and field_visible(phone_visibility) else None
         social_handle = (
             member.social_handle
-            if member.social_handle and field_visible(member.social_handle_visibility)
+            if member.social_handle and field_visible(social_handle_visibility)
             else None
         )
         student_id = member.student_id if is_self or is_board else None
@@ -218,9 +245,9 @@ class MemberResponse(BaseModel):
             talent_other=member.talent_other,
             phone=phone,
             social_handle=social_handle,
-            email_visibility=member.email_visibility,
-            phone_visibility=member.phone_visibility,
-            social_handle_visibility=member.social_handle_visibility,
+            email_visibility=email_visibility,
+            phone_visibility=phone_visibility,
+            social_handle_visibility=social_handle_visibility,
         )
 
 

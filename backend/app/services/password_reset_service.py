@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import secrets
 from datetime import UTC, datetime, timedelta
 
@@ -22,6 +23,8 @@ PASSWORD_RESET_RATE_LIMIT_MESSAGE = (
 PASSWORD_RESET_INVALID_TOKEN_MESSAGE = (
     "This reset link is invalid or has expired. Please request a new password reset."
 )
+
+logger = logging.getLogger(__name__)
 
 
 class InvalidPasswordResetTokenError(Exception):
@@ -69,12 +72,18 @@ def request_password_reset(db: Session, email: str) -> None:
     reset_url = (
         f"{settings.FRONTEND_URL.rstrip('/')}/reset-password?token={raw_token}"
     )
-    send_password_reset_email(
-        to_email=member.email,
-        full_name=member.full_name,
-        reset_url=reset_url,
-        expires_minutes=settings.PASSWORD_RESET_EXPIRE_MINUTES,
-    )
+    try:
+        send_password_reset_email(
+            to_email=member.email,
+            full_name=member.full_name,
+            reset_url=reset_url,
+            expires_minutes=settings.PASSWORD_RESET_EXPIRE_MINUTES,
+        )
+    except Exception:
+        logger.exception(
+            "Failed to send password reset email to %s",
+            member.email,
+        )
 
 
 def _find_valid_token(db: Session, raw_token: str) -> PasswordResetToken | None:

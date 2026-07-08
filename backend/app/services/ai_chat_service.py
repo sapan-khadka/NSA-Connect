@@ -6,6 +6,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.safe_messages import GENERIC_AI_UNAVAILABLE
 from app.integrations.anthropic_client import (
     AnthropicNotConfiguredError,
     get_anthropic_client,
@@ -242,8 +243,8 @@ def stream_chat_with_nsa_assistant(
         yield from _stream_chat_impl(db, member=member, data=data)
     except AIDisabledError:
         yield _format_sse("error", {"detail": "AI features are disabled"})
-    except AIChatError as exc:
-        yield _format_sse("error", {"detail": str(exc)})
+    except AIChatError:
+        yield _format_sse("error", {"detail": GENERIC_AI_UNAVAILABLE})
 
 
 def _stream_chat_impl(
