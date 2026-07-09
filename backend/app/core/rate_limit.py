@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 import redis
 from fastapi import Request
 from slowapi import Limiter
-from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from app.core.config import settings
@@ -18,12 +17,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-RATE_LIMIT_LOGIN_MESSAGE = (
-    "Too many login attempts — please try again in a few minutes"
-)
-RATE_LIMIT_REGISTER_MESSAGE = (
-    "Too many registration attempts — please try again later"
-)
+RATE_LIMIT_LOGIN_MESSAGE = "Too many login attempts — please try again in a few minutes"
+RATE_LIMIT_REGISTER_MESSAGE = "Too many registration attempts — please try again later"
 RATE_LIMIT_CHANGE_PASSWORD_MESSAGE = (
     "Too many password change attempts — please try again in a few minutes"
 )
@@ -66,13 +61,13 @@ def reset_rate_limit_redis(client: redis.Redis | None = None) -> None:
 def get_client_ip(request: Request) -> str:
     """Derive the client IP for rate-limit buckets.
 
-  By default uses the direct peer address (``request.client.host``), which is
-  correct for local development and when the app is exposed directly.
+    By default uses the direct peer address (``request.client.host``), which is
+    correct for local development and when the app is exposed directly.
 
-  Set ``RATE_LIMIT_TRUST_PROXY_HEADERS=true`` only when the API runs behind a
-  *trusted* reverse proxy that sets ``X-Forwarded-For``. The left-most address
-  in that header is used. If this is enabled without a trusted proxy, clients
-  can spoof IPs and evade limits.
+    Set ``RATE_LIMIT_TRUST_PROXY_HEADERS=true`` only when the API runs behind a
+    *trusted* reverse proxy that sets ``X-Forwarded-For``. The left-most address
+    in that header is used. If this is enabled without a trusted proxy, clients
+    can spoof IPs and evade limits.
     """
     if settings.RATE_LIMIT_TRUST_PROXY_HEADERS:
         forwarded_for = request.headers.get("X-Forwarded-For")

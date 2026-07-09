@@ -3,6 +3,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
+from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from sqlalchemy.exc import IntegrityError
 
@@ -27,7 +28,6 @@ from app.services.local_event_photo_storage import (
     event_photos_upload_dir,
     is_local_event_photo_storage_enabled,
 )
-from slowapi.errors import RateLimitExceeded
 
 app = FastAPI(
     title=settings.APP_NAME,

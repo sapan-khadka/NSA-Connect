@@ -3,7 +3,7 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_member, require_board
+from app.core.dependencies import require_board
 from app.models.member import Member
 from app.schemas.report import (
     ReportDetailResponse,
@@ -41,7 +41,9 @@ def list_reports_endpoint(
     )
 
 
-@router.post("", response_model=ReportDetailResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", response_model=ReportDetailResponse, status_code=status.HTTP_201_CREATED
+)
 def generate_report_endpoint(
     data: ReportGenerateRequest,
     current_member: Member = Depends(require_board),

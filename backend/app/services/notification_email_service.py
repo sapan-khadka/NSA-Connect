@@ -108,7 +108,9 @@ def send_task_assigned_email(
     task_id: int,
 ) -> str:
     due_line = (
-        f"Due: {format_due_date(due_date)}\n" if due_date is not None else "Due date: not set\n"
+        f"Due: {format_due_date(due_date)}\n"
+        if due_date is not None
+        else "Due date: not set\n"
     )
     event_line = f"Event: {event_title}\n" if event_title else ""
     body = (

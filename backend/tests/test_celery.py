@@ -23,7 +23,10 @@ def test_celery_registers_prep_task_due_soon_email_task():
 
 
 def test_celery_registers_volunteer_task_assigned_email_task():
-    assert send_volunteer_task_assigned_email_task.name == "email.send_volunteer_task_assigned"
+    assert (
+        send_volunteer_task_assigned_email_task.name
+        == "email.send_volunteer_task_assigned"
+    )
     assert "email.send_volunteer_task_assigned" in celery_app.tasks
 
 

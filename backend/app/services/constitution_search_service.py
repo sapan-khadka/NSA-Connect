@@ -36,9 +36,7 @@ def _search_with_pgvector(
         "distance",
     )
     rows = db.execute(
-        select(ConstitutionalChunk, distance)
-        .order_by(distance)
-        .limit(limit),
+        select(ConstitutionalChunk, distance).order_by(distance).limit(limit),
     ).all()
 
     return [

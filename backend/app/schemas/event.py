@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.lib.event_dates import validate_starts_at_not_before_today
-
 from app.lib.event_finance import (
     get_event_finance_lock_at,
     is_event_finance_grace_period,
@@ -18,8 +17,8 @@ if TYPE_CHECKING:
     from app.models.event import Event
 
 from app.models.event_task import EventTaskKind
-from app.schemas.event_volunteer_signup import EventVolunteerSignupResponse
 from app.schemas.event_feedback import EventFeedbackResponse
+from app.schemas.event_volunteer_signup import EventVolunteerSignupResponse
 from app.schemas.preptask import PrepTaskResponse
 
 MAX_EVENT_BUDGET = Decimal("999999.99")

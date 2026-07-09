@@ -2,17 +2,16 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
-
-from sqlalchemy import select
-
-from app.models.event import Event, EventType
-from app.models.finance_entry import FinanceCategory, FinanceEntry, FinanceEntryType
-from app.models.member import Member
 from conftest import (
     auth_header,
     create_treasurer_member,
     register_member,
 )
+from sqlalchemy import select
+
+from app.models.event import Event, EventType
+from app.models.finance_entry import FinanceCategory, FinanceEntry, FinanceEntryType
+from app.models.member import Member
 
 
 @pytest.fixture

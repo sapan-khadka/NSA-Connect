@@ -108,9 +108,7 @@ def summarize_meeting_minutes(
         raise AIMinutesSummaryError("Anthropic returned an empty summary")
 
     key_decisions = [
-        decision.strip()
-        for decision in parsed.key_decisions
-        if decision.strip()
+        decision.strip() for decision in parsed.key_decisions if decision.strip()
     ]
     action_items = [
         normalized

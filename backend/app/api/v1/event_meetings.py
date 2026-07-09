@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_member, require_board
+from app.core.safe_messages import GENERIC_AI_UNAVAILABLE
 from app.models.member import Member
-from app.schemas.ai import SummarizeMinutesResponse
 from app.schemas.meeting import (
     MeetingAttendanceUpdateRequest,
     MeetingDetailResponse,
@@ -12,7 +12,6 @@ from app.schemas.meeting import (
     MeetingMinutesResponse,
     MeetingNotesUpdateRequest,
 )
-from app.core.safe_messages import GENERIC_AI_UNAVAILABLE
 from app.services.ai_minutes_service import (
     AIDisabledError,
     AIMinutesSummaryError,

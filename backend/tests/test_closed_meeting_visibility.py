@@ -2,13 +2,6 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
 import pytest
-from sqlalchemy import select
-
-from app.models.event import Event, EventType, MeetingVisibility
-from app.models.event_rsvp import EventRsvp, RsvpStatus
-from app.models.member import Member
-from app.services.ai_chat_tools import execute_chat_tool
-from app.services.notification_scan_service import run_scheduled_notification_checks
 from conftest import (
     VALID_EMAIL,
     auth_header,
@@ -16,6 +9,13 @@ from conftest import (
     register_member,
     set_member_approved,
 )
+from sqlalchemy import select
+
+from app.models.event import Event, EventType, MeetingVisibility
+from app.models.event_rsvp import EventRsvp, RsvpStatus
+from app.models.member import Member
+from app.services.ai_chat_tools import execute_chat_tool
+from app.services.notification_scan_service import run_scheduled_notification_checks
 
 
 def _event_payload(**overrides):
@@ -66,11 +66,15 @@ def test_closed_meeting_hidden_from_general_member_lists(
     assert list_response.status_code == 200
     assert list_response.json()["total"] == 0
 
-    upcoming_response = client.get("/api/v1/events/upcoming", headers=general_member_headers)
+    upcoming_response = client.get(
+        "/api/v1/events/upcoming", headers=general_member_headers
+    )
     assert upcoming_response.status_code == 200
     assert upcoming_response.json()["total"] == 0
 
-    detail_response = client.get(f"/api/v1/events/{event_id}", headers=general_member_headers)
+    detail_response = client.get(
+        f"/api/v1/events/{event_id}", headers=general_member_headers
+    )
     assert detail_response.status_code == 404
 
     board_list = client.get("/api/v1/events", headers=board_member_headers)
@@ -97,7 +101,9 @@ def test_public_meeting_visible_to_general_members(
     assert list_response.status_code == 200
     assert list_response.json()["total"] == 1
 
-    detail_response = client.get(f"/api/v1/events/{event_id}", headers=general_member_headers)
+    detail_response = client.get(
+        f"/api/v1/events/{event_id}", headers=general_member_headers
+    )
     assert detail_response.status_code == 200
     assert detail_response.json()["name"] == "Open Town Hall"
 
@@ -147,7 +153,7 @@ def test_closed_meeting_rsvp_nudge_skips_general_members(
         board_member_headers,
         starts_at=(as_of + timedelta(hours=48)).isoformat().replace("+00:00", "Z"),
     )
-    event_id = create_response.json()["id"]
+    assert create_response.status_code == 201
 
     stats = run_scheduled_notification_checks(db_session, as_of=as_of)
     assert stats["rsvp_nudges"]["sent"] == 1

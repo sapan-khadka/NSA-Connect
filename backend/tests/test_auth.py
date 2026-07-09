@@ -2,8 +2,6 @@
 
 from conftest import (
     BAD_DOMAIN_EMAIL,
-    auth_header,
-    create_board_member,
     login_member,
     register_member,
     set_member_approved,

@@ -9,7 +9,10 @@ from app.schemas.volunteer import (
     MemberVolunteerSignupResponse,
     VolunteerSlotCreateRequest,
 )
-from app.services.event_service import EventNotFoundError, ensure_member_can_access_event
+from app.services.event_service import (
+    EventNotFoundError,
+    ensure_member_can_access_event,
+)
 
 
 class VolunteerSlotNotFoundError(Exception):
@@ -77,11 +80,14 @@ def signup_for_volunteer_slot(
     if existing is not None:
         raise AlreadySignedUpError
 
-    signup_count = db.scalar(
-        select(func.count())
-        .select_from(VolunteerSignup)
-        .where(VolunteerSignup.slot_id == slot_id),
-    ) or 0
+    signup_count = (
+        db.scalar(
+            select(func.count())
+            .select_from(VolunteerSignup)
+            .where(VolunteerSignup.slot_id == slot_id),
+        )
+        or 0
+    )
     if signup_count >= slot.capacity:
         raise VolunteerSlotFullError
 

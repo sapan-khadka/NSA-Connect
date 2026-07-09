@@ -1,9 +1,14 @@
 from datetime import UTC, datetime
 
 import pytest
+from conftest import (
+    auth_header,
+    create_board_member,
+    register_member,
+    set_member_approved,
+)
 
 from tests.helpers.task_fixtures import seed_checklist_event_task
-from conftest import auth_header, create_board_member, register_member, set_member_approved
 
 
 def _event_payload(**overrides):

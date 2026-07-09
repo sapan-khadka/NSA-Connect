@@ -1,5 +1,4 @@
 import pytest
-
 from conftest import (
     auth_header,
     create_president_member,

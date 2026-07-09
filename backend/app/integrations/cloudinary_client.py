@@ -100,7 +100,9 @@ def upload_event_photo(
             eager_async=False,
         )
     except Exception as exc:
-        raise CloudinaryUploadError("Failed to upload event photo to Cloudinary") from exc
+        raise CloudinaryUploadError(
+            "Failed to upload event photo to Cloudinary"
+        ) from exc
 
     secure_url = result.get("secure_url")
     public_id = result.get("public_id")

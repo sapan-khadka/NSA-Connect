@@ -1,9 +1,14 @@
-import pytest
+from conftest import (
+    auth_header,
+    create_board_member,
+    register_member,
+    set_member_approved,
+)
 
-from conftest import auth_header, create_board_member, register_member, set_member_approved
 
-
-def _register_and_approve(client, db_session, *, email="member@semo.edu", student_id="12345678"):
+def _register_and_approve(
+    client, db_session, *, email="member@semo.edu", student_id="12345678"
+):
     register_member(client, email=email, student_id=student_id)
     set_member_approved(db_session, email=email)
     return auth_header(client, email=email)
@@ -41,7 +46,9 @@ def test_member_can_update_profile_with_talents_and_privacy(client, db_session):
 
 
 def test_general_member_cannot_see_board_only_contact_fields(client, db_session):
-    member_headers = _register_and_approve(client, db_session, email="a@semo.edu", student_id="11111111")
+    member_headers = _register_and_approve(
+        client, db_session, email="a@semo.edu", student_id="11111111"
+    )
 
     me = client.get("/api/v1/members/me", headers=member_headers).json()
     client.patch(
@@ -66,7 +73,9 @@ def test_general_member_cannot_see_board_only_contact_fields(client, db_session)
 
 
 def test_board_member_sees_all_contact_fields(client, db_session):
-    member_headers = _register_and_approve(client, db_session, email="talent@semo.edu", student_id="33333333")
+    member_headers = _register_and_approve(
+        client, db_session, email="talent@semo.edu", student_id="33333333"
+    )
     client.patch(
         "/api/v1/members/me",
         headers=member_headers,
@@ -76,13 +85,17 @@ def test_board_member_sees_all_contact_fields(client, db_session):
     board_headers = _register_board(client, db_session)
     members = client.get("/api/v1/members", headers=board_headers)
     assert members.status_code == 200
-    member = next(item for item in members.json()["members"] if item["phone"] == "555-1212")
+    member = next(
+        item for item in members.json()["members"] if item["phone"] == "555-1212"
+    )
     assert member["email"] is not None
     assert member["student_id"] is not None
 
 
 def test_talent_filter_uses_any_match(client, db_session):
-    headers = _register_and_approve(client, db_session, email="dancer@semo.edu", student_id="44444444")
+    headers = _register_and_approve(
+        client, db_session, email="dancer@semo.edu", student_id="44444444"
+    )
     client.patch(
         "/api/v1/members/me",
         headers=headers,
@@ -114,7 +127,9 @@ def test_talent_filter_uses_any_match(client, db_session):
 
 
 def test_board_can_edit_other_member_profile(client, db_session):
-    member_headers = _register_and_approve(client, db_session, email="editme@semo.edu", student_id="66666666")
+    member_headers = _register_and_approve(
+        client, db_session, email="editme@semo.edu", student_id="66666666"
+    )
     me = client.get("/api/v1/members/me", headers=member_headers).json()
 
     board_headers = _register_board(client, db_session)
@@ -128,7 +143,9 @@ def test_board_can_edit_other_member_profile(client, db_session):
 
 
 def test_invite_members_to_event(client, db_session):
-    member_headers = _register_and_approve(client, db_session, email="invite@semo.edu", student_id="77777777")
+    member_headers = _register_and_approve(
+        client, db_session, email="invite@semo.edu", student_id="77777777"
+    )
     me = client.get("/api/v1/members/me", headers=member_headers).json()
     client.patch(
         "/api/v1/members/me",

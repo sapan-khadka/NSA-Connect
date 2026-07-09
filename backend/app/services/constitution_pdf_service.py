@@ -74,9 +74,7 @@ def extract_text_from_constitution_pdf(
 
     text = "\n".join(text_parts).strip()
     if not text:
-        raise ConstitutionPdfExtractionError(
-            "No extractable text found in PDF"
-        )
+        raise ConstitutionPdfExtractionError("No extractable text found in PDF")
 
     return ConstitutionPdfExtractResult(
         text=text,

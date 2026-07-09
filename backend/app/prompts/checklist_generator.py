@@ -122,8 +122,7 @@ EVENT_TYPE_GUIDANCE: dict[EventType, str] = {
         "reconciliation."
     ),
     EventType.SOCIAL: (
-        "Emphasize RSVPs, atmosphere, activities, and post-event community "
-        "engagement."
+        "Emphasize RSVPs, atmosphere, activities, and post-event community engagement."
     ),
     EventType.SERVICE: (
         "Emphasize partner coordination, volunteer coverage, supplies, and "

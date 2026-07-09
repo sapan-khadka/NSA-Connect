@@ -1,4 +1,3 @@
-
 import logging
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
@@ -225,6 +224,9 @@ def test_send_meeting_record_notification_email_skips_when_disabled(caplog):
         )
 
     assert "Meeting record notification (disabled)" in caplog.text
-    assert MEETING_MINUTES_READY_SUBJECT.format(
-        meeting_title="March Board Meeting",
-    ) in caplog.text
+    assert (
+        MEETING_MINUTES_READY_SUBJECT.format(
+            meeting_title="March Board Meeting",
+        )
+        in caplog.text
+    )

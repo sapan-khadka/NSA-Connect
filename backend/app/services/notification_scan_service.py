@@ -5,8 +5,8 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.lib.semester import get_current_semester_slug
 from app.lib.event_visibility import event_visible_to_member
+from app.lib.semester import get_current_semester_slug
 from app.models.event import Event
 from app.models.event_rsvp import EventRsvp, RsvpStatus
 from app.models.event_task import EventTask, EventTaskKind, EventTaskStatus
@@ -54,7 +54,9 @@ def _is_task_complete(task: EventTask) -> bool:
     return task.status == EventTaskStatus.DONE
 
 
-def _member_prefers(db: Session, member: Member, notification_type: NotificationType) -> bool:
+def _member_prefers(
+    db: Session, member: Member, notification_type: NotificationType
+) -> bool:
     if notification_type == NotificationType.EVENT_REMINDER:
         return member.notify_event_reminders
     if notification_type == NotificationType.RSVP_NUDGE:
@@ -109,7 +111,8 @@ def notify_task_assigned_if_enabled(
 ) -> bool:
     if not assignee.notify_task_reminders:
         logger.info(
-            "Skipping task assigned notification — preference off member_id=%s task_id=%s",
+            "Skipping task assigned notification — preference off "
+            "member_id=%s task_id=%s",
             assignee.id,
             task.id,
         )

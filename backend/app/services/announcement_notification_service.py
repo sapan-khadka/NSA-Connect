@@ -15,7 +15,9 @@ from app.services.notification_sent_store import record_notification_send
 logger = logging.getLogger(__name__)
 
 
-def notify_announcement_broadcast(db: Session, announcement: Announcement) -> dict[str, int]:
+def notify_announcement_broadcast(
+    db: Session, announcement: Announcement
+) -> dict[str, int]:
     members = list(
         db.scalars(
             select(Member).where(Member.status == MemberStatus.APPROVED),

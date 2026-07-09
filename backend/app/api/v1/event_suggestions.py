@@ -28,7 +28,9 @@ def _to_response(suggestion) -> EventSuggestionResponse:
         description=suggestion.description,
         preferred_timing=suggestion.preferred_timing,
         status=suggestion.status.value,
-        suggested_by=EventSuggestionMemberResponse.model_validate(suggestion.suggested_by),
+        suggested_by=EventSuggestionMemberResponse.model_validate(
+            suggestion.suggested_by
+        ),
         noted_by=(
             EventSuggestionMemberResponse.model_validate(suggestion.noted_by)
             if suggestion.noted_by is not None
@@ -51,7 +53,9 @@ def list_event_suggestions_endpoint(
     )
 
 
-@router.post("", response_model=EventSuggestionResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", response_model=EventSuggestionResponse, status_code=status.HTTP_201_CREATED
+)
 def create_event_suggestion_endpoint(
     data: EventSuggestionCreateRequest,
     current_member: Member = Depends(get_current_member),

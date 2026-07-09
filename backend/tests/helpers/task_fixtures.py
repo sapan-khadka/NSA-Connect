@@ -6,7 +6,6 @@ from app.models.event_task import (
     EventTask,
     EventTaskChecklistItem,
     EventTaskKind,
-    checklist_items_from_group,
     sync_checklist_status,
 )
 from app.models.preptask import PrepTaskGroup, PrepTaskGroupItem

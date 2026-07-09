@@ -186,7 +186,9 @@ class EventTaskResponse(BaseModel):
             event_name=task.event.title if task.event else "",
             task_kind=task.task_kind,
             title=task.title,
-            group_name=task.title if task.task_kind == EventTaskKind.CHECKLIST else None,
+            group_name=task.title
+            if task.task_kind == EventTaskKind.CHECKLIST
+            else None,
             description=task.description,
             assignee_id=task.assignee_id,
             assignee_name=task.assignee.full_name if task.assignee else None,

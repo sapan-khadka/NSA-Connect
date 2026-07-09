@@ -1,22 +1,21 @@
 """Tests for global API error handling — no internal details leak to clients."""
 
 import pytest
+from conftest import (
+    auth_header,
+    create_board_member,
+    register_member,
+    set_member_approved,
+)
 from fastapi.testclient import TestClient
-from conftest import auth_header, create_board_member, register_member, set_member_approved
-from app.core.database import get_db
-from app.main import app as fastapi_app
 
+from app.core.database import get_db
 from app.core.safe_messages import (
     GENERIC_AI_UNAVAILABLE,
     GENERIC_CONFLICT_ERROR,
     GENERIC_SERVER_ERROR,
 )
-
-
-@pytest.fixture(autouse=True)
-def force_production_error_responses(monkeypatch):
-    """Ensure global handlers return JSON, not HTML tracebacks, during this module."""
-    monkeypatch.setattr(fastapi_app, "debug", False)
+from app.main import app as fastapi_app
 
 
 @pytest.fixture(autouse=True)
@@ -41,7 +40,9 @@ def client_no_raise(db_session, monkeypatch):
     fastapi_app.dependency_overrides.clear()
 
 
-def test_unhandled_exception_returns_generic_500(client_no_raise, db_session, monkeypatch):
+def test_unhandled_exception_returns_generic_500(
+    client_no_raise, db_session, monkeypatch
+):
     register_member(client_no_raise)
     set_member_approved(db_session)
 
@@ -183,8 +184,8 @@ def test_notification_test_email_masks_resend_errors(client, db_session, monkeyp
     create_board_member(db_session)
     headers = auth_header(client, email="board@semo.edu")
 
-    from app.integrations.resend_client import ResendDeliveryError
     import app.api.v1.notifications as notifications_api
+    from app.integrations.resend_client import ResendDeliveryError
 
     def fake_send(**kwargs):
         raise ResendDeliveryError("Resend API 401 unauthorized key=sk_live_secret")

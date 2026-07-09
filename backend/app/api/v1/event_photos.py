@@ -41,7 +41,9 @@ def list_photo_albums_endpoint(
     current_member: Member = Depends(get_current_member),
     db: Session = Depends(get_db),
 ):
-    albums, total = list_photo_albums(db, viewer=current_member, limit=limit, offset=offset)
+    albums, total = list_photo_albums(
+        db, viewer=current_member, limit=limit, offset=offset
+    )
     return PhotoAlbumListResponse(
         albums=[PhotoAlbumSummary(**album) for album in albums],
         total=total,
@@ -138,8 +140,7 @@ def download_event_photo_album_endpoint(
 
     encoded_filename = quote(zip_filename)
     content_disposition = (
-        f'attachment; filename="{zip_filename}"; '
-        f"filename*=UTF-8''{encoded_filename}"
+        f"attachment; filename=\"{zip_filename}\"; filename*=UTF-8''{encoded_filename}"
     )
 
     return StreamingResponse(

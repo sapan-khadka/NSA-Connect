@@ -38,5 +38,6 @@ def is_event_finance_grace_period(event: Event, *, now: datetime | None = None) 
 def assert_event_finance_editable(event: Event, *, now: datetime | None = None) -> None:
     if is_event_finance_locked(event, now=now):
         raise EventFinanceLockedError(
-            "Event finances are closed. The one-day edit window after this event has ended.",
+            "Event finances are closed. "
+            "The one-day edit window after this event has ended.",
         )

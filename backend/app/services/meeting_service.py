@@ -303,9 +303,7 @@ def _validate_attendance_entries(
     *,
     entries: list[MeetingAttendanceUpdateItem],
 ) -> None:
-    assignable_ids = {
-        member.id for member in list_assignable_board_members(db)
-    }
+    assignable_ids = {member.id for member in list_assignable_board_members(db)}
     for entry in entries:
         if entry.member_id not in assignable_ids:
             raise InvalidMeetingAttendeeError

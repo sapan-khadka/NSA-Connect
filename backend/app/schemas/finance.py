@@ -8,6 +8,7 @@ from app.lib.finance_categories import normalize_finance_category
 from app.models.finance_entry import FinanceEntryType
 
 if TYPE_CHECKING:
+    from app.models.finance_change_request import FinanceChangeRequest
     from app.models.finance_entry import FinanceEntry
 
 MAX_FINANCE_AMOUNT = Decimal("999999.99")
@@ -87,7 +88,9 @@ class FinanceEntryUpdateRequest(BaseModel):
 
     @field_validator("amount")
     @classmethod
-    def amount_must_have_two_decimal_places(cls, value: Decimal | None) -> Decimal | None:
+    def amount_must_have_two_decimal_places(
+        cls, value: Decimal | None
+    ) -> Decimal | None:
         if value is None:
             return None
         if value != value.quantize(Decimal("0.01")):
@@ -206,8 +209,9 @@ class FinanceChangeRequestResponse(BaseModel):
     entry_description: str | None = None
 
     @classmethod
-    def from_request(cls, request: "FinanceChangeRequest") -> "FinanceChangeRequestResponse":
-        from app.models.finance_change_request import FinanceChangeRequest
+    def from_request(
+        cls, request: "FinanceChangeRequest"
+    ) -> "FinanceChangeRequestResponse":
 
         payload = None
         if request.payload:
@@ -223,7 +227,9 @@ class FinanceChangeRequestResponse(BaseModel):
             status=request.status.value,
             payload=payload,
             requested_by_id=request.requested_by_id,
-            requested_by_name=request.requested_by.full_name if request.requested_by else "",
+            requested_by_name=request.requested_by.full_name
+            if request.requested_by
+            else "",
             reviewed_by_id=request.reviewed_by_id,
             reviewed_by_name=(
                 request.reviewed_by.full_name if request.reviewed_by else None

@@ -53,7 +53,9 @@ def test_sendgrid_client_is_mocked_during_tests(block_external_integrations):
 
 def test_anthropic_sdk_is_mocked_during_tests(block_external_integrations):
     block_external_integrations["anthropic_client"].assert_not_called()
-    block_external_integrations["anthropic_sdk_client"].messages.create.assert_not_called()
+    block_external_integrations[
+        "anthropic_sdk_client"
+    ].messages.create.assert_not_called()
 
 
 def test_claude_checklist_endpoint_uses_mock_not_real_api(

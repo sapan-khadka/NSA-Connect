@@ -1,6 +1,10 @@
 import pytest
-
-from conftest import auth_header, create_board_member, register_member, set_member_approved
+from conftest import (
+    auth_header,
+    create_board_member,
+    register_member,
+    set_member_approved,
+)
 
 BOARD_REQUIRED_DETAIL = "Requires board role or higher"
 
@@ -94,7 +98,9 @@ def test_general_member_gets_403(client, general_member_headers, board_member_he
     assert response.json()["detail"] == BOARD_REQUIRED_DETAIL
 
 
-def test_create_volunteer_slot_returns_404_for_missing_event(client, board_member_headers):
+def test_create_volunteer_slot_returns_404_for_missing_event(
+    client, board_member_headers
+):
     response = client.post(
         "/api/v1/events/999/slots",
         json=_slot_payload(),

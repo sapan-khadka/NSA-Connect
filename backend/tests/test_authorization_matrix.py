@@ -3,22 +3,9 @@
 from __future__ import annotations
 
 import json
-
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi.testclient import TestClient
-from fastapi.routing import APIRoute
-from sqlalchemy import create_engine, select
-from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import StaticPool
-
-from app.core.database import engine, get_db
-from app.main import app as fastapi_app
-from app.models.base import Base
-from app.models.member import Member, MemberRole, MemberStatus, ProfileFieldVisibility
-from app.models.preptask import PrepTaskGroup, PrepTaskGroupItem
-from app.services.ai_chat_tools import execute_chat_tool
 from authorization_matrix import (
     ENDPOINT_AUTH_RULES,
     MEMBER_REQUIRED_PATHS,
@@ -42,6 +29,18 @@ from conftest import (
     register_member,
     set_member_approved,
 )
+from fastapi.routing import APIRoute
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
+
+from app.core.database import engine, get_db
+from app.main import app as fastapi_app
+from app.models.base import Base
+from app.models.member import Member, MemberRole, MemberStatus, ProfileFieldVisibility
+from app.models.preptask import PrepTaskGroup, PrepTaskGroupItem
+from app.services.ai_chat_tools import execute_chat_tool
 
 BOARD_REQUIRED_DETAIL = "Requires board role or higher"
 TREASURER_REQUIRED_DETAIL = "Requires treasurer role or higher"
@@ -120,6 +119,7 @@ def auth_matrix_db() -> Session:
     )
     Base.metadata.create_all(bind=test_engine)
     import app.models.password_reset_token  # noqa: F401
+
     session = sessionmaker(bind=test_engine)()
     try:
         yield session
@@ -213,7 +213,9 @@ def probe_context(
     board_member_headers,
     treasurer_member_headers,
 ):
-    general = auth_matrix_db.scalar(select(Member).where(Member.email == "sapan@semo.edu"))
+    general = auth_matrix_db.scalar(
+        select(Member).where(Member.email == "sapan@semo.edu")
+    )
     assert general is not None, "general_member_headers must register sapan@semo.edu"
     return build_probe_context(
         auth_matrix_client,
@@ -277,8 +279,12 @@ def test_all_restricted_endpoints_have_probe_definitions():
     RESTRICTED_ENDPOINT_RULES,
     ids=lambda rule: f"{rule.method} {rule.path}",
 )
-def test_restricted_endpoints_reject_unauthenticated(auth_matrix_client, probe_context, rule):
-    response = _request(auth_matrix_client, rule, headers=None, probe_context=probe_context)
+def test_restricted_endpoints_reject_unauthenticated(
+    auth_matrix_client, probe_context, rule
+):
+    response = _request(
+        auth_matrix_client, rule, headers=None, probe_context=probe_context
+    )
     assert response.status_code == 401, (
         f"{rule.method} {rule.path} should require authentication"
     )

@@ -26,7 +26,9 @@ def preferences_from_member(member: Member) -> NotificationPreferencesResponse:
     )
 
 
-def get_notification_preferences(db: Session, member_id: int) -> NotificationPreferencesResponse:
+def get_notification_preferences(
+    db: Session, member_id: int
+) -> NotificationPreferencesResponse:
     member = db.get(Member, member_id)
     if member is None:
         raise MemberNotFoundError

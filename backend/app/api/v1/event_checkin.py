@@ -162,7 +162,9 @@ def check_in_to_event_endpoint(
     )
 
 
-@router.post("/{event_id}/checkin/guest", response_model=EventGuestCheckInResultResponse)
+@router.post(
+    "/{event_id}/checkin/guest", response_model=EventGuestCheckInResultResponse
+)
 @limit(
     f"{settings.RATE_LIMIT_GUEST_CHECKIN_GLOBAL_IP_MAX}/{settings.RATE_LIMIT_GUEST_CHECKIN_GLOBAL_IP_WINDOW_SECONDS}second",
     key_func=guest_checkin_global_key,
@@ -216,7 +218,9 @@ def check_in_guest_to_event_endpoint(
     )
 
 
-@router.get("/{event_id}/attendance-summary", response_model=EventAttendanceSummaryResponse)
+@router.get(
+    "/{event_id}/attendance-summary", response_model=EventAttendanceSummaryResponse
+)
 def get_event_attendance_summary_endpoint(
     event_id: int,
     _: Member = Depends(require_board),

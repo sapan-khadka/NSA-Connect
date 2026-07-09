@@ -3,10 +3,10 @@ from decimal import Decimal
 from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
-from app.lib.event_finance import EventFinanceLockedError, assert_event_finance_editable
+from app.lib.event_finance import assert_event_finance_editable
 from app.lib.semester import semester_date_range
 from app.models.event import Event
-from app.models.finance_entry import FinanceCategory, FinanceEntry, FinanceEntryType
+from app.models.finance_entry import FinanceEntry, FinanceEntryType
 from app.models.member import Member
 from app.schemas.finance import (
     FinanceEntryCreateRequest,
@@ -36,7 +36,10 @@ def _income_sum():
     return func.coalesce(
         func.sum(
             case(
-                (FinanceEntry.entry_type == FinanceEntryType.INCOME, FinanceEntry.amount),
+                (
+                    FinanceEntry.entry_type == FinanceEntryType.INCOME,
+                    FinanceEntry.amount,
+                ),
                 else_=Decimal("0"),
             ),
         ),
@@ -48,7 +51,10 @@ def _expense_sum():
     return func.coalesce(
         func.sum(
             case(
-                (FinanceEntry.entry_type == FinanceEntryType.EXPENSE, FinanceEntry.amount),
+                (
+                    FinanceEntry.entry_type == FinanceEntryType.EXPENSE,
+                    FinanceEntry.amount,
+                ),
                 else_=Decimal("0"),
             ),
         ),
@@ -56,7 +62,9 @@ def _expense_sum():
     )
 
 
-def _bucket_from_row(income: Decimal, expense: Decimal, entry_count: int) -> FinanceSummaryBucket:
+def _bucket_from_row(
+    income: Decimal, expense: Decimal, entry_count: int
+) -> FinanceSummaryBucket:
     income = Decimal(income)
     expense = Decimal(expense)
     return FinanceSummaryBucket(
@@ -172,7 +180,9 @@ def get_expense_by_category(
         )
         for row in rows
     ]
-    total_expense = sum((category.total_expense for category in categories), Decimal("0"))
+    total_expense = sum(
+        (category.total_expense for category in categories), Decimal("0")
+    )
 
     return FinanceExpenseCategoryListResponse(
         categories=categories,
@@ -224,7 +234,9 @@ def get_finance_summary(
         total_income=total_income,
         total_expense=total_expense,
         entry_count=overall[2],
-        pre_event=_bucket_from_row(pre_event_row[0], pre_event_row[1], pre_event_row[2]),
+        pre_event=_bucket_from_row(
+            pre_event_row[0], pre_event_row[1], pre_event_row[2]
+        ),
         events=[
             FinanceEventSummary(
                 event_id=row[0],
@@ -341,6 +353,8 @@ def list_finance_entries(
         query = query.where(FinanceEntry.event_id == event_id)
 
     entries = list(
-        db.scalars(query.order_by(FinanceEntry.created_at.desc(), FinanceEntry.id.desc())).all(),
+        db.scalars(
+            query.order_by(FinanceEntry.created_at.desc(), FinanceEntry.id.desc())
+        ).all(),
     )
     return entries, len(entries)

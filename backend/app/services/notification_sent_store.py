@@ -82,7 +82,8 @@ def record_notification_send(
 
     if success:
         logger.info(
-            "Notification sent type=%s member_id=%s email=%s event_id=%s event_task_id=%s semester=%s",
+            "Notification sent type=%s member_id=%s email=%s "
+            "event_id=%s event_task_id=%s semester=%s",
             notification_type.value,
             member.id,
             member.email,
@@ -92,7 +93,8 @@ def record_notification_send(
         )
     else:
         logger.error(
-            "Notification failed type=%s member_id=%s email=%s event_id=%s event_task_id=%s semester=%s error=%s",
+            "Notification failed type=%s member_id=%s email=%s "
+            "event_id=%s event_task_id=%s semester=%s error=%s",
             notification_type.value,
             member.id,
             member.email,

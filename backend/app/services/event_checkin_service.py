@@ -280,7 +280,9 @@ def get_attendance_summary(db: Session, event_id: int) -> dict:
 
     rsvps = {
         row.member_id: row.status
-        for row in db.scalars(select(EventRsvp).where(EventRsvp.event_id == event_id)).all()
+        for row in db.scalars(
+            select(EventRsvp).where(EventRsvp.event_id == event_id)
+        ).all()
     }
 
     going_attended: list[dict] = []

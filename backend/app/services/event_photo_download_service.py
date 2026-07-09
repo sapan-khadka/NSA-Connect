@@ -59,7 +59,9 @@ def iter_event_photo_album_zip(
     ) as client:
         for index, photo in enumerate(photos, start=1):
             entry_name = _photo_entry_filename(photo, index)
-            if _photo_url_available(client, resolve_event_photo_fetch_url(photo.image_url)):
+            if _photo_url_available(
+                client, resolve_event_photo_fetch_url(photo.image_url)
+            ):
                 entries.append(
                     (
                         resolve_event_photo_fetch_url(photo.image_url),
@@ -76,9 +78,7 @@ def iter_event_photo_album_zip(
                 )
 
     if not entries:
-        raise EventPhotoAlbumEmptyError(
-            "All photos failed to download from storage"
-        )
+        raise EventPhotoAlbumEmptyError("All photos failed to download from storage")
 
     skipped_manifest = (
         _format_skipped_manifest(skipped).encode("utf-8") if skipped else None

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, model_validator
 
 from app.models.event_task import EventTaskKind
 from app.schemas.event_task import (

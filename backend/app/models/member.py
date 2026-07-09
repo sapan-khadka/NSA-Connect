@@ -1,6 +1,6 @@
 from enum import StrEnum
 
-from sqlalchemy import Boolean, Column, Integer, String, Text, JSON
+from sqlalchemy import JSON, Boolean, Column, Integer, String, Text
 from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.orm import relationship
 

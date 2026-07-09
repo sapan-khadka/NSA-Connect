@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session, selectinload
 from app.models.event import Event
 from app.models.event_task import (
     EventTask,
-    EventTaskChecklistItem,
     EventTaskKind,
     EventTaskStatus,
     checklist_items_from_group,
@@ -312,7 +311,13 @@ def update_event_task(
         )
         task.assignee_id = updates["assignee_id"]
 
-    for field in ("title", "description", "due_date", "completion_note", "completion_photo_url"):
+    for field in (
+        "title",
+        "description",
+        "due_date",
+        "completion_note",
+        "completion_photo_url",
+    ):
         if field in updates:
             setattr(task, field, updates[field])
 
@@ -446,9 +451,7 @@ def get_task_overview(db: Session) -> TaskOverviewResponse:
     ]
 
     total_tasks = len(tasks)
-    completed_tasks = sum(
-        1 for task in tasks if task.status == EventTaskStatus.DONE
-    )
+    completed_tasks = sum(1 for task in tasks if task.status == EventTaskStatus.DONE)
 
     return TaskOverviewResponse(
         members=members,

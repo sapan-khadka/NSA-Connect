@@ -10,12 +10,10 @@ from app.lib.event_visibility import (
     apply_event_visibility_filter,
     event_visible_to_member,
 )
-from app.models.member import Member, MemberRole, MemberStatus
 from app.models.event import Event, EventType
-from app.services.event_service import EventNotFoundError, get_event_with_tasks
 from app.models.event_task import EventTaskKind
-
-
+from app.models.member import Member, MemberRole, MemberStatus
+from app.services.event_service import EventNotFoundError, get_event_with_tasks
 from app.services.finance_service import get_finance_summary
 
 
@@ -299,8 +297,7 @@ def _get_member_counts(db: Session, member: Member) -> str:
     _require_role(member, MemberRole.BOARD)
 
     status_rows = db.execute(
-        select(Member.status, func.count())
-        .group_by(Member.status),
+        select(Member.status, func.count()).group_by(Member.status),
     ).all()
     role_rows = db.execute(
         select(Member.role, func.count())

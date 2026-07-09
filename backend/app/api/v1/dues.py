@@ -100,7 +100,9 @@ def generate_dues_records_endpoint(
     except DuesSettingsNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Set a default dues amount for this semester before generating records.",
+            detail=(
+                "Set a default dues amount for this semester before generating records."
+            ),
         ) from exc
     except InvalidDuesOperationError as exc:
         raise HTTPException(
@@ -143,7 +145,9 @@ def update_member_dues_endpoint(
             paid_at=payload.paid_at,
         )
     except DuesNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dues record not found.") from exc
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Dues record not found."
+        ) from exc
     except InvalidDuesOperationError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -169,7 +173,9 @@ def mark_dues_paid_endpoint(
             note=payload.note,
         )
     except DuesNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dues record not found.") from exc
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Dues record not found."
+        ) from exc
     except InvalidDuesOperationError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -186,4 +192,6 @@ def mark_dues_unpaid_endpoint(
     try:
         return mark_dues_unpaid(db, dues_id, actor=current_member)
     except DuesNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dues record not found.") from exc
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Dues record not found."
+        ) from exc

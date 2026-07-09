@@ -80,7 +80,8 @@ class Settings(BaseSettings):
         default="",
         description=(
             "When set, all Resend notification emails are delivered to this address "
-            "instead of the real recipient (dev/testing only). Leave unset in production."
+            "instead of the real recipient (dev/testing only). "
+            "Leave unset in production."
         ),
     )
 

@@ -2,7 +2,7 @@ import os
 
 from fastapi import APIRouter, Depends
 
-from app.core.config import Settings, get_frontend_url, get_settings, settings
+from app.core.config import Settings, get_frontend_url, settings
 from app.core.dependencies import require_board
 from app.models.member import Member
 

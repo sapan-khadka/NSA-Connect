@@ -1,14 +1,13 @@
-from sqlalchemy import select
-
-from app.core.security import verify_password
-from app.models.member import Member
-
 from conftest import (
     VALID_GRADUATION_YEAR,
     VALID_MAJOR,
     VALID_STUDENT_ID,
     register_payload,
 )
+from sqlalchemy import select
+
+from app.core.security import verify_password
+from app.models.member import Member
 
 
 def test_register_creates_member(client):

@@ -13,7 +13,6 @@ from app.schemas.finance import (
     FinanceChangeRequestListResponse,
     FinanceChangeRequestResponse,
     FinanceChangeRequestSummaryResponse,
-    FinanceMyChangeRequestsResponse,
     FinanceEntryCreateRequest,
     FinanceEntryListResponse,
     FinanceEntryResponse,
@@ -21,6 +20,7 @@ from app.schemas.finance import (
     FinanceEventBudgetListResponse,
     FinanceEventBudgetSummary,
     FinanceExpenseCategoryListResponse,
+    FinanceMyChangeRequestsResponse,
     FinanceSummaryResponse,
     ReceiptUploadResponse,
 )
@@ -153,7 +153,9 @@ def list_pending_finance_change_requests(
     )
 
 
-@router.get("/change-requests/mine/summary", response_model=FinanceChangeRequestSummaryResponse)
+@router.get(
+    "/change-requests/mine/summary", response_model=FinanceChangeRequestSummaryResponse
+)
 def my_finance_change_request_summary_endpoint(
     db: Session = Depends(get_db),
     current_member: Member = Depends(require_treasurer),
@@ -333,7 +335,11 @@ def create_finance_entry_endpoint(
     return FinanceEntryResponse.from_entry(entry)
 
 
-@router.patch("/{entry_id}", response_model=FinanceChangeRequestResponse, status_code=status.HTTP_202_ACCEPTED)
+@router.patch(
+    "/{entry_id}",
+    response_model=FinanceChangeRequestResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
 def update_finance_entry_endpoint(
     entry_id: int,
     data: FinanceEntryUpdateRequest,
@@ -371,7 +377,11 @@ def update_finance_entry_endpoint(
     return FinanceChangeRequestResponse.from_request(request)
 
 
-@router.delete("/{entry_id}", response_model=FinanceChangeRequestResponse, status_code=status.HTTP_202_ACCEPTED)
+@router.delete(
+    "/{entry_id}",
+    response_model=FinanceChangeRequestResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
 def delete_finance_entry_endpoint(
     entry_id: int,
     db: Session = Depends(get_db),

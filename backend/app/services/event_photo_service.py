@@ -7,7 +7,10 @@ from app.integrations.cloudinary_client import (
     CloudinaryUploadError,
     delete_cloudinary_asset,
 )
-from app.lib.event_visibility import apply_event_visibility_filter, event_visible_to_member
+from app.lib.event_visibility import (
+    apply_event_visibility_filter,
+    event_visible_to_member,
+)
 from app.models.event import Event
 from app.models.event_photo import EventPhoto
 from app.models.member import Member, MemberRole
@@ -69,7 +72,9 @@ def list_photo_albums(
     cover_ids = [row.cover_photo_id for row in photo_rows if row.cover_photo_id]
     cover_photos = {}
     if cover_ids:
-        covers = db.scalars(select(EventPhoto).where(EventPhoto.id.in_(cover_ids))).all()
+        covers = db.scalars(
+            select(EventPhoto).where(EventPhoto.id.in_(cover_ids))
+        ).all()
         cover_photos = {photo.id: photo for photo in covers}
 
     cover_by_event: dict[int, str | None] = {}

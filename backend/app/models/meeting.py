@@ -2,11 +2,11 @@ from datetime import UTC, datetime
 from enum import StrEnum
 
 from sqlalchemy import (
+    JSON,
     Column,
     DateTime,
     ForeignKey,
     Integer,
-    JSON,
     Text,
     UniqueConstraint,
 )
@@ -46,7 +46,9 @@ class MeetingRecord(Base):
 class MeetingAttendance(Base):
     __tablename__ = "meeting_attendance"
     __table_args__ = (
-        UniqueConstraint("event_id", "member_id", name="uq_meeting_attendance_event_member"),
+        UniqueConstraint(
+            "event_id", "member_id", name="uq_meeting_attendance_event_member"
+        ),
     )
 
     id = Column(Integer, primary_key=True, index=True)

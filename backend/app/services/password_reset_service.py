@@ -69,9 +69,7 @@ def request_password_reset(db: Session, email: str) -> None:
     db.add(reset_token)
     db.commit()
 
-    reset_url = (
-        f"{settings.FRONTEND_URL.rstrip('/')}/reset-password?token={raw_token}"
-    )
+    reset_url = f"{settings.FRONTEND_URL.rstrip('/')}/reset-password?token={raw_token}"
     try:
         send_password_reset_email(
             to_email=member.email,
@@ -101,7 +99,9 @@ def _find_valid_token(db: Session, raw_token: str) -> PasswordResetToken | None:
     return None
 
 
-def reset_password_with_token(db: Session, *, raw_token: str, new_password: str) -> None:
+def reset_password_with_token(
+    db: Session, *, raw_token: str, new_password: str
+) -> None:
     reset_token = _find_valid_token(db, raw_token)
     if reset_token is None:
         raise InvalidPasswordResetTokenError

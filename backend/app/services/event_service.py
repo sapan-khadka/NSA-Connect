@@ -4,8 +4,11 @@ from sqlalchemy import delete, extract, func, or_, select, update
 from sqlalchemy.orm import Session, selectinload
 
 from app.lib.event_photo_archive import default_show_in_photo_archive
-from app.lib.event_visibility import apply_event_visibility_filter, event_visible_to_member
-from app.models.event import Event, EventType, MeetingVisibility
+from app.lib.event_visibility import (
+    apply_event_visibility_filter,
+    event_visible_to_member,
+)
+from app.models.event import Event, EventType
 from app.models.event_task import EventTask
 from app.models.finance_entry import FinanceEntry
 from app.models.member import Member
@@ -35,9 +38,7 @@ def create_event(
         budget=data.budget,
         show_in_photo_archive=default_show_in_photo_archive(data.event_type),
         meeting_visibility=(
-            data.meeting_visibility
-            if data.event_type == EventType.MEETING
-            else None
+            data.meeting_visibility if data.event_type == EventType.MEETING else None
         ),
         created_by_id=created_by_id,
     )
@@ -135,9 +136,7 @@ def list_upcoming_events(
 ) -> tuple[list[Event], int]:
     now = datetime.now(UTC)
     query = select(Event).where(Event.starts_at >= now)
-    count_query = (
-        select(func.count()).select_from(Event).where(Event.starts_at >= now)
-    )
+    count_query = select(func.count()).select_from(Event).where(Event.starts_at >= now)
 
     query = apply_event_visibility_filter(query, viewer)
     count_query = apply_event_visibility_filter(count_query, viewer)

@@ -1,7 +1,7 @@
-from datetime import datetime
 from enum import StrEnum
 
-from sqlalchemy import Column, DateTime, Enum as SqlEnum, ForeignKey, Integer, UniqueConstraint
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, UniqueConstraint
+from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.orm import relationship
 
 from app.models.base import Base
@@ -23,7 +23,9 @@ class EventRsvp(Base):
     event_id = Column(Integer, ForeignKey("events.id"), nullable=False)
     member_id = Column(Integer, ForeignKey("members.id"), nullable=False)
     status = Column(
-        SqlEnum(RsvpStatus, values_callable=lambda statuses: [s.value for s in statuses]),
+        SqlEnum(
+            RsvpStatus, values_callable=lambda statuses: [s.value for s in statuses]
+        ),
         nullable=False,
     )
     created_at = Column(DateTime(timezone=True), nullable=False)

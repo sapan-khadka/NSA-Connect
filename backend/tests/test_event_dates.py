@@ -2,7 +2,10 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from app.lib.event_dates import EVENT_DATE_PAST_ERROR, validate_starts_at_not_before_today
+from app.lib.event_dates import (
+    EVENT_DATE_PAST_ERROR,
+    validate_starts_at_not_before_today,
+)
 
 
 def test_validate_starts_at_rejects_yesterday():

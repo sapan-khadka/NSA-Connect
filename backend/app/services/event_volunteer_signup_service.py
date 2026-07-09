@@ -10,7 +10,10 @@ from app.schemas.event_volunteer_signup import (
     EventVolunteerSignupMemberResponse,
     EventVolunteerSignupResponse,
 )
-from app.services.event_service import EventNotFoundError, ensure_member_can_access_event
+from app.services.event_service import (
+    EventNotFoundError,
+    ensure_member_can_access_event,
+)
 from app.services.rsvp_service import EventNotUpcomingError
 
 

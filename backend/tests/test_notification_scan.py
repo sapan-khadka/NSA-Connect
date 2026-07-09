@@ -2,6 +2,12 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
 import pytest
+from conftest import (
+    auth_header,
+    create_board_member,
+    register_member,
+    set_member_approved,
+)
 from sqlalchemy import select
 
 from app.integrations.resend_client import ResendDeliveryError
@@ -10,10 +16,11 @@ from app.models.event_rsvp import EventRsvp, RsvpStatus
 from app.models.event_task import EventTask, EventTaskKind, EventTaskStatus
 from app.models.member import Member
 from app.services.notification_scan_service import run_scheduled_notification_checks
-from conftest import auth_header, create_board_member, register_member, set_member_approved
 
 
-def _create_event(db, *, starts_at: datetime, creator_id: int, title: str = "Test Event") -> Event:
+def _create_event(
+    db, *, starts_at: datetime, creator_id: int, title: str = "Test Event"
+) -> Event:
     event = Event(
         title=title,
         description="Test description",
@@ -38,7 +45,9 @@ def approved_member(db_session, client):
 
 
 @patch("app.services.notification_email_service.send_resend_email")
-def test_event_reminder_sends_to_going_and_maybe(mock_send, db_session, approved_member):
+def test_event_reminder_sends_to_going_and_maybe(
+    mock_send, db_session, approved_member
+):
     board = create_board_member(db_session, email="board@semo.edu")
     mock_send.return_value = "email_1"
 
@@ -178,7 +187,9 @@ def test_event_reminder_respects_preferences(mock_send, db_session, approved_mem
 
 
 @patch("app.services.notification_email_service.send_resend_email")
-def test_rsvp_nudge_targets_members_without_response(mock_send, db_session, approved_member):
+def test_rsvp_nudge_targets_members_without_response(
+    mock_send, db_session, approved_member
+):
     board = create_board_member(db_session, email="board@semo.edu")
     mock_send.return_value = "email_1"
     as_of = datetime(2026, 7, 1, 12, 0, tzinfo=UTC)
@@ -278,7 +289,9 @@ def test_dues_reminder_respects_preferences(mock_send, db_session, approved_memb
 
 
 @patch("app.services.notification_email_service.send_resend_email")
-def test_dues_reminder_does_not_resend_for_same_semester(mock_send, db_session, approved_member):
+def test_dues_reminder_does_not_resend_for_same_semester(
+    mock_send, db_session, approved_member
+):
     from decimal import Decimal
 
     from app.models.member_dues import MemberDues
@@ -302,7 +315,9 @@ def test_dues_reminder_does_not_resend_for_same_semester(mock_send, db_session, 
 
 
 @patch("app.services.notification_email_service.send_resend_email")
-def test_dues_reminder_uses_remaining_balance_for_partial(mock_send, db_session, approved_member):
+def test_dues_reminder_uses_remaining_balance_for_partial(
+    mock_send, db_session, approved_member
+):
     from decimal import Decimal
 
     from app.models.member_dues import MemberDues

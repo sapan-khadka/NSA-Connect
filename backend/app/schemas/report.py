@@ -26,7 +26,8 @@ class ReportGenerateRequest(BaseModel):
         elif self.range_type == ReportRangeType.CUSTOM:
             if self.period_start is None or self.period_end is None:
                 raise ValueError(
-                    "period_start and period_end are required when range_type is custom",
+                    "period_start and period_end are required "
+                    "when range_type is custom",
                 )
             start = self.period_start
             end = self.period_end

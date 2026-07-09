@@ -1,11 +1,16 @@
 from datetime import UTC, datetime
 
 import pytest
+from conftest import (
+    auth_header,
+    create_board_member,
+    register_member,
+    set_member_approved,
+)
 from sqlalchemy import select
 
 from app.models.event_suggestion import EventSuggestion, EventSuggestionStatus
 from app.models.member import Member
-from conftest import auth_header, create_board_member, register_member, set_member_approved
 
 
 @pytest.fixture
@@ -55,7 +60,9 @@ def test_member_can_submit_without_preferred_timing(client, member_headers):
     assert response.json()["preferred_timing"] is None
 
 
-def test_all_members_can_list_suggestions(client, member_headers, board_headers, db_session):
+def test_all_members_can_list_suggestions(
+    client, member_headers, board_headers, db_session
+):
     member = db_session.scalar(select(Member).where(Member.email == "sapan@semo.edu"))
     db_session.add(
         EventSuggestion(

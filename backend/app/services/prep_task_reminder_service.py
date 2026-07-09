@@ -55,7 +55,8 @@ def scan_and_notify_prep_tasks_due_soon(
         if task.assignee_id is None:
             skipped_unassigned += 1
             logger.info(
-                "Checklist task due soon with no assignee task_id=%s event_id=%s title=%s due=%s",
+                "Checklist task due soon with no assignee "
+                "task_id=%s event_id=%s title=%s due=%s",
                 task.id,
                 task.event_id,
                 task.title,
@@ -80,7 +81,8 @@ def scan_and_notify_prep_tasks_due_soon(
         ):
             skipped_already_sent += 1
             logger.info(
-                "Checklist task due-soon reminder already sent task_id=%s assignee_id=%s",
+                "Checklist task due-soon reminder already sent "
+                "task_id=%s assignee_id=%s",
                 task.id,
                 assignee.id,
             )

@@ -7,11 +7,11 @@ from app.core.security import hash_password, verify_password
 from app.models.member import (
     EXCLUSIVE_AUTH_ROLES,
     EXCLUSIVE_MEMBER_POSITIONS,
+    POSITION_AUTH_ROLES,
     Member,
     MemberPosition,
     MemberRole,
     MemberStatus,
-    POSITION_AUTH_ROLES,
 )
 from app.schemas.member import MemberCreateRequest, MemberProfileUpdateRequest
 
@@ -101,7 +101,9 @@ def get_member_by_id(db: Session, member_id: int) -> Member:
     return member
 
 
-def list_members_by_status(db: Session, status: MemberStatus | None = None) -> list[Member]:
+def list_members_by_status(
+    db: Session, status: MemberStatus | None = None
+) -> list[Member]:
     query = select(Member)
     if status is not None:
         query = query.where(Member.status == status)
@@ -111,9 +113,7 @@ def list_members_by_status(db: Session, status: MemberStatus | None = None) -> l
 def _member_has_talent_filters(db: Session, talents: list[str]):
     dialect = db.get_bind().dialect.name
     if dialect == "postgresql":
-        return [
-            cast(Member.talents, JSONB).contains([talent]) for talent in talents
-        ]
+        return [cast(Member.talents, JSONB).contains([talent]) for talent in talents]
     return [Member.talents.contains([talent]) for talent in talents]
 
 
@@ -187,7 +187,9 @@ def update_member_board_role(db: Session, member_id: int, role: MemberRole) -> M
     member = get_member_by_id(db, member_id)
 
     if not member.is_approved:
-        raise InvalidMemberRoleError("Only approved members can have their role updated")
+        raise InvalidMemberRoleError(
+            "Only approved members can have their role updated"
+        )
 
     if role not in (MemberRole.BOARD, MemberRole.GENERAL):
         raise InvalidMemberRoleError(
@@ -195,7 +197,9 @@ def update_member_board_role(db: Session, member_id: int, role: MemberRole) -> M
         )
 
     if member.role in (MemberRole.PRESIDENT, MemberRole.TREASURER):
-        raise InvalidMemberRoleError("Cannot change role of president or treasurer members")
+        raise InvalidMemberRoleError(
+            "Cannot change role of president or treasurer members"
+        )
 
     if role == member.role:
         raise InvalidMemberRoleError("Member already has this role")

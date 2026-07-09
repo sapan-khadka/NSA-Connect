@@ -1,12 +1,11 @@
 import pytest
-from sqlalchemy import select
-
 from conftest import (
     auth_header,
     create_board_member,
     register_member,
     set_member_approved,
 )
+from sqlalchemy import select
 
 BOARD_REQUIRED_DETAIL = "Requires board role or higher"
 

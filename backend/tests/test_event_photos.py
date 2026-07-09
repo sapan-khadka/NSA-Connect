@@ -3,22 +3,24 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from unittest.mock import patch
 
-import pytest
 import httpx
-from sqlalchemy import select
-
-from app.integrations.cloudinary_client import CloudinaryEventPhotoResult
-from app.models.event import Event, EventType, MeetingVisibility
-from app.models.event_photo import EventPhoto
-from app.models.member import Member
+import pytest
 from conftest import (
     auth_header,
     create_board_member,
     register_member,
     set_member_approved,
 )
+from sqlalchemy import select
 
-MINIMAL_JPEG = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xff\xd9"
+from app.integrations.cloudinary_client import CloudinaryEventPhotoResult
+from app.models.event import Event, EventType, MeetingVisibility
+from app.models.event_photo import EventPhoto
+from app.models.member import Member
+
+MINIMAL_JPEG = (
+    b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xff\xd9"
+)
 
 
 @pytest.fixture
@@ -99,7 +101,9 @@ def test_list_photo_albums_returns_past_events_with_cover(
     board = db_session.get(Member, past_event.created_by_id)
     _create_photo(db_session, event=past_event, uploader=board, suffix="1")
 
-    response = client.get("/api/v1/events/photos/albums", headers=general_member_headers)
+    response = client.get(
+        "/api/v1/events/photos/albums", headers=general_member_headers
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -115,7 +119,9 @@ def test_list_photo_albums_includes_visible_past_event_with_zero_photos(
     general_member_headers,
     past_event,
 ):
-    response = client.get("/api/v1/events/photos/albums", headers=general_member_headers)
+    response = client.get(
+        "/api/v1/events/photos/albums", headers=general_member_headers
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -143,7 +149,9 @@ def test_list_photo_albums_excludes_past_meeting_when_hidden(
     db_session.add(meeting)
     db_session.commit()
 
-    response = client.get("/api/v1/events/photos/albums", headers=general_member_headers)
+    response = client.get(
+        "/api/v1/events/photos/albums", headers=general_member_headers
+    )
 
     assert response.status_code == 200
     assert response.json()["total"] == 0
@@ -177,7 +185,9 @@ def test_patch_show_in_photo_archive_includes_meeting_in_albums(
     )
     assert patch.status_code == 200
 
-    response = client.get("/api/v1/events/photos/albums", headers=general_member_headers)
+    response = client.get(
+        "/api/v1/events/photos/albums", headers=general_member_headers
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -204,7 +214,9 @@ def test_list_photo_albums_includes_upcoming_event_when_visible(
     db_session.add(upcoming)
     db_session.commit()
 
-    response = client.get("/api/v1/events/photos/albums", headers=general_member_headers)
+    response = client.get(
+        "/api/v1/events/photos/albums", headers=general_member_headers
+    )
 
     assert response.status_code == 200
     body = response.json()

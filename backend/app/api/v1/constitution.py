@@ -3,6 +3,10 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_member, require_board
+from app.core.safe_messages import (
+    GENERIC_EMBEDDING_UNAVAILABLE,
+    GENERIC_PDF_PROCESSING_ERROR,
+)
 from app.models.member import Member
 from app.schemas.constitution import (
     ConstitutionChunkResponse,
@@ -10,10 +14,6 @@ from app.schemas.constitution import (
     ConstitutionSearchRequest,
     ConstitutionSearchResponse,
     ConstitutionSearchResult,
-)
-from app.core.safe_messages import (
-    GENERIC_EMBEDDING_UNAVAILABLE,
-    GENERIC_PDF_PROCESSING_ERROR,
 )
 from app.services.constitution_chunk_service import ConstitutionChunkingError
 from app.services.constitution_ingest_service import ingest_constitution_pdf

@@ -53,8 +53,7 @@ def test_board_member_can_summarize_minutes(
     assert len(body["key_decisions"]) == 2
     assert len(body["action_items"]) == 2
     assert (
-        body["action_items"][0]["task"]
-        == "Reserve University Center room for Dashain"
+        body["action_items"][0]["task"] == "Reserve University Center room for Dashain"
     )
     mock_claude_minutes_api.messages.create.assert_called_once()
 

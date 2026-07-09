@@ -3,13 +3,12 @@
 from datetime import UTC, datetime, timedelta
 
 import jwt
+from conftest import login_member, register_member, set_member_approved
 from sqlalchemy import select
 
 from app.core.config import settings
 from app.core.security import JWT_ALGORITHM, TokenType
 from app.models.member import Member, MemberStatus
-
-from conftest import login_member, register_member, set_member_approved
 
 
 def test_login_returns_refresh_token(client, db_session):

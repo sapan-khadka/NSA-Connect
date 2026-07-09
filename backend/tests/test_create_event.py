@@ -1,9 +1,14 @@
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from conftest import (
+    auth_header,
+    create_board_member,
+    register_member,
+    set_member_approved,
+)
 
 from app.lib.event_dates import EVENT_DATE_PAST_ERROR
-from conftest import auth_header, create_board_member, register_member, set_member_approved
 
 BOARD_REQUIRED_DETAIL = "Requires board role or higher"
 
@@ -196,7 +201,9 @@ def test_create_meeting_rejects_past_calendar_date(client, board_member_headers)
     assert EVENT_DATE_PAST_ERROR in response.text
 
 
-def test_create_event_allows_today_even_if_time_has_passed(client, board_member_headers):
+def test_create_event_allows_today_even_if_time_has_passed(
+    client, board_member_headers
+):
     today = datetime.now(UTC).date()
     today_start = datetime(
         today.year,

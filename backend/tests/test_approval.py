@@ -1,5 +1,4 @@
 from conftest import (
-    VALID_PASSWORD,
     auth_header,
     create_board_member,
     login_member,

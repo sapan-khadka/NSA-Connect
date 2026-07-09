@@ -11,7 +11,10 @@ from app.schemas.event_feedback import (
     EventFeedbackMemberResponse,
     EventFeedbackResponse,
 )
-from app.services.event_service import EventNotFoundError, ensure_member_can_access_event
+from app.services.event_service import (
+    EventNotFoundError,
+    ensure_member_can_access_event,
+)
 
 
 class EventNotPastError(Exception):
@@ -104,7 +107,9 @@ def list_event_feedback(db: Session, event_id: int) -> EventFeedbackListResponse
 
     average_rating = 0.0
     if feedback:
-        average_rating = round(sum(entry.rating for entry in feedback) / len(feedback), 1)
+        average_rating = round(
+            sum(entry.rating for entry in feedback) / len(feedback), 1
+        )
 
     return EventFeedbackListResponse(
         feedback=feedback,

@@ -5,6 +5,12 @@ from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 import pytest
+from conftest import (
+    VALID_EMAIL,
+    login_member,
+    register_member,
+    set_member_approved,
+)
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
@@ -13,12 +19,6 @@ from app.core.config import settings
 from app.core.rate_limit import reset_rate_limit_redis
 from app.models.password_reset_token import PasswordResetToken
 from app.services.password_reset_service import PASSWORD_RESET_REQUEST_MESSAGE
-from conftest import (
-    VALID_EMAIL,
-    login_member,
-    register_member,
-    set_member_approved,
-)
 
 RESET_REQUEST_URL = "/api/v1/auth/password-reset/request"
 RESET_CONFIRM_URL = "/api/v1/auth/password-reset/confirm"
@@ -39,7 +39,9 @@ def _extract_token(reset_url: str) -> str:
 def capture_reset_email():
     captured: dict[str, str] = {}
 
-    def fake_send(*, to_email: str, full_name: str, reset_url: str, expires_minutes: int):
+    def fake_send(
+        *, to_email: str, full_name: str, reset_url: str, expires_minutes: int
+    ):
         captured["to_email"] = to_email
         captured["full_name"] = full_name
         captured["reset_url"] = reset_url

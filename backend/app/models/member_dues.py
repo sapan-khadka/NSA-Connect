@@ -56,7 +56,9 @@ class SemesterDuesSettings(Base):
 class MemberDues(Base):
     __tablename__ = "member_dues"
     __table_args__ = (
-        UniqueConstraint("member_id", "semester", name="uq_member_dues_member_semester"),
+        UniqueConstraint(
+            "member_id", "semester", name="uq_member_dues_member_semester"
+        ),
     )
 
     id = Column(Integer, primary_key=True, index=True)

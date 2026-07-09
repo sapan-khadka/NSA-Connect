@@ -1,6 +1,10 @@
 import pytest
 
-from app.core.validators import SEMO_EMAIL_DOMAIN, validate_semo_email, validate_student_id
+from app.core.validators import (
+    SEMO_EMAIL_DOMAIN,
+    validate_semo_email,
+    validate_student_id,
+)
 
 
 def test_validate_semo_email_accepts_valid_address():

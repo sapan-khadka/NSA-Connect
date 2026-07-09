@@ -1,6 +1,14 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Integer, Text, UniqueConstraint
+from sqlalchemy import (
+    CheckConstraint,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 
 from app.models.base import Base
@@ -14,11 +22,15 @@ class EventFeedback(Base):
             "member_id",
             name="uq_event_feedback_event_member",
         ),
-        CheckConstraint("rating >= 1 AND rating <= 5", name="ck_event_feedback_rating_range"),
+        CheckConstraint(
+            "rating >= 1 AND rating <= 5", name="ck_event_feedback_rating_range"
+        ),
     )
 
     id = Column(Integer, primary_key=True, index=True)
-    event_id = Column(Integer, ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
+    event_id = Column(
+        Integer, ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     member_id = Column(Integer, ForeignKey("members.id"), nullable=False, index=True)
     rating = Column(Integer, nullable=False)
     comment = Column(Text, nullable=True)

@@ -2,11 +2,6 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import select
-
-from app.models.event import Event, EventType
-from app.models.finance_entry import FinanceCategory, FinanceEntry, FinanceEntryType
-from app.models.member import Member
 from conftest import (
     auth_header,
     create_board_member,
@@ -14,6 +9,11 @@ from conftest import (
     register_member,
     set_member_approved,
 )
+from sqlalchemy import select
+
+from app.models.event import Event, EventType
+from app.models.finance_entry import FinanceCategory, FinanceEntry, FinanceEntryType
+from app.models.member import Member
 
 
 @pytest.fixture

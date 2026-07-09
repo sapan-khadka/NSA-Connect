@@ -47,7 +47,10 @@ def secretary_and_board(db_session):
 def test_build_meeting_detail_url_uses_frontend_base():
     with patch("app.services.meeting_notification_service.settings") as mock_settings:
         mock_settings.FRONTEND_URL = "https://connect.example.edu/"
-        assert build_meeting_detail_url(42) == "https://connect.example.edu/events/meetings/42"
+        assert (
+            build_meeting_detail_url(42)
+            == "https://connect.example.edu/events/meetings/42"
+        )
 
 
 @patch("app.tasks.email_tasks.send_meeting_record_notification_email_task")

@@ -1,7 +1,7 @@
 from app.core.config import settings
 from app.integrations.cloudinary_client import (
-    CloudinaryUploadError,
     CloudinaryEventPhotoResult,
+    CloudinaryUploadError,
     upload_event_photo,
 )
 from app.services.local_event_photo_storage import (

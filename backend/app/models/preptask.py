@@ -1,7 +1,4 @@
-from datetime import UTC, datetime
-from enum import StrEnum
-
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Column, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app.models.base import Base
@@ -27,7 +24,9 @@ class PrepTaskGroupItem(Base):
 
     __tablename__ = "prep_task_group_items"
     __table_args__ = (
-        UniqueConstraint("group_id", "sort_order", name="uq_prep_task_group_items_order"),
+        UniqueConstraint(
+            "group_id", "sort_order", name="uq_prep_task_group_items_order"
+        ),
     )
 
     id = Column(Integer, primary_key=True, index=True)

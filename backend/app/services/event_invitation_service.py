@@ -1,13 +1,13 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.event import Event
 from app.models.event_participant_invitation import EventParticipantInvitation
 from app.models.member import Member, MemberStatus
 from app.services.event_service import EventNotFoundError
-from app.services.member_service import MemberNotFoundError, get_member_by_id
+from app.services.member_service import MemberNotFoundError
 
 
 class InvitationAlreadyExistsError(Exception):

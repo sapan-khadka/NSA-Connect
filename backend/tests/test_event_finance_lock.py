@@ -1,14 +1,14 @@
-import pytest
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
-
+import pytest
 from conftest import (
     auth_header,
     create_board_member,
     create_treasurer_member,
     register_member,
 )
+from sqlalchemy import select
+
 from app.lib.event_finance import (
     FINANCE_EDIT_GRACE_PERIOD,
     get_event_finance_lock_at,

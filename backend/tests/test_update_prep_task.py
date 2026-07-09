@@ -1,7 +1,12 @@
 import pytest
+from conftest import (
+    auth_header,
+    create_board_member,
+    register_member,
+    set_member_approved,
+)
 
 from app.models.preptask import PrepTaskGroup, PrepTaskGroupItem
-from conftest import auth_header, create_board_member, register_member, set_member_approved
 
 FORBIDDEN_DETAIL = "Not allowed to update this prep task"
 

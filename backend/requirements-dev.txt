@@ -10,3 +10,4 @@ packaging==26.2
 pluggy==1.6.0
 Pygments==2.20.0
 ruff==0.15.18
+pip-audit==2.10.1

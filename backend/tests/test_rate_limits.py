@@ -1,6 +1,13 @@
 """Rate limiting tests."""
 
 import pytest
+from conftest import (
+    auth_header,
+    create_board_member,
+    login_member,
+    register_payload,
+    set_member_approved,
+)
 from fastapi.testclient import TestClient
 
 from app.core import rate_limit as rate_limit_module
@@ -13,13 +20,6 @@ from app.core.rate_limit import (
     get_rate_limit_redis,
     record_login_failure,
     reset_rate_limit_redis,
-)
-from conftest import (
-    auth_header,
-    create_board_member,
-    login_member,
-    register_payload,
-    set_member_approved,
 )
 
 
@@ -94,7 +94,9 @@ def _create_open_event(db_session, board_member):
     return event
 
 
-def test_login_ip_limit_returns_429_on_eleventh_attempt(client, db_session, isolated_rate_limit_redis):
+def test_login_ip_limit_returns_429_on_eleventh_attempt(
+    client, db_session, isolated_rate_limit_redis
+):
     _, ip_state = isolated_rate_limit_redis
     ip_state["ip"] = "10.0.0.10"
 
@@ -110,7 +112,9 @@ def test_login_ip_limit_returns_429_on_eleventh_attempt(client, db_session, isol
     assert blocked.json()["detail"] == RATE_LIMIT_LOGIN_MESSAGE
 
 
-def test_login_account_failure_returns_429(client, db_session, isolated_rate_limit_redis):
+def test_login_account_failure_returns_429(
+    client, db_session, isolated_rate_limit_redis
+):
     _, ip_state = isolated_rate_limit_redis
     ip_state["ip"] = "10.0.0.11"
 
@@ -126,7 +130,9 @@ def test_login_account_failure_returns_429(client, db_session, isolated_rate_lim
     assert blocked.json()["detail"] == RATE_LIMIT_LOGIN_MESSAGE
 
 
-def test_successful_login_clears_account_failure_counter(client, db_session, isolated_rate_limit_redis):
+def test_successful_login_clears_account_failure_counter(
+    client, db_session, isolated_rate_limit_redis
+):
     _, ip_state = isolated_rate_limit_redis
     ip_state["ip"] = "10.0.0.12"
 
@@ -199,7 +205,9 @@ def test_registration_limit_triggers(client, isolated_rate_limit_redis):
     assert blocked.status_code == 429
 
 
-def test_guest_checkin_event_limit_triggers(client, db_session, isolated_rate_limit_redis):
+def test_guest_checkin_event_limit_triggers(
+    client, db_session, isolated_rate_limit_redis
+):
     _, ip_state = isolated_rate_limit_redis
     ip_state["ip"] = "10.0.2.1"
 

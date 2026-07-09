@@ -1,15 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.api.v1.event_checkin import router as event_checkin_router
+from app.api.v1.event_meetings import router as event_meetings_router
+from app.api.v1.event_photos import router as event_photos_router
 from app.core.database import get_db
 from app.core.dependencies import get_current_member, require_board
 from app.models.event import EventType
 from app.models.member import Member
-from app.schemas.member import (
-    EventParticipantInvitationCreateRequest,
-    EventParticipantInvitationListResponse,
-    EventParticipantInvitationResponse,
-)
 from app.schemas.event import (
     EventAttendeesResponse,
     EventCreateRequest,
@@ -21,17 +19,32 @@ from app.schemas.event import (
     EventRsvpStatusResponse,
     EventRsvpUpdateRequest,
 )
-from app.schemas.event_volunteer_signup import (
-    EventVolunteerSignupCreateRequest,
-    EventVolunteerSignupListResponse,
-    EventVolunteerSignupResponse,
-)
 from app.schemas.event_feedback import (
     EventFeedbackCreateRequest,
     EventFeedbackListResponse,
     EventFeedbackResponse,
 )
+from app.schemas.event_volunteer_signup import (
+    EventVolunteerSignupCreateRequest,
+    EventVolunteerSignupListResponse,
+    EventVolunteerSignupResponse,
+)
+from app.schemas.member import (
+    EventParticipantInvitationCreateRequest,
+    EventParticipantInvitationListResponse,
+    EventParticipantInvitationResponse,
+)
+from app.schemas.preptask import PrepTaskCreateRequest, PrepTaskResponse
 from app.schemas.volunteer import VolunteerSlotCreateRequest, VolunteerSlotResponse
+from app.services.event_feedback_service import (
+    EventNotPastError,
+    get_member_event_feedback,
+    list_event_feedback,
+    submit_event_feedback,
+)
+from app.services.event_feedback_service import (
+    to_member_response as to_feedback_response,
+)
 from app.services.event_invitation_service import (
     invite_members_to_event,
     is_member_invited_to_event,
@@ -54,6 +67,15 @@ from app.services.event_task_service import (
     PrepTaskGroupNotFoundError,
     create_checklist_event_task,
 )
+from app.services.event_volunteer_signup_service import (
+    NotVolunteeredError,
+    get_member_volunteer_signup,
+    list_event_volunteer_signups,
+    to_member_response,
+    volunteer_for_event,
+    withdraw_volunteer_signup,
+)
+from app.services.member_service import MemberNotFoundError
 from app.services.rsvp_service import (
     AlreadyRsvpedError,
     EventNotUpcomingError,
@@ -64,27 +86,7 @@ from app.services.rsvp_service import (
     rsvp_to_event,
     set_event_rsvp_status,
 )
-from app.services.member_service import MemberNotFoundError
-from app.schemas.preptask import PrepTaskCreateRequest, PrepTaskResponse
-from app.services.event_volunteer_signup_service import (
-    NotVolunteeredError,
-    get_member_volunteer_signup,
-    list_event_volunteer_signups,
-    to_member_response,
-    volunteer_for_event,
-    withdraw_volunteer_signup,
-)
-from app.services.event_feedback_service import (
-    EventNotPastError,
-    get_member_event_feedback,
-    list_event_feedback,
-    submit_event_feedback,
-    to_member_response as to_feedback_response,
-)
 from app.services.volunteer_service import create_volunteer_slot_for_event
-from app.api.v1.event_meetings import router as event_meetings_router
-from app.api.v1.event_photos import router as event_photos_router
-from app.api.v1.event_checkin import router as event_checkin_router
 
 router = APIRouter(prefix="/events", tags=["events"])
 router.include_router(event_photos_router)
@@ -132,10 +134,14 @@ def _build_event_detail_response(
         current_member_rsvp_status=current_status,
         current_member_is_invited_participant=is_invited,
         current_member_volunteer_signup=(
-            to_member_response(volunteer_signup) if volunteer_signup is not None else None
+            to_member_response(volunteer_signup)
+            if volunteer_signup is not None
+            else None
         ),
         current_member_feedback=(
-            to_feedback_response(member_feedback) if member_feedback is not None else None
+            to_feedback_response(member_feedback)
+            if member_feedback is not None
+            else None
         ),
     )
 

@@ -1,10 +1,8 @@
+from conftest import register_payload
 from sqlalchemy import select
 
 from app.core.security import decode_access_token
 from app.models.member import Member, MemberStatus
-
-
-from conftest import register_payload
 
 
 def _register(client, email="sapan@semo.edu", password="securepass123"):

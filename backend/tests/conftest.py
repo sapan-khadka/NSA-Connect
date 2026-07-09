@@ -6,9 +6,9 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.core.database import engine, get_db
-from app.core.config import settings
 import app.models.password_reset_token  # noqa: F401 — register table for create_all
+from app.core.config import settings
+from app.core.database import engine, get_db
 from app.main import app
 from app.models.base import Base
 from app.models.member import Member, MemberStatus
@@ -98,12 +98,16 @@ def block_external_integrations():
 
     with (
         patch("app.integrations.sendgrid_client.SendGridAPIClient") as sendgrid_client,
-        patch("anthropic.Anthropic", return_value=anthropic_sdk_client) as anthropic_client,
+        patch(
+            "anthropic.Anthropic", return_value=anthropic_sdk_client
+        ) as anthropic_client,
         patch("openai.OpenAI", return_value=openai_sdk_client) as openai_client,
         patch("celery.app.task.Task.delay") as celery_delay,
         patch("celery.app.task.Task.apply_async") as celery_apply_async,
         patch("app.services.email_service.settings.EMAIL_ENABLED", False),
-        patch("app.services.receipt_upload_service.upload_receipt") as cloudinary_upload_receipt,
+        patch(
+            "app.services.receipt_upload_service.upload_receipt"
+        ) as cloudinary_upload_receipt,
     ):
         sendgrid_client.return_value.send.return_value = sendgrid_response
         from app.integrations.cloudinary_client import CloudinaryUploadResult

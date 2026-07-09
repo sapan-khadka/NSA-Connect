@@ -3,7 +3,6 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 AnnouncementCategoryLiteral = Literal["general", "urgent", "event_related"]
 
 
@@ -44,6 +43,5 @@ class AnnouncementUpdateRequest(BaseModel):
 
     def has_updates(self) -> bool:
         return any(
-            value is not None
-            for value in (self.title, self.body, self.category)
+            value is not None for value in (self.title, self.body, self.category)
         )

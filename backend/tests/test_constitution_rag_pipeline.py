@@ -73,9 +73,13 @@ def test_full_rag_pipeline_upload_embed_search_and_chat_cites_constitution(
     uploaded_chunk = upload_body["chunks"][0]["content"]
     assert CONSTITUTION_PHRASE in uploaded_chunk
 
-    stored_rows = db_session.query(ConstitutionalChunk).order_by(
-        ConstitutionalChunk.chunk_index,
-    ).all()
+    stored_rows = (
+        db_session.query(ConstitutionalChunk)
+        .order_by(
+            ConstitutionalChunk.chunk_index,
+        )
+        .all()
+    )
     assert len(stored_rows) == upload_body["chunk_count"]
     assert all(len(row.embedding) == EMBEDDING_DIMENSION for row in stored_rows)
     assert CONSTITUTION_PHRASE in stored_rows[0].content

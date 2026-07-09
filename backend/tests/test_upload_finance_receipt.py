@@ -1,12 +1,13 @@
 import pytest
-
 from conftest import (
     auth_header,
     create_treasurer_member,
     register_member,
 )
 
-MINIMAL_JPEG = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xff\xd9"
+MINIMAL_JPEG = (
+    b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xff\xd9"
+)
 
 
 @pytest.fixture
@@ -38,7 +39,9 @@ def test_treasurer_can_upload_receipt_image(
     assert body["resource_type"] == "image"
 
     block_external_integrations["cloudinary_upload_receipt"].assert_called_once()
-    upload_kwargs = block_external_integrations["cloudinary_upload_receipt"].call_args.kwargs
+    upload_kwargs = block_external_integrations[
+        "cloudinary_upload_receipt"
+    ].call_args.kwargs
     assert upload_kwargs["file_bytes"] == MINIMAL_JPEG
     assert upload_kwargs["folder"] == "nsa-connect/finance-receipts"
 
@@ -157,9 +160,9 @@ def test_upload_receipt_returns_502_when_cloudinary_fails(
 ):
     from app.integrations.cloudinary_client import CloudinaryUploadError
 
-    block_external_integrations["cloudinary_upload_receipt"].side_effect = (
-        CloudinaryUploadError("upload failed")
-    )
+    block_external_integrations[
+        "cloudinary_upload_receipt"
+    ].side_effect = CloudinaryUploadError("upload failed")
 
     response = client.post(
         "/api/v1/finance/receipts",

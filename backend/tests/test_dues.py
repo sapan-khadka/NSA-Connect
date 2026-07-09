@@ -1,6 +1,6 @@
-import pytest
 from decimal import Decimal
 
+import pytest
 from conftest import (
     auth_header,
     create_president_member,
@@ -8,9 +8,10 @@ from conftest import (
     register_member,
     set_member_approved,
 )
+
 from app.models.finance_entry import FinanceEntry, FinanceEntryType
 from app.models.member import Member, MemberStatus
-from app.models.member_dues import MemberDues, SemesterDuesSettings
+from app.models.member_dues import MemberDues
 
 SEMESTER = "2026-fall"
 
@@ -44,7 +45,9 @@ def _set_default_dues(client, headers, amount="20.00"):
     )
 
 
-def test_treasurer_can_set_default_and_generate_dues(client, db_session, treasurer_headers):
+def test_treasurer_can_set_default_and_generate_dues(
+    client, db_session, treasurer_headers
+):
     second = Member(
         full_name="Second Member",
         email="second@semo.edu",
@@ -84,7 +87,9 @@ def test_treasurer_can_set_default_and_generate_dues(client, db_session, treasur
     assert len(payload["records"]) == 2
 
 
-def test_mark_paid_creates_finance_entry_and_updates_summary(client, db_session, treasurer_headers):
+def test_mark_paid_creates_finance_entry_and_updates_summary(
+    client, db_session, treasurer_headers
+):
     second = Member(
         full_name="Second Member",
         email="second@semo.edu",
@@ -192,7 +197,9 @@ def test_status_filter_and_amount_override(client, db_session, treasurer_headers
     assert len(unpaid_only.json()["records"]) == 0
 
 
-def test_member_can_view_own_dues_not_dashboard(client, member_headers, treasurer_headers):
+def test_member_can_view_own_dues_not_dashboard(
+    client, member_headers, treasurer_headers
+):
     _set_default_dues(client, treasurer_headers)
     client.post(
         "/api/v1/finance/dues/generate",
@@ -266,7 +273,8 @@ def test_mark_paid_increases_treasury_income_exactly_once(
 
     assert db_session.query(FinanceEntry).count() == 1
 
-    # Re-marking paid (e.g. changing method) must update the same entry, not add another.
+    # Re-marking paid (e.g. changing method) must update the same entry,
+    # not add another.
     remark = client.post(
         f"/api/v1/finance/dues/{dues_id}/mark-paid",
         headers=treasurer_headers,
@@ -333,4 +341,7 @@ def test_generate_bulk_is_idempotent_for_all_approved_members(
     assert second_body["created_count"] == 0
     assert second_body["skipped_count"] == 42
 
-    assert db_session.query(MemberDues).filter(MemberDues.semester == SEMESTER).count() == 42
+    assert (
+        db_session.query(MemberDues).filter(MemberDues.semester == SEMESTER).count()
+        == 42
+    )

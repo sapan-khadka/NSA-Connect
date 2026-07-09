@@ -2,21 +2,23 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
 import pytest
+from conftest import create_board_member
 
 from app.models.event import Event, EventType
-from app.services.prep_task_reminder_store import (
-    due_soon_reminder_exists,
-    record_due_soon_reminder,
-)
 from app.services.prep_task_reminder_service import (
     list_incomplete_checklist_tasks_due_within,
     scan_and_notify_prep_tasks_due_soon,
 )
-from conftest import create_board_member
+from app.services.prep_task_reminder_store import (
+    due_soon_reminder_exists,
+    record_due_soon_reminder,
+)
 from tests.helpers.task_fixtures import seed_checklist_event_task
 
 
-def _seed_event(db_session, *, board_member_id: int, title: str = "Dashain Celebration"):
+def _seed_event(
+    db_session, *, board_member_id: int, title: str = "Dashain Celebration"
+):
     event = Event(
         title=title,
         description="Annual cultural night.",

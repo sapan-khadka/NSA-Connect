@@ -9,7 +9,9 @@ logger = logging.getLogger(__name__)
 WELCOME_EMAIL_SUBJECT = "Welcome to NSA Connect"
 PREP_TASK_DUE_SOON_SUBJECT = "Prep task due soon: {group_name}"
 VOLUNTEER_TASK_ASSIGNED_SUBJECT = "Volunteer task assigned: {task_name}"
-MEETING_ATTENDANCE_RECORDED_SUBJECT = "Board meeting attendance recorded: {meeting_title}"
+MEETING_ATTENDANCE_RECORDED_SUBJECT = (
+    "Board meeting attendance recorded: {meeting_title}"
+)
 MEETING_NOTES_SAVED_SUBJECT = "Board meeting notes saved: {meeting_title}"
 MEETING_MINUTES_READY_SUBJECT = "Board meeting minutes ready: {meeting_title}"
 
@@ -64,7 +66,8 @@ def build_prep_task_due_soon_email_body(
     return (
         f"Hi {full_name},\n\n"
         f'Your prep task "{group_name}" for "{event_title}" is due on {due_label}.\n'
-        "Please sign in to NSA Connect and complete the checklist before the deadline.\n\n"
+        "Please sign in to NSA Connect and complete the checklist "
+        "before the deadline.\n\n"
         "Best,\n"
         "Nepalese Students' Association"
     )
@@ -97,7 +100,8 @@ def send_prep_task_due_soon_email(
 
     if not settings.SENDGRID_API_KEY:
         logger.error(
-            "Prep task due-soon email skipped: EMAIL_ENABLED=true but SENDGRID_API_KEY is missing"
+            "Prep task due-soon email skipped: EMAIL_ENABLED=true "
+            "but SENDGRID_API_KEY is missing"
         )
         return False
 
@@ -112,10 +116,14 @@ def send_prep_task_due_soon_email(
         logger.info("Prep task due-soon email sent via SendGrid to=%s", email)
         return True
     except SendGridDeliveryError:
-        logger.exception("SendGrid failed to deliver prep task due-soon email to=%s", email)
+        logger.exception(
+            "SendGrid failed to deliver prep task due-soon email to=%s", email
+        )
         return False
     except Exception:
-        logger.exception("Unexpected error sending prep task due-soon email to=%s", email)
+        logger.exception(
+            "Unexpected error sending prep task due-soon email to=%s", email
+        )
         return False
 
 
@@ -164,7 +172,8 @@ def send_volunteer_task_assigned_email(
 
     if not settings.SENDGRID_API_KEY:
         logger.error(
-            "Volunteer task assigned email skipped: EMAIL_ENABLED=true but SENDGRID_API_KEY is missing"
+            "Volunteer task assigned email skipped: EMAIL_ENABLED=true "
+            "but SENDGRID_API_KEY is missing"
         )
         return False
 
@@ -213,7 +222,9 @@ def build_meeting_record_notification_email_body(
     meeting_starts_at: datetime,
     meeting_url: str,
 ) -> str:
-    meeting_label = meeting_starts_at.astimezone(UTC).strftime("%B %d, %Y at %I:%M %p %Z")
+    meeting_label = meeting_starts_at.astimezone(UTC).strftime(
+        "%B %d, %Y at %I:%M %p %Z"
+    )
 
     if notification_kind == "attendance":
         lead = (
@@ -275,7 +286,8 @@ def send_meeting_record_notification_email(
 
     if not settings.SENDGRID_API_KEY:
         logger.error(
-            "Meeting record notification skipped: EMAIL_ENABLED=true but SENDGRID_API_KEY is missing"
+            "Meeting record notification skipped: EMAIL_ENABLED=true "
+            "but SENDGRID_API_KEY is missing"
         )
         return False
 

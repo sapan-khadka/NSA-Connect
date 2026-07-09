@@ -24,13 +24,13 @@ MinRole = Literal[
 
 @dataclass(frozen=True)
 class EndpointAuthRule:
-  method: str
-  path: str
-  description: str
-  min_role: MinRole
-  guard: str
-  object_rules: str = ""
-  skip_role_probe: bool = False
+    method: str
+    path: str
+    description: str
+    min_role: MinRole
+    guard: str
+    object_rules: str = ""
+    skip_role_probe: bool = False
 
 
 ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
@@ -46,10 +46,24 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
         object_rules="Strip before production",
     ),
     # Auth
-    EndpointAuthRule("POST", "/api/v1/auth/register", "Register pending member", "public", "none"),
+    EndpointAuthRule(
+        "POST", "/api/v1/auth/register", "Register pending member", "public", "none"
+    ),
     EndpointAuthRule("POST", "/api/v1/auth/login", "Login", "public", "none"),
-    EndpointAuthRule("POST", "/api/v1/auth/refresh", "Refresh tokens", "public", "none; valid refresh token"),
-    EndpointAuthRule("GET", "/api/v1/auth/me", "Current member profile", "member", "get_current_member"),
+    EndpointAuthRule(
+        "POST",
+        "/api/v1/auth/refresh",
+        "Refresh tokens",
+        "public",
+        "none; valid refresh token",
+    ),
+    EndpointAuthRule(
+        "GET",
+        "/api/v1/auth/me",
+        "Current member profile",
+        "member",
+        "get_current_member",
+    ),
     EndpointAuthRule(
         "POST",
         "/api/v1/auth/password-reset/request",
@@ -65,17 +79,34 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
         "none; valid reset token",
     ),
     # Members
-    EndpointAuthRule("GET", "/api/v1/members/talent-options", "Talent enum options", "member", "get_current_member"),
+    EndpointAuthRule(
+        "GET",
+        "/api/v1/members/talent-options",
+        "Talent enum options",
+        "member",
+        "get_current_member",
+    ),
     EndpointAuthRule(
         "GET",
         "/api/v1/members",
         "Member directory",
         "member",
         "get_current_member",
-        object_rules="Approved only by default; status filter board+; privacy fields via MemberResponse.from_member",
+        object_rules=(
+            "Approved only by default; status filter board+; "
+            "privacy fields via MemberResponse.from_member"
+        ),
     ),
-    EndpointAuthRule("GET", "/api/v1/members/me", "Own profile", "self", "get_current_member"),
-    EndpointAuthRule("PATCH", "/api/v1/members/me", "Update own profile", "self", "get_current_member"),
+    EndpointAuthRule(
+        "GET", "/api/v1/members/me", "Own profile", "self", "get_current_member"
+    ),
+    EndpointAuthRule(
+        "PATCH",
+        "/api/v1/members/me",
+        "Update own profile",
+        "self",
+        "get_current_member",
+    ),
     EndpointAuthRule(
         "POST",
         "/api/v1/members/me/password",
@@ -83,11 +114,41 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
         "self",
         "get_current_member",
     ),
-    EndpointAuthRule("GET", "/api/v1/members/assignees", "Task assignee list", "board", "require_board"),
-    EndpointAuthRule("GET", "/api/v1/members/pending", "Pending approvals queue", "board", "require_board"),
-    EndpointAuthRule("PATCH", "/api/v1/members/{member_id}/approve", "Approve member", "board", "require_board"),
-    EndpointAuthRule("PATCH", "/api/v1/members/{member_id}/reject", "Reject member", "board", "require_board"),
-    EndpointAuthRule("PATCH", "/api/v1/members/{member_id}", "Board edit member profile", "board", "require_board"),
+    EndpointAuthRule(
+        "GET",
+        "/api/v1/members/assignees",
+        "Task assignee list",
+        "board",
+        "require_board",
+    ),
+    EndpointAuthRule(
+        "GET",
+        "/api/v1/members/pending",
+        "Pending approvals queue",
+        "board",
+        "require_board",
+    ),
+    EndpointAuthRule(
+        "PATCH",
+        "/api/v1/members/{member_id}/approve",
+        "Approve member",
+        "board",
+        "require_board",
+    ),
+    EndpointAuthRule(
+        "PATCH",
+        "/api/v1/members/{member_id}/reject",
+        "Reject member",
+        "board",
+        "require_board",
+    ),
+    EndpointAuthRule(
+        "PATCH",
+        "/api/v1/members/{member_id}",
+        "Board edit member profile",
+        "board",
+        "require_board",
+    ),
     EndpointAuthRule(
         "PATCH",
         "/api/v1/members/{member_id}/role",
@@ -120,18 +181,74 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
         "get_current_member",
     ),
     # Announcements
-    EndpointAuthRule("GET", "/api/v1/announcements", "List announcements", "member", "get_current_member"),
-    EndpointAuthRule("GET", "/api/v1/announcements/{announcement_id}", "Get announcement", "member", "get_current_member"),
-    EndpointAuthRule("POST", "/api/v1/announcements", "Create announcement", "board", "require_board"),
-    EndpointAuthRule("PATCH", "/api/v1/announcements/{announcement_id}", "Update announcement", "board", "require_board"),
-    EndpointAuthRule("DELETE", "/api/v1/announcements/{announcement_id}", "Delete announcement", "board", "require_board"),
+    EndpointAuthRule(
+        "GET",
+        "/api/v1/announcements",
+        "List announcements",
+        "member",
+        "get_current_member",
+    ),
+    EndpointAuthRule(
+        "GET",
+        "/api/v1/announcements/{announcement_id}",
+        "Get announcement",
+        "member",
+        "get_current_member",
+    ),
+    EndpointAuthRule(
+        "POST", "/api/v1/announcements", "Create announcement", "board", "require_board"
+    ),
+    EndpointAuthRule(
+        "PATCH",
+        "/api/v1/announcements/{announcement_id}",
+        "Update announcement",
+        "board",
+        "require_board",
+    ),
+    EndpointAuthRule(
+        "DELETE",
+        "/api/v1/announcements/{announcement_id}",
+        "Delete announcement",
+        "board",
+        "require_board",
+    ),
     # Constitution
-    EndpointAuthRule("POST", "/api/v1/constitution/upload", "Upload constitution PDF", "board", "require_board"),
-    EndpointAuthRule("POST", "/api/v1/constitution/search", "Search constitution", "member", "get_current_member"),
+    EndpointAuthRule(
+        "POST",
+        "/api/v1/constitution/upload",
+        "Upload constitution PDF",
+        "board",
+        "require_board",
+    ),
+    EndpointAuthRule(
+        "POST",
+        "/api/v1/constitution/search",
+        "Search constitution",
+        "member",
+        "get_current_member",
+    ),
     # AI
-    EndpointAuthRule("POST", "/api/v1/ai/generate-checklist", "AI event checklist", "board", "require_board"),
-    EndpointAuthRule("POST", "/api/v1/ai/draft-announcement-email", "AI announcement draft", "board", "require_board"),
-    EndpointAuthRule("POST", "/api/v1/ai/summarize-minutes", "AI minutes summary", "board", "require_board"),
+    EndpointAuthRule(
+        "POST",
+        "/api/v1/ai/generate-checklist",
+        "AI event checklist",
+        "board",
+        "require_board",
+    ),
+    EndpointAuthRule(
+        "POST",
+        "/api/v1/ai/draft-announcement-email",
+        "AI announcement draft",
+        "board",
+        "require_board",
+    ),
+    EndpointAuthRule(
+        "POST",
+        "/api/v1/ai/summarize-minutes",
+        "AI minutes summary",
+        "board",
+        "require_board",
+    ),
     EndpointAuthRule(
         "POST",
         "/api/v1/ai/chat/stream",
@@ -299,9 +416,15 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
         "board",
         "require_board",
     ),
-    EndpointAuthRule("POST", "/api/v1/events", "Create event", "board", "require_board"),
-    EndpointAuthRule("PATCH", "/api/v1/events/{event_id}", "Update event", "board", "require_board"),
-    EndpointAuthRule("DELETE", "/api/v1/events/{event_id}", "Delete event", "board", "require_board"),
+    EndpointAuthRule(
+        "POST", "/api/v1/events", "Create event", "board", "require_board"
+    ),
+    EndpointAuthRule(
+        "PATCH", "/api/v1/events/{event_id}", "Update event", "board", "require_board"
+    ),
+    EndpointAuthRule(
+        "DELETE", "/api/v1/events/{event_id}", "Delete event", "board", "require_board"
+    ),
     # Event check-in
     EndpointAuthRule(
         "GET",
@@ -350,7 +473,9 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
         "require_board",
     ),
     # Event meetings
-    EndpointAuthRule("GET", "/api/v1/events/meetings", "List meetings", "board", "require_board"),
+    EndpointAuthRule(
+        "GET", "/api/v1/events/meetings", "List meetings", "board", "require_board"
+    ),
     EndpointAuthRule(
         "GET",
         "/api/v1/events/{event_id}/meeting",
@@ -425,8 +550,20 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
         skip_role_probe=True,
     ),
     # Event suggestions
-    EndpointAuthRule("GET", "/api/v1/event-suggestions", "List suggestions", "member", "get_current_member"),
-    EndpointAuthRule("POST", "/api/v1/event-suggestions", "Create suggestion", "member", "get_current_member"),
+    EndpointAuthRule(
+        "GET",
+        "/api/v1/event-suggestions",
+        "List suggestions",
+        "member",
+        "get_current_member",
+    ),
+    EndpointAuthRule(
+        "POST",
+        "/api/v1/event-suggestions",
+        "Create suggestion",
+        "member",
+        "get_current_member",
+    ),
     EndpointAuthRule(
         "PATCH",
         "/api/v1/event-suggestions/{suggestion_id}/status",
@@ -449,7 +586,13 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
         "board",
         "require_board",
     ),
-    EndpointAuthRule("GET", "/api/v1/event-tasks/mine", "My assigned tasks", "self", "get_current_member"),
+    EndpointAuthRule(
+        "GET",
+        "/api/v1/event-tasks/mine",
+        "My assigned tasks",
+        "self",
+        "get_current_member",
+    ),
     EndpointAuthRule(
         "GET",
         "/api/v1/event-tasks/overview",
@@ -519,8 +662,12 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
         skip_role_probe=True,
     ),
     # Reports
-    EndpointAuthRule("GET", "/api/v1/reports", "List reports", "board", "require_board"),
-    EndpointAuthRule("POST", "/api/v1/reports", "Generate report", "board", "require_board"),
+    EndpointAuthRule(
+        "GET", "/api/v1/reports", "List reports", "board", "require_board"
+    ),
+    EndpointAuthRule(
+        "POST", "/api/v1/reports", "Generate report", "board", "require_board"
+    ),
     EndpointAuthRule(
         "GET",
         "/api/v1/reports/{report_id}",
@@ -536,7 +683,13 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
         "require_board",
     ),
     # Finance
-    EndpointAuthRule("POST", "/api/v1/finance/receipts", "Upload receipt", "treasurer", "require_treasurer"),
+    EndpointAuthRule(
+        "POST",
+        "/api/v1/finance/receipts",
+        "Upload receipt",
+        "treasurer",
+        "require_treasurer",
+    ),
     EndpointAuthRule(
         "GET",
         "/api/v1/finance/expenses/by-category",
@@ -593,9 +746,27 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
         "treasurer",
         "require_treasurer",
     ),
-    EndpointAuthRule("GET", "/api/v1/finance/summary", "Finance summary", "treasurer", "require_treasurer"),
-    EndpointAuthRule("GET", "/api/v1/finance", "List finance entries", "treasurer", "require_treasurer"),
-    EndpointAuthRule("POST", "/api/v1/finance", "Create finance entry", "treasurer", "require_treasurer"),
+    EndpointAuthRule(
+        "GET",
+        "/api/v1/finance/summary",
+        "Finance summary",
+        "treasurer",
+        "require_treasurer",
+    ),
+    EndpointAuthRule(
+        "GET",
+        "/api/v1/finance",
+        "List finance entries",
+        "treasurer",
+        "require_treasurer",
+    ),
+    EndpointAuthRule(
+        "POST",
+        "/api/v1/finance",
+        "Create finance entry",
+        "treasurer",
+        "require_treasurer",
+    ),
     EndpointAuthRule(
         "PATCH",
         "/api/v1/finance/{entry_id}",
@@ -611,11 +782,41 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
         "require_treasurer",
     ),
     # Dues
-    EndpointAuthRule("GET", "/api/v1/finance/dues", "Dues dashboard", "treasurer", "require_treasurer"),
-    EndpointAuthRule("GET", "/api/v1/finance/dues/settings", "Dues settings", "treasurer", "require_treasurer"),
-    EndpointAuthRule("PUT", "/api/v1/finance/dues/settings", "Update dues settings", "treasurer", "require_treasurer"),
-    EndpointAuthRule("POST", "/api/v1/finance/dues/generate", "Generate dues records", "treasurer", "require_treasurer"),
-    EndpointAuthRule("GET", "/api/v1/finance/dues/mine", "Own dues status", "self", "get_current_member"),
+    EndpointAuthRule(
+        "GET",
+        "/api/v1/finance/dues",
+        "Dues dashboard",
+        "treasurer",
+        "require_treasurer",
+    ),
+    EndpointAuthRule(
+        "GET",
+        "/api/v1/finance/dues/settings",
+        "Dues settings",
+        "treasurer",
+        "require_treasurer",
+    ),
+    EndpointAuthRule(
+        "PUT",
+        "/api/v1/finance/dues/settings",
+        "Update dues settings",
+        "treasurer",
+        "require_treasurer",
+    ),
+    EndpointAuthRule(
+        "POST",
+        "/api/v1/finance/dues/generate",
+        "Generate dues records",
+        "treasurer",
+        "require_treasurer",
+    ),
+    EndpointAuthRule(
+        "GET",
+        "/api/v1/finance/dues/mine",
+        "Own dues status",
+        "self",
+        "get_current_member",
+    ),
     EndpointAuthRule(
         "PATCH",
         "/api/v1/finance/dues/{dues_id}",
@@ -671,14 +872,16 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
 )
 
 
-RESTRICTED_MIN_ROLES = frozenset({
-    "board",
-    "treasurer",
-    "president",
-    "meeting_manager",
-    "task_manager",
-    "task_oversight",
-})
+RESTRICTED_MIN_ROLES = frozenset(
+    {
+        "board",
+        "treasurer",
+        "president",
+        "meeting_manager",
+        "task_manager",
+        "task_oversight",
+    }
+)
 
 RESTRICTED_ENDPOINT_RULES: tuple[EndpointAuthRule, ...] = tuple(
     rule for rule in ENDPOINT_AUTH_RULES if rule.min_role in RESTRICTED_MIN_ROLES

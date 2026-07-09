@@ -56,9 +56,13 @@ def test_board_member_can_upload_constitution_pdf(
     assert body["chunks"][0]["token_count"] >= 1
     assert body["chunks"][0]["id"] >= 1
 
-    rows = db_session.query(ConstitutionalChunk).order_by(
-        ConstitutionalChunk.chunk_index,
-    ).all()
+    rows = (
+        db_session.query(ConstitutionalChunk)
+        .order_by(
+            ConstitutionalChunk.chunk_index,
+        )
+        .all()
+    )
     assert len(rows) == body["chunk_count"]
     assert all(len(row.embedding) == 1536 for row in rows)
     assert rows[0].content == body["chunks"][0]["content"]

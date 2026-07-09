@@ -2,12 +2,17 @@ from datetime import UTC, datetime
 from unittest.mock import patch
 
 import pytest
+from conftest import (
+    auth_header,
+    create_board_member,
+    register_member,
+    set_member_approved,
+)
 from sqlalchemy import select
 
 from app.models.announcement import Announcement
 from app.models.member import Member
 from app.models.notification_sent_log import NotificationSentLog, NotificationType
-from conftest import auth_header, create_board_member, register_member, set_member_approved
 
 
 @pytest.fixture
@@ -58,8 +63,12 @@ def test_member_cannot_create_announcement(client, member_headers):
     assert response.status_code == 403
 
 
-def test_all_members_can_list_announcements(client, board_headers, member_headers, db_session):
-    board_member = db_session.scalar(select(Member).where(Member.email == "board@semo.edu"))
+def test_all_members_can_list_announcements(
+    client, board_headers, member_headers, db_session
+):
+    board_member = db_session.scalar(
+        select(Member).where(Member.email == "board@semo.edu")
+    )
     db_session.add(
         Announcement(
             title="Welcome",
@@ -127,7 +136,9 @@ def test_create_announcement_sends_email_to_opted_in_members(
 
 
 def test_board_can_update_and_delete_announcement(client, board_headers, db_session):
-    board_member = db_session.scalar(select(Member).where(Member.email == "board@semo.edu"))
+    board_member = db_session.scalar(
+        select(Member).where(Member.email == "board@semo.edu")
+    )
     announcement = Announcement(
         title="Old title",
         body="Old body",

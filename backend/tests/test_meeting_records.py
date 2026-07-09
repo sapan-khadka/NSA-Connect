@@ -1,9 +1,12 @@
 from unittest.mock import patch
 
 import pytest
-
-from conftest import auth_header, create_board_member, register_member, set_member_approved
-from tests.helpers.anthropic_mocks import mock_claude_minutes_api
+from conftest import (
+    auth_header,
+    create_board_member,
+    register_member,
+    set_member_approved,
+)
 
 BOARD_REQUIRED_DETAIL = "Requires board role or higher"
 SECRETARY_REQUIRED_DETAIL = "Requires secretary, vice president, or president"
@@ -219,7 +222,9 @@ def test_board_member_can_list_meeting_history(client, board_member_headers):
     assert detail_response.json()["agenda"] == "Monthly board meeting."
 
 
-def test_list_meetings_reflects_saved_records(client, secretary_headers, board_member_headers):
+def test_list_meetings_reflects_saved_records(
+    client, secretary_headers, board_member_headers
+):
     with patch(
         "app.services.meeting_service.notify_board_of_meeting_update",
     ) as mock_notify:
@@ -249,7 +254,9 @@ def test_list_meetings_reflects_saved_records(client, secretary_headers, board_m
         assert mock_notify.call_count == 2
         assert mock_notify.call_args.kwargs["notification_kind"] == "attendance"
 
-        meeting = client.get("/api/v1/events/meetings", headers=board_member_headers).json()["meetings"][0]
+        meeting = client.get(
+            "/api/v1/events/meetings", headers=board_member_headers
+        ).json()["meetings"][0]
         assert meeting["has_attendance"] is True
         assert meeting["has_minutes"] is True
         assert meeting["present_count"] == 1

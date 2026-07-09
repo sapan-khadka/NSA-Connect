@@ -2,13 +2,17 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
+from conftest import (
+    auth_header,
+    create_board_member,
+    register_member,
+    set_member_approved,
+)
 from sqlalchemy import select
 
 from app.lib.event_dates import EVENT_DATE_PAST_ERROR
-
 from app.models.event import Event, EventType
 from app.models.member import Member
-from conftest import auth_header, create_board_member, register_member, set_member_approved
 
 BOARD_REQUIRED_DETAIL = "Requires board role or higher"
 

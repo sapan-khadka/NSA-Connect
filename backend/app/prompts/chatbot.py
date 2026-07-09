@@ -16,9 +16,7 @@ Rules:
 - Cite whether information came from the constitution or live database when helpful.
 """
 
-RAG_CONTEXT_HEADER = (
-    "\n\n---\nRetrieved constitution excerpts (semantic search):\n"
-)
+RAG_CONTEXT_HEADER = "\n\n---\nRetrieved constitution excerpts (semantic search):\n"
 
 
 def build_chat_system_prompt(*, rag_context: str) -> str:

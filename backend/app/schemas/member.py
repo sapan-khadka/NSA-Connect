@@ -1,14 +1,21 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 
 from app.core.password_validation import (
     PASSWORD_MAX_LENGTH,
     PASSWORD_MIN_LENGTH,
 )
 from app.core.validators import SemoEmailStr, StudentIdStr
-from app.lib.member_talents import ALL_MEMBER_TALENTS, is_valid_talent
+from app.lib.member_talents import is_valid_talent
 from app.models.member import (
     MemberPosition,
     MemberRole,
@@ -28,7 +35,9 @@ SENSITIVE_MEMBER_FIELDS = frozenset({"password", "hashed_password"})
 class MemberCreateRequest(BaseModel):
     full_name: str = Field(min_length=1, max_length=255)
     email: SemoEmailStr
-    password: str = Field(min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH)
+    password: str = Field(
+        min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH
+    )
     student_id: StudentIdStr
     major: str = Field(min_length=1, max_length=255)
     graduation_year: int = Field(ge=CURRENT_YEAR, le=MAX_GRADUATION_YEAR)
@@ -58,7 +67,9 @@ class MemberProfileUpdateRequest(BaseModel):
     phone_visibility: ProfileFieldVisibility | None = None
     social_handle_visibility: ProfileFieldVisibility | None = None
 
-    @field_validator("interests", "bio", "talent_other", "phone", "social_handle", mode="before")
+    @field_validator(
+        "interests", "bio", "talent_other", "phone", "social_handle", mode="before"
+    )
     @classmethod
     def strip_optional_text(cls, value: Any) -> Any:
         if isinstance(value, str):
@@ -114,7 +125,9 @@ class MemberLoginRequest(BaseModel):
 
 class MemberPasswordChangeRequest(BaseModel):
     current_password: str = Field(min_length=1, max_length=128)
-    new_password: str = Field(min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH)
+    new_password: str = Field(
+        min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH
+    )
 
 
 class MemberRoleUpdateRequest(BaseModel):
@@ -174,7 +187,9 @@ class MemberResponse(BaseModel):
         mode="before",
     )
     @classmethod
-    def default_visibility(cls, value: Any, info: ValidationInfo) -> ProfileFieldVisibility:
+    def default_visibility(
+        cls, value: Any, info: ValidationInfo
+    ) -> ProfileFieldVisibility:
         if value is not None:
             return value
         defaults = {
@@ -205,12 +220,8 @@ class MemberResponse(BaseModel):
         is_self = viewer is not None and viewer.id == member.id
         is_board = viewer is not None and viewer.has_role_at_least(MemberRole.BOARD)
 
-        email_visibility = (
-            member.email_visibility or ProfileFieldVisibility.PUBLIC
-        )
-        phone_visibility = (
-            member.phone_visibility or ProfileFieldVisibility.BOARD_ONLY
-        )
+        email_visibility = member.email_visibility or ProfileFieldVisibility.PUBLIC
+        phone_visibility = member.phone_visibility or ProfileFieldVisibility.BOARD_ONLY
         social_handle_visibility = (
             member.social_handle_visibility or ProfileFieldVisibility.BOARD_ONLY
         )
@@ -221,7 +232,9 @@ class MemberResponse(BaseModel):
             return visibility == ProfileFieldVisibility.PUBLIC
 
         email = member.email if field_visible(email_visibility) else None
-        phone = member.phone if member.phone and field_visible(phone_visibility) else None
+        phone = (
+            member.phone if member.phone and field_visible(phone_visibility) else None
+        )
         social_handle = (
             member.social_handle
             if member.social_handle and field_visible(social_handle_visibility)

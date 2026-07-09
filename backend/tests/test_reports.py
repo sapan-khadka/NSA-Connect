@@ -2,6 +2,12 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
+from conftest import (
+    auth_header,
+    create_board_member,
+    register_member,
+    set_member_approved,
+)
 from sqlalchemy import select
 
 from app.models.event import Event, EventType
@@ -10,7 +16,6 @@ from app.models.event_feedback import EventFeedback
 from app.models.finance_entry import FinanceCategory, FinanceEntry, FinanceEntryType
 from app.models.member import Member
 from app.models.member_dues import MemberDues
-from conftest import auth_header, create_board_member, register_member, set_member_approved
 
 
 @pytest.fixture
@@ -27,7 +32,9 @@ def board_member_headers(client, db_session):
     return auth_header(client, email="board@semo.edu")
 
 
-def _create_event(db, *, board_id: int, starts_at: datetime, title: str = "Cultural Night") -> Event:
+def _create_event(
+    db, *, board_id: int, starts_at: datetime, title: str = "Cultural Night"
+) -> Event:
     event = Event(
         title=title,
         description="Test event",

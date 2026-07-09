@@ -5,7 +5,10 @@ from app.tasks.notification_tasks import run_scheduled_notification_checks_task
 
 
 def test_celery_registers_notification_scan_task():
-    assert run_scheduled_notification_checks_task.name == "notifications.run_scheduled_checks"
+    assert (
+        run_scheduled_notification_checks_task.name
+        == "notifications.run_scheduled_checks"
+    )
     assert "notifications.run_scheduled_checks" in celery_app.tasks
 
 

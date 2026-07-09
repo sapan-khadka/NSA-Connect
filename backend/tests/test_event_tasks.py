@@ -1,8 +1,6 @@
-import pytest
 from unittest.mock import patch
 
-from app.integrations.resend_client import ResendDeliveryError
-
+import pytest
 from conftest import (
     auth_header,
     create_board_member,
@@ -10,6 +8,8 @@ from conftest import (
     register_member,
     set_member_approved,
 )
+
+from app.integrations.resend_client import ResendDeliveryError
 
 
 def _event_payload(**overrides):
@@ -94,7 +94,8 @@ def test_create_task_succeeds_when_assignment_email_fails(
     board_member,
 ):
     mock_send.side_effect = ResendDeliveryError(
-        "You can only send testing emails to your own email address (sapankhadka110@gmail.com)."
+        "You can only send testing emails to your own email address "
+        "(sapankhadka110@gmail.com)."
     )
 
     event = _create_event(client, president_headers)

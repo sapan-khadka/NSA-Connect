@@ -1,12 +1,13 @@
-import pytest
 from unittest.mock import patch
 
+import pytest
 from conftest import (
     auth_header,
     create_board_member,
     register_member,
     set_member_approved,
 )
+
 from app.models.member import Member
 
 VALID_EMAIL = "sapan@semo.edu"
@@ -98,7 +99,6 @@ def test_test_email_rejects_invalid_address(client, board_headers):
 @patch("app.services.resend_email_service.send_email")
 @patch("app.services.resend_email_service.settings")
 def test_send_resend_email_uses_api_key_from_settings(mock_settings, mock_send):
-    from app.integrations.resend_client import ResendDeliveryError
     from app.services.resend_email_service import send_resend_email
 
     mock_settings.RESEND_API_KEY = "re_test_key"
@@ -191,7 +191,9 @@ def test_send_resend_email_skips_redirect_when_override_unset(mock_settings, moc
 
 
 @patch("app.api.v1.notifications.send_test_email")
-def test_test_email_endpoint_returns_resend_error_message(mock_send, client, board_headers):
+def test_test_email_endpoint_returns_resend_error_message(
+    mock_send, client, board_headers
+):
     from app.integrations.resend_client import ResendDeliveryError
 
     mock_send.side_effect = ResendDeliveryError("Invalid API key")

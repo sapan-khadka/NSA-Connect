@@ -1,6 +1,10 @@
 import pytest
-
-from conftest import auth_header, create_board_member, register_member, set_member_approved
+from conftest import (
+    auth_header,
+    create_board_member,
+    register_member,
+    set_member_approved,
+)
 
 
 def _event_payload(**overrides):
@@ -45,7 +49,9 @@ def test_list_events_requires_authentication(client, board_member_headers):
     assert response.status_code == 401
 
 
-def test_list_events_returns_all_when_no_filters(client, board_member_headers, general_member_headers):
+def test_list_events_returns_all_when_no_filters(
+    client, board_member_headers, general_member_headers
+):
     _create_event(
         client,
         board_member_headers,
@@ -74,7 +80,9 @@ def test_list_events_returns_all_when_no_filters(client, board_member_headers, g
     ]
 
 
-def test_list_events_filters_by_month(client, board_member_headers, general_member_headers):
+def test_list_events_filters_by_month(
+    client, board_member_headers, general_member_headers
+):
     _create_event(
         client,
         board_member_headers,
@@ -104,7 +112,9 @@ def test_list_events_filters_by_month(client, board_member_headers, general_memb
     assert body["events"][0]["name"] == "June Cultural"
 
 
-def test_list_events_filters_by_type(client, board_member_headers, general_member_headers):
+def test_list_events_filters_by_type(
+    client, board_member_headers, general_member_headers
+):
     _create_event(
         client,
         board_member_headers,

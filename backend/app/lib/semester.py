@@ -57,7 +57,7 @@ def semesters_overlapping_range(
     period_start: datetime,
     period_end: datetime,
 ) -> list[str]:
-    """Return semester slugs whose [start, end) bounds overlap [period_start, period_end)."""
+    """Return semester slugs overlapping [period_start, period_end)."""
     if period_start.tzinfo is None:
         period_start = period_start.replace(tzinfo=UTC)
     else:

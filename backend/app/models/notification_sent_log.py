@@ -40,8 +40,12 @@ class NotificationSentLog(Base):
         nullable=False,
     )
     event_id = Column(Integer, ForeignKey("events.id"), nullable=True, index=True)
-    event_task_id = Column(Integer, ForeignKey("event_tasks.id"), nullable=True, index=True)
-    announcement_id = Column(Integer, ForeignKey("announcements.id"), nullable=True, index=True)
+    event_task_id = Column(
+        Integer, ForeignKey("event_tasks.id"), nullable=True, index=True
+    )
+    announcement_id = Column(
+        Integer, ForeignKey("announcements.id"), nullable=True, index=True
+    )
     semester = Column(String(16), nullable=True, index=True)
     recipient_email = Column(String(255), nullable=False)
     success = Column(Boolean, nullable=False, default=True)

@@ -1,7 +1,16 @@
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.orm import relationship
 

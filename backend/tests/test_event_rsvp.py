@@ -1,6 +1,10 @@
 import pytest
-
-from conftest import auth_header, create_board_member, register_member, set_member_approved
+from conftest import (
+    auth_header,
+    create_board_member,
+    register_member,
+    set_member_approved,
+)
 
 
 def _event_payload(**overrides):
@@ -213,7 +217,11 @@ def test_board_can_list_attendees_general_cannot(
     assert body["not_going_count"] == 0
     assert body["no_response_count"] >= 0
     assert len(body["attendees"]) >= 2
-    member_types = {attendee["member_type"] for attendee in body["attendees"] if attendee["rsvp_status"] is not None}
+    member_types = {
+        attendee["member_type"]
+        for attendee in body["attendees"]
+        if attendee["rsvp_status"] is not None
+    }
     assert "Board member" in member_types or "General member" in member_types
     responded = [a for a in body["attendees"] if a["rsvp_status"] is not None]
     assert len(responded) == 2

@@ -28,7 +28,9 @@ class PrepTaskReminder(Base):
     reminder_type = Column(
         SqlEnum(
             ReminderType,
-            values_callable=lambda types: [reminder_type.value for reminder_type in types],
+            values_callable=lambda types: [
+                reminder_type.value for reminder_type in types
+            ],
         ),
         nullable=False,
     )

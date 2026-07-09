@@ -20,8 +20,8 @@ from app.schemas.report import (
     ReportAttendanceSection,
     ReportData,
     ReportDuesSection,
-    ReportEventSummary,
     ReportEventsSection,
+    ReportEventSummary,
     ReportFeedbackSection,
     ReportFinanceSection,
     ReportGenerateRequest,
@@ -41,7 +41,9 @@ def _as_utc(value: datetime) -> datetime:
     return value.astimezone(UTC)
 
 
-def _resolve_period(request: ReportGenerateRequest) -> tuple[datetime, datetime, str | None, str]:
+def _resolve_period(
+    request: ReportGenerateRequest,
+) -> tuple[datetime, datetime, str | None, str]:
     if request.range_type == ReportRangeType.SEMESTER:
         assert request.semester is not None
         start, end = semester_date_range(request.semester)
@@ -63,7 +65,10 @@ def _income_sum():
     return func.coalesce(
         func.sum(
             case(
-                (FinanceEntry.entry_type == FinanceEntryType.INCOME, FinanceEntry.amount),
+                (
+                    FinanceEntry.entry_type == FinanceEntryType.INCOME,
+                    FinanceEntry.amount,
+                ),
                 else_=Decimal("0"),
             ),
         ),
@@ -75,7 +80,10 @@ def _expense_sum():
     return func.coalesce(
         func.sum(
             case(
-                (FinanceEntry.entry_type == FinanceEntryType.EXPENSE, FinanceEntry.amount),
+                (
+                    FinanceEntry.entry_type == FinanceEntryType.EXPENSE,
+                    FinanceEntry.amount,
+                ),
                 else_=Decimal("0"),
             ),
         ),
@@ -233,16 +241,22 @@ def _build_events_and_attendance(
 
     for event in events:
         summary = get_attendance_summary(db, event.id)
-        member_checkins = db.scalar(
-            select(func.count())
-            .select_from(EventCheckIn)
-            .where(EventCheckIn.event_id == event.id),
-        ) or 0
-        guest_checkins = db.scalar(
-            select(func.count())
-            .select_from(EventGuestCheckIn)
-            .where(EventGuestCheckIn.event_id == event.id),
-        ) or 0
+        member_checkins = (
+            db.scalar(
+                select(func.count())
+                .select_from(EventCheckIn)
+                .where(EventCheckIn.event_id == event.id),
+            )
+            or 0
+        )
+        guest_checkins = (
+            db.scalar(
+                select(func.count())
+                .select_from(EventGuestCheckIn)
+                .where(EventGuestCheckIn.event_id == event.id),
+            )
+            or 0
+        )
         attendance_count = member_checkins + guest_checkins
 
         if attendance_count > 0:
@@ -293,9 +307,9 @@ def build_report_data(
 
     return ReportData(
         title=title,
-        period_label=format_semester_label(semester) if semester else (
-            f"{period_start.date().isoformat()} to {period_end.date().isoformat()}"
-        ),
+        period_label=format_semester_label(semester)
+        if semester
+        else (f"{period_start.date().isoformat()} to {period_end.date().isoformat()}"),
         range_type=request.range_type,
         semester=semester,
         period_start=period_start,
@@ -348,7 +362,9 @@ def list_reports(db: Session) -> list[SemesterReport]:
             select(SemesterReport)
             .options(joinedload(SemesterReport.generated_by))
             .order_by(SemesterReport.created_at.desc()),
-        ).unique().all(),
+        )
+        .unique()
+        .all(),
     )
 
 

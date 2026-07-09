@@ -22,24 +22,24 @@ from app.schemas.member import (
     MemberTalentOptionsResponse,
     PaginatedMemberListResponse,
 )
-from app.tasks.email_tasks import send_welcome_email_task
 from app.services.member_service import (
+    InvalidCurrentPasswordError,
     InvalidMemberRoleError,
     InvalidMemberStatusError,
-    InvalidCurrentPasswordError,
     MemberAlreadyExistsError,
     MemberNotFoundError,
     approve_member,
     change_member_password,
     get_member_by_id,
+    list_assignable_board_members,
     list_members_by_status,
     list_members_paginated,
-    list_assignable_board_members,
     reject_member,
     update_member_board_role,
     update_member_position,
     update_member_profile,
 )
+from app.tasks.email_tasks import send_welcome_email_task
 
 router = APIRouter(prefix="/members", tags=["members"])
 
@@ -74,7 +74,9 @@ def list_members(
         )
 
     effective_status = status
-    if effective_status is None and not current_member.has_role_at_least(MemberRole.BOARD):
+    if effective_status is None and not current_member.has_role_at_least(
+        MemberRole.BOARD
+    ):
         effective_status = MemberStatus.APPROVED
 
     members, total = list_members_paginated(

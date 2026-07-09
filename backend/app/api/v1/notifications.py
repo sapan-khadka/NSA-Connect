@@ -6,18 +6,18 @@ from app.core.dependencies import get_current_member, require_board
 from app.core.safe_messages import GENERIC_EMAIL_SEND_FAILED
 from app.integrations.resend_client import ResendDeliveryError
 from app.models.member import Member
+from app.schemas.notification_check import RunNotificationCheckRequest
 from app.schemas.notification_preferences import (
     NotificationPreferencesResponse,
     NotificationPreferencesUpdateRequest,
 )
-from app.schemas.notification_check import RunNotificationCheckRequest
 from app.schemas.test_email import SendTestEmailRequest
-from app.services.resend_email_service import send_test_email
 from app.services.notification_preferences_service import (
     get_notification_preferences,
     update_notification_preferences,
 )
 from app.services.notification_scan_service import run_scheduled_notification_checks
+from app.services.resend_email_service import send_test_email
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 

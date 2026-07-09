@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
-from unittest.mock import patch
 
+from conftest import create_board_member
 from sqlalchemy import select
 
 from app.models.event import Event, EventType
@@ -9,7 +9,6 @@ from app.services.prep_task_reminder_store import (
     due_soon_reminder_exists,
     record_due_soon_reminder,
 )
-from conftest import create_board_member
 from tests.helpers.task_fixtures import seed_checklist_event_task
 
 

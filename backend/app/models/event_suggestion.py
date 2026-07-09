@@ -29,7 +29,9 @@ class EventSuggestion(Base):
         default=EventSuggestionStatus.SUBMITTED,
         server_default=EventSuggestionStatus.SUBMITTED.value,
     )
-    suggested_by_id = Column(Integer, ForeignKey("members.id"), nullable=False, index=True)
+    suggested_by_id = Column(
+        Integer, ForeignKey("members.id"), nullable=False, index=True
+    )
     noted_at = Column(DateTime(timezone=True), nullable=True)
     noted_by_id = Column(Integer, ForeignKey("members.id"), nullable=True, index=True)
     created_at = Column(

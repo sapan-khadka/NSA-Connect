@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.lib.event_finance import EventFinanceLockedError, assert_event_finance_editable
+from app.lib.event_finance import assert_event_finance_editable
 from app.models.finance_change_request import (
     FinanceChangeAction,
     FinanceChangeRequest,
@@ -54,15 +54,9 @@ def _can_submit(member: Member) -> bool:
 def _can_review(requester: Member, reviewer: Member) -> bool:
     if requester.id == reviewer.id:
         return False
-    if (
-        requester.role == MemberRole.TREASURER
-        and reviewer.role == MemberRole.PRESIDENT
-    ):
+    if requester.role == MemberRole.TREASURER and reviewer.role == MemberRole.PRESIDENT:
         return True
-    if (
-        requester.role == MemberRole.PRESIDENT
-        and reviewer.role == MemberRole.TREASURER
-    ):
+    if requester.role == MemberRole.PRESIDENT and reviewer.role == MemberRole.TREASURER:
         return True
     return False
 
@@ -204,37 +198,46 @@ def summarize_my_change_requests(
     if member.role not in APPROVER_ROLES:
         return FinanceChangeRequestSummary(0, 0, 0)
 
-    pending_count = db.scalar(
-        select(func.count())
-        .select_from(FinanceChangeRequest)
-        .where(
-            FinanceChangeRequest.requested_by_id == member.id,
-            FinanceChangeRequest.status == FinanceChangeStatus.PENDING,
-        ),
-    ) or 0
+    pending_count = (
+        db.scalar(
+            select(func.count())
+            .select_from(FinanceChangeRequest)
+            .where(
+                FinanceChangeRequest.requested_by_id == member.id,
+                FinanceChangeRequest.status == FinanceChangeStatus.PENDING,
+            ),
+        )
+        or 0
+    )
 
     recent_cutoff = _recent_review_cutoff()
-    recently_rejected_count = db.scalar(
-        select(func.count())
-        .select_from(FinanceChangeRequest)
-        .where(
-            FinanceChangeRequest.requested_by_id == member.id,
-            FinanceChangeRequest.status == FinanceChangeStatus.REJECTED,
-            FinanceChangeRequest.reviewed_at.is_not(None),
-            FinanceChangeRequest.reviewed_at >= recent_cutoff,
-        ),
-    ) or 0
+    recently_rejected_count = (
+        db.scalar(
+            select(func.count())
+            .select_from(FinanceChangeRequest)
+            .where(
+                FinanceChangeRequest.requested_by_id == member.id,
+                FinanceChangeRequest.status == FinanceChangeStatus.REJECTED,
+                FinanceChangeRequest.reviewed_at.is_not(None),
+                FinanceChangeRequest.reviewed_at >= recent_cutoff,
+            ),
+        )
+        or 0
+    )
 
-    recently_approved_count = db.scalar(
-        select(func.count())
-        .select_from(FinanceChangeRequest)
-        .where(
-            FinanceChangeRequest.requested_by_id == member.id,
-            FinanceChangeRequest.status == FinanceChangeStatus.APPROVED,
-            FinanceChangeRequest.reviewed_at.is_not(None),
-            FinanceChangeRequest.reviewed_at >= recent_cutoff,
-        ),
-    ) or 0
+    recently_approved_count = (
+        db.scalar(
+            select(func.count())
+            .select_from(FinanceChangeRequest)
+            .where(
+                FinanceChangeRequest.requested_by_id == member.id,
+                FinanceChangeRequest.status == FinanceChangeStatus.APPROVED,
+                FinanceChangeRequest.reviewed_at.is_not(None),
+                FinanceChangeRequest.reviewed_at >= recent_cutoff,
+            ),
+        )
+        or 0
+    )
 
     return FinanceChangeRequestSummary(
         pending_count=pending_count,

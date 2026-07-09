@@ -17,7 +17,10 @@ def normalize_finance_category(value: str) -> str:
     if len(normalized) > 64:
         raise ValueError("Category must be at most 64 characters")
     if not FINANCE_CATEGORY_PATTERN.match(normalized):
-        raise ValueError("Category must start with a letter and use only letters, numbers, and underscores")
+        raise ValueError(
+            "Category must start with a letter and use only "
+            "letters, numbers, and underscores"
+        )
 
     return normalized
 

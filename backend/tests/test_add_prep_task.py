@@ -1,9 +1,12 @@
-from datetime import UTC, datetime
-
 import pytest
+from conftest import (
+    auth_header,
+    create_board_member,
+    register_member,
+    set_member_approved,
+)
 
 from app.models.preptask import PrepTaskGroup, PrepTaskGroupItem
-from conftest import auth_header, create_board_member, register_member, set_member_approved
 
 BOARD_REQUIRED_DETAIL = "Requires board role or higher"
 
@@ -155,7 +158,9 @@ def test_unauthenticated_request_gets_401(client, board_member_headers, db_sessi
     assert response.status_code == 401
 
 
-def test_general_member_gets_403(client, general_member_headers, board_member_headers, db_session):
+def test_general_member_gets_403(
+    client, general_member_headers, board_member_headers, db_session
+):
     _seed_prep_task_group(db_session, group_name="Setup", labels=["Reserve room"])
     event_id = _create_event(client, board_member_headers).json()["id"]
 
@@ -169,7 +174,9 @@ def test_general_member_gets_403(client, general_member_headers, board_member_he
     assert response.json()["detail"] == BOARD_REQUIRED_DETAIL
 
 
-def test_add_prep_task_returns_404_for_missing_event(client, board_member_headers, db_session):
+def test_add_prep_task_returns_404_for_missing_event(
+    client, board_member_headers, db_session
+):
     _seed_prep_task_group(db_session, group_name="Setup", labels=["Reserve room"])
 
     response = client.post(

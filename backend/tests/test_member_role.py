@@ -98,7 +98,9 @@ def test_cannot_promote_pending_member(client, db_session):
     )
 
     assert response.status_code == 400
-    assert response.json()["detail"] == "Only approved members can have their role updated"
+    assert (
+        response.json()["detail"] == "Only approved members can have their role updated"
+    )
 
 
 def test_cannot_assign_treasurer_or_president_role(client, db_session):

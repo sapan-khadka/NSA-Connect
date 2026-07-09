@@ -3,9 +3,6 @@ from datetime import UTC, datetime
 import pytest
 
 from app.lib.semester import semester_date_range
-from app.models.event import Event, EventType
-from app.models.finance_entry import FinanceCategory, FinanceEntry, FinanceEntryType
-from conftest import create_board_member, create_treasurer_member
 
 
 def test_semester_date_range_spring():

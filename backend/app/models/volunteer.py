@@ -1,6 +1,13 @@
-from datetime import datetime
-
-from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    CheckConstraint,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 
 from app.models.base import Base
@@ -42,7 +49,9 @@ class VolunteerSlot(Base):
 class VolunteerSignup(Base):
     __tablename__ = "volunteer_signups"
     __table_args__ = (
-        UniqueConstraint("slot_id", "member_id", name="uq_volunteer_signups_slot_member"),
+        UniqueConstraint(
+            "slot_id", "member_id", name="uq_volunteer_signups_slot_member"
+        ),
     )
 
     id = Column(Integer, primary_key=True, index=True)

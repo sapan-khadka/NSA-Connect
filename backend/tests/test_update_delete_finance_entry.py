@@ -1,5 +1,4 @@
 import pytest
-
 from conftest import (
     auth_header,
     create_president_member,
@@ -56,7 +55,11 @@ def test_treasurer_update_submits_change_request(client, treasurer_member_header
 
     response = client.patch(
         f"/api/v1/finance/{entry['id']}",
-        json={"amount": "80.00", "description": "Updated snacks", "category": "supplies"},
+        json={
+            "amount": "80.00",
+            "description": "Updated snacks",
+            "category": "supplies",
+        },
         headers=treasurer_member_headers,
     )
 

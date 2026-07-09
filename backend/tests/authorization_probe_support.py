@@ -4,15 +4,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from decimal import Decimal
 
+from conftest import create_president_member
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.models.event_suggestion import EventSuggestion, EventSuggestionStatus
 from app.models.member import Member
 from app.models.preptask import PrepTaskGroup, PrepTaskGroupItem
-from conftest import create_president_member
 
 
 @dataclass
@@ -169,9 +168,6 @@ def build_probe_context(
     prep_task_id = prep_task.json()["id"]
     checklist_item_id = prep_task.json()["checklist_items"][0]["id"]
 
-    from app.core.security import hash_password
-    from app.models.member import MemberRole
-
     president = create_president_member(
         db_session,
         email="probe-president@semo.edu",
@@ -273,7 +269,9 @@ def probe_request_kwargs(method: str, path_template: str) -> dict:
             "body": "Probe",
             "category": "general",
         }
-    elif path_template.endswith("/announcements/{announcement_id}") and method == "PATCH":
+    elif (
+        path_template.endswith("/announcements/{announcement_id}") and method == "PATCH"
+    ):
         kwargs["json"] = {"title": "Updated"}
     elif path_template == "/api/v1/events" and method == "POST":
         kwargs["json"] = _event_payload(name="Probe Create Event")
@@ -291,7 +289,10 @@ def probe_request_kwargs(method: str, path_template: str) -> dict:
         }
     elif path_template.endswith("/events/{event_id}/slots") and method == "POST":
         kwargs["json"] = {"task_name": "Probe slot", "max_signup_count": 2}
-    elif path_template.endswith("/events/{event_id}/invited-participants") and method == "POST":
+    elif (
+        path_template.endswith("/events/{event_id}/invited-participants")
+        and method == "POST"
+    ):
         kwargs["json"] = {"member_ids": [1]}
     elif path_template.endswith("/events/{event_id}/event-tasks") and method == "POST":
         kwargs["json"] = {
@@ -299,7 +300,10 @@ def probe_request_kwargs(method: str, path_template: str) -> dict:
             "description": "Probe",
             "due_date": "2030-05-25T12:00:00+00:00",
         }
-    elif path_template.endswith("/event-suggestions/{suggestion_id}/status") and method == "PATCH":
+    elif (
+        path_template.endswith("/event-suggestions/{suggestion_id}/status")
+        and method == "PATCH"
+    ):
         kwargs["json"] = {"status": "noted"}
     elif path_template.endswith("/members/{member_id}/role") and method == "PATCH":
         kwargs["json"] = {"role": "board"}

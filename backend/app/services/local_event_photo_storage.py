@@ -65,7 +65,9 @@ def delete_local_event_photo(public_id: str) -> None:
     if not is_local_event_photo_public_id(public_id):
         return
 
-    filename = Path(public_id.removeprefix(f"{LOCAL_EVENT_PHOTO_PUBLIC_ID_PREFIX}/")).name
+    filename = Path(
+        public_id.removeprefix(f"{LOCAL_EVENT_PHOTO_PUBLIC_ID_PREFIX}/")
+    ).name
     if not filename or filename in {".", ".."}:
         return
 

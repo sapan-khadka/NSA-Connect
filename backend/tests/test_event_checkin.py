@@ -1,6 +1,12 @@
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from conftest import (
+    auth_header,
+    create_board_member,
+    register_member,
+    set_member_approved,
+)
 from sqlalchemy import select
 
 from app.models.event import Event, EventType
@@ -9,14 +15,11 @@ from app.models.event_guest_checkin import EventGuestCheckIn
 from app.models.event_rsvp import EventRsvp, RsvpStatus
 from app.models.member import Member
 from app.services.event_checkin_service import (
-    CheckInResultStatus,
     CheckInWindowClosedError,
     InvalidCheckInTokenError,
     ensure_checkin_token,
-    get_attendance_summary,
     perform_checkin,
 )
-from conftest import auth_header, create_board_member, register_member, set_member_approved
 
 
 def _create_event(db, *, starts_at: datetime, creator_id: int) -> Event:
@@ -77,7 +80,9 @@ def test_board_can_fetch_checkin_qr(client, board_headers, db_session, board_mem
     assert len(body["token"]) >= 32
 
 
-def test_checkin_records_attendance_once(client, member_headers, db_session, board_member):
+def test_checkin_records_attendance_once(
+    client, member_headers, db_session, board_member
+):
     now = datetime.now(UTC)
     event = _create_event(
         db_session,
@@ -102,11 +107,15 @@ def test_checkin_records_attendance_once(client, member_headers, db_session, boa
     assert second.status_code == 200
     assert second.json()["status"] == "already_checked_in"
 
-    rows = db_session.scalars(select(EventCheckIn).where(EventCheckIn.event_id == event.id)).all()
+    rows = db_session.scalars(
+        select(EventCheckIn).where(EventCheckIn.event_id == event.id)
+    ).all()
     assert len(rows) == 1
 
 
-def test_checkin_rejects_invalid_token(client, member_headers, db_session, board_member):
+def test_checkin_rejects_invalid_token(
+    client, member_headers, db_session, board_member
+):
     event = _create_event(
         db_session,
         starts_at=datetime(2030, 6, 1, 18, 0, tzinfo=UTC),
@@ -143,13 +152,17 @@ def test_checkin_rejects_outside_window(db_session, board_member):
         )
 
 
-def test_regenerate_token_invalidates_old_token(client, board_headers, db_session, board_member):
+def test_regenerate_token_invalidates_old_token(
+    client, board_headers, db_session, board_member
+):
     event = _create_event(
         db_session,
         starts_at=datetime(2030, 6, 1, 18, 0, tzinfo=UTC),
         creator_id=board_member.id,
     )
-    old = client.get(f"/api/v1/events/{event.id}/checkin/qr", headers=board_headers).json()["token"]
+    old = client.get(
+        f"/api/v1/events/{event.id}/checkin/qr", headers=board_headers
+    ).json()["token"]
     new = client.post(
         f"/api/v1/events/{event.id}/checkin/regenerate",
         headers=board_headers,
@@ -177,15 +190,21 @@ def test_attendance_summary_buckets(client, board_headers, db_session, board_mem
 
     register_member(client, email="going@semo.edu", student_id="33333333")
     set_member_approved(db_session, email="going@semo.edu")
-    going_member = db_session.scalar(select(Member).where(Member.email == "going@semo.edu"))
+    going_member = db_session.scalar(
+        select(Member).where(Member.email == "going@semo.edu")
+    )
 
     register_member(client, email="noshow@semo.edu", student_id="44444444")
     set_member_approved(db_session, email="noshow@semo.edu")
-    noshow_member = db_session.scalar(select(Member).where(Member.email == "noshow@semo.edu"))
+    noshow_member = db_session.scalar(
+        select(Member).where(Member.email == "noshow@semo.edu")
+    )
 
     register_member(client, email="walkin@semo.edu", student_id="55555555")
     set_member_approved(db_session, email="walkin@semo.edu")
-    walkin_member = db_session.scalar(select(Member).where(Member.email == "walkin@semo.edu"))
+    walkin_member = db_session.scalar(
+        select(Member).where(Member.email == "walkin@semo.edu")
+    )
 
     now = datetime(2029, 6, 1, 18, 30, tzinfo=UTC)
     db_session.add_all(
@@ -331,7 +350,10 @@ def test_guest_checkin_rejects_outside_window(db_session, board_member):
     )
     token = ensure_checkin_token(db_session, event)
 
-    from app.services.event_checkin_service import CheckInWindowClosedError, perform_guest_checkin
+    from app.services.event_checkin_service import (
+        CheckInWindowClosedError,
+        perform_guest_checkin,
+    )
 
     with pytest.raises(CheckInWindowClosedError):
         perform_guest_checkin(
@@ -369,7 +391,9 @@ def test_checkins_list_includes_guests(client, board_headers, db_session, board_
     assert body["checkins"][0]["full_name"] == "Public Guest"
 
 
-def test_attendance_summary_includes_guest_count(client, board_headers, db_session, board_member):
+def test_attendance_summary_includes_guest_count(
+    client, board_headers, db_session, board_member
+):
     now = datetime.now(UTC)
     event = _create_event(
         db_session,

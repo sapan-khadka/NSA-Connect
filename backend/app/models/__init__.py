@@ -1,27 +1,29 @@
+from app.models.announcement import Announcement, AnnouncementCategory
 from app.models.base import Base
 from app.models.constitutional_chunk import ConstitutionalChunk
 from app.models.event import Event, EventType, MeetingVisibility
-from app.models.announcement import Announcement, AnnouncementCategory
 from app.models.event_checkin import EventCheckIn
-from app.models.event_suggestion import EventSuggestion, EventSuggestionStatus
-from app.models.event_volunteer_signup import EventVolunteerSignup
 from app.models.event_feedback import EventFeedback
 from app.models.event_guest_checkin import EventGuestCheckIn, GuestAffiliationType
 from app.models.event_participant_invitation import EventParticipantInvitation
 from app.models.event_photo import EventPhoto
 from app.models.event_rsvp import EventRsvp, RsvpStatus
+from app.models.event_suggestion import EventSuggestion, EventSuggestionStatus
 from app.models.event_task import (
     EventTask,
     EventTaskChecklistItem,
     EventTaskKind,
     EventTaskStatus,
 )
+from app.models.event_volunteer_signup import EventVolunteerSignup
 from app.models.finance_change_request import (
     FinanceChangeAction,
     FinanceChangeRequest,
     FinanceChangeStatus,
 )
 from app.models.finance_entry import FinanceCategory, FinanceEntry, FinanceEntryType
+from app.models.meeting import MeetingAttendance, MeetingRecord
+from app.models.member import Member, MemberPosition, MemberRole, MemberStatus
 from app.models.member_dues import (
     DuesPaymentMethod,
     DuesStatus,
@@ -29,13 +31,11 @@ from app.models.member_dues import (
     SemesterDuesSettings,
 )
 from app.models.notification_sent_log import NotificationSentLog, NotificationType
-from app.models.member import Member, MemberPosition, MemberRole, MemberStatus
 from app.models.password_reset_token import PasswordResetToken
-from app.models.meeting import MeetingAttendance, MeetingRecord
 from app.models.preptask import PrepTaskGroup, PrepTaskGroupItem
 from app.models.reminder import PrepTaskReminder, ReminderType
-from app.models.volunteer import VolunteerSignup, VolunteerSlot
 from app.models.semester_report import ReportRangeType, SemesterReport
+from app.models.volunteer import VolunteerSignup, VolunteerSlot
 
 __all__ = [
     "Announcement",
@@ -73,6 +73,7 @@ __all__ = [
     "NotificationSentLog",
     "NotificationType",
     "Member",
+    "MemberPosition",
     "MemberRole",
     "MemberStatus",
     "PasswordResetToken",

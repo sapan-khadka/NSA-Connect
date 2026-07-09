@@ -7,7 +7,10 @@ from sqlalchemy.orm import Session
 from app.models.event import Event
 from app.models.event_rsvp import EventRsvp, RsvpStatus
 from app.models.member import Member, MemberRole, MemberStatus
-from app.services.event_service import EventNotFoundError, ensure_member_can_access_event
+from app.services.event_service import (
+    EventNotFoundError,
+    ensure_member_can_access_event,
+)
 
 
 class EventNotUpcomingError(Exception):

@@ -1,5 +1,4 @@
 import pytest
-
 from conftest import (
     auth_header,
     create_president_member,
@@ -64,7 +63,9 @@ def test_treasurer_update_creates_pending_request(client, treasurer_headers):
     assert listed.json()["entries"][0]["amount"] == "65.00"
 
 
-def test_president_approves_treasurer_update(client, treasurer_headers, president_headers):
+def test_president_approves_treasurer_update(
+    client, treasurer_headers, president_headers
+):
     entry = _create_entry(client, treasurer_headers)
     submitted = client.patch(
         f"/api/v1/finance/{entry['id']}",
@@ -90,7 +91,9 @@ def test_president_approves_treasurer_update(client, treasurer_headers, presiden
     assert listed.json()["entries"][0]["amount"] == "80.00"
 
 
-def test_treasurer_approves_president_delete(client, treasurer_headers, president_headers):
+def test_treasurer_approves_president_delete(
+    client, treasurer_headers, president_headers
+):
     entry = _create_entry(client, president_headers)
     submitted = client.delete(
         f"/api/v1/finance/{entry['id']}",

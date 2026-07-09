@@ -126,7 +126,11 @@ def format_validation_errors(exc: RequestValidationError) -> dict[str, Any]:
         }
         for error in exc.errors()
     ]
-    detail = errors[0]["message"] if len(errors) == 1 else "Please fix the highlighted fields."
+    detail = (
+        errors[0]["message"]
+        if len(errors) == 1
+        else "Please fix the highlighted fields."
+    )
     return {"detail": detail, "errors": errors}
 
 

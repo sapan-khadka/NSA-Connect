@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_member, require_board
+from app.core.safe_messages import GENERIC_AI_UNAVAILABLE
 from app.models.member import Member
 from app.schemas.ai import (
     ChatRequest,
@@ -29,7 +30,6 @@ from app.services.ai_checklist_service import (
     AIDisabledError,
     generate_event_checklist,
 )
-from app.core.safe_messages import GENERIC_AI_UNAVAILABLE
 from app.services.ai_minutes_service import (
     AIMinutesSummaryError,
     summarize_meeting_minutes,

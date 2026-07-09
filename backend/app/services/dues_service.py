@@ -232,7 +232,9 @@ def get_dues_dashboard(
     responses = [_to_response(record) for record in records]
 
     if status_filter is not None:
-        responses = [response for response in responses if response.status == status_filter]
+        responses = [
+            response for response in responses if response.status == status_filter
+        ]
 
     responses.sort(
         key=lambda item: (
@@ -243,10 +245,16 @@ def get_dues_dashboard(
 
     all_responses = [_to_response(record) for record in records]
     total_expected = sum(
-        (response.amount_owed for response in all_responses if response.status != DuesStatus.EXEMPT),
+        (
+            response.amount_owed
+            for response in all_responses
+            if response.status != DuesStatus.EXEMPT
+        ),
         Decimal("0"),
     )
-    total_collected = sum((response.amount_paid for response in all_responses), Decimal("0"))
+    total_collected = sum(
+        (response.amount_paid for response in all_responses), Decimal("0")
+    )
     total_outstanding = sum(
         (
             max(response.amount_owed - response.amount_paid, Decimal("0"))
@@ -256,10 +264,18 @@ def get_dues_dashboard(
         Decimal("0"),
     )
 
-    paid_count = sum(1 for response in all_responses if response.status == DuesStatus.PAID)
-    unpaid_count = sum(1 for response in all_responses if response.status == DuesStatus.UNPAID)
-    partial_count = sum(1 for response in all_responses if response.status == DuesStatus.PARTIAL)
-    exempt_count = sum(1 for response in all_responses if response.status == DuesStatus.EXEMPT)
+    paid_count = sum(
+        1 for response in all_responses if response.status == DuesStatus.PAID
+    )
+    unpaid_count = sum(
+        1 for response in all_responses if response.status == DuesStatus.UNPAID
+    )
+    partial_count = sum(
+        1 for response in all_responses if response.status == DuesStatus.PARTIAL
+    )
+    exempt_count = sum(
+        1 for response in all_responses if response.status == DuesStatus.EXEMPT
+    )
 
     summary = DuesDashboardSummary(
         semester=semester,
@@ -325,12 +341,20 @@ def update_member_dues(
     if paid_at is not None and Decimal(record.amount_paid) > 0:
         record.paid_at = paid_at
 
-    if Decimal(record.amount_paid) > Decimal(record.amount_owed) and Decimal(record.amount_owed) > 0:
+    if (
+        Decimal(record.amount_paid) > Decimal(record.amount_owed)
+        and Decimal(record.amount_owed) > 0
+    ):
         raise InvalidDuesOperationError("Amount paid cannot exceed amount owed.")
 
     status = MemberDues.compute_status(record.amount_owed, record.amount_paid)
-    if status in {DuesStatus.PAID, DuesStatus.PARTIAL} and record.payment_method is None:
-        raise InvalidDuesOperationError("Payment method is required when recording a payment.")
+    if (
+        status in {DuesStatus.PAID, DuesStatus.PARTIAL}
+        and record.payment_method is None
+    ):
+        raise InvalidDuesOperationError(
+            "Payment method is required when recording a payment."
+        )
 
     _sync_finance_entry(db, record, actor=actor, paid_at=paid_at)
     db.commit()
@@ -352,7 +376,9 @@ def mark_dues_paid(
     owed = Decimal(record.amount_owed)
 
     if owed <= 0:
-        raise InvalidDuesOperationError("This member is exempt from dues for this semester.")
+        raise InvalidDuesOperationError(
+            "This member is exempt from dues for this semester."
+        )
 
     target_paid = amount_paid if amount_paid is not None else owed
     if target_paid <= 0:
