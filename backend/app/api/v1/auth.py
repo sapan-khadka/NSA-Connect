@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.dependencies import get_current_member
+from app.core.password_validation import WeakPasswordError
 from app.core.rate_limit import (
     AppRateLimitExceeded,
     check_login_account_failures,
@@ -22,7 +23,6 @@ from app.schemas.auth import (
     TokenResponse,
 )
 from app.schemas.member import MemberCreateRequest, MemberLoginRequest, MemberResponse
-from app.core.password_validation import WeakPasswordError
 from app.services.member_service import (
     InvalidCredentialsError,
     MemberAlreadyExistsError,
