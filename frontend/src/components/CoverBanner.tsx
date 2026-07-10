@@ -1,4 +1,5 @@
 import nsaCover from "../assets/nsa-cover.PNG";
+import { Card } from "./ui/Card";
 
 type CoverBannerProps = {
   alt?: string;
@@ -10,11 +11,10 @@ export function CoverBanner({
   className = "",
 }: CoverBannerProps) {
   return (
-    <div
-      className={[
-        "overflow-hidden ds-card",
-        className,
-      ].join(" ")}
+    <Card
+      as="div"
+      padding="none"
+      className={["overflow-hidden", className].join(" ")}
     >
       <div className="relative">
         <img
@@ -29,6 +29,6 @@ export function CoverBanner({
           className="pointer-events-none absolute inset-x-0 bottom-0 h-1/4 bg-gradient-to-t from-black/40 to-transparent"
         />
       </div>
-    </div>
+    </Card>
   );
 }

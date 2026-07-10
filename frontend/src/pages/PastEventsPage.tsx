@@ -17,6 +17,7 @@ import {
 } from "../lib/event-budget";
 import { fetchEventBudgetBreakdown, type FinanceEventBudgetSummary } from "../lib/finance-api";
 import { formatCurrency } from "../lib/format-currency";
+import { Card } from "../components/ui/Card";
 import { formatEventDateTime } from "../lib/format-datetime";
 import { isRoleAtLeast } from "../lib/roles";
 
@@ -125,9 +126,10 @@ export function PastEventsPage() {
             const budget = budgetByEventId[event.id];
 
             return (
-              <article
+              <Card
                 key={event.id}
-                className="ds-card p-6"
+                as="article"
+                padding="md"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
@@ -208,7 +210,7 @@ export function PastEventsPage() {
                     {budgetStatusLabel(budget)}
                   </p>
                 ) : null}
-              </article>
+              </Card>
             );
           })}
         </div>

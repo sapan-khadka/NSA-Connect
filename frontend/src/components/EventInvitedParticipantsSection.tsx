@@ -6,6 +6,7 @@ import {
   removeEventInvitedParticipant,
   type EventParticipantInvitation,
 } from "../lib/events-api";
+import { Card } from "./ui/Card";
 
 type EventInvitedParticipantsSectionProps = {
   eventId: number;
@@ -64,7 +65,7 @@ export function EventInvitedParticipantsSection({
   }
 
   return (
-    <section className="ds-card p-6">
+    <Card padding="md">
       <h2 className="text-lg font-light tracking-subhead text-foreground">
         Invited participants
       </h2>
@@ -104,6 +105,6 @@ export function EventInvitedParticipantsSection({
           ))}
         </ul>
       ) : null}
-    </section>
+    </Card>
   );
 }

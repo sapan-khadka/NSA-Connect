@@ -3,6 +3,9 @@ import { CheckCircle2, ChevronRight, Circle } from "lucide-react";
 import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
 
 import { AppIcon } from "../components/ui/AppIcon";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
+import { inputFieldClassName } from "../components/ui/Input";
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage } from "../lib/auth-api";
 import {
@@ -16,7 +19,6 @@ import {
 type PageMode = "choose" | "guest-form" | "member-result" | "guest-result";
 
 const pageShellClass = "mx-auto max-w-lg px-4 py-8 sm:px-0 sm:py-10";
-const cardClass = "ds-card p-5 sm:p-8";
 const choiceButtonClass =
   "flex w-full min-h-11 items-center justify-between rounded-xl border border-gray-200 px-4 py-3 text-left transition-colors hover:border-accent sm:px-5 sm:py-4";
 
@@ -123,7 +125,7 @@ export function EventCheckInPage() {
 
     return (
       <div className={pageShellClass}>
-        <section className={`${cardClass} text-center`}>
+        <Card padding="none" className="p-5 sm:p-8 text-center">
           <div
             className={[
               "flex justify-center",
@@ -149,7 +151,7 @@ export function EventCheckInPage() {
               Checked in at {new Date(memberResult.checked_in_at).toLocaleString()}
             </p>
           ) : null}
-        </section>
+        </Card>
 
         <div className="mt-6 text-center">
           <Link to={`/events/${numericEventId}`} className="ds-link">
@@ -163,7 +165,7 @@ export function EventCheckInPage() {
   if (guestResult) {
     return (
       <div className={pageShellClass}>
-        <section className={`${cardClass} text-center`}>
+        <Card padding="none" className="p-5 sm:p-8 text-center">
           <div className="flex justify-center text-accent" aria-hidden>
             <AppIcon icon={CheckCircle2} size="xl" className="text-current" />
           </div>
@@ -177,7 +179,7 @@ export function EventCheckInPage() {
           <p className="mt-2 text-xs text-label">
             Checked in at {new Date(guestResult.checked_in_at).toLocaleString()}
           </p>
-        </section>
+        </Card>
       </div>
     );
   }
@@ -216,7 +218,7 @@ export function EventCheckInPage() {
   if (mode === "guest-form") {
     return (
       <div className={pageShellClass}>
-        <section className={cardClass}>
+        <Card padding="none" className="p-5 sm:p-8">
           <h1 className="text-2xl font-light tracking-headline text-foreground">
             Guest check-in
           </h1>
@@ -244,7 +246,7 @@ export function EventCheckInPage() {
                 onChange={(event) => setGuestName(event.target.value)}
                 required
                 autoFocus
-                className="ds-field-input"
+                className={`${inputFieldClassName} mt-1`}
                 placeholder="Your full name"
               />
             </label>
@@ -262,7 +264,7 @@ export function EventCheckInPage() {
                     setRelatedMemberName("");
                   }
                 }}
-                className="ds-field-input"
+                className={`${inputFieldClassName} mt-1`}
               >
                 <option value="">Skip — no affiliation</option>
                 <option value="guest_of_member">Guest of a member</option>
@@ -279,40 +281,44 @@ export function EventCheckInPage() {
                   type="text"
                   value={relatedMemberName}
                   onChange={(event) => setRelatedMemberName(event.target.value)}
-                  className="ds-field-input"
+                  className={`${inputFieldClassName} mt-1`}
                   placeholder="Which member invited you?"
                 />
               </label>
             ) : null}
 
             <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:flex-wrap">
-              <button
+              <Button
                 type="submit"
                 disabled={submitting}
-                className="ds-btn-accent w-full sm:w-auto"
+                loading={submitting}
+                size="lg"
+                className="w-full sm:w-auto"
               >
-                {submitting ? "Checking in…" : "Check in"}
-              </button>
-              <button
+                Check in
+              </Button>
+              <Button
                 type="button"
+                variant="outline"
                 onClick={() => {
                   setMode("choose");
                   setErrorMessage(null);
                 }}
-                className="ds-btn-outline w-full sm:w-auto"
+                size="lg"
+                className="w-full sm:w-auto"
               >
                 Back
-              </button>
+              </Button>
             </div>
           </form>
-        </section>
+        </Card>
       </div>
     );
   }
 
   return (
     <div className={pageShellClass}>
-      <section className={cardClass}>
+      <Card padding="none" className="p-5 sm:p-8">
         <h1 className="text-2xl font-light tracking-headline text-foreground">
           Event check-in
         </h1>
@@ -353,7 +359,7 @@ export function EventCheckInPage() {
             <AppIcon icon={ChevronRight} size="sm" className="text-label" />
           </button>
         </div>
-      </section>
+      </Card>
     </div>
   );
 }

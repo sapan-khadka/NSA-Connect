@@ -8,6 +8,8 @@ import {
   postEventDiscussion,
   type DiscussionMessage,
 } from "../lib/discussion-api";
+import { Button } from "./ui/Button";
+import { Card } from "./ui/Card";
 import { formatRelativeTimestamp } from "../lib/format-datetime";
 
 const POLL_INTERVAL_MS = 20_000;
@@ -172,8 +174,9 @@ export function DiscussionFeed({
   }
 
   return (
-    <section
-      className={["ds-card flex flex-col overflow-hidden p-0", className]
+    <Card
+      padding="none"
+      className={["flex flex-col overflow-hidden", className]
         .filter(Boolean)
         .join(" ")}
       aria-label={title}
@@ -249,15 +252,15 @@ export function DiscussionFeed({
           <p className="text-xs text-label">
             {draft.trim().length}/{MAX_CONTENT_LENGTH}
           </p>
-          <button
+          <Button
             type="submit"
             disabled={posting || !draft.trim()}
-            className="min-h-11 rounded-full bg-primary px-4 py-2 text-sm font-light text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+            loading={posting}
           >
-            {posting ? "Posting…" : "Post"}
-          </button>
+            Post
+          </Button>
         </div>
       </form>
-    </section>
+    </Card>
   );
 }

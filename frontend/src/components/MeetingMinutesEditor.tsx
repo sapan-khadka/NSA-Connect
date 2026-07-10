@@ -1,12 +1,13 @@
 import { useState, type FormEvent } from "react";
 
 import { MeetingMinutesSummary } from "./MeetingMinutesSummary";
+import { Badge } from "./ui/Badge";
+import { Button } from "./ui/Button";
+import { Card } from "./ui/Card";
+import { inputFieldClassName } from "./ui/Input";
 import { getApiErrorMessage } from "../lib/auth-api";
 import type { MeetingMinutes } from "../lib/meetings-api";
 import type { SummarizeMinutesResponse } from "../lib/ai-api";
-
-const inputClassName =
-  "mt-3 w-full rounded-md border border-gray-300 px-3 py-2 text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
 
 type MeetingMinutesEditorProps = {
   eventName: string;
@@ -24,26 +25,14 @@ function MinutesStatusChip({
   draftSaved: boolean;
 }) {
   if (published) {
-    return (
-      <span className="rounded-full bg-mint/40 px-2.5 py-0.5 text-xs font-medium text-primary">
-        Published
-      </span>
-    );
+    return <Badge variant="success">Published</Badge>;
   }
 
   if (draftSaved) {
-    return (
-      <span className="rounded-full bg-surface-muted px-2.5 py-0.5 text-xs text-foreground">
-        Draft saved
-      </span>
-    );
+    return <Badge variant="neutral">Draft saved</Badge>;
   }
 
-  return (
-    <span className="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-0.5 text-xs font-medium text-label">
-      Not published
-    </span>
-  );
+  return <Badge variant="neutral">Not published</Badge>;
 }
 
 export function MeetingMinutesEditor({
@@ -114,7 +103,7 @@ export function MeetingMinutesEditor({
   }
 
   return (
-    <section aria-label="Minutes" className="ds-card p-6">
+    <Card aria-label="Minutes" padding="md">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-light tracking-subhead text-foreground">Minutes</h2>
         <MinutesStatusChip
@@ -164,7 +153,7 @@ export function MeetingMinutesEditor({
                 setSaveSuccess(null);
               }}
               placeholder="Agenda items, discussion points, votes, and action items…"
-              className={inputClassName}
+              className={`${inputFieldClassName} mt-3`}
             />
             {notesError ? (
               <p className="mt-1 ds-field-error">{notesError}</p>
@@ -179,18 +168,17 @@ export function MeetingMinutesEditor({
             >
               {isSaving ? "Saving…" : "Save draft"}
             </button>
-            <button
+            <Button
               type="button"
               disabled={isSaving || isSummarizing}
               onClick={() => void handleSummarize()}
-              className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSummarizing
                 ? "Publishing…"
                 : hasPublishedMinutes
                   ? "Re-publish"
                   : "Publish"}
-            </button>
+            </Button>
           </div>
 
           {hasDraft &&
@@ -220,6 +208,6 @@ export function MeetingMinutesEditor({
           ) : null}
         </>
       )}
-    </section>
+    </Card>
   );
 }

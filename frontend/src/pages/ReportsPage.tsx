@@ -10,6 +10,7 @@ import {
   type ReportGenerateRequest,
   type ReportListItem,
 } from "../lib/reports-api";
+import { Card } from "../components/ui/Card";
 import {
   formatSemesterLabel,
   getRecentSemesterOptions,
@@ -85,7 +86,7 @@ export function ReportsPage() {
 
   return (
     <div className="space-y-8">
-      <section className="ds-card p-6 sm:p-8">
+      <Card padding="none" className="p-6 sm:p-8">
         <h1 className="text-3xl font-light tracking-headline text-foreground">
           Reports
         </h1>
@@ -93,10 +94,10 @@ export function ReportsPage() {
           End-of-semester summaries for sharing with advisors and incoming board
           members. All members can view generated reports.
         </p>
-      </section>
+      </Card>
 
       {canGenerate ? (
-        <section className="ds-card p-6 sm:p-8">
+        <Card padding="none" className="p-6 sm:p-8">
           <h2 className="text-lg font-medium text-foreground">Generate report</h2>
           <p className="mt-1 text-sm text-label">
             Board members can create a snapshot report for a semester or custom
@@ -202,10 +203,10 @@ export function ReportsPage() {
               {isGenerating ? "Generating…" : "Generate report"}
             </button>
           </form>
-        </section>
+        </Card>
       ) : null}
 
-      <section className="ds-card p-6 sm:p-8">
+      <Card padding="none" className="p-6 sm:p-8">
         <h2 className="text-lg font-medium text-foreground">Past reports</h2>
 
         {isLoading ? (
@@ -238,7 +239,7 @@ export function ReportsPage() {
             ))}
           </ul>
         )}
-      </section>
+      </Card>
     </div>
   );
 }

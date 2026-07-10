@@ -11,6 +11,7 @@ import {
   type EventTaskStatus,
 } from "../lib/event-tasks-api";
 import { formatEventDateTime } from "../lib/format-datetime";
+import { Card } from "./ui/Card";
 import {
   applyChecklistItemToggle,
   replaceEventTaskInList,
@@ -252,7 +253,7 @@ export function MyEventTasks() {
   }
 
   return (
-    <section className="ds-card p-6">
+    <Card padding="md">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-light tracking-subhead text-foreground">My tasks</h2>
@@ -300,6 +301,6 @@ export function MyEventTasks() {
           )}
         </ul>
       )}
-    </section>
+    </Card>
   );
 }

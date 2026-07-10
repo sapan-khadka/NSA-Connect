@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { getApiErrorMessage } from "../lib/auth-api";
 import { patchEvent, type EventDetailResponse } from "../lib/events-api";
+import { Card } from "./ui/Card";
 
 type EventPhotoArchiveSettingProps = {
   event: EventDetailResponse;
@@ -32,7 +33,7 @@ export function EventPhotoArchiveSetting({
   }
 
   return (
-    <section className="ds-card p-4 sm:p-6">
+    <Card padding="none" className="p-4 sm:p-6">
       <label className="flex cursor-pointer items-start gap-3">
         <input
           type="checkbox"
@@ -52,6 +53,6 @@ export function EventPhotoArchiveSetting({
           {error}
         </p>
       ) : null}
-    </section>
+    </Card>
   );
 }

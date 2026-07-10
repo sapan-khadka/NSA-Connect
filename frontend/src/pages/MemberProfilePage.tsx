@@ -11,6 +11,8 @@ import { PositionSelect } from "../components/PositionSelect";
 import { RoleBadge } from "../components/RoleBadge";
 import { RolePromotionSelect } from "../components/RolePromotionSelect";
 import { StatusBadge } from "../components/StatusBadge";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage, type MemberResponse } from "../lib/auth-api";
 import {
@@ -159,7 +161,7 @@ export function MemberProfilePage() {
 
   return (
     <div className="space-y-6">
-      <section className="ds-card p-8">
+      <Card padding="lg">
         <Link to="/members" className="text-sm text-accent hover:underline">
           ← Back to directory
         </Link>
@@ -192,17 +194,25 @@ export function MemberProfilePage() {
             </button>
           ) : null}
         </div>
-      </section>
+      </Card>
 
       {error ? <div className="ds-alert-banner">{error}</div> : null}
       {successMessage ? (
-        <div className="rounded-lg ds-card px-4 py-3 text-sm text-primary">
+        <Card
+          as="div"
+          padding="none"
+          className="rounded-lg px-4 py-3 text-sm text-primary"
+        >
           {successMessage}
-        </div>
+        </Card>
       ) : null}
 
       {isEditing && canEdit ? (
-        <form onSubmit={(event) => void handleSubmit(event)} className="ds-card p-6">
+        <Card
+          as="form"
+          onSubmit={(event) => void handleSubmit(event)}
+          padding="md"
+        >
           <h2 className="text-lg font-light tracking-subhead text-foreground">
             {isSelf ? "Edit your profile" : "Edit member profile"}
           </h2>
@@ -215,27 +225,27 @@ export function MemberProfilePage() {
             />
           </div>
           <div className="mt-8 flex justify-end gap-3">
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={() => {
                 setValues(memberToProfileFormValues(profile));
                 setIsEditing(false);
               }}
-              className="rounded-full border border-gray-300 px-4 py-2 text-sm"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={isSubmitting}
-              className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-white disabled:opacity-60"
+              loading={isSubmitting}
             >
-              {isSubmitting ? "Saving…" : "Save changes"}
-            </button>
+              Save changes
+            </Button>
           </div>
-        </form>
+        </Card>
       ) : (
-        <section className="ds-card p-6">
+        <Card padding="md">
           {(profile.talents ?? []).length > 0 ? (
             <div>
               <h2 className="text-base font-medium text-foreground">Talents</h2>
@@ -281,11 +291,11 @@ export function MemberProfilePage() {
               <p className="mt-2 text-sm text-foreground">{profile.student_id}</p>
             </div>
           ) : null}
-        </section>
+        </Card>
       )}
 
       {isPresident && currentMember && canViewMemberDirectory(currentMember.role) ? (
-        <section className="ds-card p-6">
+        <Card padding="md">
           <h2 className="text-lg font-light tracking-subhead text-foreground">
             Membership admin
           </h2>
@@ -321,7 +331,7 @@ export function MemberProfilePage() {
               )}
             </div>
           </div>
-        </section>
+        </Card>
       ) : null}
     </div>
   );

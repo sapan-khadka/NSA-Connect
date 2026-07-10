@@ -6,6 +6,7 @@ import { PageHeader } from "../components/PageHeader";
 import { getApiErrorMessage } from "../lib/auth-api";
 import { fetchMeetings, type MeetingSummary } from "../lib/meetings-api";
 import { formatEventDateTime } from "../lib/format-datetime";
+import { Card } from "../components/ui/Card";
 
 function groupMeetings(meetings: MeetingSummary[]) {
   const upcoming = meetings.filter((meeting) => !meeting.is_past);
@@ -31,9 +32,10 @@ function MeetingListSection({
       </h2>
       <div className="grid gap-4">
         {meetings.map((meeting) => (
-          <article
+          <Card
             key={meeting.event_id}
-            className="ds-card p-6"
+            as="article"
+            padding="md"
           >
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0 space-y-2">
@@ -60,7 +62,7 @@ function MeetingListSection({
                 View meeting
               </Link>
             </div>
-          </article>
+          </Card>
         ))}
       </div>
     </section>

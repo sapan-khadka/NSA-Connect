@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from "react";
 
 import { getApiErrorMessage } from "../lib/auth-api";
+import { Button } from "./ui/Button";
+import { Card } from "./ui/Card";
+import { inputFieldClassName } from "./ui/Input";
 import {
   countChecklistTasks,
   generateEventChecklist,
@@ -28,8 +31,7 @@ type CreateEventFormProps = {
   onCreated: (event: EventResponse) => void;
 };
 
-const inputClassName =
-  "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
+const inputClassName = `${inputFieldClassName} mt-1`;
 
 export function CreateEventForm({ onCreated }: CreateEventFormProps) {
   const [values, setValues] = useState<CreateEventFormValues>(
@@ -132,8 +134,9 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
   const draftTaskCount = countChecklistTasks(draftChecklist);
 
   return (
-    <section
-      className="ds-card shadow-card p-4"
+    <Card
+      padding="sm"
+      className="shadow-card"
       data-testid="create-event-card"
       aria-labelledby="create-event-heading"
     >
@@ -357,7 +360,7 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
             </div>
           </div>
 
-          <div className="ds-card-nested p-4">
+          <Card nested padding="sm">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-foreground">Prep checklist</h3>
@@ -394,7 +397,7 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
                 />
               </div>
             ) : null}
-          </div>
+          </Card>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             {draftTaskCount > 0 ? (
@@ -404,10 +407,9 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
             ) : (
               <span />
             )}
-            <button
+            <Button
               type="submit"
               disabled={isSubmitting || isGeneratingChecklist}
-              className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting
                 ? draftTaskCount > 0
@@ -416,10 +418,10 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
                 : draftTaskCount > 0
                   ? "Create event with prep tasks"
                   : "Create event"}
-            </button>
+            </Button>
           </div>
         </form>
       ) : null}
-    </section>
+    </Card>
   );
 }

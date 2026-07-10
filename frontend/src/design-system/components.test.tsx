@@ -28,8 +28,7 @@ describe("design-system/components", () => {
 
   it("renders Card with default surface", () => {
     const { container } = render(<Card>Body</Card>);
-    expect(container.firstChild).toHaveClass("rounded-card");
-    expect(container.firstChild).toHaveClass("bg-surface-card");
+    expect(container.firstChild).toHaveClass("ds-card");
   });
 
   it("renders Input error for assistive tech", () => {

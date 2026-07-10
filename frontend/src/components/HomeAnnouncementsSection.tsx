@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { ArrowLink } from "./ui/ArrowLink";
+import { Badge } from "./ui/Badge";
 import { HomeCard } from "./ui/HomeCard";
 import { IconBadge } from "./ui/IconBadge";
 import {
@@ -116,9 +117,9 @@ export function HomeAnnouncementsSection({
               {featured.title}
             </p>
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-badge-teal-bg px-2 py-1 text-sm font-semibold text-badge-teal">
+              <Badge variant="primary" className="px-2 py-1 text-sm">
                 {ANNOUNCEMENT_CATEGORY_LABELS[featured.category]}
-              </span>
+              </Badge>
               <span className="text-sm text-label">
                 {formatEventDateTime(featured.created_at)}
               </span>

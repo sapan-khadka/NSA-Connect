@@ -1,22 +1,25 @@
-const STATUS_STYLES: Record<string, string> = {
-  approved: "bg-mint text-primary",
-  pending: "bg-surface-muted text-label",
-  rejected: "bg-primary/10 text-primary",
+import { Badge, type BadgeVariant } from "./ui/Badge";
+
+const STATUS_VARIANT: Record<string, BadgeVariant> = {
+  approved: "success",
+  pending: "neutral",
+  rejected: "danger",
 };
 
 type StatusBadgeProps = {
   status: string;
 };
 
+/**
+ * Member/account status chip built on the design-system Badge.
+ */
 export function StatusBadge({ status }: StatusBadgeProps) {
-  const style =
-    STATUS_STYLES[status] ?? "bg-surface-muted text-foreground";
-
   return (
-    <span
-      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs capitalize ${style}`}
+    <Badge
+      variant={STATUS_VARIANT[status] ?? "neutral"}
+      className="capitalize"
     >
       {status}
-    </span>
+    </Badge>
   );
 }

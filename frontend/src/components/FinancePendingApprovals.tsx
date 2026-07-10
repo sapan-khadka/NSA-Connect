@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { Button } from "./ui/Button";
+import { Card } from "./ui/Card";
 import { getApiErrorMessage } from "../lib/auth-api";
 import {
   approveFinanceChangeRequest,
@@ -72,14 +74,14 @@ export function FinancePendingApprovals({
 
   if (isLoading) {
     return (
-      <section className="ds-card p-6">
+      <Card padding="md">
         <p className="text-sm text-label">Loading pending approvals…</p>
-      </section>
+      </Card>
     );
   }
 
   return (
-    <section className="ds-card p-6">
+    <Card padding="md">
       <h2 className="text-base font-medium text-foreground">Pending finance approvals</h2>
 
       {error ? <p className="mt-3 ds-field-error">{error}</p> : null}
@@ -95,9 +97,12 @@ export function FinancePendingApprovals({
                 ? formatCurrency(request.entry_amount)
                 : "—";
             return (
-              <li
+              <Card
                 key={request.id}
-                className="rounded-md ds-card-nested p-4"
+                as="li"
+                nested
+                padding="sm"
+                className="rounded-md"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
@@ -118,14 +123,14 @@ export function FinancePendingApprovals({
                     ) : null}
                   </div>
                   <div className="flex gap-2">
-                    <button
+                    <Button
                       type="button"
                       disabled={isBusy}
                       onClick={() => void handleApprove(request.id)}
-                      className="rounded-full bg-primary px-3 py-1.5 text-sm font-medium text-white transition hover:bg-primary-hover disabled:opacity-60"
+                      size="sm"
                     >
                       Approve
-                    </button>
+                    </Button>
                     <button
                       type="button"
                       disabled={isBusy}
@@ -136,11 +141,11 @@ export function FinancePendingApprovals({
                     </button>
                   </div>
                 </div>
-              </li>
+              </Card>
             );
           })}
         </ul>
       )}
-    </section>
+    </Card>
   );
 }

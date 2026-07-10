@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
+import { Input } from "../components/ui/Input";
 import {
   getApiErrorMessage,
   requestPasswordReset,
@@ -9,9 +12,6 @@ import {
   SEMO_EMAIL_DOMAIN,
   validateSemoEmail,
 } from "../lib/validation";
-
-const inputClassName =
-  "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -57,15 +57,23 @@ export function ForgotPasswordPage() {
         </p>
       </div>
 
-      <form
+      <Card
+        as="form"
         onSubmit={handleSubmit}
         noValidate
-        className="mt-8 space-y-5 ds-card p-6"
+        padding="md"
+        className="mt-8 space-y-5"
       >
         {successMessage && (
-          <p role="status" className="ds-card-nested px-4 py-3 text-sm text-foreground">
+          <Card
+            as="p"
+            nested
+            padding="none"
+            role="status"
+            className="px-4 py-3 text-sm text-foreground"
+          >
             {successMessage}
-          </p>
+          </Card>
         )}
 
         {serverError && (
@@ -74,42 +82,32 @@ export function ForgotPasswordPage() {
           </p>
         )}
 
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-foreground">
-            Email
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(event) => {
-              setEmail(event.target.value);
-              setFieldError(undefined);
-              setServerError(null);
-            }}
-            onBlur={() => setFieldError(validateSemoEmail(email) ?? undefined)}
-            aria-invalid={fieldError ? true : undefined}
-            aria-describedby={fieldError ? "email-error" : undefined}
-            className={inputClassName}
-            placeholder="you@semo.edu"
-          />
-          {fieldError && (
-            <p id="email-error" className="mt-1 ds-field-error">
-              {fieldError}
-            </p>
-          )}
-        </div>
+        <Input
+          id="email"
+          name="email"
+          label="Email"
+          type="email"
+          autoComplete="email"
+          value={email}
+          onChange={(event) => {
+            setEmail(event.target.value);
+            setFieldError(undefined);
+            setServerError(null);
+          }}
+          onBlur={() => setFieldError(validateSemoEmail(email) ?? undefined)}
+          error={fieldError}
+          placeholder="you@semo.edu"
+        />
 
-        <button
+        <Button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded-full bg-primary px-4 py-2 font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+          loading={isSubmitting}
+          className="w-full"
         >
-          {isSubmitting ? "Sending..." : "Send reset link"}
-        </button>
-      </form>
+          Send reset link
+        </Button>
+      </Card>
 
       <p className="mt-4 text-center text-sm text-label">
         Remember your password?{" "}

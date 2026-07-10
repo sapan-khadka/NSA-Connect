@@ -1,5 +1,5 @@
 import { Bell, Menu, Search, X } from "lucide-react";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/useAuth";
@@ -41,7 +41,7 @@ export function AppTopBar({
           type="button"
           aria-label="Open navigation"
           onClick={onOpenSidebar}
-          className="ds-icon-btn h-10 w-10 shrink-0 rounded-xl text-label hover:bg-surface-muted hover:text-foreground lg:hidden"
+          className="ds-icon-btn h-10 w-10 shrink-0 rounded-xl text-label transition duration-200 hover:bg-surface-muted hover:text-foreground lg:hidden"
         >
           <AppIcon icon={Menu} size="md" className="text-current" />
         </button>
@@ -76,7 +76,7 @@ export function AppTopBar({
         <Link
           to="/announcements"
           aria-label="Notifications"
-          className="relative ds-icon-btn h-10 w-10 rounded-xl text-label hover:bg-surface-muted hover:text-foreground"
+          className="relative ds-icon-btn h-10 w-10 rounded-xl text-label transition duration-200 hover:bg-surface-muted hover:text-foreground"
         >
           <AppIcon icon={Bell} size="sm" className="text-current" />
         </Link>
@@ -99,30 +99,74 @@ type MobileSidebarDrawerProps = {
   children: ReactNode;
 };
 
+/**
+ * Tablet/mobile collapsible sidebar drawer with backdrop + slide transition.
+ */
 export function MobileSidebarDrawer({
   open,
   onClose,
   children,
 }: MobileSidebarDrawerProps) {
-  if (!open) {
+  const [rendered, setRendered] = useState(open);
+  const [visible, setVisible] = useState(open);
+
+  useEffect(() => {
+    if (open) {
+      setRendered(true);
+      const frame = window.requestAnimationFrame(() => setVisible(true));
+      return () => window.cancelAnimationFrame(frame);
+    }
+
+    setVisible(false);
+    const timeout = window.setTimeout(() => setRendered(false), 280);
+    return () => window.clearTimeout(timeout);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [open, onClose]);
+
+  if (!rendered) {
     return null;
   }
 
   return (
-    <div className="fixed inset-0 z-50 lg:hidden">
+    <div className="fixed inset-0 z-50 lg:hidden" aria-hidden={!visible}>
       <button
         type="button"
         aria-label="Close navigation"
-        className="absolute inset-0 bg-black/40"
+        className={[
+          "absolute inset-0 bg-black/40 transition-opacity duration-300 ease-out",
+          visible ? "opacity-100" : "opacity-0",
+        ].join(" ")}
         onClick={onClose}
       />
-      <div className="absolute inset-y-0 left-0 flex w-[min(100%,var(--sidebar-width))] flex-col bg-white shadow-card">
+      <div
+        className={[
+          "absolute inset-y-0 left-0 flex w-[min(100%,var(--sidebar-width))] flex-col bg-white shadow-card transition-transform duration-300 ease-out",
+          visible ? "translate-x-0" : "-translate-x-full",
+        ].join(" ")}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Navigation"
+      >
         <div className="flex items-center justify-end px-3 pt-3">
           <button
             type="button"
             aria-label="Close navigation"
             onClick={onClose}
-            className="ds-icon-btn h-9 w-9 rounded-xl text-label hover:bg-surface-muted"
+            className="ds-icon-btn h-9 w-9 rounded-xl text-label transition duration-200 hover:bg-surface-muted"
           >
             <AppIcon icon={X} size="sm" className="text-current" />
           </button>

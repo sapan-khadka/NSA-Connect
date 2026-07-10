@@ -428,23 +428,8 @@
     @apply mt-1 w-full rounded-lg border border-gray-200 bg-surface-card px-3 py-3 text-base text-foreground transition duration-200 placeholder:text-label focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:py-2 sm:text-sm;
   }
 
-  .btn-primary {
-    @apply inline-flex min-h-11 items-center justify-center rounded-pill bg-primary px-5 py-2.5 text-sm text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60;
-    font-weight: 500;
-  }
-
   .ds-chip {
     @apply inline-flex min-h-11 items-center rounded-full px-3.5 py-2 text-sm font-medium transition-colors;
-  }
-
-  .ds-btn-accent {
-    @apply inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-5 py-2.5 text-sm text-white transition-colors disabled:cursor-not-allowed disabled:opacity-60;
-    font-weight: 500;
-  }
-
-  .ds-btn-outline {
-    @apply inline-flex min-h-11 items-center justify-center rounded-full border border-gray-200 px-5 py-2.5 text-sm text-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-60;
-    font-weight: 400;
   }
 
   .ds-link {

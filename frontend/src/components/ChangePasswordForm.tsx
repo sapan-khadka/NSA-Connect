@@ -1,15 +1,15 @@
 import { useState, type FormEvent } from "react";
 
 import { useAuth } from "../context/useAuth";
+import { Button } from "./ui/Button";
+import { Card } from "./ui/Card";
+import { Input } from "./ui/Input";
 import { getApiErrorMessage } from "../lib/auth-api";
 import { changeMyPassword } from "../lib/members-api";
 import { getPasswordHint, validatePasswordStrength } from "../lib/password-validation";
 import {
   validateLoginPassword,
 } from "../lib/validation";
-
-const inputClassName =
-  "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
 
 type PasswordFormErrors = {
   current_password?: string;
@@ -91,9 +91,10 @@ export function ChangePasswordForm({ email, fullName }: ChangePasswordFormProps)
   }
 
   return (
-    <form
+    <Card
+      as="form"
       onSubmit={(event) => void handleSubmit(event)}
-      className="ds-card p-6"
+      padding="md"
     >
       <h2 className="text-lg font-light tracking-subhead text-foreground">Change password</h2>
       <p className="mt-1 text-sm text-label">
@@ -108,22 +109,21 @@ export function ChangePasswordForm({ email, fullName }: ChangePasswordFormProps)
       ) : null}
 
       {successMessage ? (
-        <div className="mt-4 ds-card px-4 py-3 text-sm text-primary">
+        <Card
+          as="div"
+          padding="none"
+          className="mt-4 px-4 py-3 text-sm text-primary"
+        >
           {successMessage}
-        </div>
+        </Card>
       ) : null}
 
       <div className="mt-6 grid gap-6 md:grid-cols-2">
         <div className="md:col-span-2">
-          <label
-            htmlFor="current_password"
-            className="block text-sm font-medium text-foreground"
-          >
-            Current password
-          </label>
-          <input
+          <Input
             id="current_password"
             name="current_password"
+            label="Current password"
             type="password"
             autoComplete="current-password"
             value={currentPassword}
@@ -136,88 +136,61 @@ export function ChangePasswordForm({ email, fullName }: ChangePasswordFormProps)
               setServerError(null);
               setSuccessMessage(null);
             }}
-            className={inputClassName}
+            error={fieldErrors.current_password}
           />
-          {fieldErrors.current_password ? (
-            <p className="mt-1 ds-field-error">
-              {fieldErrors.current_password}
-            </p>
-          ) : null}
         </div>
 
-        <div>
-          <label
-            htmlFor="new_password"
-            className="block text-sm font-medium text-foreground"
-          >
-            New password
-          </label>
-          <input
-            id="new_password"
-            name="new_password"
-            type="password"
-            autoComplete="new-password"
-            value={newPassword}
-            onChange={(event) => {
-              setNewPassword(event.target.value);
-              setFieldErrors((current) => ({
-                ...current,
-                new_password: undefined,
-              }));
-              setServerError(null);
-              setSuccessMessage(null);
-            }}
-            className={inputClassName}
-          />
-          <p className="mt-1 text-xs text-label">
-            {newPassword ? `${newPassword.length} characters` : getPasswordHint()}
-          </p>
-          {fieldErrors.new_password ? (
-            <p className="mt-1 ds-field-error">{fieldErrors.new_password}</p>
-          ) : null}
-        </div>
+        <Input
+          id="new_password"
+          name="new_password"
+          label="New password"
+          type="password"
+          autoComplete="new-password"
+          value={newPassword}
+          onChange={(event) => {
+            setNewPassword(event.target.value);
+            setFieldErrors((current) => ({
+              ...current,
+              new_password: undefined,
+            }));
+            setServerError(null);
+            setSuccessMessage(null);
+          }}
+          error={fieldErrors.new_password}
+          hint={
+            newPassword ? `${newPassword.length} characters` : getPasswordHint()
+          }
+        />
 
-        <div>
-          <label
-            htmlFor="confirm_password"
-            className="block text-sm font-medium text-foreground"
-          >
-            Confirm new password
-          </label>
-          <input
-            id="confirm_password"
-            name="confirm_password"
-            type="password"
-            autoComplete="new-password"
-            value={confirmPassword}
-            onChange={(event) => {
-              setConfirmPassword(event.target.value);
-              setFieldErrors((current) => ({
-                ...current,
-                confirm_password: undefined,
-              }));
-              setServerError(null);
-              setSuccessMessage(null);
-            }}
-            className={inputClassName}
-          />
-          {fieldErrors.confirm_password ? (
-            <p className="mt-1 ds-field-error">
-              {fieldErrors.confirm_password}
-            </p>
-          ) : null}
-        </div>
+        <Input
+          id="confirm_password"
+          name="confirm_password"
+          label="Confirm new password"
+          type="password"
+          autoComplete="new-password"
+          value={confirmPassword}
+          onChange={(event) => {
+            setConfirmPassword(event.target.value);
+            setFieldErrors((current) => ({
+              ...current,
+              confirm_password: undefined,
+            }));
+            setServerError(null);
+            setSuccessMessage(null);
+          }}
+          error={fieldErrors.confirm_password}
+        />
       </div>
 
       <div className="mt-8 flex justify-end">
-        <button
+        <Button
           type="submit"
           disabled={isSubmitting}
-          className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+          loading={isSubmitting}
         >
-          {isSubmitting ? "Updating…" : "Update password"}
-        </button>
+          Update password
+        </Button>
       </div>
-    </form>
+    </Card>
   );
 }

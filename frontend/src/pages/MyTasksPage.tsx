@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 import { MyEventTasks } from "../components/MyEventTasks";
 import { useAuth } from "../context/useAuth";
+import { Card } from "../components/ui/Card";
 import { formatEventDateTime } from "../lib/format-datetime";
 import {
   fetchMyVolunteerSignups,
@@ -36,7 +37,7 @@ function TaskList({
   tone,
 }: TaskListProps) {
   return (
-    <section className="ds-card p-6">
+    <Card padding="md">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-light tracking-subhead text-foreground">{title}</h2>
@@ -61,10 +62,13 @@ function TaskList({
       ) : (
         <ul className="mt-6 space-y-3">
           {signups.map((signup) => (
-            <li
-              key={signup.id}
-                className="rounded-md ds-card-nested px-4 py-4"
-            >
+              <Card
+                key={signup.id}
+                as="li"
+                nested
+                padding="none"
+                className="rounded-md px-4 py-4"
+              >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="font-medium text-foreground">{signup.task_name}</p>
@@ -95,11 +99,11 @@ function TaskList({
                   </dd>
                 </div>
               </dl>
-            </li>
+            </Card>
           ))}
         </ul>
       )}
-    </section>
+    </Card>
   );
 }
 
@@ -147,9 +151,9 @@ export function MyTasksPage() {
       <MyEventTasks />
 
       {loadState.status === "loading" ? (
-        <div className="ds-card p-10 text-center text-label">
+        <Card as="div" padding="none" className="p-10 text-center text-label">
           Loading your tasks...
-        </div>
+        </Card>
       ) : null}
 
       {loadState.status === "error" ? (

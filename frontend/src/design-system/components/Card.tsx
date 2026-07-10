@@ -21,14 +21,9 @@ const PADDING_CLASS: Record<CardPadding, string> = {
   lg: "p-8",
 };
 
-const VARIANT_CLASS: Record<CardVariant, string> = {
-  default: "border border-gray-200 bg-surface-card shadow-card",
-  nested: "border border-gray-200 bg-surface-muted",
-  outline: "border border-gray-200 bg-transparent",
-};
-
 /**
- * CampusOS surface card. 16px radius and soft elevation from design tokens.
+ * CampusOS surface card.
+ * Uses `.ds-card` / `.ds-card-nested` so existing mobile-edge CSS hooks keep working.
  */
 export function Card({
   as: Component = "section",
@@ -42,12 +37,13 @@ export function Card({
   return (
     <Component
       className={cx(
-        "rounded-card transition duration-200 ease-out",
-        VARIANT_CLASS[variant],
+        variant === "nested"
+          ? "ds-card-nested"
+          : variant === "outline"
+            ? "rounded-card border border-gray-200 bg-transparent"
+            : "ds-card",
+        interactive ? "ds-card-interactive" : "",
         PADDING_CLASS[padding],
-        interactive
-          ? "cursor-pointer hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-card-hover"
-          : "",
         className,
       )}
       {...rest}

@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
+import { Input, inputFieldClassName } from "../components/ui/Input";
 import { getApiErrorMessage, registerMember } from "../lib/auth-api";
 import {
   SEMO_EMAIL_DOMAIN,
@@ -23,8 +26,7 @@ const initialValues: RegisterFormValues = {
   graduation_year: "",
 };
 
-const inputClassName =
-  "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
+const selectClassName = `${inputFieldClassName} mt-1`;
 
 export function RegisterPage() {
   const [values, setValues] = useState<RegisterFormValues>(initialValues);
@@ -108,10 +110,12 @@ export function RegisterPage() {
         </p>
       </div>
 
-      <form
+      <Card
+        as="form"
         onSubmit={handleSubmit}
         noValidate
-        className="mt-8 space-y-5 ds-card p-6"
+        padding="md"
+        className="mt-8 space-y-5"
       >
         {serverError && (
           <p
@@ -122,104 +126,57 @@ export function RegisterPage() {
           </p>
         )}
 
-        <div>
-          <label htmlFor="full_name" className="block text-sm font-medium text-foreground">
-            Full name
-          </label>
-          <input
-            id="full_name"
-            name="full_name"
-            type="text"
-            autoComplete="name"
-            value={values.full_name}
-            onChange={(event) => updateField("full_name", event.target.value)}
-            onBlur={() => validateField("full_name")}
-            aria-invalid={fieldErrors.full_name ? true : undefined}
-            aria-describedby={fieldErrors.full_name ? "full_name-error" : undefined}
-            className={inputClassName}
-            placeholder="Sapan Khadka"
-          />
-          {fieldErrors.full_name && (
-            <p id="full_name-error" className="mt-1 ds-field-error">
-              {fieldErrors.full_name}
-            </p>
-          )}
-        </div>
+        <Input
+          id="full_name"
+          name="full_name"
+          label="Full name"
+          type="text"
+          autoComplete="name"
+          value={values.full_name}
+          onChange={(event) => updateField("full_name", event.target.value)}
+          onBlur={() => validateField("full_name")}
+          error={fieldErrors.full_name}
+          placeholder="Sapan Khadka"
+        />
 
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-foreground">
-            Email
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            value={values.email}
-            onChange={(event) => updateField("email", event.target.value)}
-            onBlur={() => validateField("email")}
-            aria-invalid={fieldErrors.email ? true : undefined}
-            aria-describedby={fieldErrors.email ? "email-error" : undefined}
-            className={inputClassName}
-            placeholder="you@semo.edu"
-          />
-          {fieldErrors.email && (
-            <p id="email-error" className="mt-1 ds-field-error">
-              {fieldErrors.email}
-            </p>
-          )}
-        </div>
+        <Input
+          id="email"
+          name="email"
+          label="Email"
+          type="email"
+          autoComplete="email"
+          value={values.email}
+          onChange={(event) => updateField("email", event.target.value)}
+          onBlur={() => validateField("email")}
+          error={fieldErrors.email}
+          placeholder="you@semo.edu"
+        />
 
-        <div>
-          <label
-            htmlFor="student_id"
-            className="block text-sm font-medium text-foreground"
-          >
-            Student ID
-          </label>
-          <input
-            id="student_id"
-            name="student_id"
-            type="text"
-            autoComplete="off"
-            value={values.student_id}
-            onChange={(event) => updateField("student_id", event.target.value)}
-            onBlur={() => validateField("student_id")}
-            aria-invalid={fieldErrors.student_id ? true : undefined}
-            aria-describedby={fieldErrors.student_id ? "student_id-error" : undefined}
-            className={inputClassName}
-            placeholder="S12345678"
-          />
-          {fieldErrors.student_id && (
-            <p id="student_id-error" className="mt-1 ds-field-error">
-              {fieldErrors.student_id}
-            </p>
-          )}
-        </div>
+        <Input
+          id="student_id"
+          name="student_id"
+          label="Student ID"
+          type="text"
+          autoComplete="off"
+          value={values.student_id}
+          onChange={(event) => updateField("student_id", event.target.value)}
+          onBlur={() => validateField("student_id")}
+          error={fieldErrors.student_id}
+          placeholder="S12345678"
+        />
 
-        <div>
-          <label htmlFor="major" className="block text-sm font-medium text-foreground">
-            Major
-          </label>
-          <input
-            id="major"
-            name="major"
-            type="text"
-            autoComplete="organization-title"
-            value={values.major}
-            onChange={(event) => updateField("major", event.target.value)}
-            onBlur={() => validateField("major")}
-            aria-invalid={fieldErrors.major ? true : undefined}
-            aria-describedby={fieldErrors.major ? "major-error" : undefined}
-            className={inputClassName}
-            placeholder="Computer Science"
-          />
-          {fieldErrors.major && (
-            <p id="major-error" className="mt-1 ds-field-error">
-              {fieldErrors.major}
-            </p>
-          )}
-        </div>
+        <Input
+          id="major"
+          name="major"
+          label="Major"
+          type="text"
+          autoComplete="organization-title"
+          value={values.major}
+          onChange={(event) => updateField("major", event.target.value)}
+          onBlur={() => validateField("major")}
+          error={fieldErrors.major}
+          placeholder="Computer Science"
+        />
 
         <div>
           <label
@@ -238,7 +195,7 @@ export function RegisterPage() {
             aria-describedby={
               fieldErrors.graduation_year ? "graduation_year-error" : undefined
             }
-            className={inputClassName}
+            className={selectClassName}
           >
             <option value="">Select year</option>
             {graduationYears.map((year) => (
@@ -255,45 +212,36 @@ export function RegisterPage() {
         </div>
 
         <div>
-          <label
-            htmlFor="password"
-            className="block text-sm font-medium text-foreground"
-          >
-            Password
-          </label>
-          <input
+          <Input
             id="password"
             name="password"
+            label="Password"
             type="password"
             autoComplete="new-password"
             value={values.password}
             onChange={(event) => updateField("password", event.target.value)}
             onBlur={() => validateField("password")}
-            aria-invalid={fieldErrors.password ? true : undefined}
-            aria-describedby="password-hint password-error"
-            className={inputClassName}
+            error={fieldErrors.password}
+            hint={
+              <>
+                {getPasswordHint()}
+                {values.password
+                  ? ` (${values.password.length} characters)`
+                  : ""}
+              </>
+            }
           />
-          <p id="password-hint" className="mt-1 text-xs text-label">
-            {getPasswordHint()}
-            {values.password
-              ? ` (${values.password.length} characters)`
-              : ""}
-          </p>
-          {fieldErrors.password && (
-            <p id="password-error" className="mt-1 ds-field-error">
-              {fieldErrors.password}
-            </p>
-          )}
         </div>
 
-        <button
+        <Button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded-full bg-primary px-4 py-2 font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+          loading={isSubmitting}
+          className="w-full"
         >
-          {isSubmitting ? "Submitting..." : "Create account"}
-        </button>
-      </form>
+          Create account
+        </Button>
+      </Card>
 
       <p className="mt-4 text-center text-sm text-label">
         Already have an account?{" "}

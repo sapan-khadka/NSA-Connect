@@ -17,6 +17,8 @@ import { isRoleAtLeast } from "../lib/roles";
 import { MemberDuesStatus } from "../components/MemberDuesStatus";
 import { RoleBadge } from "../components/RoleBadge";
 import { StatusBadge } from "../components/StatusBadge";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
 
 export function ProfilePage() {
   const { member, updateMember } = useAuth();
@@ -86,7 +88,7 @@ export function ProfilePage() {
 
   return (
     <div className="space-y-8">
-      <section className="ds-card p-4 sm:p-8">
+      <Card padding="none" className="p-4 sm:p-8">
         <p className="ds-section-label">Account settings</p>
         <h1 className="mt-2 text-3xl font-light tracking-headline text-foreground">
           {member.full_name}
@@ -99,19 +101,25 @@ export function ProfilePage() {
           <StatusBadge status={member.status} />
           <MemberDuesStatus />
         </div>
-      </section>
+      </Card>
 
       {serverError ? <div className="ds-alert-banner">{serverError}</div> : null}
 
       {successMessage ? (
-        <div className="rounded-lg ds-card px-4 py-3 text-sm text-primary">
+        <Card
+          as="div"
+          padding="none"
+          className="rounded-lg px-4 py-3 text-sm text-primary"
+        >
           {successMessage}
-        </div>
+        </Card>
       ) : null}
 
-      <form
+      <Card
+        as="form"
         onSubmit={(event) => void handleSubmit(event)}
-        className="ds-card p-4 sm:p-6"
+        padding="none"
+        className="p-4 sm:p-6"
       >
         <div className="border-b border-gray-200 pb-4">
           <h2 className="text-lg font-light tracking-subhead text-foreground">
@@ -135,15 +143,17 @@ export function ProfilePage() {
         )}
 
         <div className="mt-8 flex justify-stretch sm:justify-end">
-          <button
+          <Button
             type="submit"
             disabled={isLoading || isSubmitting}
-            className="btn-primary w-full sm:w-auto"
+            loading={isSubmitting}
+            size="lg"
+            className="w-full sm:w-auto"
           >
-            {isSubmitting ? "Saving..." : "Save changes"}
-          </button>
+            Save changes
+          </Button>
         </div>
-      </form>
+      </Card>
 
       <NotificationPreferencesSection />
 

@@ -6,6 +6,7 @@ import {
   updateNotificationPreferences,
   type NotificationPreferences,
 } from "../lib/notifications-api";
+import { Card } from "./ui/Card";
 
 type PreferenceKey = keyof NotificationPreferences;
 
@@ -92,7 +93,7 @@ export function NotificationPreferencesSection() {
   }
 
   return (
-    <section className="ds-card p-4 sm:p-6">
+    <Card padding="none" className="p-4 sm:p-6">
       <div className="border-b border-gray-200 pb-4">
         <h2 className="text-lg font-light tracking-subhead text-foreground">
           Notifications
@@ -150,6 +151,6 @@ export function NotificationPreferencesSection() {
           })}
         </ul>
       )}
-    </section>
+    </Card>
   );
 }

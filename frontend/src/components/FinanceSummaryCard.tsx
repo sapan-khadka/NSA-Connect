@@ -7,7 +7,10 @@ import {
   formatCurrency,
   parseCurrencyAmount,
 } from "../lib/format-currency";
+import { DataTable } from "../design-system/components/data-display/DataTable";
+import type { DataTableColumn } from "../design-system/components/data-display/DataTable";
 import { AppIcon } from "./ui/AppIcon";
+import { Card } from "./ui/Card";
 
 type FinanceSummaryMetricsProps = {
   isLoading: boolean;
@@ -19,6 +22,72 @@ type FinanceSummaryMetricsProps = {
 type FinanceTransactionBreakdownProps = {
   summary: FinanceSummaryResponse | null;
 };
+
+type BreakdownRow = {
+  id: string;
+  category: string;
+  income: string;
+  expense: string;
+  balance: string;
+  entryCount: number;
+};
+
+function buildBreakdownRows(summary: FinanceSummaryResponse): BreakdownRow[] {
+  return [
+    {
+      id: "pre-event",
+      category: "Pre-event / general",
+      income: summary.pre_event.income,
+      expense: summary.pre_event.expense,
+      balance: summary.pre_event.balance,
+      entryCount: summary.pre_event.entry_count,
+    },
+    ...summary.events.map((eventSummary) => ({
+      id: String(eventSummary.event_id),
+      category: eventSummary.event_name,
+      income: eventSummary.income,
+      expense: eventSummary.expense,
+      balance: eventSummary.balance,
+      entryCount: eventSummary.entry_count,
+    })),
+  ];
+}
+
+const breakdownColumns: DataTableColumn<BreakdownRow>[] = [
+  {
+    id: "category",
+    header: "Category",
+    cell: (row) => (
+      <span className="font-medium text-foreground">{row.category}</span>
+    ),
+  },
+  {
+    id: "income",
+    header: "Income",
+    cell: (row) => (
+      <span className="text-accent">{formatCurrency(row.income)}</span>
+    ),
+  },
+  {
+    id: "expense",
+    header: "Expense",
+    cell: (row) => <span>{formatCurrency(row.expense)}</span>,
+  },
+  {
+    id: "balance",
+    header: "Balance",
+    cell: (row) => (
+      <span className={`font-medium ${currencyBalanceToneClass(row.balance)}`}>
+        {formatCurrency(row.balance)}
+      </span>
+    ),
+  },
+  {
+    id: "entries",
+    header: "Entries",
+    cell: (row) => <span className="text-label">{row.entryCount}</span>,
+  },
+];
 
 type MetricCardProps = {
   title: string;
@@ -190,74 +259,23 @@ export function FinanceTransactionBreakdown({
   }
 
   return (
-    <section className="ds-card p-6">
+    <Card padding="md">
       <h2 className="text-base font-medium text-foreground">
         Transaction breakdown
       </h2>
 
-      <div className="mt-6 overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
-          <thead className="bg-gray-50 text-xs uppercase tracking-wide text-label">
-            <tr>
-              <th className="px-4 py-3 font-semibold">Category</th>
-              <th className="px-4 py-3 font-semibold">Income</th>
-              <th className="px-4 py-3 font-semibold">Expense</th>
-              <th className="px-4 py-3 font-semibold">Balance</th>
-              <th className="px-4 py-3 font-semibold">Entries</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            <tr>
-              <td className="px-4 py-3 font-medium text-foreground">
-                Pre-event / general
-              </td>
-              <td className="px-4 py-3 text-accent">
-                {formatCurrency(summary.pre_event.income)}
-              </td>
-              <td className="px-4 py-3 text-foreground">
-                {formatCurrency(summary.pre_event.expense)}
-              </td>
-              <td
-                className={`px-4 py-3 font-medium ${currencyBalanceToneClass(summary.pre_event.balance)}`}
-              >
-                {formatCurrency(summary.pre_event.balance)}
-              </td>
-              <td className="px-4 py-3 text-label">
-                {summary.pre_event.entry_count}
-              </td>
-            </tr>
-            {summary.events.map((eventSummary) => (
-              <tr key={eventSummary.event_id}>
-                <td className="px-4 py-3 font-medium text-foreground">
-                  {eventSummary.event_name}
-                </td>
-                <td className="px-4 py-3 text-accent">
-                  {formatCurrency(eventSummary.income)}
-                </td>
-                <td className="px-4 py-3 text-foreground">
-                  {formatCurrency(eventSummary.expense)}
-                </td>
-                <td
-                  className={`px-4 py-3 font-medium ${currencyBalanceToneClass(eventSummary.balance)}`}
-                >
-                  {formatCurrency(eventSummary.balance)}
-                </td>
-                <td className="px-4 py-3 text-label">
-                  {eventSummary.entry_count}
-                </td>
-              </tr>
-            ))}
-            {summary.events.length === 0 && summary.pre_event.entry_count === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-label">
-                  No finance entries yet for this period.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
+      <div className="mt-6">
+        <DataTable
+          columns={breakdownColumns}
+          rows={buildBreakdownRows(summary)}
+          getRowId={(row) => row.id}
+          emptyTitle="No finance entries yet for this period."
+          emptyDescription=""
+          caption="Finance transaction breakdown by category"
+          className="border-0 bg-transparent shadow-none rounded-none"
+        />
       </div>
-    </section>
+    </Card>
   );
 }
 

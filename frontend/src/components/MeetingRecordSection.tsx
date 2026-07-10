@@ -10,6 +10,7 @@ import {
   summarizeMeetingForEvent,
   type MeetingDetailResponse,
 } from "../lib/meetings-api";
+import { Card } from "./ui/Card";
 
 type MeetingRecordSectionProps = {
   eventId: number;
@@ -57,7 +58,7 @@ export function MeetingRecordSection({
 
   return (
     <div className="space-y-6">
-      <section className="ds-card p-4">
+      <Card padding="sm">
         <h2 className="text-base font-medium text-foreground">Agenda</h2>
         {detail.agenda ? (
           <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-foreground">
@@ -66,7 +67,7 @@ export function MeetingRecordSection({
         ) : (
           <p className="mt-2 text-sm text-label">No agenda on file.</p>
         )}
-      </section>
+      </Card>
 
       <MeetingAttendancePanel
         attendance={detail.attendance}

@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 
 import { RoleBadge } from "../components/RoleBadge";
 import { useAuth } from "../context/useAuth";
+import { Card } from "../components/ui/Card";
 
 export function GeneralDashboardPage() {
   const { member } = useAuth();
@@ -12,7 +13,7 @@ export function GeneralDashboardPage() {
 
   return (
     <div className="space-y-8">
-      <section className="ds-card p-8">
+      <Card padding="lg">
         <p className="ds-section-label">
           Member Dashboard
         </p>
@@ -23,10 +24,10 @@ export function GeneralDashboardPage() {
           View upcoming NSA events, stay connected with the community, and keep
           your member profile up to date.
         </p>
-      </section>
+      </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <section className="ds-card p-6">
+        <Card padding="md">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-lg font-light tracking-subhead text-foreground">Your profile</h2>
             <Link
@@ -60,9 +61,9 @@ export function GeneralDashboardPage() {
               </dd>
             </div>
           </dl>
-        </section>
+        </Card>
 
-        <section className="ds-card p-6">
+        <Card padding="md">
           <h2 className="text-lg font-light tracking-subhead text-foreground">Quick links</h2>
           <ul className="mt-4 space-y-3 text-sm">
             <li>
@@ -76,7 +77,7 @@ export function GeneralDashboardPage() {
               </Link>
             </li>
           </ul>
-        </section>
+        </Card>
       </div>
     </div>
   );

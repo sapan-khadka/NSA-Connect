@@ -10,6 +10,7 @@ import {
 import { PrepProgressBar } from "./PrepProgressBar";
 import { PrepTaskAssigneeSelect } from "./PrepTaskAssigneeSelect";
 import { AppIcon } from "./ui/AppIcon";
+import { Badge } from "./ui/Badge";
 
 type ChecklistTaskCardProps = {
   task: EventTaskResponse;
@@ -69,13 +70,11 @@ export function ChecklistTaskCard({
         <h4 className="font-medium text-foreground">{title}</h4>
         <div className="flex flex-wrap gap-2 text-xs">
           {task.is_complete ? (
-            <span className="rounded-full bg-mint px-2 py-0.5 text-primary">
+            <Badge variant="success" size="sm">
               Complete
-            </span>
+            </Badge>
           ) : null}
-          {showOverdue ? (
-            <span className="ds-tag-overdue">Overdue</span>
-          ) : null}
+          {showOverdue ? <Badge variant="danger">Overdue</Badge> : null}
         </div>
       </div>
 

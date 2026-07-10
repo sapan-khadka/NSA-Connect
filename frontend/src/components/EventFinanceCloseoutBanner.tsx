@@ -5,6 +5,7 @@ import {
   getEventFinanceStatusLabel,
   formatFinanceLockDeadline,
 } from "../lib/event-finance";
+import { Card } from "./ui/Card";
 
 type EventFinanceCloseoutBannerProps = {
   event: EventResponse;
@@ -23,7 +24,7 @@ export function EventFinanceCloseoutBanner({
     : "bg-urgent/20 text-foreground";
 
   return (
-    <section aria-live="polite" className={`ds-card p-4 ${toneClass}`}>
+    <Card aria-live="polite" padding="sm" className={toneClass}>
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-sm">
           {event.is_finance_locked ? "Post-event close-out complete" : "Finance close-out window"}
@@ -40,6 +41,6 @@ export function EventFinanceCloseoutBanner({
           Closes {formatFinanceLockDeadline(event.finance_lock_at)}
         </p>
       ) : null}
-    </section>
+    </Card>
   );
 }

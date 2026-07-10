@@ -8,6 +8,7 @@ import {
 } from "../lib/events-api";
 import { formatEventDateTime } from "../lib/format-datetime";
 import { StarRatingDisplay } from "./StarRatingInput";
+import { Card } from "./ui/Card";
 
 type EventFeedbackSectionProps = {
   eventId: number;
@@ -66,7 +67,7 @@ export function EventFeedbackSection({
   }, [loadFeedback, refreshKey]);
 
   return (
-    <section className="ds-card p-6" data-testid="event-feedback-section">
+    <Card padding="md" data-testid="event-feedback-section">
       <h2 className="text-lg font-light tracking-subhead text-foreground">
         Post-event feedback
       </h2>
@@ -118,6 +119,6 @@ export function EventFeedbackSection({
           ))}
         </ul>
       ) : null}
-    </section>
+    </Card>
   );
 }

@@ -11,6 +11,8 @@ import {
   type EventPhoto,
 } from "../../lib/photo-archive-api";
 import { AppIcon } from "../ui/AppIcon";
+import { Button } from "../ui/Button";
+import { Card } from "../ui/Card";
 
 type UploadItem = {
   id: string;
@@ -122,7 +124,7 @@ export function PhotoUploadPanel({ eventId, onUploaded }: PhotoUploadPanelProps)
   }
 
   return (
-    <section className="ds-card p-4">
+    <Card padding="sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-sm text-foreground">Add photos</h2>
@@ -130,15 +132,17 @@ export function PhotoUploadPanel({ eventId, onUploaded }: PhotoUploadPanelProps)
             JPG, PNG, or HEIC · up to 15 MB each · max {PHOTO_UPLOAD_MAX_BATCH} at a time
           </p>
         </div>
-        <button
+        <Button
           type="button"
-          className="btn-primary inline-flex items-center gap-2"
+          size="lg"
+          className="inline-flex items-center gap-2"
           disabled={isUploading}
+          loading={isUploading}
           onClick={() => inputRef.current?.click()}
         >
           <AppIcon icon={Upload} size="sm" className="text-current" />
           Add photos
-        </button>
+        </Button>
       </div>
 
       <div
@@ -201,6 +205,6 @@ export function PhotoUploadPanel({ eventId, onUploaded }: PhotoUploadPanelProps)
           ))}
         </ul>
       ) : null}
-    </section>
+    </Card>
   );
 }

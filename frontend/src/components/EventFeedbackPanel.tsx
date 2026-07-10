@@ -4,6 +4,9 @@ import { getApiErrorMessage } from "../lib/auth-api";
 import type { EventFeedback } from "../lib/events-api";
 import { submitEventFeedback } from "../lib/events-api";
 import { formatEventDateTime } from "../lib/format-datetime";
+import { Button } from "./ui/Button";
+import { Card } from "./ui/Card";
+import { inputFieldClassName } from "./ui/Input";
 import { StarRatingDisplay, StarRatingInput } from "./StarRatingInput";
 
 type EventFeedbackPanelProps = {
@@ -70,7 +73,7 @@ export function EventFeedbackPanel({
   }
 
   return (
-    <div className="ds-card p-3">
+    <Card as="div" padding="none" className="p-3">
       <p className="text-sm font-medium text-foreground">Post-event feedback</p>
 
       {!feedback && !isEditing ? (
@@ -79,13 +82,14 @@ export function EventFeedbackPanel({
             How was this event? Share a quick rating and optional comment for
             the board.
           </p>
-          <button
+          <Button
             type="button"
             onClick={() => startEditing()}
-            className="ds-btn-accent mt-3 w-full sm:w-auto"
+            size="lg"
+            className="mt-3 w-full sm:w-auto"
           >
             Leave feedback
-          </button>
+          </Button>
         </>
       ) : null}
 
@@ -103,13 +107,15 @@ export function EventFeedbackPanel({
           <p className="mt-2 text-xs text-label">
             Submitted {formatEventDateTime(feedback.created_at)}
           </p>
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={() => startEditing(feedback)}
-            className="ds-btn-outline mt-3 w-full sm:w-auto"
+            size="lg"
+            className="mt-3 w-full sm:w-auto"
           >
             Edit feedback
-          </button>
+          </Button>
         </div>
       ) : null}
 
@@ -129,26 +135,30 @@ export function EventFeedbackPanel({
               rows={3}
               maxLength={5000}
               placeholder="What went well? What could be improved?"
-              className="ds-field-input"
+              className={`${inputFieldClassName} mt-1`}
             />
           </label>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            <button
+            <Button
               type="submit"
               disabled={submitting || rating < 1}
-              className="ds-btn-accent w-full sm:w-auto"
+              loading={submitting}
+              size="lg"
+              className="w-full sm:w-auto"
             >
-              {submitting ? "Saving…" : feedback ? "Save changes" : "Submit feedback"}
-            </button>
-            <button
+              {feedback ? "Save changes" : "Submit feedback"}
+            </Button>
+            <Button
               type="button"
+              variant="outline"
               disabled={submitting}
               onClick={cancelEditing}
-              className="ds-btn-outline w-full sm:w-auto"
+              size="lg"
+              className="w-full sm:w-auto"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       ) : null}
@@ -158,6 +168,6 @@ export function EventFeedbackPanel({
           {errorMessage}
         </p>
       ) : null}
-    </div>
+    </Card>
   );
 }

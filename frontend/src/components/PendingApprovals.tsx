@@ -9,6 +9,8 @@ import {
 } from "../lib/members-api";
 
 import { MemberCard } from "./MemberCard";
+import { Button } from "./ui/Button";
+import { Card } from "./ui/Card";
 
 type PendingApprovalsProps = {
   onCountChange?: (count: number) => void;
@@ -86,7 +88,7 @@ export function PendingApprovals({
   }
 
   return (
-    <section className="ds-card">
+    <Card padding="none">
       <div className="border-b border-gray-200 px-6 py-4">
         <h2 className="text-lg font-light tracking-subhead text-foreground">Approval queue</h2>
         <p className="mt-1 text-sm text-label">
@@ -132,15 +134,16 @@ export function PendingApprovals({
                           Reject
                         </button>
                       )}
-                      <button
+                      <Button
                         type="button"
                         onClick={() => void handleApprove(member.id)}
                         disabled={isActing}
+                        loading={isApproving}
                         aria-label={`Approve ${member.full_name}`}
-                        className="min-w-[7.5rem] rounded-full bg-primary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+                        className="min-w-[7.5rem]"
                       >
-                        {isApproving ? "Approving..." : "Approve"}
-                      </button>
+                        Approve
+                      </Button>
                     </>
                   }
                 />
@@ -149,6 +152,6 @@ export function PendingApprovals({
           })}
         </ul>
       )}
-    </section>
+    </Card>
   );
 }

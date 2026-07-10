@@ -7,6 +7,7 @@ import {
 } from "../lib/finance-api";
 import { formatCurrency } from "../lib/format-currency";
 import { formatEventDateTime } from "../lib/format-datetime";
+import { Card } from "./ui/Card";
 
 type FinanceMyChangeRequestsProps = {
   refreshKey?: number;
@@ -59,14 +60,14 @@ export function FinanceMyChangeRequests({
 
   if (isLoading) {
     return (
-      <section className="ds-card p-6">
+      <Card padding="md">
         <p className="text-sm text-label">Loading your finance requests…</p>
-      </section>
+      </Card>
     );
   }
 
   return (
-    <section className="ds-card p-6">
+    <Card padding="md">
       <h2 className="text-base font-medium text-foreground">
         Your finance requests
       </h2>
@@ -83,9 +84,12 @@ export function FinanceMyChangeRequests({
                 ? formatCurrency(request.entry_amount)
                 : "—";
             return (
-              <li
+              <Card
                 key={request.id}
-                className="rounded-md ds-card-nested p-4"
+                as="li"
+                nested
+                padding="sm"
+                className="rounded-md"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
@@ -119,11 +123,11 @@ export function FinanceMyChangeRequests({
                     {statusLabel(request.status)}
                   </span>
                 </div>
-              </li>
+              </Card>
             );
           })}
         </ul>
       )}
-    </section>
+    </Card>
   );
 }

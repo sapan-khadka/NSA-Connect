@@ -11,6 +11,8 @@ import { Trash2 } from "lucide-react";
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/auth-api";
 import { AppIcon } from "./ui/AppIcon";
+import { Button } from "./ui/Button";
+import { Card } from "./ui/Card";
 import {
   createEventTask,
   deleteEventTask,
@@ -196,7 +198,7 @@ function SimpleTaskRow({
   onDelete: () => void;
 }) {
   return (
-    <li className="ds-card-nested p-3">
+    <Card as="li" nested padding="none" className="p-3">
       <div className="flex items-center gap-3">
         <AssigneeAvatar name={task.assignee_name} />
 
@@ -252,7 +254,7 @@ function SimpleTaskRow({
           />
         </a>
       ) : null}
-    </li>
+    </Card>
   );
 }
 
@@ -601,13 +603,14 @@ export function EventTaskManager({
         </div>
 
         {allowCreateTasks && !showAddForm ? (
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => setShowAddForm(true)}
-            className="rounded-full border border-gray-200 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:border-accent hover:text-accent"
           >
             + Add task
-          </button>
+          </Button>
         ) : null}
       </div>
 
@@ -624,11 +627,12 @@ export function EventTaskManager({
       ) : null}
 
       {allowCreateTasks && showAddForm ? (
-        <form
-          ref={addFormRef}
-          onSubmit={(event) => void handleCreate(event)}
-          className="mt-3 space-y-2 ds-card p-3"
-        >
+        <Card padding="none" className="mt-3 space-y-2 p-3">
+          <form
+            ref={addFormRef}
+            onSubmit={(event) => void handleCreate(event)}
+            className="space-y-2"
+          >
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-medium text-label">New task</p>
             <button
@@ -712,14 +716,16 @@ export function EventTaskManager({
             </div>
           </div>
 
-          <button
+          <Button
             type="submit"
             disabled={isSubmitting || title.trim().length === 0}
-            className="rounded-full bg-primary px-3 py-1.5 text-sm font-medium text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+            loading={isSubmitting}
+            size="sm"
           >
-            {isSubmitting ? "Adding…" : "Add task"}
-          </button>
-        </form>
+            Add task
+          </Button>
+          </form>
+        </Card>
       ) : null}
 
       {actionError ? (

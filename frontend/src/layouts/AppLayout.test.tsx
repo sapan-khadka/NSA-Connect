@@ -9,7 +9,7 @@ describe("AppLayout navigation", () => {
     cleanup();
   });
 
-  it("shows Members for general members but keeps Finance in Admin for board only", () => {
+  it("shows Main nav for general members without Finance", () => {
     renderWithRouter(undefined, {
       initialEntries: ["/"],
       auth: {
@@ -18,18 +18,26 @@ describe("AppLayout navigation", () => {
       },
     });
 
-    expect(screen.queryByRole("link", { name: "Finance" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Members" })).toHaveAttribute(
+    const sidebar = screen.getByRole("navigation", { name: "Primary" });
+    expect(within(sidebar).getByRole("link", { name: "Dashboard" })).toHaveAttribute(
+      "href",
+      "/",
+    );
+    expect(within(sidebar).getByRole("link", { name: "Members" })).toHaveAttribute(
       "href",
       "/members",
     );
-    expect(screen.queryByRole("link", { name: "Dashboard" })).not.toBeInTheDocument();
-    const headerNav = within(screen.getByRole("banner"));
-    expect(headerNav.getByRole("link", { name: "Events" })).toHaveAttribute(
+    expect(within(sidebar).getByRole("link", { name: "Events" })).toHaveAttribute(
       "href",
       "/events/calendar",
     );
-    expect(screen.getByRole("banner")).toHaveClass("ds-app-header");
+    expect(
+      within(sidebar).queryByRole("link", { name: "Finance" }),
+    ).not.toBeInTheDocument();
+    expect(within(sidebar).getByText("Main")).toBeInTheDocument();
+    expect(within(sidebar).getByText("Management")).toBeInTheDocument();
+    expect(within(sidebar).getByText("Tools")).toBeInTheDocument();
+    expect(within(sidebar).getByText("System")).toBeInTheDocument();
   });
 
   it("shows only Login and Register for unauthenticated users", () => {
@@ -40,13 +48,15 @@ describe("AppLayout navigation", () => {
 
     expect(screen.getByRole("link", { name: "Login" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Register" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Home" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("navigation", { name: "Primary" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Dashboard" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Events" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Upcoming" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Finance" })).not.toBeInTheDocument();
   });
 
-  it("shows grouped primary navigation and account menu for board members", () => {
+  it("shows sectioned navigation, profile, and logout for board members", () => {
     renderWithRouter(undefined, {
       initialEntries: ["/"],
       auth: {
@@ -55,21 +65,29 @@ describe("AppLayout navigation", () => {
       },
     });
 
-    expect(screen.getByRole("link", { name: "Home" })).toBeInTheDocument();
-    const headerNav = within(screen.getByRole("banner"));
-    expect(headerNav.getByRole("link", { name: "Events" })).toHaveAttribute(
+    const sidebar = screen.getByRole("navigation", { name: "Primary" });
+    expect(within(sidebar).getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
+    expect(within(sidebar).getByRole("link", { name: "Finance" })).toHaveAttribute(
       "href",
-      "/events/calendar",
+      "/finance",
     );
-    expect(screen.getByRole("link", { name: "Assistant" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Dashboard" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Admin/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Account menu for Test User" })).toBeInTheDocument();
-    expect(headerNav.queryByRole("link", { name: "Profile" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Logout" })).not.toBeInTheDocument();
+    expect(within(sidebar).getByRole("link", { name: "AI Assistant" })).toHaveAttribute(
+      "href",
+      "/assistant",
+    );
+    expect(within(sidebar).getByRole("link", { name: "Settings" })).toHaveAttribute(
+      "href",
+      "/profile",
+    );
+    expect(within(sidebar).getByRole("button", { name: /Board tools/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /User profile for Test User/i }),
+    ).toHaveAttribute("href", "/profile");
+    expect(screen.getByRole("button", { name: "Logout" })).toBeInTheDocument();
+    expect(screen.getByText("Need help?")).toBeInTheDocument();
   });
 
-  it("shows Finance in the Admin menu for treasurer members", async () => {
+  it("shows Finance in Main for treasurer members and preserves board tools", async () => {
     const user = userEvent.setup();
 
     renderWithRouter(undefined, {
@@ -80,10 +98,21 @@ describe("AppLayout navigation", () => {
       },
     });
 
-    await user.click(screen.getByRole("button", { name: /Admin/i }));
-    expect(screen.getByRole("menuitem", { name: "Finance" })).toHaveAttribute(
+    const sidebar = screen.getByRole("navigation", { name: "Primary" });
+    expect(within(sidebar).getByRole("link", { name: "Finance" })).toHaveAttribute(
       "href",
       "/finance",
     );
+
+    await user.click(within(sidebar).getByRole("button", { name: /Board tools/i }));
+    expect(
+      within(sidebar).getByRole("link", { name: "Board discussion" }),
+    ).toHaveAttribute("href", "/board/discussion");
+    expect(
+      within(sidebar).getByRole("link", { name: "Meeting minutes" }),
+    ).toHaveAttribute("href", "/board/meeting-minutes");
+    expect(
+      within(sidebar).getByRole("link", { name: "Announcement email" }),
+    ).toHaveAttribute("href", "/board/announcement-email");
   });
 });

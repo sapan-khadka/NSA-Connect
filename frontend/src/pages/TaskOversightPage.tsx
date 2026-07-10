@@ -2,6 +2,7 @@ import { AlertCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { SectionLabel } from "../components/ui/SectionLabel";
+import { Card } from "../components/ui/Card";
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage } from "../lib/auth-api";
 import {
@@ -44,7 +45,7 @@ const STATUS_BADGE_STYLES: Record<EventTaskStatus, string> = {
 
 function ActiveMemberCard({ row }: { row: TaskOverviewMember }) {
   return (
-    <section className="ds-card p-6">
+    <Card padding="md">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-lg font-light tracking-subhead text-foreground">
@@ -65,13 +66,13 @@ function ActiveMemberCard({ row }: { row: TaskOverviewMember }) {
           <TaskRow key={task.id} task={task} />
         ))}
       </ul>
-    </section>
+    </Card>
   );
 }
 
 function TaskRow({ task }: { task: EventTaskResponse }) {
   return (
-    <li className="rounded-md ds-card-nested p-3">
+    <Card as="li" nested padding="none" className="rounded-md p-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="text-sm font-medium text-foreground">{task.title}</p>
@@ -104,7 +105,7 @@ function TaskRow({ task }: { task: EventTaskResponse }) {
           />
         </a>
       ) : null}
-    </li>
+    </Card>
   );
 }
 
@@ -193,10 +194,10 @@ export function TaskOversightPage() {
 
   if (!allowed) {
     return (
-      <div className="ds-card p-6 text-foreground">
+      <Card padding="md" className="text-foreground">
         Only the President or Vice President can view the task oversight
         dashboard.
-      </div>
+      </Card>
     );
   }
 
@@ -228,9 +229,9 @@ export function TaskOversightPage() {
       ) : null}
 
       {isLoading ? (
-        <div className="ds-card p-10 text-center text-label">
+        <Card as="div" padding="none" className="p-10 text-center text-label">
           Loading oversight…
-        </div>
+        </Card>
       ) : null}
 
       {error ? (

@@ -15,6 +15,7 @@ import {
   formatBudgetRemaining,
 } from "../lib/event-budget";
 import { formatCurrency } from "../lib/format-currency";
+import { Card } from "./ui/Card";
 
 type EventManageLogisticsSectionProps = {
   event: EventDetailResponse;
@@ -58,7 +59,7 @@ export function EventManageLogisticsSection({
       <EventFinanceCloseoutBanner event={event} />
 
       {canViewBoard ? (
-        <section className="ds-card p-6">
+        <Card padding="md">
           <h2 className="text-lg font-light tracking-subhead text-foreground">
             Task completion
           </h2>
@@ -74,11 +75,11 @@ export function EventManageLogisticsSection({
               style={{ width: `${percent}%` }}
             />
           </div>
-        </section>
+        </Card>
       ) : null}
 
       {budget ? (
-        <section className="ds-card p-6">
+        <Card padding="md">
           <h2 className="text-lg font-light tracking-subhead text-foreground">
             Event budget
           </h2>
@@ -123,11 +124,11 @@ export function EventManageLogisticsSection({
               {budgetStatusLabel(budget)}
             </p>
           </div>
-        </section>
+        </Card>
       ) : null}
 
       {canViewBoard ? (
-        <div className="ds-card p-6">
+        <Card as="div" padding="md">
           <EventTaskManager
             key={`${event.id}-${refreshKey}`}
             eventId={event.id}
@@ -141,7 +142,7 @@ export function EventManageLogisticsSection({
             taskDraft={taskDraft}
             onTaskDraftApplied={onTaskDraftApplied}
           />
-        </div>
+        </Card>
       ) : null}
 
       {canViewTreasury ? (

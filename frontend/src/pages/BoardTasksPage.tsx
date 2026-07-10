@@ -16,6 +16,7 @@ import {
   type KanbanColumnId,
   type KanbanTask,
 } from "../lib/kanban-status";
+import { Card } from "../components/ui/Card";
 
 type LoadState =
   | { status: "loading" }
@@ -151,7 +152,7 @@ export function BoardTasksPage() {
 
   return (
     <div className="space-y-8">
-      <section className="ds-card p-6">
+      <Card padding="md">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div className="grid min-w-[14rem] grid-cols-3 gap-3">
             <div className="text-center">
@@ -189,7 +190,7 @@ export function BoardTasksPage() {
             />
           </div>
         </div>
-      </section>
+      </Card>
 
       {moveError ? (
         <div
@@ -201,9 +202,9 @@ export function BoardTasksPage() {
       ) : null}
 
       {loadState.status === "loading" ? (
-        <div className="ds-card p-16 text-center text-label">
+        <Card as="div" padding="none" className="p-16 text-center text-label">
           Loading your tasks…
-        </div>
+        </Card>
       ) : null}
 
       {loadState.status === "error" ? (
@@ -216,7 +217,11 @@ export function BoardTasksPage() {
       ) : null}
 
       {loadState.status === "ready" && tasks.length === 0 ? (
-        <div className="ds-card border border-dashed border-gray-200 p-16 text-center">
+        <Card
+          as="div"
+          padding="none"
+          className="border border-dashed border-gray-200 p-16 text-center"
+        >
           <p className="text-lg font-light tracking-subhead text-foreground">
             No tasks assigned to you yet
           </p>
@@ -224,7 +229,7 @@ export function BoardTasksPage() {
             When a task manager assigns you work — for example the treasurer or
             event manager — it will show up here automatically.
           </p>
-        </div>
+        </Card>
       ) : null}
 
       {loadState.status === "ready" && tasks.length > 0 ? (

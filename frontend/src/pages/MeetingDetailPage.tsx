@@ -10,6 +10,7 @@ import {
   type MeetingDetailResponse,
 } from "../lib/meetings-api";
 import { formatEventDateTime } from "../lib/format-datetime";
+import { Card } from "../components/ui/Card";
 
 export function MeetingDetailPage() {
   const { eventId } = useParams();
@@ -89,7 +90,7 @@ export function MeetingDetailPage() {
         </Link>
       </div>
 
-      <section className="ds-card p-6">
+      <Card padding="md">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
             <h1 className="text-3xl font-light tracking-headline text-foreground">{detail.event_name}</h1>
@@ -108,7 +109,7 @@ export function MeetingDetailPage() {
           ) : null}
         </div>
 
-        <div className="mt-6 ds-card p-4">
+        <Card as="div" padding="sm" className="mt-6">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-label">
             Agenda
           </h2>
@@ -121,8 +122,8 @@ export function MeetingDetailPage() {
               No agenda was added when this meeting was created.
             </p>
           )}
-        </div>
-      </section>
+        </Card>
+      </Card>
 
       <MeetingRecordSection
         eventId={detail.event_id}

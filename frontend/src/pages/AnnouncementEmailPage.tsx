@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from "react";
 
 import { AnnouncementEmailDraft } from "../components/AnnouncementEmailDraft";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
+import { inputFieldClassName } from "../components/ui/Input";
 import { getApiErrorMessage } from "../lib/auth-api";
 import {
   draftAnnouncementEmail,
@@ -9,8 +12,7 @@ import {
 import { combineDateAndTime } from "../lib/event-form";
 import { EVENT_TYPE_LABELS, EVENT_TYPES, type EventType } from "../lib/event-types";
 
-const inputClassName =
-  "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
+const inputClassName = `${inputFieldClassName} mt-1`;
 
 export function AnnouncementEmailPage() {
   const [eventName, setEventName] = useState("");
@@ -73,10 +75,12 @@ export function AnnouncementEmailPage() {
         </p>
       </header>
 
-      <form
+      <Card
+        as="form"
         onSubmit={handleSubmit}
         noValidate
-        className="ds-card p-4 sm:p-6"
+        padding="none"
+        className="p-4 sm:p-6"
       >
         {serverError ? (
           <p
@@ -109,7 +113,7 @@ export function AnnouncementEmailPage() {
             ) : null}
           </div>
 
-          <div className="ds-card p-4">
+          <Card padding="sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-sm font-semibold text-foreground">Event details</h2>
@@ -219,19 +223,19 @@ export function AnnouncementEmailPage() {
                 </div>
               </div>
             ) : null}
-          </div>
+          </Card>
         </div>
 
         <div className="mt-5 flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 pt-5">
-          <button
+          <Button
             type="submit"
             disabled={isSubmitting}
-            className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+            loading={isSubmitting}
           >
-            {isSubmitting ? "Generating draft…" : "Generate email draft"}
-          </button>
+            Generate email draft
+          </Button>
         </div>
-      </form>
+      </Card>
 
       {draft ? <AnnouncementEmailDraft draft={draft} onClear={clearDraft} /> : null}
     </div>

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import { getApiErrorMessage } from "../lib/auth-api";
 import { deleteEvent } from "../lib/events-api";
+import { Card } from "./ui/Card";
 
 type EventDeleteSectionProps = {
   eventId: number;
@@ -39,7 +40,7 @@ export function EventDeleteSection({
   }
 
   return (
-    <section className="ds-card border border-overdue/30 p-6">
+    <Card padding="md" className="border border-overdue/30">
       <h2 className="text-lg font-light tracking-subhead text-foreground">
         Delete event
       </h2>
@@ -62,6 +63,6 @@ export function EventDeleteSection({
           {errorMessage}
         </p>
       ) : null}
-    </section>
+    </Card>
   );
 }

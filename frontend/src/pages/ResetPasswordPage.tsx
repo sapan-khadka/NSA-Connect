@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
+import { Input } from "../components/ui/Input";
 import {
   confirmPasswordReset,
   getApiErrorMessage,
@@ -9,9 +12,6 @@ import {
   getPasswordHint,
   validateRegisterPassword,
 } from "../lib/validation";
-
-const inputClassName =
-  "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
 
 export function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -92,10 +92,12 @@ export function ResetPasswordPage() {
         <p className="mt-2 text-label">Choose a new password for your account.</p>
       </div>
 
-      <form
+      <Card
+        as="form"
         onSubmit={handleSubmit}
         noValidate
-        className="mt-8 space-y-5 ds-card p-6"
+        padding="md"
+        className="mt-8 space-y-5"
       >
         {serverError && (
           <div role="alert" className="ds-alert-banner">
@@ -111,83 +113,54 @@ export function ResetPasswordPage() {
           </div>
         )}
 
-        <div>
-          <label
-            htmlFor="password"
-            className="block text-sm font-medium text-foreground"
-          >
-            New password
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="new-password"
-            value={password}
-            onChange={(event) => {
-              setPassword(event.target.value);
-              setPasswordError(undefined);
-              setServerError(null);
-            }}
-            onBlur={() =>
-              setPasswordError(validateRegisterPassword(password) ?? undefined)
-            }
-            aria-invalid={passwordError ? true : undefined}
-            aria-describedby={passwordError ? "password-error" : "password-hint"}
-            className={inputClassName}
-          />
-          <p id="password-hint" className="mt-1 text-xs text-label">
-            {getPasswordHint()}
-          </p>
-          {passwordError && (
-            <p id="password-error" className="mt-1 ds-field-error">
-              {passwordError}
-            </p>
-          )}
-        </div>
+        <Input
+          id="password"
+          name="password"
+          label="New password"
+          type="password"
+          autoComplete="new-password"
+          value={password}
+          onChange={(event) => {
+            setPassword(event.target.value);
+            setPasswordError(undefined);
+            setServerError(null);
+          }}
+          onBlur={() =>
+            setPasswordError(validateRegisterPassword(password) ?? undefined)
+          }
+          error={passwordError}
+          hint={getPasswordHint()}
+        />
 
-        <div>
-          <label
-            htmlFor="confirm-password"
-            className="block text-sm font-medium text-foreground"
-          >
-            Confirm new password
-          </label>
-          <input
-            id="confirm-password"
-            name="confirm-password"
-            type="password"
-            autoComplete="new-password"
-            value={confirmPassword}
-            onChange={(event) => {
-              setConfirmPassword(event.target.value);
-              setConfirmError(undefined);
-              setServerError(null);
-            }}
-            onBlur={() =>
-              setConfirmError(
-                password !== confirmPassword ? "Passwords do not match" : undefined,
-              )
-            }
-            aria-invalid={confirmError ? true : undefined}
-            aria-describedby={confirmError ? "confirm-password-error" : undefined}
-            className={inputClassName}
-          />
-          {confirmError && (
-            <p id="confirm-password-error" className="mt-1 ds-field-error">
-              {confirmError}
-            </p>
-          )}
-        </div>
+        <Input
+          id="confirm-password"
+          name="confirm-password"
+          label="Confirm new password"
+          type="password"
+          autoComplete="new-password"
+          value={confirmPassword}
+          onChange={(event) => {
+            setConfirmPassword(event.target.value);
+            setConfirmError(undefined);
+            setServerError(null);
+          }}
+          onBlur={() =>
+            setConfirmError(
+              password !== confirmPassword ? "Passwords do not match" : undefined,
+            )
+          }
+          error={confirmError}
+        />
 
-        <button
+        <Button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded-full bg-primary px-4 py-2 font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+          loading={isSubmitting}
+          className="w-full"
         >
-          {isSubmitting ? "Updating..." : "Update password"}
-        </button>
-      </form>
+          Update password
+        </Button>
+      </Card>
 
       <p className="mt-4 text-center text-sm text-label">
         <Link to="/login" className="font-medium text-accent">

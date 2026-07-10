@@ -5,6 +5,7 @@ import {
   runNotificationCheck,
   type NotificationCheckSummary,
 } from "../lib/notifications-api";
+import { Card } from "./ui/Card";
 
 function formatSummary(summary: NotificationCheckSummary): string {
   const parts = [
@@ -37,7 +38,7 @@ export function AdminNotificationCheckButton() {
   }
 
   return (
-    <section className="ds-card p-6">
+    <Card padding="md">
       <div className="border-b border-gray-200 pb-4">
         <h2 className="text-lg font-light tracking-subhead text-foreground">
           Notification scheduler
@@ -69,6 +70,6 @@ export function AdminNotificationCheckButton() {
           {errorMessage}
         </p>
       ) : null}
-    </section>
+    </Card>
   );
 }

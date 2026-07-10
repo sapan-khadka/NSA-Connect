@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 
+import { Button } from "./ui/Button";
 import { FINANCE_APPROVALS_PATH } from "../lib/finance-routes";
 
 type HomeFinanceQuickActionsProps = {
@@ -20,13 +21,9 @@ export function HomeFinanceQuickActions({
       className="flex flex-wrap items-center gap-3"
     >
       {!compact ? (
-        <button
-          type="button"
-          onClick={onLogTransaction}
-          className="min-h-11 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
-        >
+        <Button type="button" onClick={onLogTransaction}>
           + Log transaction
-        </button>
+        </Button>
       ) : null}
 
       <Link

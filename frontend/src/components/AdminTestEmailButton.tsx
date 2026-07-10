@@ -4,9 +4,10 @@ import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage } from "../lib/auth-api";
 import { sendTestEmail } from "../lib/notifications-api";
 import { validateEmailAddress } from "../lib/validation";
+import { Card } from "./ui/Card";
+import { inputFieldClassName } from "./ui/Input";
 
-const inputClassName =
-  "min-w-[14rem] flex-1 rounded-lg border border-gray-200 bg-surface-card px-3 py-2 text-sm text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40";
+const inputClassName = `${inputFieldClassName} min-w-[14rem] flex-1`;
 
 export function AdminTestEmailButton() {
   const { member } = useAuth();
@@ -38,7 +39,7 @@ export function AdminTestEmailButton() {
   }
 
   return (
-    <section className="ds-card p-6">
+    <Card padding="md">
       <div className="border-b border-gray-200 pb-4">
         <h2 className="text-lg font-light tracking-subhead text-foreground">
           Email connection test
@@ -80,6 +81,6 @@ export function AdminTestEmailButton() {
           {errorMessage}
         </p>
       ) : null}
-    </section>
+    </Card>
   );
 }

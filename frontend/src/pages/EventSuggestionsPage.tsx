@@ -9,6 +9,9 @@ import {
   markEventSuggestionNoted,
   type EventSuggestion,
 } from "../lib/event-suggestions-api";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
+import { inputFieldClassName } from "../components/ui/Input";
 import { formatEventDateTime } from "../lib/format-datetime";
 import { isRoleAtLeast } from "../lib/roles";
 
@@ -68,14 +71,17 @@ function SuggestionCard({
           ) : null}
         </div>
         {canManage && !isNoted ? (
-          <button
+          <Button
             type="button"
             onClick={() => void handleMarkNoted()}
             disabled={marking}
-            className="ds-btn-outline shrink-0"
+            loading={marking}
+            variant="outline"
+            size="lg"
+            className="shrink-0"
           >
-            {marking ? "Saving…" : "Mark noted"}
-          </button>
+            Mark noted
+          </Button>
         ) : null}
       </div>
 
@@ -194,28 +200,35 @@ export function EventSuggestionsPage() {
             Share ideas for future NSA events. All members can browse suggestions for inspiration.
           </p>
         </div>
-        <button
+        <Button
           type="button"
           onClick={() => {
             setShowForm((current) => !current);
             setSubmitError(null);
             setSubmitSuccess(null);
           }}
-          className="ds-btn-accent w-full min-[400px]:w-auto"
+          size="lg"
+          className="w-full min-[400px]:w-auto"
         >
           {showForm ? "Close form" : "Suggest an event"}
-        </button>
+        </Button>
       </div>
 
       {submitSuccess ? (
-        <div className="rounded-lg ds-card px-4 py-3 text-sm text-primary">
+        <Card
+          as="div"
+          padding="none"
+          className="rounded-lg px-4 py-3 text-sm text-primary"
+        >
           {submitSuccess}
-        </div>
+        </Card>
       ) : null}
 
       {showForm ? (
-        <form
-          className="ds-card p-4 sm:p-6"
+        <Card
+          as="form"
+          padding="none"
+          className="p-4 sm:p-6"
           onSubmit={(event) => void handleSubmit(event)}
         >
           <h2 className="text-lg font-light tracking-subhead text-foreground">
@@ -239,7 +252,7 @@ export function EventSuggestionsPage() {
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 required
-                className="ds-field-input"
+                className={`${inputFieldClassName} mt-1`}
                 placeholder="e.g. Spring cultural night"
               />
             </label>
@@ -251,7 +264,7 @@ export function EventSuggestionsPage() {
                 onChange={(event) => setDescription(event.target.value)}
                 required
                 rows={5}
-                className="ds-field-input"
+                className={`${inputFieldClassName} mt-1`}
                 placeholder="What would this event look like? Why would members enjoy it?"
               />
             </label>
@@ -263,7 +276,7 @@ export function EventSuggestionsPage() {
               <select
                 value={preferredTiming}
                 onChange={(event) => setPreferredTiming(event.target.value)}
-                className="ds-field-input"
+                className={`${inputFieldClassName} mt-1`}
               >
                 <option value="">No preference</option>
                 {TIMING_SUGGESTIONS.map((option) => (
@@ -284,7 +297,7 @@ export function EventSuggestionsPage() {
                   type="text"
                   value={customTiming}
                   onChange={(event) => setCustomTiming(event.target.value)}
-                  className="ds-field-input"
+                  className={`${inputFieldClassName} mt-1`}
                   placeholder="e.g. early March, after midterms"
                 />
               </label>
@@ -292,15 +305,17 @@ export function EventSuggestionsPage() {
           </div>
 
           <div className="mt-6">
-            <button
+            <Button
               type="submit"
               disabled={submitting}
-              className="ds-btn-accent w-full sm:w-auto"
+              loading={submitting}
+              size="lg"
+              className="w-full sm:w-auto"
             >
-              {submitting ? "Submitting…" : "Submit suggestion"}
-            </button>
+              Submit suggestion
+            </Button>
           </div>
-        </form>
+        </Card>
       ) : null}
 
       {canManage ? (
@@ -318,7 +333,7 @@ export function EventSuggestionsPage() {
       {loading ? (
         <p className="text-sm text-label">Loading suggestions…</p>
       ) : suggestions.length === 0 ? (
-        <div className="ds-card p-8 text-center">
+        <Card as="div" padding="lg" className="text-center">
           <p className="text-sm text-label">No suggestions yet.</p>
           <p className="mt-2 text-sm text-label">
             Be the first to{" "}
@@ -331,7 +346,7 @@ export function EventSuggestionsPage() {
             </button>
             .
           </p>
-        </div>
+        </Card>
       ) : (
         <div className="space-y-4">
           {suggestions.map((suggestion) => (

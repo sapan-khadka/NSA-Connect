@@ -5,6 +5,8 @@ import {
   type ChatHistoryMessage,
 } from "../../lib/chat-stream";
 import { getApiErrorMessage } from "../../lib/auth-api";
+import { Button } from "../ui/Button";
+import { Card } from "../ui/Card";
 import { ChatMessageBubble, type ChatMessage } from "./ChatMessageBubble";
 import { TypingIndicator } from "./TypingIndicator";
 
@@ -187,7 +189,10 @@ export function ChatPanel() {
     );
 
   return (
-    <section className="flex h-[min(72vh,720px)] flex-col overflow-hidden ds-card">
+    <Card
+      padding="none"
+      className="flex h-[min(72vh,720px)] flex-col overflow-hidden"
+    >
       <div
         ref={scrollRef}
         className="flex-1 space-y-4 overflow-y-auto px-4 py-5 sm:px-6"
@@ -239,16 +244,16 @@ export function ChatPanel() {
               Stop
             </button>
           ) : (
-            <button
+            <Button
               type="submit"
               disabled={draft.trim().length === 0}
-              className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60 sm:self-end"
+              className="sm:self-end"
             >
               Send
-            </button>
+            </Button>
           )}
         </div>
       </form>
-    </section>
+    </Card>
   );
 }

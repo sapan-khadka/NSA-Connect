@@ -7,6 +7,9 @@ import {
   withdrawVolunteerSignup,
 } from "../lib/events-api";
 import { formatEventDateTime } from "../lib/format-datetime";
+import { Button } from "./ui/Button";
+import { Card } from "./ui/Card";
+import { inputFieldClassName } from "./ui/Input";
 
 type EventVolunteerSignupPanelProps = {
   eventId: number;
@@ -61,7 +64,7 @@ export function EventVolunteerSignupPanel({
   }
 
   return (
-    <div className="ds-card p-3">
+    <Card as="div" padding="none" className="p-3">
       <p className="text-sm text-foreground">Volunteer for this event</p>
 
       {!canVolunteer ? (
@@ -78,13 +81,14 @@ export function EventVolunteerSignupPanel({
             Let organizers know you&apos;d like to help with setup, cleanup, or
             other tasks.
           </p>
-          <button
+          <Button
             type="button"
             onClick={() => setShowForm(true)}
-            className="ds-btn-accent mt-3 w-full sm:w-auto"
+            size="lg"
+            className="mt-3 w-full sm:w-auto"
           >
             Volunteer for this event
-          </button>
+          </Button>
         </>
       ) : null}
 
@@ -98,29 +102,33 @@ export function EventVolunteerSignupPanel({
               rows={3}
               maxLength={2000}
               placeholder='e.g. "I can help with decoration" or "available for setup/cleanup"'
-              className="ds-field-input"
+              className={`${inputFieldClassName} mt-1`}
             />
           </label>
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            <button
+            <Button
               type="submit"
               disabled={submitting}
-              className="ds-btn-accent w-full sm:w-auto"
+              loading={submitting}
+              size="lg"
+              className="w-full sm:w-auto"
             >
-              {submitting ? "Submitting…" : "Submit volunteer signup"}
-            </button>
-            <button
+              Submit volunteer signup
+            </Button>
+            <Button
               type="button"
+              variant="outline"
               disabled={submitting}
               onClick={() => {
                 setShowForm(false);
                 setNote("");
                 setErrorMessage(null);
               }}
-              className="ds-btn-outline w-full sm:w-auto"
+              size="lg"
+              className="w-full sm:w-auto"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       ) : null}
@@ -139,14 +147,17 @@ export function EventVolunteerSignupPanel({
             </p>
           ) : null}
           {canVolunteer ? (
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={() => void handleWithdraw()}
               disabled={withdrawing}
-              className="ds-btn-outline mt-3 w-full sm:w-auto"
+              loading={withdrawing}
+              size="lg"
+              className="mt-3 w-full sm:w-auto"
             >
-              {withdrawing ? "Withdrawing…" : "Withdraw signup"}
-            </button>
+              Withdraw signup
+            </Button>
           ) : null}
         </div>
       ) : null}
@@ -156,6 +167,6 @@ export function EventVolunteerSignupPanel({
           {errorMessage}
         </p>
       ) : null}
-    </div>
+    </Card>
   );
 }

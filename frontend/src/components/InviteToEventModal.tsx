@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { Modal } from "./ui/Modal";
+import { Button } from "./ui/Button";
 import { getApiErrorMessage } from "../lib/auth-api";
 import { fetchUpcomingEvents, type EventResponse } from "../lib/events-api";
 import { inviteEventParticipants } from "../lib/events-api";
@@ -123,21 +124,17 @@ export function InviteToEventModal({
         ) : null}
 
         <div className="flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full border border-gray-300 px-4 py-2 text-sm text-foreground"
-          >
+          <Button type="button" variant="outline" onClick={onClose}>
             Close
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             disabled={!selectedEventId || isSubmitting || memberIds.length === 0}
+            loading={isSubmitting}
             onClick={() => void handleInvite()}
-            className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
           >
-            {isSubmitting ? "Inviting…" : "Send invites"}
-          </button>
+            Send invites
+          </Button>
         </div>
       </div>
     </Modal>

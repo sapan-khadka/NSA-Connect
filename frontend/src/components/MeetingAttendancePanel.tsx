@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { Button } from "./ui/Button";
+import { Card } from "./ui/Card";
 import { PositionBadge } from "./PositionBadge";
 import type { MeetingAttendanceEntry, MeetingAttendanceStatus } from "../lib/meetings-api";
 import { formatPositionLabel, isExclusiveMemberPosition, type MemberPosition } from "../lib/roles";
@@ -92,7 +94,7 @@ export function MeetingAttendancePanel({
   }
 
   return (
-    <section className="ds-card p-6">
+    <Card padding="md">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <h2 className="text-lg font-light tracking-subhead text-foreground">
           Board attendance
@@ -175,16 +177,16 @@ export function MeetingAttendancePanel({
 
       {canManage ? (
         <div className="mt-4 flex justify-end">
-          <button
+          <Button
             type="button"
             disabled={!dirty || saving}
+            loading={saving}
             onClick={() => void handleSave()}
-            className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {saving ? "Saving attendance…" : "Save attendance"}
-          </button>
+            Save attendance
+          </Button>
         </div>
       ) : null}
-    </section>
+    </Card>
   );
 }

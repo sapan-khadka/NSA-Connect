@@ -1,8 +1,11 @@
 import type { ElementType, ReactNode } from "react";
 
-import { cx } from "../../design-system/cx";
+import {
+  Card as DesignSystemCard,
+  type CardPadding,
+} from "../../design-system/components/Card";
 
-type CardPadding = "none" | "sm" | "md" | "lg";
+export type { CardPadding };
 
 export type CardProps = {
   as?: ElementType;
@@ -13,33 +16,12 @@ export type CardProps = {
   padding?: CardPadding;
 };
 
-const PADDING_CLASS: Record<CardPadding, string> = {
-  none: "",
-  sm: "p-4",
-  md: "p-6",
-  lg: "p-8",
-};
-
-function buildCardClass({
-  interactive = false,
-  nested = false,
-}: {
-  interactive?: boolean;
-  nested?: boolean;
-}): string {
-  if (nested) {
-    return interactive ? "ds-card-nested ds-card-interactive" : "ds-card-nested";
-  }
-
-  return interactive ? "ds-card ds-card-interactive" : "ds-card";
-}
-
 /**
- * CampusOS surface card. Styles come from design tokens via `.ds-card`.
- * Existing callers (HomeCard, etc.) keep the same API and appearance.
+ * App-facing Card — wraps the design-system Card with the legacy `nested` API.
+ * Default padding is `none` so callers that pass padding via className stay unchanged.
  */
 export function Card({
-  as: Component = "section",
+  as,
   children,
   className = "",
   interactive = false,
@@ -48,15 +30,15 @@ export function Card({
   ...rest
 }: CardProps & Record<string, unknown>) {
   return (
-    <Component
-      className={cx(
-        buildCardClass({ interactive, nested }),
-        PADDING_CLASS[padding],
-        className,
-      )}
+    <DesignSystemCard
+      as={as}
+      variant={nested ? "nested" : "default"}
+      padding={padding}
+      interactive={interactive}
+      className={className}
       {...rest}
     >
       {children}
-    </Component>
+    </DesignSystemCard>
   );
 }

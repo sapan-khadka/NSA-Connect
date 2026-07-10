@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { PendingApprovals } from "../components/PendingApprovals";
 import { RoleBadge } from "../components/RoleBadge";
 import { useAuth } from "../context/useAuth";
+import { Card } from "../components/ui/Card";
 
 export function BoardDashboardPage() {
   const { member } = useAuth();
@@ -15,7 +16,7 @@ export function BoardDashboardPage() {
 
   return (
     <div className="space-y-8">
-      <section className="ds-card p-8">
+      <Card padding="lg">
         <p className="ds-section-label">
           Board Dashboard
         </p>
@@ -26,10 +27,10 @@ export function BoardDashboardPage() {
           Approve new signups with one click, manage members, and oversee NSA
           operations from one place.
         </p>
-      </section>
+      </Card>
 
       <div className="grid gap-6 md:grid-cols-3">
-        <section className="ds-card p-6">
+        <Card padding="md">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-label">
             Pending approvals
           </h2>
@@ -39,28 +40,28 @@ export function BoardDashboardPage() {
           >
             {pendingCount ?? "..."}
           </p>
-        </section>
+        </Card>
 
-        <section className="ds-card p-6">
+        <Card padding="md">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-label">
             Your role
           </h2>
           <div className="mt-3">
             <RoleBadge role={member.role} size="md" />
           </div>
-        </section>
+        </Card>
 
-        <section className="ds-card p-6">
+        <Card padding="md">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-label">
             Board tools
           </h2>
           <p className="mt-3 text-2xl font-light tracking-headline text-foreground">Active</p>
-        </section>
+        </Card>
       </div>
 
       <PendingApprovals onCountChange={setPendingCount} showReject={false} />
 
-      <section className="ds-card p-6">
+      <Card padding="md">
         <h2 className="text-lg font-light tracking-subhead text-foreground">Board actions</h2>
         <ul className="mt-4 grid gap-3 md:grid-cols-2">
           <li>
@@ -130,7 +131,7 @@ export function BoardDashboardPage() {
             </Link>
           </li>
         </ul>
-      </section>
+      </Card>
     </div>
   );
 }

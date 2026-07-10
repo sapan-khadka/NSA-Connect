@@ -1,6 +1,8 @@
 import { useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import { FinanceCategoryField } from "./FinanceCategoryField";
+import { Button } from "./ui/Button";
+import { inputFieldClassName } from "./ui/Input";
 import {
   createFinanceEntry,
   scanFinanceReceipt,
@@ -40,8 +42,7 @@ const SCAN_FALLBACK_MESSAGE =
   "Couldn't read that receipt clearly — please fill in the details manually";
 
 const labelClassName = "block text-sm font-light text-label";
-const inputClassName =
-  "mt-1 w-full rounded-lg border border-gray-200 bg-surface-card px-3 py-2 text-sm font-light text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/40";
+const inputClassName = `${inputFieldClassName} mt-1`;
 
 function fieldId(prefix: string | undefined, name: string): string {
   return prefix ? `${prefix}-${name}` : name;
@@ -350,23 +351,23 @@ export function LogFinanceEntryForm({
           />
 
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            <button
+            <Button
               type="button"
+              variant="outline"
               disabled={isScanning || isSubmitting}
               onClick={() => cameraInputRef.current?.click()}
-              className="inline-flex min-h-11 items-center justify-center rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-light text-foreground transition hover:border-accent hover:bg-accent/5 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Take photo
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="outline"
               disabled={isScanning || isSubmitting}
               onClick={() => uploadInputRef.current?.click()}
-              className="inline-flex min-h-11 items-center justify-center rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-light text-foreground transition hover:border-accent hover:bg-accent/5 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Upload file
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               disabled={
                 isScanning ||
@@ -374,15 +375,15 @@ export function LogFinanceEntryForm({
                 !receiptFile ||
                 !isReceiptImage(receiptFile)
               }
+              loading={isScanning}
               onClick={() => {
                 if (receiptFile) {
                   void runReceiptScan(receiptFile);
                 }
               }}
-              className="inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-light text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isScanning ? "Reading receipt…" : "Scan receipt"}
-            </button>
+              Scan receipt
+            </Button>
           </div>
 
           {receiptFile ? (
@@ -403,13 +404,13 @@ export function LogFinanceEntryForm({
         </div>
 
         <div className="flex justify-end md:col-span-2">
-          <button
+          <Button
             type="submit"
             disabled={isSubmitting || isScanning}
-            className="min-h-11 rounded-full bg-primary px-5 py-2 text-sm font-light text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+            loading={isSubmitting}
           >
-            {isSubmitting ? "Saving..." : "Log transaction"}
-          </button>
+            Log transaction
+          </Button>
         </div>
       </form>
     </>
@@ -447,13 +448,13 @@ function CollapsibleLogFinanceEntryForm({
   return (
     <section className="rounded-card border border-gray-200 bg-surface-card p-6 shadow-card">
       {!isExpanded ? (
-        <button
+        <Button
           type="button"
+          variant="outline"
           onClick={onExpand}
-          className="min-h-11 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-light text-foreground transition hover:border-accent hover:bg-accent/5"
         >
           + Log transaction
-        </button>
+        </Button>
       ) : (
         <>
           <div className="flex items-center justify-between gap-4">

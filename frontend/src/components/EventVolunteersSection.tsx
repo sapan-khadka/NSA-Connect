@@ -7,6 +7,7 @@ import {
   type EventVolunteerSignupMember,
 } from "../lib/events-api";
 import { formatEventDateTime } from "../lib/format-datetime";
+import { Card } from "./ui/Card";
 
 type EventVolunteersSectionProps = {
   eventId: number;
@@ -67,7 +68,7 @@ export function EventVolunteersSection({
   }, [loadSignups]);
 
   return (
-    <section className="ds-card p-6" data-testid="event-volunteers-section">
+    <Card padding="md" data-testid="event-volunteers-section">
       <h2 className="text-lg font-light tracking-subhead text-foreground">
         Volunteers
       </h2>
@@ -127,6 +128,6 @@ export function EventVolunteersSection({
           ))}
         </ul>
       ) : null}
-    </section>
+    </Card>
   );
 }

@@ -6,6 +6,8 @@ import {
   type ProfileFieldVisibility,
 } from "../lib/member-talents";
 import { SEMO_EMAIL_DOMAIN, getGraduationYearOptions } from "../lib/validation";
+import { Card } from "./ui/Card";
+import { inputFieldClassName } from "./ui/Input";
 
 export type MemberProfileFormValues = {
   full_name: string;
@@ -25,7 +27,7 @@ export type MemberProfileFormValues = {
 
 const graduationYears = getGraduationYearOptions();
 
-export const profileInputClassName = "ds-field-input rounded-md";
+export const profileInputClassName = `${inputFieldClassName} mt-1 rounded-md`;
 
 export function memberToProfileFormValues(
   member: MemberResponse,
@@ -194,7 +196,14 @@ export function MemberProfileForm({
       {studentId ? (
         <div>
           <p className="block text-sm font-medium text-foreground">Student ID</p>
-          <p className="mt-1 ds-card-nested px-3 py-2 text-sm text-label">{studentId}</p>
+          <Card
+            as="p"
+            nested
+            padding="none"
+            className="mt-1 px-3 py-2 text-sm text-label"
+          >
+            {studentId}
+          </Card>
         </div>
       ) : null}
 

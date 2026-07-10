@@ -16,6 +16,8 @@ import {
 } from "../lib/member-talents";
 import { canViewMemberDirectory, isRoleAtLeast } from "../lib/roles";
 
+import { Button } from "./ui/Button";
+import { Card } from "./ui/Card";
 import { InviteToEventModal } from "./InviteToEventModal";
 import { MemberDirectoryCard } from "./MemberDirectoryCard";
 
@@ -123,7 +125,7 @@ export function MemberDirectory() {
   }
 
   return (
-    <section className="ds-card ds-mobile-edge-directory overflow-hidden">
+    <Card padding="none" className="ds-mobile-edge-directory overflow-hidden">
       <div className="border-b border-gray-200 px-4 py-4 lg:px-6 lg:py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -186,13 +188,13 @@ export function MemberDirectory() {
 
         {canInvite ? (
           <div className="mt-4">
-            <button
+            <Button
               type="button"
               onClick={() => setInviteOpen(true)}
-              className="ds-btn-accent"
+              size="lg"
             >
               Invite to event
-            </button>
+            </Button>
           </div>
         ) : null}
       </div>
@@ -275,6 +277,6 @@ export function MemberDirectory() {
         memberIds={visibleMembers.map((member) => member.id)}
         onClose={() => setInviteOpen(false)}
       />
-    </section>
+    </Card>
   );
 }

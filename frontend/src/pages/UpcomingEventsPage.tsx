@@ -8,6 +8,7 @@ import { eventDetailPath } from "../lib/event-links";
 import { fetchUpcomingEvents, type EventResponse } from "../lib/events-api";
 import { EVENT_TYPE_BADGE_CLASS, EVENT_TYPE_LABELS } from "../lib/event-types";
 import { formatEventDateTime } from "../lib/format-datetime";
+import { Card } from "../components/ui/Card";
 
 export function UpcomingEventsPage() {
   const [events, setEvents] = useState<EventResponse[]>([]);
@@ -45,7 +46,7 @@ export function UpcomingEventsPage() {
 
   return (
     <div className="space-y-8">
-      <section className="ds-card p-8">
+      <Card padding="lg">
         <p className="ds-section-label">
           Events
         </p>
@@ -54,7 +55,7 @@ export function UpcomingEventsPage() {
           Open an event to manage its tasks, budget, and completion progress in
           one place.
         </p>
-      </section>
+      </Card>
 
       {isLoading ? (
         <p className="text-sm text-label">Loading upcoming events…</p>

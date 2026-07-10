@@ -18,6 +18,7 @@ import {
   groupUpcomingEvents,
 } from "../lib/calendar-upcoming";
 import { EventRsvpButton } from "./EventRsvpButton";
+import { Badge } from "./ui/Badge";
 import { AppIcon } from "./ui/AppIcon";
 
 type EventDayPanelProps = {
@@ -210,9 +211,9 @@ export function EventDayPanel({
                       {previewEvent.name}
                     </Link>
                   </h3>
-                  <span className="rounded-full bg-mint/40 px-2 py-0.5 text-xs font-medium text-primary">
+                  <Badge variant="primary" size="sm">
                     {EVENT_TYPE_LABELS[previewEvent.event_type]}
-                  </span>
+                  </Badge>
                 </div>
                 <p className="mt-2 text-sm text-label">
                   {formatEventDateTime(previewEvent.starts_at)}

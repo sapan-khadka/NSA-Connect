@@ -2,6 +2,9 @@ import { useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/useAuth";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
+import { Input } from "../components/ui/Input";
 import { getApiErrorMessage, isPendingApprovalError, loginMember } from "../lib/auth-api";
 import { getDashboardPath } from "../lib/roles";
 import {
@@ -90,15 +93,20 @@ export function LoginPage() {
         </p>
       </div>
 
-      <form
+      <Card
+        as="form"
         onSubmit={handleSubmit}
         noValidate
-        className="mt-8 space-y-5 ds-card p-6"
+        padding="md"
+        className="mt-8 space-y-5"
       >
         {isPendingApproval && (
-          <div
+          <Card
+            as="div"
+            nested
+            padding="none"
             role="status"
-            className="ds-card-nested px-4 py-3 text-sm text-foreground"
+            className="px-4 py-3 text-sm text-foreground"
           >
             <p className="font-medium">Your account is pending approval</p>
             <p className="mt-1">
@@ -106,7 +114,7 @@ export function LoginPage() {
               review your request soon. You&apos;ll be able to sign in once your
               account is approved.
             </p>
-          </div>
+          </Card>
         )}
 
         {serverError && (
@@ -118,54 +126,31 @@ export function LoginPage() {
           </p>
         )}
 
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-foreground">
-            Email
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            value={values.email}
-            onChange={(event) => updateField("email", event.target.value)}
-            onBlur={() => validateField("email")}
-            aria-invalid={fieldErrors.email ? true : undefined}
-            aria-describedby={fieldErrors.email ? "email-error" : undefined}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-            placeholder="you@semo.edu"
-          />
-          {fieldErrors.email && (
-            <p id="email-error" className="mt-1 ds-field-error">
-              {fieldErrors.email}
-            </p>
-          )}
-        </div>
+        <Input
+          id="email"
+          name="email"
+          label="Email"
+          type="email"
+          autoComplete="email"
+          value={values.email}
+          onChange={(event) => updateField("email", event.target.value)}
+          onBlur={() => validateField("email")}
+          error={fieldErrors.email}
+          placeholder="you@semo.edu"
+        />
 
         <div>
-          <label
-            htmlFor="password"
-            className="block text-sm font-medium text-foreground"
-          >
-            Password
-          </label>
-          <input
+          <Input
             id="password"
             name="password"
+            label="Password"
             type="password"
             autoComplete="current-password"
             value={values.password}
             onChange={(event) => updateField("password", event.target.value)}
             onBlur={() => validateField("password")}
-            aria-invalid={fieldErrors.password ? true : undefined}
-            aria-describedby={fieldErrors.password ? "password-error" : undefined}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+            error={fieldErrors.password}
           />
-          {fieldErrors.password && (
-            <p id="password-error" className="mt-1 ds-field-error">
-              {fieldErrors.password}
-            </p>
-          )}
           <p className="mt-2 text-right text-sm">
             <Link to="/forgot-password" className="font-medium text-accent">
               Forgot password?
@@ -173,14 +158,15 @@ export function LoginPage() {
           </p>
         </div>
 
-        <button
+        <Button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded-full bg-primary px-4 py-2 font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+          loading={isSubmitting}
+          className="w-full"
         >
-          {isSubmitting ? "Signing in..." : "Sign in"}
-        </button>
-      </form>
+          Sign in
+        </Button>
+      </Card>
 
       <p className="mt-4 text-center text-sm text-label">
         Don&apos;t have an account?{" "}

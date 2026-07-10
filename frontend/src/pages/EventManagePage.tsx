@@ -24,6 +24,7 @@ import { fetchEventBudgetForEvent } from "../lib/finance-api";
 import type { MemberResponse } from "../lib/auth-api";
 import type { FinanceEventBudgetSummary } from "../lib/finance-api";
 import { formatEventDateTime } from "../lib/format-datetime";
+import { Card } from "../components/ui/Card";
 import {
   buildVolunteerTaskDraft,
   type EventTaskDraft,
@@ -235,7 +236,7 @@ export function EventManagePage() {
         </Link>
       </div>
 
-      <section className="ds-card p-6 sm:p-8">
+      <Card padding="none" className="p-6 sm:p-8">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-3xl font-light tracking-headline text-foreground">
             {event.name}
@@ -252,7 +253,7 @@ export function EventManagePage() {
             {event.description}
           </p>
         ) : null}
-      </section>
+      </Card>
 
       {canViewBoard ? (
         <>

@@ -11,6 +11,7 @@ import {
   type EventCheckInRecord,
 } from "../lib/event-checkin-api";
 import { formatEventDateTime } from "../lib/format-datetime";
+import { Card } from "./ui/Card";
 
 type EventCheckInPanelProps = {
   eventId: number;
@@ -92,7 +93,7 @@ export function EventCheckInPanel({ eventId, eventName }: EventCheckInPanelProps
   const guestCount = checkins.filter((checkin) => checkin.kind === "guest").length;
 
   return (
-    <section className="ds-card p-6">
+    <Card padding="md">
       <div className="border-b border-gray-200 pb-4">
         <h2 className="text-lg font-light tracking-subhead text-foreground">
           Check-in
@@ -207,6 +208,6 @@ export function EventCheckInPanel({ eventId, eventName }: EventCheckInPanelProps
           </p>
         ) : null}
       </div>
-    </section>
+    </Card>
   );
 }

@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { Button } from "./ui/Button";
+import { Card } from "./ui/Card";
+import { inputFieldClassName } from "./ui/Input";
 import { getApiErrorMessage } from "../lib/api-error";
 import {
   CUSTOM_FINANCE_CATEGORY,
@@ -204,9 +207,9 @@ export function FinanceEntryList({
 
   if (isLoading) {
     return (
-      <div className="ds-card p-10 text-center text-label">
+      <Card as="div" padding="none" className="p-10 text-center text-label">
         Loading transactions...
-      </div>
+      </Card>
     );
   }
 
@@ -224,7 +227,7 @@ export function FinanceEntryList({
   const columnCount = canManage ? 7 : 6;
 
   return (
-    <section className="ds-card p-6">
+    <Card padding="md">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <h2 className="text-base font-medium text-foreground">
           Recent transactions
@@ -236,16 +239,21 @@ export function FinanceEntryList({
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             placeholder="Search description or category"
-            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-light text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/40"
+            className={`mt-1 ${inputFieldClassName}`}
           />
         </label>
       </div>
 
       {financeLocked ? (
-        <p className="mt-4 ds-card-nested px-3 py-2 text-sm text-foreground">
+        <Card
+          as="p"
+          nested
+          padding="none"
+          className="mt-4 px-3 py-2 text-sm text-foreground"
+        >
           Event finances are closed. These entries are preserved for accountability
           and can no longer be edited.
-        </p>
+        </Card>
       ) : null}
 
       {actionError ? (
@@ -368,14 +376,16 @@ export function FinanceEntryList({
                     <td className="px-4 py-3 text-label">—</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
-                        <button
+                        <Button
                           type="button"
                           onClick={() => void saveEdit(entry.id)}
                           disabled={isBusy}
-                          className="rounded-full bg-primary px-3 py-1 text-xs font-medium text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+                          loading={isBusy}
+                          size="sm"
+                          className="text-xs px-3 py-1 min-h-0"
                         >
-                          {isBusy ? "Saving…" : "Save"}
-                        </button>
+                          Save
+                        </Button>
                         <button
                           type="button"
                           onClick={cancelEdit}
@@ -467,6 +477,6 @@ export function FinanceEntryList({
           </tbody>
         </table>
       </div>
-    </section>
+    </Card>
   );
 }

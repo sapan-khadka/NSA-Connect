@@ -3,6 +3,7 @@ import { useState } from "react";
 import { getApiErrorMessage } from "../lib/auth-api";
 import { patchEvent, type EventDetailResponse } from "../lib/events-api";
 import type { MeetingVisibility } from "../lib/event-types";
+import { Card } from "./ui/Card";
 
 type EventMeetingVisibilitySettingProps = {
   event: EventDetailResponse;
@@ -57,7 +58,7 @@ export function EventMeetingVisibilitySetting({
   }
 
   return (
-    <section className="ds-card p-4 sm:p-6">
+    <Card padding="none" className="p-4 sm:p-6">
       <h2 className="text-sm font-medium text-foreground">Meeting visibility</h2>
       <p className="mt-1 text-sm text-label">
         Control whether general members can see this meeting on the calendar.
@@ -93,6 +94,6 @@ export function EventMeetingVisibilitySetting({
           {error}
         </p>
       ) : null}
-    </section>
+    </Card>
   );
 }

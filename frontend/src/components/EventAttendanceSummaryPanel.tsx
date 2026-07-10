@@ -1,5 +1,6 @@
 import type { EventAttendanceSummary } from "../lib/event-checkin-api";
 import { formatEventDateTime } from "../lib/format-datetime";
+import { Card } from "./ui/Card";
 
 type EventAttendanceSummaryPanelProps = {
   summary: EventAttendanceSummary;
@@ -50,7 +51,7 @@ export function EventAttendanceSummaryPanel({
   summary,
 }: EventAttendanceSummaryPanelProps) {
   return (
-    <section className="ds-card p-6">
+    <Card padding="md">
       <div className="border-b border-gray-200 pb-4">
         <h2 className="text-lg font-light tracking-subhead text-foreground">
           RSVP vs attendance
@@ -91,6 +92,6 @@ export function EventAttendanceSummaryPanel({
           (non-members; not included in RSVP categories above)
         </span>
       </p>
-    </section>
+    </Card>
   );
 }

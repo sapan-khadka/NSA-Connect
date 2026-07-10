@@ -11,6 +11,8 @@ import {
   type Announcement,
   type AnnouncementCategory,
 } from "../lib/announcements-api";
+import { Button } from "../components/ui/Button";
+import { inputFieldClassName } from "../components/ui/Input";
 import { formatEventDateTime } from "../lib/format-datetime";
 import { isRoleAtLeast } from "../lib/roles";
 
@@ -104,7 +106,7 @@ function AnnouncementForm({ initial, onCancel, onSaved }: AnnouncementFormProps)
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             required
-            className="ds-field-input"
+            className={`${inputFieldClassName} mt-1`}
           />
         </label>
 
@@ -115,7 +117,7 @@ function AnnouncementForm({ initial, onCancel, onSaved }: AnnouncementFormProps)
             onChange={(event) => setBody(event.target.value)}
             required
             rows={5}
-            className="ds-field-input"
+            className={`${inputFieldClassName} mt-1`}
           />
         </label>
 
@@ -124,7 +126,7 @@ function AnnouncementForm({ initial, onCancel, onSaved }: AnnouncementFormProps)
           <select
             value={category}
             onChange={(event) => setCategory(event.target.value as AnnouncementCategory)}
-            className="ds-field-input"
+            className={`${inputFieldClassName} mt-1`}
           >
             {CATEGORY_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -136,20 +138,22 @@ function AnnouncementForm({ initial, onCancel, onSaved }: AnnouncementFormProps)
       </div>
 
       <div className="mt-6 flex flex-wrap gap-3">
-        <button
+        <Button
           type="submit"
           disabled={submitting}
-          className="ds-btn-accent"
+          loading={submitting}
+          size="lg"
         >
-          {submitting ? "Saving…" : initial ? "Save changes" : "Post announcement"}
-        </button>
-        <button
+          {initial ? "Save changes" : "Post announcement"}
+        </Button>
+        <Button
           type="button"
+          variant="outline"
           onClick={onCancel}
-          className="ds-btn-outline"
+          size="lg"
         >
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -312,13 +316,13 @@ export function AnnouncementsPage() {
             </p>
           </div>
           {canManage && !showCreateForm && !editingAnnouncement ? (
-            <button
+            <Button
               type="button"
               onClick={() => setShowCreateForm(true)}
-              className="ds-btn-accent"
+              size="lg"
             >
               Post announcement
-            </button>
+            </Button>
           ) : null}
         </div>
       </div>

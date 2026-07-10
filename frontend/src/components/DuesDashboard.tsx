@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { Button } from "./ui/Button";
+import { inputFieldClassName } from "./ui/Input";
 import { getApiErrorMessage } from "../lib/api-error";
 import {
   DUES_PAYMENT_METHODS,
@@ -23,6 +25,8 @@ import {
 } from "../lib/dues-api";
 import { formatCurrency } from "../lib/format-currency";
 import { formatSemesterLabel } from "../lib/semester";
+import { DataTable } from "../design-system/components/data-display/DataTable";
+import type { DataTableColumn } from "../design-system/components/data-display/DataTable";
 import { Modal } from "./ui/Modal";
 
 type DuesDashboardProps = {
@@ -45,8 +49,7 @@ type EditAmountState = {
   amount: string;
 };
 
-const inputClassName =
-  "w-full rounded-lg border border-gray-200 bg-surface-card px-3 py-2 text-sm text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40";
+const inputClassName = inputFieldClassName;
 
 function SummaryMetric({
   title,
@@ -161,20 +164,16 @@ function MarkPaidModal({
         ) : null}
 
         <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full border border-gray-200 px-4 py-2 text-sm text-label hover:border-accent hover:text-foreground"
-          >
+          <Button type="button" variant="outline" onClick={onClose}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             disabled={isSubmitting}
-            className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-60"
+            loading={isSubmitting}
           >
-            {isSubmitting ? "Saving…" : "Mark paid"}
-          </button>
+            Mark paid
+          </Button>
         </div>
       </form>
     </Modal>
@@ -236,20 +235,16 @@ function EditAmountModal({
         ) : null}
 
         <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full border border-gray-200 px-4 py-2 text-sm text-label hover:border-accent hover:text-foreground"
-          >
+          <Button type="button" variant="outline" onClick={onClose}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             disabled={isSubmitting}
-            className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-60"
+            loading={isSubmitting}
           >
-            {isSubmitting ? "Saving…" : "Save amount"}
-          </button>
+            Save amount
+          </Button>
         </div>
       </form>
     </Modal>
@@ -382,6 +377,85 @@ export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboard
     }
   }
 
+  const duesColumns = useMemo<DataTableColumn<MemberDuesRecord>[]>(
+    () => [
+      {
+        id: "member",
+        header: "Member",
+        cell: (record) => (
+          <>
+            <p className="font-medium text-foreground">{record.member_name}</p>
+            <p className="text-xs text-label">{record.member_email}</p>
+          </>
+        ),
+      },
+      {
+        id: "owed",
+        header: "Owed",
+        cell: (record) => formatCurrency(record.amount_owed),
+      },
+      {
+        id: "paid",
+        header: "Paid",
+        cell: (record) => formatCurrency(record.amount_paid),
+      },
+      {
+        id: "status",
+        header: "Status",
+        cell: (record) => (
+          <span
+            className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${duesStatusToneClass(record.status)}`}
+          >
+            {duesStatusLabel(record.status)}
+          </span>
+        ),
+      },
+      {
+        id: "method",
+        header: "Method",
+        className: "text-label",
+        cell: (record) => paymentMethodLabel(record.payment_method),
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        cell: (record) => (
+          <div className="flex flex-wrap gap-2">
+            {record.status !== "paid" && record.status !== "exempt" ? (
+              <button
+                type="button"
+                onClick={() => setMarkPaidState({ record })}
+                className="rounded-full border border-gray-200 px-3 py-1 text-xs hover:border-accent"
+              >
+                Mark paid
+              </button>
+            ) : null}
+            {record.status === "paid" || record.status === "partial" ? (
+              <button
+                type="button"
+                disabled={busyRecordId === record.id}
+                onClick={() => void handleMarkUnpaid(record)}
+                className="rounded-full border border-gray-200 px-3 py-1 text-xs hover:border-accent disabled:opacity-60"
+              >
+                Mark unpaid
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() =>
+                setEditAmountState({ record, amount: record.amount_owed })
+              }
+              className="rounded-full border border-gray-200 px-3 py-1 text-xs hover:border-accent"
+            >
+              Edit amount
+            </button>
+          </div>
+        ),
+      },
+    ],
+    [busyRecordId],
+  );
+
   return (
     <div className="space-y-6">
       <section className="rounded-card border border-gray-200 bg-surface-card p-5 shadow-card">
@@ -394,14 +468,14 @@ export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboard
               Set the default amount, then generate unpaid records for all approved members.
             </p>
           </div>
-          <button
+          <Button
             type="button"
             onClick={() => void handleGenerate()}
             disabled={isGenerating}
-            className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-60"
+            loading={isGenerating}
           >
             {isGenerating ? "Generating…" : `Generate for ${semesterLabel}`}
-          </button>
+          </Button>
         </div>
 
         <form
@@ -419,13 +493,14 @@ export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboard
               className={inputClassName}
             />
           </label>
-          <button
+          <Button
             type="submit"
+            variant="outline"
             disabled={isSavingDefault || !defaultAmount.trim()}
-            className="rounded-full border border-gray-200 bg-surface-card px-4 py-2 text-sm text-foreground hover:border-accent disabled:opacity-60"
+            loading={isSavingDefault}
           >
-            {isSavingDefault ? "Saving…" : "Save default"}
-          </button>
+            Save default
+          </Button>
         </form>
 
         {settingsMessage ? (
@@ -486,7 +561,7 @@ export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboard
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="Search by name or email"
                   aria-label="Search members"
-                  className="min-w-[14rem] rounded-lg border border-gray-200 bg-surface-card px-3 py-2 text-sm text-foreground shadow-sm"
+                  className={`${inputFieldClassName} min-w-[14rem]`}
                 />
                 <select
                   aria-label="Filter by status"
@@ -494,7 +569,7 @@ export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboard
                   onChange={(event) =>
                     setStatusFilter(event.target.value as "all" | DuesStatus)
                   }
-                  className="rounded-lg border border-gray-200 bg-surface-card px-3 py-2 text-sm text-foreground shadow-sm"
+                  className={inputFieldClassName}
                 >
                   {DUES_STATUS_FILTERS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -508,80 +583,15 @@ export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboard
               </p>
             </div>
 
-            {records.length === 0 ? (
-              <p className="px-4 py-8 text-center text-sm text-label">
-                No dues records match this filter. Generate records to get started.
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead className="bg-gray-50 text-left text-label">
-                    <tr>
-                      <th className="px-4 py-3 font-medium">Member</th>
-                      <th className="px-4 py-3 font-medium">Owed</th>
-                      <th className="px-4 py-3 font-medium">Paid</th>
-                      <th className="px-4 py-3 font-medium">Status</th>
-                      <th className="px-4 py-3 font-medium">Method</th>
-                      <th className="px-4 py-3 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {records.map((record) => (
-                      <tr key={record.id}>
-                        <td className="px-4 py-3">
-                          <p className="font-medium text-foreground">{record.member_name}</p>
-                          <p className="text-xs text-label">{record.member_email}</p>
-                        </td>
-                        <td className="px-4 py-3">{formatCurrency(record.amount_owed)}</td>
-                        <td className="px-4 py-3">{formatCurrency(record.amount_paid)}</td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${duesStatusToneClass(record.status)}`}
-                          >
-                            {duesStatusLabel(record.status)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-label">
-                          {paymentMethodLabel(record.payment_method)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-wrap gap-2">
-                            {record.status !== "paid" && record.status !== "exempt" ? (
-                              <button
-                                type="button"
-                                onClick={() => setMarkPaidState({ record })}
-                                className="rounded-full border border-gray-200 px-3 py-1 text-xs hover:border-accent"
-                              >
-                                Mark paid
-                              </button>
-                            ) : null}
-                            {record.status === "paid" || record.status === "partial" ? (
-                              <button
-                                type="button"
-                                disabled={busyRecordId === record.id}
-                                onClick={() => void handleMarkUnpaid(record)}
-                                className="rounded-full border border-gray-200 px-3 py-1 text-xs hover:border-accent disabled:opacity-60"
-                              >
-                                Mark unpaid
-                              </button>
-                            ) : null}
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setEditAmountState({ record, amount: record.amount_owed })
-                              }
-                              className="rounded-full border border-gray-200 px-3 py-1 text-xs hover:border-accent"
-                            >
-                              Edit amount
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <DataTable
+              columns={duesColumns}
+              rows={records}
+              getRowId={(record) => String(record.id)}
+              emptyTitle="No dues records match this filter."
+              emptyDescription="Generate records to get started."
+              caption="Member dues records"
+              className="border-0 bg-transparent shadow-none rounded-none"
+            />
           </section>
         </>
       ) : null}

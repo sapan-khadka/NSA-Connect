@@ -2,14 +2,14 @@ import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 
 import { MeetingMinutesSummary } from "../components/MeetingMinutesSummary";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
+import { Input, TextArea } from "../components/ui/Input";
 import { getApiErrorMessage } from "../lib/auth-api";
 import {
   summarizeMeetingMinutes,
   type SummarizeMinutesResponse,
 } from "../lib/ai-api";
-
-const inputClassName =
-  "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
 
 export function MeetingMinutesPage() {
   const [meetingTitle, setMeetingTitle] = useState("");
@@ -68,10 +68,12 @@ export function MeetingMinutesPage() {
         </p>
       </header>
 
-      <form
+      <Card
+        as="form"
         onSubmit={handleSubmit}
         noValidate
-        className="ds-card p-4 sm:p-6"
+        padding="none"
+        className="p-4 sm:p-6"
       >
         {serverError ? (
           <p
@@ -83,59 +85,45 @@ export function MeetingMinutesPage() {
         ) : null}
 
         <div className="space-y-5">
-          <div>
-            <label
-              htmlFor="meeting-title"
-              className="block text-sm font-medium text-foreground"
-            >
-              Meeting title{" "}
-              <span className="font-normal text-label">(optional)</span>
-            </label>
-            <input
-              id="meeting-title"
-              type="text"
-              value={meetingTitle}
-              onChange={(event) => setMeetingTitle(event.target.value)}
-              placeholder="March board meeting"
-              className={inputClassName}
-            />
-          </div>
+          <Input
+            id="meeting-title"
+            label={
+              <>
+                Meeting title{" "}
+                <span className="font-normal text-label">(optional)</span>
+              </>
+            }
+            type="text"
+            value={meetingTitle}
+            onChange={(event) => setMeetingTitle(event.target.value)}
+            placeholder="March board meeting"
+          />
 
-          <div>
-            <label
-              htmlFor="meeting-notes"
-              className="block text-sm font-medium text-foreground"
-            >
-              Raw notes
-            </label>
-            <textarea
-              id="meeting-notes"
-              rows={12}
-              value={notes}
-              onChange={(event) => {
-                setNotes(event.target.value);
-                setNotesError(null);
-                setServerError(null);
-              }}
-              placeholder="Paste bullet points, chat logs, or rough notes from the meeting…"
-              className={inputClassName}
-            />
-            {notesError ? (
-              <p className="mt-1 ds-field-error">{notesError}</p>
-            ) : null}
-          </div>
+          <TextArea
+            id="meeting-notes"
+            label="Raw notes"
+            rows={12}
+            value={notes}
+            onChange={(event) => {
+              setNotes(event.target.value);
+              setNotesError(null);
+              setServerError(null);
+            }}
+            placeholder="Paste bullet points, chat logs, or rough notes from the meeting…"
+            error={notesError}
+          />
         </div>
 
         <div className="mt-5 flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 pt-5">
-          <button
+          <Button
             type="submit"
             disabled={isSubmitting}
-            className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+            loading={isSubmitting}
           >
-            {isSubmitting ? "Summarizing…" : "Summarize minutes"}
-          </button>
+            Summarize minutes
+          </Button>
         </div>
-      </form>
+      </Card>
 
       {result ? <MeetingMinutesSummary result={result} onClear={clearResult} /> : null}
     </div>

@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 
+import { Button } from "./ui/Button";
+import { Card } from "./ui/Card";
+import { inputFieldClassName } from "./ui/Input";
 import { getApiErrorMessage } from "../lib/auth-api";
 import {
   combineDateAndTime,
@@ -10,8 +13,7 @@ import {
 import { patchEvent, type EventDetailResponse } from "../lib/events-api";
 import { formatEventDateTime } from "../lib/format-datetime";
 
-const inputClassName =
-  "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
+const inputClassName = `${inputFieldClassName} mt-1`;
 
 type EventManageScheduleFieldsProps = {
   event: EventDetailResponse;
@@ -84,7 +86,7 @@ export function EventManageScheduleFields({
   }
 
   return (
-    <section className="ds-card p-4 sm:p-6">
+    <Card padding="none" className="p-4 sm:p-6">
       <h2 className="text-base font-medium text-foreground">Schedule</h2>
       <p className="mt-1 text-sm text-label">
         Currently scheduled for {formatEventDateTime(event.starts_at)}.
@@ -140,15 +142,15 @@ export function EventManageScheduleFields({
       ) : null}
 
       <div className="mt-4 flex justify-end">
-        <button
+        <Button
           type="button"
           disabled={!isDirty || isSaving}
+          loading={isSaving}
           onClick={() => void handleSave()}
-          className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isSaving ? "Saving…" : "Save schedule"}
-        </button>
+          Save schedule
+        </Button>
       </div>
-    </section>
+    </Card>
   );
 }
