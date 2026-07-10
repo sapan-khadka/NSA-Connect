@@ -82,7 +82,7 @@ export function EventFeedbackPanel({
           <button
             type="button"
             onClick={() => startEditing()}
-            className="mt-3 rounded-pill bg-primary px-4 py-2 text-sm text-white transition hover:opacity-90"
+            className="ds-btn-accent mt-3 w-full sm:w-auto"
           >
             Leave feedback
           </button>
@@ -106,7 +106,7 @@ export function EventFeedbackPanel({
           <button
             type="button"
             onClick={() => startEditing(feedback)}
-            className="mt-3 rounded-pill border border-gray-200 px-4 py-2 text-sm text-foreground hover:border-accent"
+            className="ds-btn-outline mt-3 w-full sm:w-auto"
           >
             Edit feedback
           </button>
@@ -129,15 +129,15 @@ export function EventFeedbackPanel({
               rows={3}
               maxLength={5000}
               placeholder="What went well? What could be improved?"
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-foreground"
+              className="ds-field-input"
             />
           </label>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <button
               type="submit"
               disabled={submitting || rating < 1}
-              className="rounded-pill bg-primary px-4 py-2 text-sm text-white disabled:opacity-60"
+              className="ds-btn-accent w-full sm:w-auto"
             >
               {submitting ? "Saving…" : feedback ? "Save changes" : "Submit feedback"}
             </button>
@@ -145,7 +145,7 @@ export function EventFeedbackPanel({
               type="button"
               disabled={submitting}
               onClick={cancelEditing}
-              className="rounded-pill border border-gray-200 px-4 py-2 text-sm text-foreground disabled:opacity-60"
+              className="ds-btn-outline w-full sm:w-auto"
             >
               Cancel
             </button>

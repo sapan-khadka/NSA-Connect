@@ -37,19 +37,21 @@ export function MembersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="Community"
-        title="Members"
-        description={
-          canManagePending
-            ? "Browse talents for program planning, approve new signups, and manage membership."
-            : "Browse member talents and interests to connect for cultural programs."
-        }
-      />
+    <div className="space-y-0 lg:space-y-6">
+      <div className="ds-mobile-edge-section lg:px-0 lg:py-0">
+        <PageHeader
+          eyebrow="Community"
+          title="Members"
+          description={
+            canManagePending
+              ? "Browse talents for program planning, approve new signups, and manage membership."
+              : "Browse member talents and interests to connect for cultural programs."
+          }
+        />
+      </div>
 
       {canManagePending ? (
-        <div className="flex gap-2 border-b border-surface-card">
+        <div className="ds-mobile-edge-section flex gap-2 border-b border-gray-200 lg:border-surface-card lg:px-0">
           {(Object.keys(TAB_LABELS) as MembersTab[]).map((tab) => {
             const isActive = activeTab === tab;
 

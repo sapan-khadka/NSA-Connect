@@ -84,7 +84,7 @@ export function NavDropdown({ label, items, isActive = false }: NavDropdownProps
               onClick={() => setOpen(false)}
               className={({ isActive: itemActive }) =>
                 [
-                  "block px-3 py-2 text-sm transition-colors",
+                  "block px-3 py-3 text-sm transition-colors",
                   itemActive
                     ? "bg-accent/5 font-medium text-accent"
                     : "text-foreground hover:bg-surface-card hover:text-accent",
@@ -182,7 +182,7 @@ export function AccountMenu({ fullName, onLogout }: AccountMenuProps) {
             onClick={() => setOpen(false)}
             className={({ isActive }) =>
               [
-                "block px-3 py-2 text-sm transition-colors",
+                "block px-3 py-3 text-sm transition-colors",
                 isActive
                   ? "bg-accent/5 font-medium text-accent"
                   : "text-foreground hover:bg-surface-card hover:text-accent",
@@ -198,7 +198,7 @@ export function AccountMenu({ fullName, onLogout }: AccountMenuProps) {
               setOpen(false);
               onLogout();
             }}
-            className="block w-full px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-surface-card hover:text-accent"
+            className="block w-full px-3 py-3 text-left text-sm text-foreground transition-colors hover:bg-surface-card hover:text-accent"
           >
             Log out
           </button>

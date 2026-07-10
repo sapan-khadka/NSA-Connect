@@ -411,7 +411,7 @@ describe("HomePage", () => {
     );
 
     const activityList = await screen.findByLabelText("Activity");
-    expect(activityList.querySelector("ul")).toHaveClass("max-h-64", "overflow-y-auto");
+    expect(activityList.querySelector("ul")).toHaveClass("lg:max-h-64", "overflow-y-auto");
     expect(screen.getAllByText("Recent · clears from this feed after 7 days")).toHaveLength(2);
 
     const activityItems = Array.from(

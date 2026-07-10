@@ -100,7 +100,7 @@ export function BoardTaskKanban({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="grid gap-5 xl:grid-cols-3">
+      <div className="grid gap-5 overflow-x-hidden xl:grid-cols-3">
         {KANBAN_COLUMNS.map((column) => (
           <KanbanColumn
             key={column.id}

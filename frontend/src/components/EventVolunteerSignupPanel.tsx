@@ -81,7 +81,7 @@ export function EventVolunteerSignupPanel({
           <button
             type="button"
             onClick={() => setShowForm(true)}
-            className="mt-3 rounded-pill bg-primary px-4 py-2 text-sm text-white transition hover:opacity-90"
+            className="ds-btn-accent mt-3 w-full sm:w-auto"
           >
             Volunteer for this event
           </button>
@@ -98,14 +98,14 @@ export function EventVolunteerSignupPanel({
               rows={3}
               maxLength={2000}
               placeholder='e.g. "I can help with decoration" or "available for setup/cleanup"'
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-foreground"
+              className="ds-field-input"
             />
           </label>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-pill bg-primary px-4 py-2 text-sm text-white disabled:opacity-60"
+              className="ds-btn-accent w-full sm:w-auto"
             >
               {submitting ? "Submitting…" : "Submit volunteer signup"}
             </button>
@@ -117,7 +117,7 @@ export function EventVolunteerSignupPanel({
                 setNote("");
                 setErrorMessage(null);
               }}
-              className="rounded-pill border border-gray-200 px-4 py-2 text-sm text-foreground disabled:opacity-60"
+              className="ds-btn-outline w-full sm:w-auto"
             >
               Cancel
             </button>
@@ -143,7 +143,7 @@ export function EventVolunteerSignupPanel({
               type="button"
               onClick={() => void handleWithdraw()}
               disabled={withdrawing}
-              className="mt-3 rounded-pill border border-gray-200 px-4 py-2 text-sm text-foreground hover:border-accent disabled:opacity-60"
+              className="ds-btn-outline mt-3 w-full sm:w-auto"
             >
               {withdrawing ? "Withdrawing…" : "Withdraw signup"}
             </button>

@@ -12,7 +12,11 @@ import {
 } from "../lib/announcements-api";
 import { formatEventDateTime } from "../lib/format-datetime";
 
-export function HomeAnnouncementsSection() {
+export function HomeAnnouncementsSection({
+  previewLimit = 3,
+}: {
+  previewLimit?: number;
+}) {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -56,6 +60,9 @@ export function HomeAnnouncementsSection() {
     return null;
   }
 
+  const visibleAnnouncements = announcements.slice(0, previewLimit);
+  const isTruncated = announcements.length > visibleAnnouncements.length;
+
   return (
     <HomeCard>
       <div className="flex items-center justify-between gap-3">
@@ -63,12 +70,12 @@ export function HomeAnnouncementsSection() {
         <ArrowLink to="/announcements">View all</ArrowLink>
       </div>
 
-      <ul className="mt-4 space-y-4">
-        {announcements.map((announcement) => (
+      <ul className="mt-3 space-y-3 lg:mt-4 lg:space-y-4">
+        {visibleAnnouncements.map((announcement) => (
           <li key={announcement.id} className="border-b border-gray-100 pb-4 last:border-b-0">
             <Link to="/announcements" className="group block">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-sm font-medium text-foreground group-hover:text-accent">
+                <p className="break-words text-sm font-medium text-foreground group-hover:text-accent">
                   {announcement.title}
                 </p>
                 <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-label">

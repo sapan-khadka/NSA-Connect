@@ -17,7 +17,7 @@ export function StarRatingInput({
     <div>
       <p className="text-sm text-label">{label}</p>
       <div
-        className="mt-1 flex gap-1"
+        className="mt-1 flex flex-wrap gap-1"
         role="radiogroup"
         aria-label={label}
       >
@@ -34,14 +34,14 @@ export function StarRatingInput({
               disabled={disabled}
               onClick={() => onChange(rating)}
               className={[
-                "rounded-md p-1 transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                "inline-flex min-h-11 min-w-11 items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-60",
                 selected
                   ? "text-accent"
                   : "text-gray-300 hover:text-accent/70",
               ].join(" ")}
             >
               <Star
-                className="h-7 w-7"
+                className="h-8 w-8"
                 fill={selected ? "currentColor" : "none"}
                 aria-hidden="true"
               />

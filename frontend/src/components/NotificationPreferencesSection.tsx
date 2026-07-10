@@ -92,7 +92,7 @@ export function NotificationPreferencesSection() {
   }
 
   return (
-    <section className="ds-card p-6">
+    <section className="ds-card p-4 sm:p-6">
       <div className="border-b border-gray-200 pb-4">
         <h2 className="text-lg font-light tracking-subhead text-foreground">
           Notifications
@@ -121,7 +121,7 @@ export function NotificationPreferencesSection() {
                 key={option.key}
                 className="flex items-start justify-between gap-4 rounded-lg border border-gray-200 bg-surface-card px-4 py-3"
               >
-                <div>
+                <div className="min-w-0 flex-1">
                   <p className="font-medium text-foreground">{option.label}</p>
                   <p className="mt-1 text-sm text-label">{option.description}</p>
                 </div>
@@ -133,15 +133,15 @@ export function NotificationPreferencesSection() {
                   disabled={isSaving}
                   onClick={() => void handleToggle(option.key)}
                   className={[
-                    "relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors",
+                    "relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition-colors",
                     isOn ? "bg-primary" : "bg-gray-200",
                     isSaving ? "opacity-60" : "",
                   ].join(" ")}
                 >
                   <span
                     className={[
-                      "inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform",
-                      isOn ? "translate-x-6" : "translate-x-1",
+                      "inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform",
+                      isOn ? "translate-x-7" : "translate-x-1",
                     ].join(" ")}
                   />
                 </button>

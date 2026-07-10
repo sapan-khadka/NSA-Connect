@@ -19,7 +19,7 @@ export function MemberDirectoryCard({ member, to }: MemberDirectoryCardProps) {
   return (
     <Link
       to={to}
-      className="group block rounded-2xl border border-[#E7EBF1] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05),0_8px_20px_rgba(0,0,0,0.04)] transition-all hover:-translate-y-0.5 hover:shadow-[0_2px_6px_rgba(0,0,0,0.08),0_12px_28px_rgba(0,0,0,0.06)]"
+      className="group block bg-white px-4 py-4 lg:rounded-2xl lg:border lg:border-[#E7EBF1] lg:p-5 lg:shadow-[0_1px_3px_rgba(0,0,0,0.05),0_8px_20px_rgba(0,0,0,0.04)] lg:transition-all lg:hover:-translate-y-0.5 lg:hover:shadow-[0_2px_6px_rgba(0,0,0,0.08),0_12px_28px_rgba(0,0,0,0.06)]"
     >
       <div className="flex items-start gap-4">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-[#E7EBF1] bg-[#FAFAF9] text-sm font-medium text-foreground">

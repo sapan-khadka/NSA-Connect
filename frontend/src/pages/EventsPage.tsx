@@ -408,35 +408,40 @@ export function EventsPage() {
   const calendarLoading = loading || (viewMode === "year" && yearLoading);
 
   return (
-    <div className="-mx-1 rounded-2xl bg-[#F3F3F1] px-1 py-2 sm:px-2 sm:py-4">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3">
-        <div>
-          <p className="text-sm font-medium text-foreground">Have an event idea?</p>
-          <p className="text-xs text-label">
-            Share suggestions for the board to review when planning.
-          </p>
+    <div className="lg:-mx-1 lg:rounded-2xl lg:bg-[#F3F3F1] lg:px-2 lg:py-4">
+      <div className="ds-mobile-edge-section lg:mb-5 lg:rounded-xl lg:border lg:border-gray-200 lg:bg-white lg:px-4 lg:py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium text-foreground">Have an event idea?</p>
+            <p className="text-xs text-label">
+              Share suggestions for the board to review when planning.
+            </p>
+          </div>
+          <Link
+            to="/events/suggestions"
+            className="rounded-full border border-gray-200 px-4 py-2 text-sm text-foreground hover:border-accent"
+          >
+            Suggest an event
+          </Link>
         </div>
-        <Link
-          to="/events/suggestions"
-          className="rounded-full border border-gray-200 px-4 py-2 text-sm text-foreground hover:border-accent"
-        >
-          Suggest an event
-        </Link>
       </div>
 
       {canCreateEvents ? (
-        <div className="mb-5">
+        <div className="ds-mobile-edge-section lg:mb-5">
           <CreateEventForm onCreated={(event) => void handleEventCreated(event)} />
         </div>
       ) : null}
 
       {calendarLoading ? (
-        <p className="text-sm text-label">Loading events…</p>
+        <p className="ds-mobile-edge-section text-sm text-label lg:px-0">Loading events…</p>
       ) : null}
-      {error ? <p className="ds-field-error">{error}</p> : null}
+      {error ? (
+        <p className="ds-mobile-edge-section ds-field-error lg:px-0">{error}</p>
+      ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.75fr)_minmax(16rem,20rem)]">
-        <EventsCalendarPanel
+      <div className="ds-mobile-edge-stack flex flex-col xl:grid xl:grid-cols-[minmax(0,1.75fr)_minmax(16rem,20rem)] xl:gap-6">
+        <div className="ds-mobile-edge-section order-2 min-w-0 xl:order-1">
+          <EventsCalendarPanel
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           year={viewYear}
@@ -451,7 +456,9 @@ export function EventsPage() {
           searchResults={searchResults}
           onSelectSearchResult={navigateToEvent}
         />
+        </div>
 
+        <div className="ds-mobile-edge-section order-1 min-w-0 xl:order-2">
         <EventDayPanel
           selectedDate={selectedDate}
           dayEvents={selectedDayEvents}
@@ -468,6 +475,7 @@ export function EventsPage() {
           upcomingLoading={upcomingLoading}
           onSelectUpcomingEvent={navigateToEvent}
         />
+        </div>
       </div>
     </div>
   );

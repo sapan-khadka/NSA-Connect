@@ -14,6 +14,7 @@
   html {
     @apply font-light text-foreground antialiased;
     font-weight: 300;
+    overflow-x: clip;
   }
 
   body {
@@ -86,7 +87,7 @@
   }
 
   .ds-nav-link {
-    @apply relative inline-flex items-center gap-1 px-3 py-2 text-sm outline-none transition-colors;
+    @apply relative inline-flex min-h-11 shrink-0 items-center gap-1 whitespace-nowrap px-3 py-2 text-sm outline-none transition-colors;
     color: #9a9a9a;
   }
 
@@ -151,6 +152,80 @@
     @apply rounded-card bg-surface-card;
     box-shadow: var(--ds-card-shadow);
   }
+
+  /* Mobile edge-to-edge member pages (< lg): full-width sections with dividers */
+  .ds-mobile-edge-stack {
+    @apply flex flex-col divide-y divide-gray-200 border-t border-gray-200;
+  }
+
+  .ds-mobile-edge-section {
+    @apply bg-surface-card px-4 py-3;
+  }
+
+  .ds-mobile-edge-section > .ds-card,
+  .ds-mobile-edge-section > section.ds-card {
+    @apply rounded-none bg-transparent p-0 shadow-none;
+  }
+
+  .ds-mobile-edge-section .events-calendar-card {
+    @apply rounded-none p-4 shadow-none;
+  }
+
+  .ds-mobile-edge-section .events-upcoming-panel {
+    animation: none;
+    @apply rounded-none border-0 shadow-none;
+  }
+
+  .ds-mobile-edge-section .events-upcoming-panel::before {
+    @apply hidden;
+  }
+
+  @media (min-width: 1024px) {
+    .ds-mobile-edge-stack {
+      @apply divide-y-0 border-t-0;
+    }
+
+    .ds-mobile-edge-section {
+      @apply bg-transparent px-0 py-0;
+    }
+
+    .ds-mobile-edge-section > .ds-card,
+    .ds-mobile-edge-section > section.ds-card {
+      @apply rounded-card bg-surface-card p-3 lg:p-4;
+      box-shadow: var(--ds-card-shadow);
+    }
+
+    .ds-mobile-edge-section .events-calendar-card {
+      @apply rounded-2xl p-4 shadow-none sm:p-6;
+      box-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.05),
+        0 10px 26px rgba(0, 0, 0, 0.06);
+    }
+
+    .ds-mobile-edge-section .events-upcoming-panel {
+      @apply rounded-2xl border border-[#e7ebf1];
+      box-shadow: 0 8px 28px rgba(27, 75, 138, 0.1);
+    }
+
+    .ds-mobile-edge-section .events-upcoming-panel::before {
+      @apply block;
+    }
+  }
+
+  .ds-mobile-edge-directory.ds-card {
+    @apply rounded-none shadow-none lg:rounded-card;
+  }
+
+  @media (min-width: 1024px) {
+    .ds-mobile-edge-directory.ds-card {
+      box-shadow: var(--ds-card-shadow);
+    }
+  }
+
+  .ds-mobile-edge-announcement {
+    @apply rounded-none border-0 bg-transparent p-0 shadow-none lg:overflow-hidden lg:rounded-xl lg:border lg:border-gray-200 lg:bg-white lg:p-6;
+  }
+
 
   .ds-card-interactive {
     @apply transition-all duration-200 ease-out;
@@ -297,12 +372,30 @@
   }
 
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-pill bg-primary px-5 py-2 text-sm text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex min-h-11 items-center justify-center rounded-pill bg-primary px-5 py-2.5 text-sm text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60;
     font-weight: 500;
   }
 
+  .ds-chip {
+    @apply inline-flex min-h-11 items-center rounded-full px-3.5 py-2 text-sm font-medium transition-colors;
+  }
+
+  .ds-field-input {
+    @apply mt-1 w-full rounded-lg border border-gray-200 px-3 py-3 text-base text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:py-2 sm:text-sm;
+  }
+
+  .ds-btn-accent {
+    @apply inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-5 py-2.5 text-sm text-white transition-colors disabled:cursor-not-allowed disabled:opacity-60;
+    font-weight: 500;
+  }
+
+  .ds-btn-outline {
+    @apply inline-flex min-h-11 items-center justify-center rounded-full border border-gray-200 px-5 py-2.5 text-sm text-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-60;
+    font-weight: 400;
+  }
+
   .ds-link {
-    @apply text-sm text-accent transition-colors hover:text-accent-hover;
+    @apply inline-flex min-h-11 items-center text-sm text-accent transition-colors hover:text-accent-hover;
     font-weight: 400;
   }
 

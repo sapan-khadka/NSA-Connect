@@ -86,7 +86,7 @@ export function ProfilePage() {
 
   return (
     <div className="space-y-8">
-      <section className="ds-card p-8">
+      <section className="ds-card p-4 sm:p-8">
         <p className="ds-section-label">Account settings</p>
         <h1 className="mt-2 text-3xl font-light tracking-headline text-foreground">
           {member.full_name}
@@ -109,7 +109,10 @@ export function ProfilePage() {
         </div>
       ) : null}
 
-      <form onSubmit={(event) => void handleSubmit(event)} className="ds-card p-6">
+      <form
+        onSubmit={(event) => void handleSubmit(event)}
+        className="ds-card p-4 sm:p-6"
+      >
         <div className="border-b border-gray-200 pb-4">
           <h2 className="text-lg font-light tracking-subhead text-foreground">
             Profile & contact
@@ -131,11 +134,11 @@ export function ProfilePage() {
           </div>
         )}
 
-        <div className="mt-8 flex justify-end">
+        <div className="mt-8 flex justify-stretch sm:justify-end">
           <button
             type="submit"
             disabled={isLoading || isSubmitting}
-            className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+            className="btn-primary w-full sm:w-auto"
           >
             {isSubmitting ? "Saving..." : "Save changes"}
           </button>

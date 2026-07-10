@@ -10,8 +10,8 @@ type HomeCardProps = {
 };
 
 const PADDING_CLASS = {
-  sm: "p-4",
-  md: "p-5",
+  sm: "p-3 lg:p-4",
+  md: "p-4 lg:p-5",
 } as const;
 
 export function HomeCard({

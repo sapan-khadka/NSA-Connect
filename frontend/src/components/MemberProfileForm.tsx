@@ -25,8 +25,7 @@ export type MemberProfileFormValues = {
 
 const graduationYears = getGraduationYearOptions();
 
-export const profileInputClassName =
-  "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-foreground shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
+export const profileInputClassName = "ds-field-input rounded-md";
 
 export function memberToProfileFormValues(
   member: MemberResponse,
@@ -80,7 +79,7 @@ function VisibilityToggle({ label, value, onChange }: VisibilityToggleProps) {
   return (
     <fieldset className="mt-2">
       <legend className="text-xs text-label">{label} visibility</legend>
-      <div className="mt-1 flex gap-2">
+      <div className="mt-1 flex flex-wrap gap-2">
         {(["public", "board_only"] as const).map((option) => (
           <button
             key={option}
@@ -88,7 +87,7 @@ function VisibilityToggle({ label, value, onChange }: VisibilityToggleProps) {
             aria-pressed={value === option}
             onClick={() => onChange(option)}
             className={[
-              "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+              "ds-chip",
               value === option
                 ? "bg-primary text-white"
                 : "bg-[#F5F5F7] text-label hover:text-foreground",
@@ -237,7 +236,7 @@ export function MemberProfileForm({
                 aria-pressed={selected}
                 onClick={() => toggleTalent(talent)}
                 className={[
-                  "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                  "ds-chip",
                   selected
                     ? "bg-primary text-white"
                     : "border border-gray-200 bg-white text-label hover:text-foreground",

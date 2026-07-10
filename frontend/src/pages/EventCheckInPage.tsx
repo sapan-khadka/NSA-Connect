@@ -13,6 +13,11 @@ import {
 
 type PageMode = "choose" | "guest-form" | "member-result" | "guest-result";
 
+const pageShellClass = "mx-auto max-w-lg px-4 py-8 sm:px-0 sm:py-10";
+const cardClass = "ds-card p-5 sm:p-8";
+const choiceButtonClass =
+  "flex w-full min-h-11 items-center justify-between rounded-xl border border-gray-200 px-4 py-3 text-left transition-colors hover:border-accent sm:px-5 sm:py-4";
+
 export function EventCheckInPage() {
   const { eventId } = useParams();
   const [searchParams] = useSearchParams();
@@ -71,8 +76,8 @@ export function EventCheckInPage() {
 
   if (!token || !Number.isFinite(numericEventId)) {
     return (
-      <div className="mx-auto max-w-lg space-y-4 py-10">
-        <div className="ds-alert-banner p-6" role="alert">
+      <div className={`${pageShellClass} space-y-4`}>
+        <div className="ds-alert-banner p-5 sm:p-6" role="alert">
           This check-in link is invalid.
         </div>
         <Link to="/" className="ds-link">
@@ -84,7 +89,7 @@ export function EventCheckInPage() {
 
   if (isLoading) {
     return (
-      <div className="py-16 text-center text-sm text-label">
+      <div className="px-4 py-16 text-center text-sm text-label">
         Checking your session…
       </div>
     );
@@ -92,7 +97,7 @@ export function EventCheckInPage() {
 
   if (isAuthenticated && submitting && mode === "choose") {
     return (
-      <div className="py-16 text-center text-sm text-label">
+      <div className="px-4 py-16 text-center text-sm text-label">
         Checking you in…
       </div>
     );
@@ -100,8 +105,8 @@ export function EventCheckInPage() {
 
   if (isAuthenticated && errorMessage && mode === "choose") {
     return (
-      <div className="mx-auto max-w-lg space-y-4 py-10">
-        <div className="ds-alert-banner p-6" role="alert">
+      <div className={`${pageShellClass} space-y-4`}>
+        <div className="ds-alert-banner p-5 sm:p-6" role="alert">
           {errorMessage}
         </div>
         <Link to={`/events/${numericEventId}`} className="ds-link">
@@ -115,8 +120,8 @@ export function EventCheckInPage() {
     const isSuccess = memberResult.status === "checked_in";
 
     return (
-      <div className="mx-auto max-w-lg py-10">
-        <section className="ds-card p-8 text-center">
+      <div className={pageShellClass}>
+        <section className={`${cardClass} text-center`}>
           <p
             className={[
               "text-5xl",
@@ -151,8 +156,8 @@ export function EventCheckInPage() {
 
   if (guestResult) {
     return (
-      <div className="mx-auto max-w-lg py-10">
-        <section className="ds-card p-8 text-center">
+      <div className={pageShellClass}>
+        <section className={`${cardClass} text-center`}>
           <p className="text-5xl text-accent" aria-hidden>
             ✓
           </p>
@@ -204,8 +209,8 @@ export function EventCheckInPage() {
 
   if (mode === "guest-form") {
     return (
-      <div className="mx-auto max-w-lg py-10">
-        <section className="ds-card p-8">
+      <div className={pageShellClass}>
+        <section className={cardClass}>
           <h1 className="text-2xl font-light tracking-headline text-foreground">
             Guest check-in
           </h1>
@@ -219,7 +224,10 @@ export function EventCheckInPage() {
             </p>
           ) : null}
 
-          <form className="mt-6 space-y-5" onSubmit={(event) => void handleGuestSubmit(event)}>
+          <form
+            className="mt-6 space-y-5 pb-[max(1rem,env(safe-area-inset-bottom))]"
+            onSubmit={(event) => void handleGuestSubmit(event)}
+          >
             <label className="block">
               <span className="text-sm font-medium text-foreground">
                 Name <span className="text-overdue">*</span>
@@ -230,7 +238,7 @@ export function EventCheckInPage() {
                 onChange={(event) => setGuestName(event.target.value)}
                 required
                 autoFocus
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                className="ds-field-input"
                 placeholder="Your full name"
               />
             </label>
@@ -248,7 +256,7 @@ export function EventCheckInPage() {
                     setRelatedMemberName("");
                   }
                 }}
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                className="ds-field-input"
               >
                 <option value="">Skip — no affiliation</option>
                 <option value="guest_of_member">Guest of a member</option>
@@ -265,17 +273,17 @@ export function EventCheckInPage() {
                   type="text"
                   value={relatedMemberName}
                   onChange={(event) => setRelatedMemberName(event.target.value)}
-                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  className="ds-field-input"
                   placeholder="Which member invited you?"
                 />
               </label>
             ) : null}
 
-            <div className="flex flex-wrap gap-3 pt-2">
+            <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:flex-wrap">
               <button
                 type="submit"
                 disabled={submitting}
-                className="rounded-full bg-accent px-5 py-2 text-sm text-white disabled:opacity-60"
+                className="ds-btn-accent w-full sm:w-auto"
               >
                 {submitting ? "Checking in…" : "Check in"}
               </button>
@@ -285,7 +293,7 @@ export function EventCheckInPage() {
                   setMode("choose");
                   setErrorMessage(null);
                 }}
-                className="rounded-full border border-gray-200 px-5 py-2 text-sm text-label"
+                className="ds-btn-outline w-full sm:w-auto"
               >
                 Back
               </button>
@@ -297,8 +305,8 @@ export function EventCheckInPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg py-10">
-      <section className="ds-card p-8">
+    <div className={pageShellClass}>
+      <section className={cardClass}>
         <h1 className="text-2xl font-light tracking-headline text-foreground">
           Event check-in
         </h1>
@@ -306,13 +314,13 @@ export function EventCheckInPage() {
           Choose how you&apos;d like to check in for this event.
         </p>
 
-        <div className="mt-8 space-y-4">
+        <div className="mt-8 space-y-3">
           <Link
             to="/login"
             state={{ from: loginRedirect }}
-            className="flex w-full items-center justify-between rounded-xl border border-gray-200 px-5 py-4 text-left hover:border-accent"
+            className={choiceButtonClass}
           >
-            <span>
+            <span className="min-w-0 pr-3">
               <span className="block text-sm font-medium text-foreground">
                 Log in to check in as a member
               </span>
@@ -320,7 +328,7 @@ export function EventCheckInPage() {
                 For NSA Connect members with an account
               </span>
             </span>
-            <span aria-hidden className="text-label">
+            <span aria-hidden className="shrink-0 text-label">
               →
             </span>
           </Link>
@@ -328,9 +336,9 @@ export function EventCheckInPage() {
           <button
             type="button"
             onClick={() => setMode("guest-form")}
-            className="flex w-full items-center justify-between rounded-xl border border-gray-200 px-5 py-4 text-left hover:border-accent"
+            className={choiceButtonClass}
           >
-            <span>
+            <span className="min-w-0 pr-3">
               <span className="block text-sm font-medium text-foreground">
                 Check in as a guest
               </span>
@@ -338,7 +346,7 @@ export function EventCheckInPage() {
                 For faculty, guests, and visitors without an account
               </span>
             </span>
-            <span aria-hidden className="text-label">
+            <span aria-hidden className="shrink-0 text-label">
               →
             </span>
           </button>

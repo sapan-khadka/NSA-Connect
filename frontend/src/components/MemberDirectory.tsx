@@ -123,8 +123,8 @@ export function MemberDirectory() {
   }
 
   return (
-    <section className="ds-card">
-      <div className="border-b border-gray-200 px-6 py-5">
+    <section className="ds-card ds-mobile-edge-directory overflow-hidden">
+      <div className="border-b border-gray-200 px-4 py-4 lg:px-6 lg:py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h2 className="text-lg font-light tracking-subhead text-foreground">
@@ -148,7 +148,7 @@ export function MemberDirectory() {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search by name, major, interests..."
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-foreground placeholder:text-label focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+              className="w-full rounded-md border border-gray-300 px-3 py-3 text-base text-foreground placeholder:text-label focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:py-2 sm:text-sm"
             />
           </label>
         </div>
@@ -163,7 +163,7 @@ export function MemberDirectory() {
                 aria-pressed={active}
                 onClick={() => toggleTalent(talent)}
                 className={[
-                  "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                  "ds-chip",
                   active
                     ? "bg-primary text-white"
                     : "border border-gray-200 bg-white text-label hover:text-foreground",
@@ -177,7 +177,7 @@ export function MemberDirectory() {
             <button
               type="button"
               onClick={clearTalentFilter}
-              className="rounded-full px-3 py-1 text-xs font-medium text-accent hover:underline"
+              className="ds-chip text-accent hover:underline"
             >
               Clear filter
             </button>
@@ -189,7 +189,7 @@ export function MemberDirectory() {
             <button
               type="button"
               onClick={() => setInviteOpen(true)}
-              className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white"
+              className="ds-btn-accent"
             >
               Invite to event
             </button>
@@ -197,13 +197,13 @@ export function MemberDirectory() {
         ) : null}
       </div>
 
-      {error ? <div className="mx-6 mt-4 ds-alert-banner">{error}</div> : null}
+      {error ? <div className="ds-mobile-edge-section ds-alert-banner lg:mx-6 lg:mt-4">{error}</div> : null}
 
-      <div className="grid gap-4 p-6 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid divide-y divide-gray-200 lg:grid-cols-2 lg:gap-4 lg:divide-y-0 lg:p-6 xl:grid-cols-3">
         {isLoading ? (
-          <p className="text-sm text-label">Loading members...</p>
+          <p className="px-4 py-4 text-sm text-label lg:px-0 lg:py-0">Loading members...</p>
         ) : visibleMembers.length === 0 ? (
-          <p className="text-sm text-label">
+          <p className="px-4 py-4 text-sm text-label lg:px-0 lg:py-0">
             {selectedTalents.length > 0 && !isSearching
               ? "No members have this talent yet."
               : isSearching
@@ -222,7 +222,7 @@ export function MemberDirectory() {
       </div>
 
       {!isSearching && totalPages > 1 ? (
-        <div className="flex flex-col gap-4 border-t border-gray-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 border-t border-gray-200 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">
           <div className="flex items-center gap-2 text-sm text-label">
             <label htmlFor="page-size" className="font-medium text-foreground">
               Cards per page
@@ -234,7 +234,7 @@ export function MemberDirectory() {
                 setPageSize(Number(event.target.value));
                 setPage(1);
               }}
-              className="rounded-md border border-gray-300 px-2 py-1 text-sm text-foreground"
+              className="min-h-11 rounded-md border border-gray-300 px-3 py-2 text-sm text-foreground"
             >
               {PAGE_SIZE_OPTIONS.map((option) => (
                 <option key={option} value={option}>
@@ -252,7 +252,7 @@ export function MemberDirectory() {
               type="button"
               onClick={() => setPage((current) => Math.max(1, current - 1))}
               disabled={page <= 1 || isLoading}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-50"
+              className="min-h-11 rounded-md border border-gray-300 px-4 py-2 text-sm disabled:opacity-50"
             >
               Previous
             </button>
@@ -262,7 +262,7 @@ export function MemberDirectory() {
                 setPage((current) => Math.min(totalPages, current + 1))
               }
               disabled={page >= totalPages || isLoading}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-50"
+              className="min-h-11 rounded-md border border-gray-300 px-4 py-2 text-sm disabled:opacity-50"
             >
               Next
             </button>

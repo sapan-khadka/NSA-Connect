@@ -8,6 +8,7 @@ import {
   PrimaryNavLink,
 } from "../components/AppNav";
 import { AppLogo } from "../components/AppLogo";
+import { MobileBottomNav } from "../components/MobileBottomNav";
 import { useAuth } from "../context/useAuth";
 import { useLogout } from "../context/useLogout";
 import {
@@ -48,12 +49,12 @@ export function AppLayout() {
   return (
     <div className="min-h-screen bg-surface">
       <header className="ds-app-header bg-surface">
-        <nav className="mx-auto flex min-h-[3.75rem] w-full max-w-7xl items-center gap-3 px-6 lg:gap-5">
-          <AppLogo asLink size="nav" showTagline={false} />
+        <nav className="mx-auto flex min-h-[3.75rem] w-full max-w-7xl items-center gap-2 px-4 sm:gap-3 sm:px-6 lg:gap-5">
+          <AppLogo asLink size="nav" showTagline={false} className="shrink-0" />
 
           {isAuthenticated ? (
-            <div className="flex min-w-0 flex-1 items-center justify-between gap-3 lg:gap-4">
-              <ul className="flex min-w-0 flex-wrap items-center gap-0.5 text-sm">
+            <div className="flex min-w-0 flex-1 items-center justify-between gap-2 sm:gap-3">
+              <ul className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto text-sm [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <PrimaryNavLink to="/" end>
                   Home
                 </PrimaryNavLink>
@@ -95,9 +96,16 @@ export function AppLayout() {
         </nav>
       </header>
 
-      <main className="mx-auto w-full max-w-7xl px-6 py-8">
+      <main
+        className={[
+          "mx-auto w-full max-w-7xl px-0 py-6 sm:px-6 sm:py-8",
+          isAuthenticated ? "pb-24 lg:pb-8" : "",
+        ].join(" ")}
+      >
         <Outlet />
       </main>
+
+      <MobileBottomNav />
     </div>
   );
 }

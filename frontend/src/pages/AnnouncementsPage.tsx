@@ -78,7 +78,7 @@ function AnnouncementForm({ initial, onCancel, onSaved }: AnnouncementFormProps)
 
   return (
     <form
-      className="rounded-xl border border-gray-200 bg-surface-card p-6"
+      className="ds-mobile-edge-announcement sm:p-6"
       onSubmit={(event) => void handleSubmit(event)}
     >
       <h2 className="text-lg font-light tracking-subhead text-foreground">
@@ -104,7 +104,7 @@ function AnnouncementForm({ initial, onCancel, onSaved }: AnnouncementFormProps)
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             required
-            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            className="ds-field-input"
           />
         </label>
 
@@ -115,7 +115,7 @@ function AnnouncementForm({ initial, onCancel, onSaved }: AnnouncementFormProps)
             onChange={(event) => setBody(event.target.value)}
             required
             rows={5}
-            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            className="ds-field-input"
           />
         </label>
 
@@ -124,7 +124,7 @@ function AnnouncementForm({ initial, onCancel, onSaved }: AnnouncementFormProps)
           <select
             value={category}
             onChange={(event) => setCategory(event.target.value as AnnouncementCategory)}
-            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            className="ds-field-input"
           >
             {CATEGORY_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -139,14 +139,14 @@ function AnnouncementForm({ initial, onCancel, onSaved }: AnnouncementFormProps)
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-full bg-accent px-5 py-2 text-sm text-white disabled:opacity-60"
+          className="ds-btn-accent"
         >
           {submitting ? "Saving…" : initial ? "Save changes" : "Post announcement"}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-full border border-gray-200 px-5 py-2 text-sm text-label"
+          className="ds-btn-outline"
         >
           Cancel
         </button>
@@ -191,11 +191,11 @@ function AnnouncementCard({
   }
 
   return (
-    <article className="rounded-xl border border-gray-200 bg-white p-6">
+    <article className="ds-mobile-edge-announcement">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-lg font-medium text-foreground">
+            <h2 className="break-words text-lg font-medium text-foreground">
               {announcement.title}
             </h2>
             <span
@@ -207,7 +207,7 @@ function AnnouncementCard({
               {ANNOUNCEMENT_CATEGORY_LABELS[announcement.category]}
             </span>
           </div>
-          <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+          <p className="mt-2 break-words whitespace-pre-wrap text-sm leading-relaxed text-foreground">
             {announcement.body}
           </p>
         </div>
@@ -216,7 +216,7 @@ function AnnouncementCard({
             <button
               type="button"
               onClick={() => onEdit(announcement)}
-              className="text-sm text-accent hover:underline"
+              className="inline-flex min-h-11 items-center px-2 text-sm text-accent hover:underline"
             >
               Edit
             </button>
@@ -224,7 +224,7 @@ function AnnouncementCard({
               type="button"
               onClick={() => void handleDelete()}
               disabled={deleting}
-              className="text-sm text-overdue hover:underline disabled:opacity-60"
+              className="inline-flex min-h-11 items-center px-2 text-sm text-overdue hover:underline disabled:opacity-60"
             >
               {deleting ? "Deleting…" : "Delete"}
             </button>
@@ -300,68 +300,79 @@ export function AnnouncementsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-light tracking-headline text-foreground">
-            Announcements
-          </h1>
-          <p className="mt-2 text-sm text-label">
-            Updates and broadcasts from the NSA board.
-          </p>
+    <div className="mx-auto max-w-3xl">
+      <div className="ds-mobile-edge-section lg:border-b lg:border-surface-card lg:pb-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-light tracking-headline text-foreground">
+              Announcements
+            </h1>
+            <p className="mt-2 text-sm text-label">
+              Updates and broadcasts from the NSA board.
+            </p>
+          </div>
+          {canManage && !showCreateForm && !editingAnnouncement ? (
+            <button
+              type="button"
+              onClick={() => setShowCreateForm(true)}
+              className="ds-btn-accent"
+            >
+              Post announcement
+            </button>
+          ) : null}
         </div>
-        {canManage && !showCreateForm && !editingAnnouncement ? (
-          <button
-            type="button"
-            onClick={() => setShowCreateForm(true)}
-            className="rounded-full bg-accent px-5 py-2 text-sm text-white"
-          >
-            Post announcement
-          </button>
-        ) : null}
       </div>
 
       {canManage && showCreateForm ? (
-        <AnnouncementForm
-          onCancel={() => setShowCreateForm(false)}
-          onSaved={handleSaved}
-        />
+        <div className="ds-mobile-edge-section">
+          <AnnouncementForm
+            onCancel={() => setShowCreateForm(false)}
+            onSaved={handleSaved}
+          />
+        </div>
       ) : null}
 
       {canManage && editingAnnouncement ? (
-        <AnnouncementForm
-          initial={editingAnnouncement}
-          onCancel={() => setEditingAnnouncement(null)}
-          onSaved={handleSaved}
-        />
+        <div className="ds-mobile-edge-section">
+          <AnnouncementForm
+            initial={editingAnnouncement}
+            onCancel={() => setEditingAnnouncement(null)}
+            onSaved={handleSaved}
+          />
+        </div>
       ) : null}
 
       {errorMessage ? (
-        <div className="ds-alert-banner p-4 text-sm" role="alert">
-          {errorMessage}
+        <div className="ds-mobile-edge-section">
+          <div className="ds-alert-banner text-sm" role="alert">
+            {errorMessage}
+          </div>
         </div>
       ) : null}
 
       {loading ? (
-        <p className="text-sm text-label">Loading announcements…</p>
+        <p className="ds-mobile-edge-section text-sm text-label lg:px-0">
+          Loading announcements…
+        </p>
       ) : announcements.length === 0 ? (
-        <div className="ds-card p-8 text-center">
+        <div className="ds-mobile-edge-section py-8 text-center lg:px-0">
           <p className="text-sm text-label">No announcements yet.</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="ds-mobile-edge-stack lg:space-y-4">
           {announcements.map((announcement) => (
-            <AnnouncementCard
-              key={announcement.id}
-              announcement={announcement}
-              canManage={canManage}
-              onEdit={setEditingAnnouncement}
-              onDeleted={(announcementId) =>
-                setAnnouncements((current) =>
-                  current.filter((item) => item.id !== announcementId),
-                )
-              }
-            />
+            <div key={announcement.id} className="ds-mobile-edge-section">
+              <AnnouncementCard
+                announcement={announcement}
+                canManage={canManage}
+                onEdit={setEditingAnnouncement}
+                onDeleted={(announcementId) =>
+                  setAnnouncements((current) =>
+                    current.filter((item) => item.id !== announcementId),
+                  )
+                }
+              />
+            </div>
           ))}
         </div>
       )}

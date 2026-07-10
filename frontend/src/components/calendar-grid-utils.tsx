@@ -27,7 +27,7 @@ type DayCellSurfaceOptions = {
 };
 
 const DAY_CELL_BASE =
-  "relative flex min-h-[3.25rem] flex-col items-center justify-center gap-0.5 rounded-[10px] border border-transparent bg-white px-0.5 py-1.5 text-sm transition-all duration-150 ease-out";
+  "relative flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-[10px] border border-transparent bg-white px-0.5 py-1 text-sm transition-all duration-150 ease-out sm:min-h-[3.25rem] sm:py-1.5";
 
 const DAY_CELL_TILE_SHADOW =
   "shadow-[0_1px_2px_rgba(0,0,0,0.04),0_3px_8px_rgba(0,0,0,0.04)] hover:-translate-y-px hover:shadow-[0_2px_4px_rgba(0,0,0,0.06),0_8px_18px_rgba(0,0,0,0.08)]";
