@@ -191,6 +191,19 @@ class ReceiptUploadResponse(BaseModel):
     resource_type: str
 
 
+class ReceiptScanResponse(BaseModel):
+    """Structured fields extracted from a receipt photo for form pre-fill."""
+
+    readable: bool
+    vendor: str | None = None
+    purchase_date: str | None = None
+    purchase_time: str | None = None
+    amount: Decimal | None = None
+    description: str | None = None
+    category: str | None = None
+    confidence: str = "low"
+
+
 class FinanceChangeRequestResponse(BaseModel):
     id: int
     entry_id: int

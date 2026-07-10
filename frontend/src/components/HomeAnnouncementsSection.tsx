@@ -1,16 +1,38 @@
-import { useEffect, useState } from "react";
+import { Megaphone } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { ArrowLink } from "./ui/ArrowLink";
 import { HomeCard } from "./ui/HomeCard";
-import { SectionLabel } from "./ui/SectionLabel";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { IconBadge } from "./ui/IconBadge";
 import {
   ANNOUNCEMENT_CATEGORY_LABELS,
   fetchAnnouncements,
   type Announcement,
 } from "../lib/announcements-api";
 import { formatEventDateTime } from "../lib/format-datetime";
+import nsaCover from "../assets/nsa-cover.PNG";
+
+function AnnouncementCardShell({
+  children,
+  headerAction,
+}: {
+  children: ReactNode;
+  headerAction?: ReactNode;
+}) {
+  return (
+    <HomeCard className="flex h-full min-h-[28rem] flex-col">
+      <div className="flex shrink-0 items-center justify-between gap-4">
+        <div className="ds-icon-label">
+          <IconBadge icon={Megaphone} category="announcements" size="sm" />
+          <h2 className="text-lg font-semibold text-foreground">Announcements</h2>
+        </div>
+        {headerAction}
+      </div>
+      <div className="mt-4 flex min-h-0 flex-1 flex-col">{children}</div>
+    </HomeCard>
+  );
+}
 
 export function HomeAnnouncementsSection({
   previewLimit = 3,
@@ -49,47 +71,84 @@ export function HomeAnnouncementsSection({
 
   if (loading) {
     return (
-      <HomeCard>
-        <SectionLabel>Announcements</SectionLabel>
-        <p className="mt-4 text-sm text-label">Loading announcements…</p>
-      </HomeCard>
+      <AnnouncementCardShell>
+        <p className="text-sm text-label">Loading announcements…</p>
+      </AnnouncementCardShell>
     );
   }
 
   if (announcements.length === 0) {
-    return null;
+    return (
+      <AnnouncementCardShell
+        headerAction={<ArrowLink to="/announcements">View all</ArrowLink>}
+      >
+        <p className="text-sm text-label">No announcements yet.</p>
+      </AnnouncementCardShell>
+    );
   }
 
   const visibleAnnouncements = announcements.slice(0, previewLimit);
-  const isTruncated = announcements.length > visibleAnnouncements.length;
+  const [featured, ...rest] = visibleAnnouncements;
 
   return (
-    <HomeCard>
-      <div className="flex items-center justify-between gap-3">
-        <SectionLabel>Announcements</SectionLabel>
-        <ArrowLink to="/announcements">View all</ArrowLink>
-      </div>
+    <AnnouncementCardShell
+      headerAction={<ArrowLink to="/announcements">View all</ArrowLink>}
+    >
+      {featured ? (
+        <Link
+          to="/announcements"
+          className="group flex min-h-0 flex-1 flex-col overflow-hidden rounded-card border border-gray-200 bg-surface-muted/60 transition duration-200 ease-out hover:border-gray-300 hover:shadow-card"
+        >
+          <div className="relative h-36 w-full shrink-0 overflow-hidden sm:h-40">
+            <img
+              src={nsaCover}
+              alt=""
+              aria-hidden="true"
+              className="h-full w-full object-cover object-center transition duration-300 group-hover:scale-[1.02]"
+            />
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 bg-gradient-to-t from-black/35 to-transparent"
+            />
+          </div>
+          <div className="flex flex-1 flex-col p-4">
+            <p className="line-clamp-2 text-lg font-semibold text-foreground group-hover:text-primary">
+              {featured.title}
+            </p>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-badge-teal-bg px-2 py-1 text-sm font-semibold text-badge-teal">
+                {ANNOUNCEMENT_CATEGORY_LABELS[featured.category]}
+              </span>
+              <span className="text-sm text-label">
+                {formatEventDateTime(featured.created_at)}
+              </span>
+            </div>
+          </div>
+        </Link>
+      ) : null}
 
-      <ul className="mt-3 space-y-3 lg:mt-4 lg:space-y-4">
-        {visibleAnnouncements.map((announcement) => (
-          <li key={announcement.id} className="border-b border-gray-100 pb-4 last:border-b-0">
-            <Link to="/announcements" className="group block">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="break-words text-sm font-medium text-foreground group-hover:text-accent">
-                  {announcement.title}
-                </p>
-                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-label">
-                  {ANNOUNCEMENT_CATEGORY_LABELS[announcement.category]}
-                </span>
-              </div>
-              <p className="mt-1 line-clamp-2 text-sm text-label">{announcement.body}</p>
-              <p className="mt-2 text-xs text-label">
-                {announcement.author.full_name} · {formatEventDateTime(announcement.created_at)}
-              </p>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </HomeCard>
+      {rest.length > 0 ? (
+        <ul className="mt-4 space-y-2 border-t border-gray-200 pt-4">
+          {rest.map((announcement) => (
+            <li key={announcement.id}>
+              <Link
+                to="/announcements"
+                className="group flex items-start justify-between gap-4 rounded-card px-1 py-2 transition duration-200 hover:bg-surface-muted"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground group-hover:text-primary">
+                    {announcement.title}
+                  </p>
+                  <p className="mt-1 text-sm text-label">
+                    {ANNOUNCEMENT_CATEGORY_LABELS[announcement.category]} ·{" "}
+                    {formatEventDateTime(announcement.created_at)}
+                  </p>
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </AnnouncementCardShell>
   );
 }

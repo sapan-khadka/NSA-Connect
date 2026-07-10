@@ -1,6 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { AppIcon } from "./AppIcon";
+
 type SectionLabelProps = {
   children: ReactNode;
   icon?: LucideIcon;
@@ -10,23 +12,17 @@ type SectionLabelProps = {
 
 export function SectionLabel({
   children,
-  icon: Icon,
-  iconClassName = "h-4 w-4 shrink-0 text-label",
+  icon,
+  iconClassName = "text-label",
   className,
 }: SectionLabelProps) {
   return (
     <p
-      className={["ds-section-label inline-flex items-center gap-1.5", className]
+      className={["ds-section-label ds-icon-label", className]
         .filter(Boolean)
         .join(" ")}
     >
-      {Icon ? (
-        <Icon
-          className={iconClassName}
-          strokeWidth={1.75}
-          aria-hidden="true"
-        />
-      ) : null}
+      {icon ? <AppIcon icon={icon} size="sm" className={iconClassName} /> : null}
       {children}
     </p>
   );

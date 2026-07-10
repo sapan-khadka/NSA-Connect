@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { CheckCircle2, ChevronRight, Circle } from "lucide-react";
 import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
 
+import { AppIcon } from "../components/ui/AppIcon";
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage } from "../lib/auth-api";
 import {
@@ -122,15 +124,19 @@ export function EventCheckInPage() {
     return (
       <div className={pageShellClass}>
         <section className={`${cardClass} text-center`}>
-          <p
+          <div
             className={[
-              "text-5xl",
+              "flex justify-center",
               isSuccess ? "text-accent" : "text-label",
             ].join(" ")}
             aria-hidden
           >
-            {isSuccess ? "✓" : "•"}
-          </p>
+            <AppIcon
+              icon={isSuccess ? CheckCircle2 : Circle}
+              size="xl"
+              className="text-current"
+            />
+          </div>
           <h1 className="mt-4 text-2xl font-light tracking-headline text-foreground">
             {isSuccess ? "You're checked in!" : "Already checked in"}
           </h1>
@@ -158,9 +164,9 @@ export function EventCheckInPage() {
     return (
       <div className={pageShellClass}>
         <section className={`${cardClass} text-center`}>
-          <p className="text-5xl text-accent" aria-hidden>
-            ✓
-          </p>
+          <div className="flex justify-center text-accent" aria-hidden>
+            <AppIcon icon={CheckCircle2} size="xl" className="text-current" />
+          </div>
           <h1 className="mt-4 text-2xl font-light tracking-headline text-foreground">
             You&apos;re checked in!
           </h1>
@@ -328,9 +334,7 @@ export function EventCheckInPage() {
                 For NSA Connect members with an account
               </span>
             </span>
-            <span aria-hidden className="shrink-0 text-label">
-              →
-            </span>
+            <AppIcon icon={ChevronRight} size="sm" className="text-label" />
           </Link>
 
           <button
@@ -346,9 +350,7 @@ export function EventCheckInPage() {
                 For faculty, guests, and visitors without an account
               </span>
             </span>
-            <span aria-hidden className="shrink-0 text-label">
-              →
-            </span>
+            <AppIcon icon={ChevronRight} size="sm" className="text-label" />
           </button>
         </div>
       </section>

@@ -1,3 +1,4 @@
+import { TrendingDown } from "lucide-react";
 import type { ReactNode } from "react";
 
 import type { FinanceSummaryResponse } from "../lib/finance-api";
@@ -6,6 +7,7 @@ import {
   formatCurrency,
   parseCurrencyAmount,
 } from "../lib/format-currency";
+import { AppIcon } from "./ui/AppIcon";
 
 type FinanceSummaryMetricsProps = {
   isLoading: boolean;
@@ -72,21 +74,6 @@ function metricCardClasses(variant: "neutral" | "positive" | "negative"): string
   return "border border-gray-200 bg-surface-card";
 }
 
-function TrendDownIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 16 16"
-      className="h-4 w-4 text-overdue"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-    >
-      <path d="M3 5.5 8 10.5 13 5.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 function MetricCard({
   title,
   children,
@@ -99,8 +86,10 @@ function MetricCard({
       data-testid={testId}
       className={`rounded-card p-5 shadow-card ${metricCardClasses(variant)}`}
     >
-      <div className="flex items-center gap-1.5">
-        {variant === "negative" ? <TrendDownIcon /> : null}
+      <div className="ds-icon-label">
+        {variant === "negative" ? (
+          <AppIcon icon={TrendingDown} size="sm" className="text-overdue" />
+        ) : null}
         <h2 className="text-xs font-medium uppercase tracking-label text-label">
           {title}
         </h2>

@@ -212,7 +212,7 @@ export function TaskOversightPage() {
           <div className="ds-stat-tile">
             <SectionLabel
               icon={AlertCircle}
-              iconClassName="h-4 w-4 shrink-0 text-overdue"
+              iconClassName="text-overdue"
               className="text-overdue"
             >
               Overdue

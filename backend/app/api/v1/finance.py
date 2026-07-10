@@ -1,8 +1,20 @@
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+    status,
+)
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
-from app.core.dependencies import require_board, require_treasurer
+from app.core.dependencies import require_board, require_treasury_writer
+from app.core.rate_limit import limit, receipt_scan_key
+from app.core.safe_messages import GENERIC_AI_UNAVAILABLE
 from app.integrations.cloudinary_client import CloudinaryUploadError
 from app.lib.event_finance import EventFinanceLockedError
 from app.lib.semester import SEMESTER_QUERY_PATTERN
@@ -22,8 +34,10 @@ from app.schemas.finance import (
     FinanceExpenseCategoryListResponse,
     FinanceMyChangeRequestsResponse,
     FinanceSummaryResponse,
+    ReceiptScanResponse,
     ReceiptUploadResponse,
 )
+from app.services.ai_checklist_service import AIDisabledError
 from app.services.event_service import EventNotFoundError
 from app.services.finance_change_request_service import (
     FinanceChangeConflictError,
@@ -47,6 +61,7 @@ from app.services.finance_service import (
     get_finance_summary,
     list_finance_entries,
 )
+from app.services.receipt_scan_service import ReceiptScanError, scan_finance_receipt
 from app.services.receipt_upload_service import (
     ReceiptUploadUnavailableError,
     ReceiptValidationError,
@@ -63,7 +78,7 @@ router = APIRouter(prefix="/finance", tags=["finance"])
 )
 async def upload_finance_receipt_endpoint(
     file: UploadFile = File(...),
-    _: Member = Depends(require_treasurer),
+    _: Member = Depends(require_treasury_writer),
 ):
     file_bytes = await file.read()
 
@@ -95,6 +110,44 @@ async def upload_finance_receipt_endpoint(
         format=result.format,
         resource_type=result.resource_type,
     )
+
+
+@router.post(
+    "/receipts/scan",
+    response_model=ReceiptScanResponse,
+    status_code=status.HTTP_200_OK,
+)
+@limit(
+    f"{settings.RATE_LIMIT_RECEIPT_SCAN_MAX}/{settings.RATE_LIMIT_RECEIPT_SCAN_WINDOW_SECONDS}second",
+    key_func=receipt_scan_key,
+)
+async def scan_finance_receipt_endpoint(
+    request: Request,
+    file: UploadFile = File(...),
+    _: Member = Depends(require_treasury_writer),
+):
+    file_bytes = await file.read()
+
+    try:
+        return scan_finance_receipt(
+            file_bytes=file_bytes,
+            content_type=file.content_type,
+        )
+    except ReceiptValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    except AIDisabledError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI features are disabled",
+        ) from None
+    except ReceiptScanError:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=GENERIC_AI_UNAVAILABLE,
+        ) from None
 
 
 @router.get("/expenses/by-category", response_model=FinanceExpenseCategoryListResponse)
@@ -142,7 +195,7 @@ def event_budget_for_event_endpoint(
 @router.get("/change-requests/pending", response_model=FinanceChangeRequestListResponse)
 def list_pending_finance_change_requests(
     db: Session = Depends(get_db),
-    current_member: Member = Depends(require_treasurer),
+    current_member: Member = Depends(require_treasury_writer),
 ):
     requests = list_pending_for_reviewer(db, current_member)
     return FinanceChangeRequestListResponse(
@@ -158,7 +211,7 @@ def list_pending_finance_change_requests(
 )
 def my_finance_change_request_summary_endpoint(
     db: Session = Depends(get_db),
-    current_member: Member = Depends(require_treasurer),
+    current_member: Member = Depends(require_treasury_writer),
 ):
     summary = summarize_my_change_requests(db, current_member)
     return FinanceChangeRequestSummaryResponse(
@@ -171,7 +224,7 @@ def my_finance_change_request_summary_endpoint(
 @router.get("/change-requests/mine", response_model=FinanceMyChangeRequestsResponse)
 def list_my_finance_change_requests(
     db: Session = Depends(get_db),
-    current_member: Member = Depends(require_treasurer),
+    current_member: Member = Depends(require_treasury_writer),
 ):
     summary = summarize_my_change_requests(db, current_member)
     requests = list_my_change_requests(db, current_member)
@@ -195,7 +248,7 @@ def list_my_finance_change_requests(
 def approve_finance_change_request_endpoint(
     request_id: int,
     db: Session = Depends(get_db),
-    current_member: Member = Depends(require_treasurer),
+    current_member: Member = Depends(require_treasury_writer),
 ):
     try:
         request = approve_change_request(db, request_id, current_member)
@@ -236,7 +289,7 @@ def reject_finance_change_request_endpoint(
     request_id: int,
     data: FinanceChangeRejectRequest,
     db: Session = Depends(get_db),
-    current_member: Member = Depends(require_treasurer),
+    current_member: Member = Depends(require_treasury_writer),
 ):
     try:
         request = reject_change_request(
@@ -272,7 +325,7 @@ def finance_summary_endpoint(
         description="Limit totals to a semester slug, e.g. 2026-spring",
     ),
     db: Session = Depends(get_db),
-    _: Member = Depends(require_treasurer),
+    _: Member = Depends(require_treasury_writer),
 ):
     return get_finance_summary(db, semester=semester)
 
@@ -295,7 +348,7 @@ def list_finance_entries_endpoint(
         description="Filter entries linked to an event",
     ),
     db: Session = Depends(get_db),
-    _: Member = Depends(require_treasurer),
+    _: Member = Depends(require_treasury_writer),
 ):
     entries, total = list_finance_entries(
         db,
@@ -317,7 +370,7 @@ def list_finance_entries_endpoint(
 def create_finance_entry_endpoint(
     data: FinanceEntryCreateRequest,
     db: Session = Depends(get_db),
-    current_member: Member = Depends(require_treasurer),
+    current_member: Member = Depends(require_treasury_writer),
 ):
     try:
         entry = create_finance_entry(db, data, created_by=current_member)
@@ -344,7 +397,7 @@ def update_finance_entry_endpoint(
     entry_id: int,
     data: FinanceEntryUpdateRequest,
     db: Session = Depends(get_db),
-    current_member: Member = Depends(require_treasurer),
+    current_member: Member = Depends(require_treasury_writer),
 ):
     try:
         request = submit_update_request(db, entry_id, data, current_member)
@@ -385,7 +438,7 @@ def update_finance_entry_endpoint(
 def delete_finance_entry_endpoint(
     entry_id: int,
     db: Session = Depends(get_db),
-    current_member: Member = Depends(require_treasurer),
+    current_member: Member = Depends(require_treasury_writer),
 ):
     try:
         request = submit_delete_request(db, entry_id, current_member)

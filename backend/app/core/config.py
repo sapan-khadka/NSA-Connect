@@ -55,6 +55,8 @@ class Settings(BaseSettings):
     RATE_LIMIT_PASSWORD_RESET_EMAIL_WINDOW_SECONDS: int = 3600
     RATE_LIMIT_PASSWORD_RESET_IP_MAX: int = 10
     RATE_LIMIT_PASSWORD_RESET_IP_WINDOW_SECONDS: int = 3600
+    RATE_LIMIT_RECEIPT_SCAN_MAX: int = 10
+    RATE_LIMIT_RECEIPT_SCAN_WINDOW_SECONDS: int = 3600
 
     PASSWORD_RESET_EXPIRE_MINUTES: int = 45
 
@@ -145,6 +147,10 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = Field(
         default="text-embedding-3-small",
         description="OpenAI embedding model for pgvector storage",
+    )
+    OPENAI_VISION_MODEL: str = Field(
+        default="gpt-4o-mini",
+        description="OpenAI vision model for finance receipt scanning",
     )
     CONSTITUTION_SEARCH_DEFAULT_LIMIT: int = Field(
         default=5,

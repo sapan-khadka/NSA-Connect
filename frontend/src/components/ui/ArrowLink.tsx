@@ -1,4 +1,7 @@
+import { ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
+
+import { AppIcon } from "./AppIcon";
 
 type ArrowLinkProps = {
   to: string;
@@ -9,7 +12,8 @@ type ArrowLinkProps = {
 export function ArrowLink({ to, children, className = "" }: ArrowLinkProps) {
   return (
     <Link to={to} className={["ds-link", className].join(" ")}>
-      {children} ›
+      {children}
+      <AppIcon icon={ChevronRight} size="sm" className="text-current" />
     </Link>
   );
 }

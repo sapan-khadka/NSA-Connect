@@ -26,9 +26,15 @@ export function getDashboardPath(_role: MemberRole): string {
   return "/";
 }
 
-/** Treasurer and president — treasury write access and finance quick actions on Home. */
-export function canManageTreasury(role: MemberRole): boolean {
-  return isRoleAtLeast(role, "treasurer");
+/** Treasurer, president, or vice president — treasury write access and Home log actions. */
+export function canManageTreasury(
+  role: MemberRole,
+  position?: MemberPosition,
+): boolean {
+  if (isRoleAtLeast(role, "treasurer")) {
+    return true;
+  }
+  return position === "vice_president";
 }
 
 /** Matches GET /v1/finance/event-budgets and the /finance route (board+). */

@@ -80,6 +80,20 @@ require_treasurer = _require_role(MemberRole.TREASURER)
 require_president = _require_role(MemberRole.PRESIDENT)
 
 
+def require_treasury_writer(
+    current_member: Member = Depends(get_current_member),
+) -> Member:
+    """Allow treasurer+, or vice president by position (board role)."""
+    if current_member.has_role_at_least(MemberRole.TREASURER):
+        return current_member
+    if current_member.position == MemberPosition.VICE_PRESIDENT:
+        return current_member
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Requires treasurer, president, or vice president",
+    )
+
+
 def require_task_manager(
     current_member: Member = Depends(get_current_member),
 ) -> Member:

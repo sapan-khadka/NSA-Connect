@@ -8,7 +8,7 @@ from conftest import (
     set_member_approved,
 )
 
-TREASURER_REQUIRED_DETAIL = "Requires treasurer role or higher"
+TREASURER_REQUIRED_DETAIL = "Requires treasurer, president, or vice president"
 BOARD_REQUIRED_DETAIL = "Requires board role or higher"
 
 FINANCE_POST_PAYLOAD = {
@@ -160,6 +160,43 @@ def test_president_can_access_all_finance_endpoints(
     kwargs,
 ):
     response = client.request(method, path, headers=president_member_headers, **kwargs)
+
+    assert response.status_code == expected_status
+
+
+@pytest.fixture
+def vice_president_member_headers(client, db_session):
+    from conftest import create_vice_president_member
+
+    register_member(client, email="other@semo.edu", student_id="22222222")
+    create_vice_president_member(db_session)
+    return auth_header(client, email="vp@semo.edu")
+
+
+@pytest.mark.parametrize(
+    "method,path,expected_status,kwargs",
+    [
+        ("get", "/api/v1/finance", 200, {}),
+        ("get", "/api/v1/finance/summary", 200, {}),
+        ("post", "/api/v1/finance", 201, {"json": FINANCE_POST_PAYLOAD}),
+        ("post", "/api/v1/finance/receipts", 201, RECEIPT_UPLOAD_KWARGS),
+    ],
+    ids=["list-entries", "summary", "create-entry", "upload-receipt"],
+)
+def test_vice_president_can_access_all_finance_endpoints(
+    client,
+    vice_president_member_headers,
+    method,
+    path,
+    expected_status,
+    kwargs,
+):
+    response = client.request(
+        method,
+        path,
+        headers=vice_president_member_headers,
+        **kwargs,
+    )
 
     assert response.status_code == expected_status
 

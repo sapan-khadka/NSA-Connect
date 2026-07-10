@@ -1,6 +1,7 @@
 from app.models.announcement import Announcement, AnnouncementCategory
 from app.models.base import Base
 from app.models.constitutional_chunk import ConstitutionalChunk
+from app.models.discussion_message import DiscussionMessage
 from app.models.event import Event, EventType, MeetingVisibility
 from app.models.event_checkin import EventCheckIn
 from app.models.event_feedback import EventFeedback
@@ -42,6 +43,7 @@ __all__ = [
     "AnnouncementCategory",
     "Base",
     "ConstitutionalChunk",
+    "DiscussionMessage",
     "Event",
     "EventCheckIn",
     "EventSuggestion",

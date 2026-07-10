@@ -239,6 +239,32 @@ def create_board_member(
     return member
 
 
+def create_vice_president_member(
+    db_session: Session,
+    email="vp@semo.edu",
+    password=VALID_PASSWORD,
+    student_id="76543210",
+):
+    from app.core.security import hash_password
+    from app.models.member import MemberPosition, MemberRole
+
+    member = Member(
+        full_name="Vice President",
+        email=email,
+        student_id=student_id,
+        major="Administration",
+        graduation_year=VALID_GRADUATION_YEAR,
+        hashed_password=hash_password(password),
+        role=MemberRole.BOARD,
+        position=MemberPosition.VICE_PRESIDENT,
+        status=MemberStatus.APPROVED,
+    )
+    db_session.add(member)
+    db_session.commit()
+    db_session.refresh(member)
+    return member
+
+
 def create_president_member(
     db_session: Session,
     email="president@semo.edu",

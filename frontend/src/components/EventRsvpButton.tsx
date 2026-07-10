@@ -1,3 +1,4 @@
+import { Check, Circle, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import type { RsvpStatus } from "../lib/events-api";
@@ -7,11 +8,16 @@ import {
   playMaybeWobble,
   playNotGoingCries,
 } from "../lib/rsvp-reactions";
+import { AppIcon } from "./ui/AppIcon";
 
-const RSVP_OPTIONS: { value: RsvpStatus; label: string }[] = [
-  { value: "going", label: RSVP_STATUS_LABELS.going },
-  { value: "maybe", label: RSVP_STATUS_LABELS.maybe },
-  { value: "not_going", label: RSVP_STATUS_LABELS.not_going },
+const RSVP_OPTIONS: {
+  value: RsvpStatus;
+  label: string;
+  icon: typeof Check;
+}[] = [
+  { value: "going", label: RSVP_STATUS_LABELS.going, icon: Check },
+  { value: "maybe", label: RSVP_STATUS_LABELS.maybe, icon: Circle },
+  { value: "not_going", label: RSVP_STATUS_LABELS.not_going, icon: X },
 ];
 
 const RSVP_CONFIRMATIONS: Record<
@@ -38,17 +44,38 @@ type EventRsvpButtonProps = {
   loading: boolean;
   onStatusChange: (status: RsvpStatus) => void;
   embedded?: boolean;
+  /** Compact joined pill group for invitation-style cards. */
+  variant?: "default" | "segmented";
 };
 
-function buttonClass(isSelected: boolean): string {
+function buttonClass(
+  isSelected: boolean,
+  variant: "default" | "segmented",
+  index: number,
+  total: number,
+): string {
+  if (variant === "segmented") {
+    const edges =
+      index === 0
+        ? "rounded-l-full rounded-r-none"
+        : index === total - 1
+          ? "rounded-r-full rounded-l-none"
+          : "rounded-none";
+    const base = `ds-icon-label min-w-0 flex-1 justify-center border px-3 py-2 text-sm font-semibold transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60 ${edges}`;
+    if (isSelected) {
+      return `${base} z-[1] border-primary bg-primary text-white`;
+    }
+    return `${base} -ml-px border-gray-200 bg-white text-foreground hover:bg-surface-muted first:ml-0`;
+  }
+
   const base =
-    "w-full min-w-0 min-h-11 rounded-pill px-3 py-2.5 text-center text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60";
+    "ds-icon-label inline-flex shrink-0 justify-center rounded-full px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60";
 
   if (isSelected) {
     return `${base} bg-primary text-white`;
   }
 
-  return `${base} bg-surface-muted text-foreground hover:bg-surface-card`;
+  return `${base} border border-gray-200 bg-white text-foreground transition duration-200 hover:border-primary/40 hover:bg-badge-teal-bg`;
 }
 
 function playReaction(status: RsvpStatus, anchor: HTMLElement): void {
@@ -69,6 +96,7 @@ export function EventRsvpButton({
   loading,
   onStatusChange,
   embedded = false,
+  variant = "default",
 }: EventRsvpButtonProps) {
   const buttonRefs = useRef<Partial<Record<RsvpStatus, HTMLButtonElement>>>({});
   const [displayStatus, setDisplayStatus] = useState<RsvpStatus | null>(
@@ -80,6 +108,7 @@ export function EventRsvpButton({
   }, [currentStatus]);
 
   const showPrompt = canRsvp && displayStatus === null;
+  const isSegmented = variant === "segmented";
 
   function handleOptionClick(status: RsvpStatus): void {
     setDisplayStatus(status);
@@ -92,10 +121,20 @@ export function EventRsvpButton({
   }
 
   return (
-    <div className={embedded ? "mt-4 border-t border-gray-100 pt-4" : "ds-card p-3"}>
-      <p className="text-sm text-foreground">Your RSVP</p>
+    <div
+      className={
+        embedded
+          ? isSegmented
+            ? "mt-4"
+            : "mt-4 border-t border-gray-100 pt-4"
+          : "ds-card p-3"
+      }
+    >
+      {!isSegmented ? (
+        <p className="text-sm font-medium text-foreground">Your RSVP</p>
+      ) : null}
 
-      {showPrompt ? (
+      {showPrompt && !isSegmented ? (
         <p
           role="status"
           className="mt-2 rounded-md border border-urgent/30 bg-urgent/5 px-3 py-2 text-sm text-foreground"
@@ -109,15 +148,23 @@ export function EventRsvpButton({
           <div
             role="group"
             aria-label="RSVP options"
-            className="mt-3 flex flex-col gap-2 min-[400px]:flex-row"
+            className={
+              isSegmented
+                ? "inline-flex w-full max-w-md overflow-hidden rounded-full shadow-sm"
+                : "mt-3 flex flex-wrap gap-2"
+            }
           >
-            {RSVP_OPTIONS.map((option) => {
+            {RSVP_OPTIONS.map((option, index) => {
               const isSelected = displayStatus === option.value;
               return (
                 <div
                   key={option.value}
                   data-rsvp-reaction-host
-                  className="relative flex-1 min-w-0 overflow-visible"
+                  className={
+                    isSegmented
+                      ? "relative min-w-0 flex-1 overflow-visible"
+                      : "relative overflow-visible"
+                  }
                 >
                   <button
                     ref={(element) => {
@@ -127,8 +174,18 @@ export function EventRsvpButton({
                     aria-pressed={isSelected}
                     disabled={loading}
                     onClick={() => handleOptionClick(option.value)}
-                    className={buttonClass(isSelected)}
+                    className={buttonClass(
+                      isSelected,
+                      variant,
+                      index,
+                      RSVP_OPTIONS.length,
+                    )}
                   >
+                    <AppIcon
+                      icon={option.icon}
+                      size="xs"
+                      className="text-current"
+                    />
                     {loading && isSelected ? "Updating…" : option.label}
                   </button>
                 </div>
@@ -136,7 +193,7 @@ export function EventRsvpButton({
             })}
           </div>
 
-          {displayStatus ? (
+          {displayStatus && !isSegmented ? (
             <p
               key={displayStatus}
               role="status"

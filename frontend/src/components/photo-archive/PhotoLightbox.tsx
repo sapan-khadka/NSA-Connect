@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 
 import type { EventPhoto } from "../../lib/photo-archive-api";
+import { AppIcon } from "../ui/AppIcon";
 
 type PhotoLightboxProps = {
   photos: EventPhoto[];
@@ -49,38 +50,38 @@ export function PhotoLightbox({
     >
       <button
         type="button"
-        className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white transition hover:bg-white/20"
+        className="absolute right-4 top-4 ds-icon-btn rounded-full bg-white/10 p-2 text-white transition hover:bg-white/20"
         aria-label="Close lightbox"
         onClick={onClose}
       >
-        <X className="h-5 w-5" aria-hidden="true" />
+        <AppIcon icon={X} size="md" className="text-white" />
       </button>
 
       {activeIndex > 0 ? (
         <button
           type="button"
-          className="absolute left-4 rounded-full bg-white/10 p-2 text-white transition hover:bg-white/20"
+          className="absolute left-4 ds-icon-btn rounded-full bg-white/10 p-2 text-white transition hover:bg-white/20"
           aria-label="Previous photo"
           onClick={(event) => {
             event.stopPropagation();
             onChangeIndex(activeIndex - 1);
           }}
         >
-          <ChevronLeft className="h-6 w-6" aria-hidden="true" />
+          <AppIcon icon={ChevronLeft} size="lg" className="text-white" />
         </button>
       ) : null}
 
       {activeIndex < photos.length - 1 ? (
         <button
           type="button"
-          className="absolute right-4 top-16 rounded-full bg-white/10 p-2 text-white transition hover:bg-white/20"
+          className="absolute right-4 top-16 ds-icon-btn rounded-full bg-white/10 p-2 text-white transition hover:bg-white/20"
           aria-label="Next photo"
           onClick={(event) => {
             event.stopPropagation();
             onChangeIndex(activeIndex + 1);
           }}
         >
-          <ChevronRight className="h-6 w-6" aria-hidden="true" />
+          <AppIcon icon={ChevronRight} size="lg" className="text-white" />
         </button>
       ) : null}
 

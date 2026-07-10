@@ -9,6 +9,7 @@ import {
   LARGE_ALBUM_PHOTO_THRESHOLD,
   triggerBrowserDownload,
 } from "../../lib/photo-archive-api";
+import { AppIcon } from "../ui/AppIcon";
 
 type DownloadAlbumButtonProps = {
   eventId: number;
@@ -71,7 +72,7 @@ export function DownloadAlbumButton({ eventId, photoCount }: DownloadAlbumButton
         disabled={isDownloading || photoCount === 0}
         className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-3 py-1.5 text-sm font-medium text-foreground transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
       >
-        <Download aria-hidden="true" className="h-4 w-4" />
+        <AppIcon icon={Download} size="sm" className="text-current" />
         {isDownloading ? "Preparing download…" : "Download album"}
       </button>
       {error ? (

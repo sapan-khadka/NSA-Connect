@@ -10,6 +10,7 @@ import {
   uploadEventPhoto,
   type EventPhoto,
 } from "../../lib/photo-archive-api";
+import { AppIcon } from "../ui/AppIcon";
 
 type UploadItem = {
   id: string;
@@ -135,7 +136,7 @@ export function PhotoUploadPanel({ eventId, onUploaded }: PhotoUploadPanelProps)
           disabled={isUploading}
           onClick={() => inputRef.current?.click()}
         >
-          <Upload className="h-4 w-4" aria-hidden="true" />
+          <AppIcon icon={Upload} size="sm" className="text-current" />
           Add photos
         </button>
       </div>

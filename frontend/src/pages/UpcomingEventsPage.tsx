@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { useAuth } from "../context/useAuth";
+import { AppIcon } from "../components/ui/AppIcon";
 import { getApiErrorMessage } from "../lib/auth-api";
 import { eventDetailPath } from "../lib/event-links";
 import { fetchUpcomingEvents, type EventResponse } from "../lib/events-api";
@@ -109,8 +110,9 @@ export function UpcomingEventsPage() {
                 <p className="mt-3 line-clamp-2 text-sm text-label">
                   {event.description}
                 </p>
-                <p className="mt-4 text-sm font-medium text-accent">
-                  View event ›
+                <p className="mt-4 ds-icon-label text-sm font-medium text-accent">
+                  View event
+                  <AppIcon icon={ChevronRight} size="sm" className="text-current" />
                 </p>
               </Link>
             </li>

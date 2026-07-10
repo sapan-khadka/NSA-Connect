@@ -358,6 +358,10 @@ def probe_request_kwargs(method: str, path_template: str) -> dict:
         kwargs["files"] = {
             "file": ("receipt.jpg", b"\xff\xd8\xffprobe", "image/jpeg"),
         }
+    elif path_template == "/api/v1/board/discussion" and method == "POST":
+        kwargs["json"] = {"content": "Probe board discussion message"}
+    elif path_template.endswith("/events/{event_id}/discussion") and method == "POST":
+        kwargs["json"] = {"content": "Probe event discussion message"}
     elif path_template == "/api/v1/constitution/upload" and method == "POST":
         kwargs["files"] = {
             "file": ("constitution.pdf", b"%PDF-1.4 probe", "application/pdf"),

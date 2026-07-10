@@ -1,110 +1,168 @@
 import type { Config } from "tailwindcss";
 
+/**
+ * Tailwind theme maps to CampusOS CSS variables (`design-system/tokens.css`).
+ * Do not hardcode hex here — change values in tokens.ts / tokens.css.
+ */
 export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
       colors: {
-        foreground: "#1D1D1F",
-        label: "#86868B",
+        foreground: "var(--color-foreground)",
+        label: "var(--color-label)",
         primary: {
-          DEFAULT: "#023D54",
-          hover: "#012A3A",
+          DEFAULT: "var(--color-primary)",
+          hover: "var(--color-primary-hover)",
         },
         accent: {
-          DEFAULT: "#027C68",
-          hover: "#016B5A",
+          DEFAULT: "var(--color-accent)",
+          hover: "var(--color-accent-hover)",
         },
         mint: {
-          DEFAULT: "#94DEA5",
+          DEFAULT: "var(--color-mint)",
         },
-        urgent: "#FFFF66",
+        urgent: "var(--color-urgent)",
         overdue: {
-          DEFAULT: "#E8590C",
-          surface: "#FDECE3",
+          DEFAULT: "var(--color-overdue)",
+          surface: "var(--color-overdue-surface)",
+        },
+        warning: {
+          DEFAULT: "var(--color-warning)",
+          surface: "var(--color-warning-surface)",
+        },
+        success: {
+          DEFAULT: "var(--color-success)",
+          surface: "var(--color-success-surface)",
         },
         kanban: {
-          header: "#FAFAFA",
-          border: "#ECECEC",
-          badge: "#E5E5E7",
+          header: "var(--color-kanban-header)",
+          border: "var(--color-kanban-border)",
+          badge: "var(--color-kanban-badge)",
         },
         surface: {
-          DEFAULT: "#FBFBFB",
-          card: "#FFFFFF",
-          muted: "#FAFAFA",
+          DEFAULT: "var(--color-surface)",
+          card: "var(--color-surface-card)",
+          muted: "var(--color-surface-muted)",
+        },
+        badge: {
+          green: { DEFAULT: "var(--badge-green-fg)", bg: "var(--badge-green-bg)" },
+          purple: {
+            DEFAULT: "var(--badge-purple-fg)",
+            bg: "var(--badge-purple-bg)",
+          },
+          blue: { DEFAULT: "var(--badge-blue-fg)", bg: "var(--badge-blue-bg)" },
+          teal: { DEFAULT: "var(--badge-teal-fg)", bg: "var(--badge-teal-bg)" },
+          coral: { DEFAULT: "var(--badge-coral-fg)", bg: "var(--badge-coral-bg)" },
+          amber: { DEFAULT: "var(--badge-amber-fg)", bg: "var(--badge-amber-bg)" },
+          red: { DEFAULT: "var(--badge-red-fg)", bg: "var(--badge-red-bg)" },
         },
         marigold: {
-          DEFAULT: "#F4A024",
-          hover: "#d9890a",
+          DEFAULT: "var(--color-marigold)",
+          hover: "var(--color-marigold-hover)",
         },
         olive: {
-          DEFAULT: "#6B8F71",
-          light: "#EEF3EF",
+          DEFAULT: "var(--color-olive)",
+          light: "var(--color-olive-light)",
         },
         roleBadge: {
           president: {
-            DEFAULT: "#9A6B2E",
-            bg: "#FBF0E3",
+            DEFAULT: "var(--role-president-fg)",
+            bg: "var(--role-president-bg)",
           },
           vicePresident: {
-            DEFAULT: "#8B6048",
-            bg: "#F7EDE8",
+            DEFAULT: "var(--role-vice-president-fg)",
+            bg: "var(--role-vice-president-bg)",
           },
           secretary: {
-            DEFAULT: "#5C6B7A",
-            bg: "#EDF1F5",
+            DEFAULT: "var(--role-secretary-fg)",
+            bg: "var(--role-secretary-bg)",
           },
           treasurer: {
-            DEFAULT: "#027C68",
-            bg: "#E6F5F2",
+            DEFAULT: "var(--role-treasurer-fg)",
+            bg: "var(--role-treasurer-bg)",
           },
           eventManager: {
-            DEFAULT: "#6B5494",
-            bg: "#F0ECF7",
+            DEFAULT: "var(--role-event-manager-fg)",
+            bg: "var(--role-event-manager-bg)",
           },
           nsr: {
-            DEFAULT: "#3D7A4A",
-            bg: "#EAF5EC",
+            DEFAULT: "var(--role-nsr-fg)",
+            bg: "var(--role-nsr-bg)",
           },
           pro: {
-            DEFAULT: "#5A6490",
-            bg: "#EEF0F8",
+            DEFAULT: "var(--role-pro-fg)",
+            bg: "var(--role-pro-bg)",
           },
           board: {
-            DEFAULT: "#4A6274",
-            bg: "#EDF1F5",
+            DEFAULT: "var(--role-board-fg)",
+            bg: "var(--role-board-bg)",
           },
           general: {
-            DEFAULT: "#86868B",
-            bg: "#F5F5F7",
+            DEFAULT: "var(--role-general-fg)",
+            bg: "var(--role-general-bg)",
           },
         },
       },
       fontFamily: {
         sans: [
-          "-apple-system",
-          "BlinkMacSystemFont",
-          '"Helvetica Neue"',
-          "Arial",
-          "sans-serif",
+          "var(--font-sans)",
         ],
       },
+      fontSize: {
+        "ds-caption": ["var(--text-caption)", { lineHeight: "var(--leading-normal)" }],
+        "ds-body": ["var(--text-body)", { lineHeight: "var(--leading-normal)" }],
+        "ds-body-lg": [
+          "var(--text-body-lg)",
+          { lineHeight: "var(--leading-normal)" },
+        ],
+        "ds-title": ["var(--text-title)", { lineHeight: "var(--leading-snug)" }],
+        "ds-heading": [
+          "var(--text-heading)",
+          { lineHeight: "var(--leading-tight)" },
+        ],
+        "ds-display": [
+          "var(--text-display)",
+          { lineHeight: "var(--leading-tight)" },
+        ],
+        "ds-number": ["var(--text-number)", { lineHeight: "1" }],
+      },
+      spacing: {
+        ds0: "var(--space-0)",
+        ds1: "var(--space-1)",
+        ds2: "var(--space-2)",
+        ds3: "var(--space-3)",
+        ds4: "var(--space-4)",
+        ds5: "var(--space-5)",
+        ds6: "var(--space-6)",
+        ds8: "var(--space-8)",
+      },
       letterSpacing: {
-        headline: "-0.02em",
-        subhead: "-0.01em",
-        body: "-0.005em",
-        label: "0.03em",
+        headline: "var(--tracking-headline)",
+        subhead: "var(--tracking-subhead)",
+        body: "var(--tracking-body)",
+        label: "var(--tracking-label)",
       },
       borderRadius: {
-        card: "14px",
-        pill: "980px",
-        kanban: "10px",
+        card: "var(--radius-card)",
+        pill: "var(--radius-pill)",
+        kanban: "var(--radius-kanban)",
+        "ds-sm": "var(--radius-sm)",
+        "ds-md": "var(--radius-md)",
+        "ds-lg": "var(--radius-lg)",
       },
       boxShadow: {
-        card:
-          "0 1px 3px rgba(0, 0, 0, 0.08), 0 6px 16px rgba(0, 0, 0, 0.08)",
-        "card-hover":
-          "0 2px 6px rgba(0, 0, 0, 0.1), 0 14px 32px rgba(0, 0, 0, 0.12)",
+        card: "var(--shadow-card)",
+        "card-hover": "var(--shadow-card-hover)",
+      },
+      transitionDuration: {
+        DEFAULT: "200ms",
+      },
+      transitionTimingFunction: {
+        DEFAULT: "cubic-bezier(0.4, 0, 0.2, 1)",
+      },
+      maxWidth: {
+        canvas: "var(--main-max-width)",
       },
     },
   },

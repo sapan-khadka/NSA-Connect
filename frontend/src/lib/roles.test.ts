@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   canAccessFinance,
+  canManageTreasury,
   canPresidentPromoteMember,
   canViewMemberDirectory,
   getDashboardPath,
@@ -23,6 +24,15 @@ describe("role access helpers", () => {
       expect(canViewMemberDirectory(role)).toBe(true);
       expect(getDashboardPath(role)).toBe("/");
     }
+  });
+
+  it("grants treasury write access to treasurer, president, and vice president", () => {
+    expect(canManageTreasury("treasurer")).toBe(true);
+    expect(canManageTreasury("president")).toBe(true);
+    expect(canManageTreasury("board", "vice_president")).toBe(true);
+    expect(canManageTreasury("board")).toBe(false);
+    expect(canManageTreasury("board", "secretary")).toBe(false);
+    expect(canManageTreasury("general")).toBe(false);
   });
 
   it("derives display role from assigned position", () => {

@@ -2,6 +2,7 @@ import { Check } from "lucide-react";
 
 import type { KanbanColumnId } from "../../lib/kanban-status";
 import { getKanbanColumnTheme } from "../../lib/kanban-theme";
+import { AppIcon } from "../ui/AppIcon";
 
 type KanbanProgressRingProps = {
   percent: number;
@@ -16,11 +17,9 @@ function KanbanDoneCheckmark({
   size?: number;
   color: string;
 }) {
-  const iconSize = Math.round(size * 0.42);
-
   return (
     <div
-      className="flex shrink-0 items-center justify-center rounded-full"
+      className="ds-icon-btn shrink-0 rounded-full"
       style={{
         width: size,
         height: size,
@@ -28,12 +27,7 @@ function KanbanDoneCheckmark({
       }}
       aria-hidden="true"
     >
-      <Check
-        size={iconSize}
-        strokeWidth={2.5}
-        className="text-white"
-        aria-hidden="true"
-      />
+      <AppIcon icon={Check} size="md" className="text-white" />
     </div>
   );
 }

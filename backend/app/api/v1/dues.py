@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_member, require_treasurer
+from app.core.dependencies import get_current_member, require_treasury_writer
 from app.lib.semester import SEMESTER_QUERY_PATTERN
 from app.models.member import Member
 from app.models.member_dues import DuesStatus
@@ -39,7 +39,7 @@ def get_dues_dashboard_endpoint(
     semester: str = Query(..., pattern=SEMESTER_QUERY_PATTERN),
     status_filter: DuesStatus | None = Query(default=None, alias="status"),
     search: str | None = Query(default=None, min_length=1, max_length=100),
-    _: Member = Depends(require_treasurer),
+    _: Member = Depends(require_treasury_writer),
     db: Session = Depends(get_db),
 ):
     return get_dues_dashboard(
@@ -53,7 +53,7 @@ def get_dues_dashboard_endpoint(
 @router.get("/settings", response_model=SemesterDuesSettingsResponse)
 def get_semester_dues_settings_endpoint(
     semester: str = Query(..., pattern=SEMESTER_QUERY_PATTERN),
-    _: Member = Depends(require_treasurer),
+    _: Member = Depends(require_treasury_writer),
     db: Session = Depends(get_db),
 ):
     settings = get_semester_settings(db, semester)
@@ -68,7 +68,7 @@ def get_semester_dues_settings_endpoint(
 @router.put("/settings", response_model=SemesterDuesSettingsResponse)
 def upsert_semester_dues_settings_endpoint(
     payload: SemesterDuesSettingsUpdateRequest,
-    current_member: Member = Depends(require_treasurer),
+    current_member: Member = Depends(require_treasury_writer),
     db: Session = Depends(get_db),
 ):
     try:
@@ -88,7 +88,7 @@ def upsert_semester_dues_settings_endpoint(
 @router.post("/generate", response_model=GenerateDuesResponse)
 def generate_dues_records_endpoint(
     payload: GenerateDuesRequest,
-    current_member: Member = Depends(require_treasurer),
+    current_member: Member = Depends(require_treasury_writer),
     db: Session = Depends(get_db),
 ):
     try:
@@ -130,7 +130,7 @@ def get_my_dues_status_endpoint(
 def update_member_dues_endpoint(
     dues_id: int,
     payload: MemberDuesUpdateRequest,
-    current_member: Member = Depends(require_treasurer),
+    current_member: Member = Depends(require_treasury_writer),
     db: Session = Depends(get_db),
 ):
     try:
@@ -159,7 +159,7 @@ def update_member_dues_endpoint(
 def mark_dues_paid_endpoint(
     dues_id: int,
     payload: MarkDuesPaidRequest,
-    current_member: Member = Depends(require_treasurer),
+    current_member: Member = Depends(require_treasury_writer),
     db: Session = Depends(get_db),
 ):
     try:
@@ -186,7 +186,7 @@ def mark_dues_paid_endpoint(
 @router.post("/{dues_id}/mark-unpaid", response_model=MemberDuesResponse)
 def mark_dues_unpaid_endpoint(
     dues_id: int,
-    current_member: Member = Depends(require_treasurer),
+    current_member: Member = Depends(require_treasury_writer),
     db: Session = Depends(get_db),
 ):
     try:

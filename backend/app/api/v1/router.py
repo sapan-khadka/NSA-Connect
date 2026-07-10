@@ -4,6 +4,7 @@ from app.api.v1.ai import router as ai_router
 from app.api.v1.announcements import router as announcements_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.constitution import router as constitution_router
+from app.api.v1.discussions import router as discussions_router
 from app.api.v1.dues import router as dues_router
 from app.api.v1.event_suggestions import router as event_suggestions_router
 from app.api.v1.event_tasks import router as event_tasks_router
@@ -22,6 +23,7 @@ api_router.include_router(auth_router)
 api_router.include_router(ai_router)
 api_router.include_router(announcements_router)
 api_router.include_router(constitution_router)
+api_router.include_router(discussions_router)
 api_router.include_router(me_router)
 api_router.include_router(members_router)
 api_router.include_router(events_router)

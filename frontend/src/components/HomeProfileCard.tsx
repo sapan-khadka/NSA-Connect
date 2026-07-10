@@ -1,6 +1,9 @@
+import { Link } from "react-router-dom";
+import { UserRound } from "lucide-react";
+
 import { RoleBadge } from "./RoleBadge";
-import { ArrowLink } from "./ui/ArrowLink";
 import { HomeCard } from "./ui/HomeCard";
+import { IconBadge } from "./ui/IconBadge";
 import type { MemberResponse } from "../lib/auth-api";
 import { MemberDuesStatus } from "./MemberDuesStatus";
 
@@ -10,34 +13,43 @@ type HomeProfileCardProps = {
 
 export function HomeProfileCard({ member }: HomeProfileCardProps) {
   return (
-    <HomeCard className="self-start">
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="text-lg font-light tracking-subhead text-foreground">Your profile</h2>
-        <ArrowLink to="/profile">Edit profile</ArrowLink>
+    <HomeCard className="flex h-full flex-col">
+      <div className="ds-icon-label">
+        <IconBadge icon={UserRound} category="members" size="sm" />
+        <h2 className="text-lg font-semibold text-foreground">User Profile</h2>
       </div>
-      <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-        <div className="sm:col-span-2">
-          <MemberDuesStatus />
+
+      <div className="mt-4 flex flex-1 flex-col">
+        <MemberDuesStatus />
+
+        <dl className="mt-4 space-y-4 text-sm">
+          <div>
+            <dt className="text-sm font-semibold text-label">Major</dt>
+            <dd className="mt-1 font-medium text-foreground">{member.major}</dd>
+          </div>
+          <div>
+            <dt className="text-sm font-semibold text-label">Graduation</dt>
+            <dd className="mt-1 font-medium text-foreground">
+              {member.graduation_year}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-sm font-semibold text-label">Role</dt>
+            <dd className="mt-2">
+              <RoleBadge role={member.role} size="md" />
+            </dd>
+          </div>
+        </dl>
+
+        <div className="mt-auto pt-4">
+          <Link
+            to="/profile"
+            className="inline-flex w-full items-center justify-center rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-foreground transition duration-200 hover:border-primary/40 hover:bg-badge-teal-bg sm:w-auto"
+          >
+            Edit Profile
+          </Link>
         </div>
-        <div>
-          <dt className="text-label">Email</dt>
-          <dd className="font-medium text-foreground">{member.email}</dd>
-        </div>
-        <div>
-          <dt className="text-label">Major</dt>
-          <dd className="font-medium text-foreground">{member.major}</dd>
-        </div>
-        <div>
-          <dt className="text-label">Graduation</dt>
-          <dd className="font-medium text-foreground">{member.graduation_year}</dd>
-        </div>
-        <div className="flex items-center gap-2">
-          <dt className="text-label">Role</dt>
-          <dd>
-            <RoleBadge role={member.role} size="md" />
-          </dd>
-        </div>
-      </dl>
+      </div>
     </HomeCard>
   );
 }

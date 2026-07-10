@@ -1,5 +1,7 @@
 import { Star } from "lucide-react";
 
+import { AppIcon } from "./ui/AppIcon";
+
 type StarRatingInputProps = {
   value: number;
   onChange: (rating: number) => void;
@@ -34,16 +36,17 @@ export function StarRatingInput({
               disabled={disabled}
               onClick={() => onChange(rating)}
               className={[
-                "inline-flex min-h-11 min-w-11 items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                "ds-icon-btn min-h-11 min-w-11 rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-60",
                 selected
                   ? "text-accent"
                   : "text-gray-300 hover:text-accent/70",
               ].join(" ")}
             >
-              <Star
-                className="h-8 w-8"
+              <AppIcon
+                icon={Star}
+                size="xl"
+                className="text-current"
                 fill={selected ? "currentColor" : "none"}
-                aria-hidden="true"
               />
             </button>
           );
@@ -66,14 +69,12 @@ export function StarRatingDisplay({
       aria-label={`${rating} out of 5 stars`}
     >
       {[1, 2, 3, 4, 5].map((star) => (
-        <Star
+        <AppIcon
           key={star}
-          className={[
-            "h-4 w-4",
-            star <= rating ? "text-accent" : "text-gray-300",
-          ].join(" ")}
+          icon={Star}
+          size="sm"
+          className={star <= rating ? "text-accent" : "text-gray-300"}
           fill={star <= rating ? "currentColor" : "none"}
-          aria-hidden="true"
         />
       ))}
     </div>

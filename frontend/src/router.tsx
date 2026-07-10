@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate, type RouteObject } from "react-router-do
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppLayout } from "./layouts/AppLayout";
 import { EventsHubLayout } from "./layouts/EventsHubLayout";
+import { BoardDiscussionPage } from "./pages/BoardDiscussionPage";
 import { BoardTasksPage } from "./pages/BoardTasksPage";
 import { AnnouncementsPage } from "./pages/AnnouncementsPage";
 import { AiAssistantPage } from "./pages/AiAssistantPage";
@@ -95,6 +96,14 @@ export const appRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute minRole="board">
             <MeetingMinutesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "board/discussion",
+        element: (
+          <ProtectedRoute minRole="board">
+            <BoardDiscussionPage />
           </ProtectedRoute>
         ),
       },

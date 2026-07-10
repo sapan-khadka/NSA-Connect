@@ -1,111 +1,80 @@
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { useState } from "react";
+import { NavLink, Outlet } from "react-router-dom";
 
-import {
-  AccountMenu,
-  buildNavLinkClass,
-  NavDropdown,
-  NavDivider,
-  PrimaryNavLink,
-} from "../components/AppNav";
-import { AppLogo } from "../components/AppLogo";
+import { AppSidebar } from "../components/AppSidebar";
+import { AppTopBar, MobileSidebarDrawer } from "../components/AppTopBar";
 import { MobileBottomNav } from "../components/MobileBottomNav";
+import { buildNavLinkClass } from "../components/AppNav";
+import { AppLogo } from "../components/AppLogo";
 import { useAuth } from "../context/useAuth";
-import { useLogout } from "../context/useLogout";
-import {
-  canAccessFinance,
-  canBrowseMemberDirectory,
-  canViewMemberDirectory,
-} from "../lib/roles";
 
-const guestLinkClass = ({ isActive }: { isActive: boolean }) =>
-  buildNavLinkClass(isActive);
-
+/**
+ * App shell: fixed left sidebar + top header + scrollable main canvas.
+ * Navigation lives in the sidebar only (not the top bar).
+ */
 export function AppLayout() {
-  const { isAuthenticated, member } = useAuth();
-  const logout = useLogout();
-  const location = useLocation();
-  const showMemberAdmin = member ? canViewMemberDirectory(member.role) : false;
-  const showMembersNav = member ? canBrowseMemberDirectory(member.role) : false;
-  const showFinance = member ? canAccessFinance(member.role) : false;
-  const showMeetingMinutes = showMemberAdmin;
-  const showAnnouncementEmail = showMemberAdmin;
+  const { isAuthenticated } = useAuth();
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  const adminItems = [
-    ...(showFinance ? [{ label: "Finance", to: "/finance" }] : []),
-    ...(showMeetingMinutes
-      ? [{ label: "Meeting minutes", to: "/board/meeting-minutes" }]
-      : []),
-    ...(showAnnouncementEmail
-      ? [{ label: "Announcement email", to: "/board/announcement-email" }]
-      : []),
-  ];
-
-  const adminActive =
-    location.pathname.startsWith("/members") ||
-    location.pathname.startsWith("/finance") ||
-    location.pathname === "/board/meeting-minutes" ||
-    location.pathname === "/board/announcement-email";
+  if (!isAuthenticated) {
+    return (
+      <div className="ds-app-shell">
+        <header className="ds-topbar justify-between">
+          <AppLogo asLink size="nav" showTagline={false} />
+          <ul className="flex items-center gap-1 text-sm">
+            <li>
+              <NavLink
+                to="/login"
+                className={({ isActive }) => buildNavLinkClass(isActive)}
+              >
+                Login
+              </NavLink>
+            </li>
+            <li>
+              <NavLink
+                to="/register"
+                className={({ isActive }) => buildNavLinkClass(isActive)}
+              >
+                Register
+              </NavLink>
+            </li>
+          </ul>
+        </header>
+        <main className="ds-main-canvas pb-8">
+          <Outlet />
+        </main>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-surface">
-      <header className="ds-app-header bg-surface">
-        <nav className="mx-auto flex min-h-[3.75rem] w-full max-w-7xl items-center gap-2 px-4 sm:gap-3 sm:px-6 lg:gap-5">
-          <AppLogo asLink size="nav" showTagline={false} className="shrink-0" />
+    <div className="ds-app-shell">
+      {/* Fixed left sidebar — desktop */}
+      <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:flex lg:w-[var(--sidebar-width)]">
+        <AppSidebar />
+      </div>
 
-          {isAuthenticated ? (
-            <div className="flex min-w-0 flex-1 items-center justify-between gap-2 sm:gap-3">
-              <ul className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto text-sm [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                <PrimaryNavLink to="/" end>
-                  Home
-                </PrimaryNavLink>
-                <PrimaryNavLink to="/announcements">Announcements</PrimaryNavLink>
-                <PrimaryNavLink to="/events/calendar">Events</PrimaryNavLink>
-                {showMembersNav ? (
-                  <PrimaryNavLink to="/members">Members</PrimaryNavLink>
-                ) : null}
-                <PrimaryNavLink to="/assistant">Assistant</PrimaryNavLink>
-                {isAuthenticated ? (
-                  <PrimaryNavLink to="/reports">Reports</PrimaryNavLink>
-                ) : null}
-                {adminItems.length > 0 ? (
-                  <>
-                    <NavDivider />
-                    <NavDropdown label="Admin" items={adminItems} isActive={adminActive} />
-                  </>
-                ) : null}
-              </ul>
-
-              {member ? (
-                <AccountMenu fullName={member.full_name} onLogout={logout} />
-              ) : null}
-            </div>
-          ) : (
-            <ul className="ml-auto flex items-center gap-0.5 text-sm">
-              <li>
-                <NavLink to="/login" className={guestLinkClass}>
-                  Login
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to="/register" className={guestLinkClass}>
-                  Register
-                </NavLink>
-              </li>
-            </ul>
-          )}
-        </nav>
-      </header>
-
-      <main
-        className={[
-          "mx-auto w-full max-w-7xl px-0 py-6 sm:px-6 sm:py-8",
-          isAuthenticated ? "pb-24 lg:pb-8" : "",
-        ].join(" ")}
+      {/* Mobile drawer sidebar */}
+      <MobileSidebarDrawer
+        open={mobileSidebarOpen}
+        onClose={() => setMobileSidebarOpen(false)}
       >
-        <Outlet />
-      </main>
+        <AppSidebar onNavigate={() => setMobileSidebarOpen(false)} />
+      </MobileSidebarDrawer>
 
-      <MobileBottomNav />
+      {/* Scrollable column: sticky header + main content */}
+      <div className="flex min-h-screen min-w-0 flex-col lg:pl-[var(--sidebar-width)]">
+        <AppTopBar
+          showMenuButton
+          onOpenSidebar={() => setMobileSidebarOpen(true)}
+        />
+
+        <main className="ds-main-canvas pb-24 lg:pb-8">
+          <Outlet />
+        </main>
+
+        <MobileBottomNav />
+      </div>
     </div>
   );
 }

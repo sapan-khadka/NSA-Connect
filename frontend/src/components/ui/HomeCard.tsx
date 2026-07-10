@@ -7,11 +7,12 @@ type HomeCardProps = {
   className?: string;
   padding?: "sm" | "md";
   interactive?: boolean;
+  "aria-label"?: string;
 };
 
 const PADDING_CLASS = {
-  sm: "p-3 lg:p-4",
-  md: "p-4 lg:p-5",
+  sm: "p-4",
+  md: "p-4",
 } as const;
 
 export function HomeCard({
@@ -19,11 +20,13 @@ export function HomeCard({
   className = "",
   padding = "md",
   interactive = false,
+  "aria-label": ariaLabel,
 }: HomeCardProps) {
   return (
     <Card
       className={[PADDING_CLASS[padding], className].filter(Boolean).join(" ")}
       interactive={interactive}
+      aria-label={ariaLabel}
     >
       {children}
     </Card>

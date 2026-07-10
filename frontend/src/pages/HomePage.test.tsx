@@ -38,6 +38,13 @@ vi.mock("../lib/members-api", async () => {
   return {
     ...actual,
     fetchPendingMembers: vi.fn(),
+    fetchMembers: vi.fn().mockResolvedValue({
+      members: [],
+      total: 128,
+      page: 1,
+      page_size: 1,
+      total_pages: 128,
+    }),
   };
 });
 
@@ -59,6 +66,14 @@ vi.mock("../lib/finance-api", async () => {
     ...actual,
     fetchPendingFinanceChangeRequests: vi.fn(),
     fetchMyFinanceChangeRequestSummary: vi.fn(),
+    fetchFinanceSummary: vi.fn().mockResolvedValue({
+      balance: "910.00",
+      total_income: "1000.00",
+      total_expense: "90.00",
+      entry_count: 2,
+      pre_event: { income: "0", expense: "0", balance: "0", entry_count: 0 },
+      events: [],
+    }),
   };
 });
 
@@ -203,15 +218,14 @@ describe("HomePage", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: /Welcome back,/,
+        name: /Welcome back, Test User/,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Test User")).toHaveClass("text-foreground");
     expect(
       screen.getByRole("navigation", { name: "Finance quick actions" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "+ Log transaction" }),
+      screen.getByRole("button", { name: /Log Transaction/i }),
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Review approvals/ })).toHaveAttribute(
       "href",
@@ -221,16 +235,16 @@ describe("HomePage", () => {
     expect(await screen.findByLabelText("Activity")).toBeInTheDocument();
     expect(screen.getByText("1 assigned task past due")).toBeInTheDocument();
     expect(screen.getByText("2 member signups waiting for approval")).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: /Review ›/ })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: /^Review$/ })).toHaveLength(2);
 
-    expect(screen.getByText("Your work")).toBeInTheDocument();
+    expect(screen.getByText("Your Work")).toBeInTheDocument();
     expect(screen.getByText("Print flyers")).toBeInTheDocument();
 
-    expect(screen.getByText("Up next")).toBeInTheDocument();
+    expect(screen.getByText("You're invited")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Dashain Celebration" }),
     ).toHaveAttribute("href", "/events/5");
-    expect(screen.getByRole("link", { name: /Full calendar/ })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /View Calendar/i })).toHaveAttribute(
       "href",
       "/events/calendar",
     );
@@ -238,17 +252,22 @@ describe("HomePage", () => {
     expect(screen.getByText("Next board meeting")).toBeInTheDocument();
     expect(screen.getByText("March Board Meeting")).toBeInTheDocument();
     expect(screen.getByText("2 going · 7 not yet responded")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View ›" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "View" })).toHaveAttribute(
       "href",
       "/events/meetings/9",
     );
 
-    expect(screen.getByText("More for your role")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Past events/i })).toHaveAttribute(
+    expect(screen.getByText("Quick Tools")).toBeInTheDocument();
+    expect(screen.getByText("User Profile")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Edit Profile/i })).toHaveAttribute(
+      "href",
+      "/profile",
+    );
+    expect(screen.getByRole("link", { name: /Past Events/i })).toHaveAttribute(
       "href",
       "/events/past",
     );
-    expect(screen.getByRole("link", { name: /Task oversight/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /Task Oversight/i })).toHaveAttribute(
       "href",
       "/events/oversight",
     );
@@ -268,7 +287,7 @@ describe("HomePage", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByText("Assigned work")).toBeInTheDocument(),
+      expect(screen.getByText("Your Work")).toBeInTheDocument(),
     );
 
     expect(screen.queryByText("Next board meeting")).not.toBeInTheDocument();
@@ -354,15 +373,15 @@ describe("HomePage", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByText("Your work")).toBeInTheDocument(),
+      expect(screen.getByText("Your Work")).toBeInTheDocument(),
     );
 
-    const overdueTile = screen.getByText("Overdue").closest(".ds-stat-tile");
+    const overdueTile = screen.getByText("Overdue").closest("div.rounded-card");
     expect(overdueTile).not.toBeNull();
     expect(within(overdueTile as HTMLElement).getByText("0")).toHaveClass(
-      "ds-stat-value",
+      "text-foreground",
     );
-    expect(screen.queryByText("0", { selector: ".ds-stat-overdue-chip" })).not.toBeInTheDocument();
+    expect(screen.queryByText("0", { selector: ".text-overdue" })).not.toBeInTheDocument();
   });
 
   it("limits activity height when many items are present", async () => {
@@ -411,14 +430,17 @@ describe("HomePage", () => {
     );
 
     const activityList = await screen.findByLabelText("Activity");
-    expect(activityList.querySelector("ul")).toHaveClass("lg:max-h-64", "overflow-y-auto");
+    expect(activityList.querySelector("ul")).toHaveClass(
+      "overflow-y-auto",
+      "min-h-0",
+      "flex-1",
+    );
     expect(screen.getAllByText("Recent · clears from this feed after 7 days")).toHaveLength(2);
 
-    const activityItems = Array.from(
-      activityList.querySelectorAll("li p.text-sm"),
-    ).map((node) => node.textContent);
-    expect(activityItems[0]).toContain("assigned task");
-    expect(activityItems.at(-1)).toContain("approved this week");
+    expect(screen.getByText("Task Assigned")).toBeInTheDocument();
+    expect(screen.getByText("Expense Approved")).toBeInTheDocument();
+    expect(screen.getByText(/assigned task/)).toBeInTheDocument();
+    expect(screen.getByText(/approved this week/)).toBeInTheDocument();
   });
 
   it("shows an activity empty state when counts are zero", async () => {
@@ -435,14 +457,17 @@ describe("HomePage", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByText("Assigned work")).toBeInTheDocument(),
+      expect(screen.getByText("Your Work")).toBeInTheDocument(),
     );
 
-    expect(screen.getByText("No open tasks assigned")).toBeInTheDocument();
+    expect(screen.getAllByText("Open Tasks").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Overdue").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Next Due")).toBeInTheDocument();
+    expect(screen.getByText("No upcoming due dates")).toBeInTheDocument();
     expect(screen.getByLabelText("Activity")).toBeInTheDocument();
-    expect(screen.getByText("All caught up")).toBeInTheDocument();
+    expect(screen.getByText("You're all caught up")).toBeInTheDocument();
     expect(
-      screen.getByText("Nothing needs your attention right now."),
+      screen.getByText("No action items right now — check back after the next event."),
     ).toBeInTheDocument();
   });
 
@@ -485,7 +510,7 @@ describe("HomePage", () => {
 
     expect(await screen.findByText("Recent memories")).toBeInTheDocument();
     expect(screen.getByText("From Dashain · 5 photos")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View all photos ›" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "View all photos" })).toHaveAttribute(
       "href",
       "/events/photos",
     );
@@ -513,7 +538,7 @@ describe("HomePage", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", { name: "+ Log transaction" }),
+      await screen.findByRole("button", { name: /Log Transaction/i }),
     );
 
     expect(screen.getByRole("dialog", { name: "Log transaction" })).toBeInTheDocument();

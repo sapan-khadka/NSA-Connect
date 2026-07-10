@@ -30,6 +30,7 @@ import {
 } from "../lib/event-task-draft";
 import {
   canManageEventTasks,
+  canManageTreasury,
   isRoleAtLeast,
 } from "../lib/roles";
 
@@ -55,7 +56,9 @@ export function EventManagePage() {
   const [taskDraft, setTaskDraft] = useState<EventTaskDraft | null>(null);
 
   const canViewBoard = member ? isRoleAtLeast(member.role, "board") : false;
-  const canViewTreasury = member ? isRoleAtLeast(member.role, "treasurer") : false;
+  const canViewTreasury = member
+    ? canManageTreasury(member.role, member.position)
+    : false;
   const canManageTasks = member
     ? canManageEventTasks(member.role, member.position)
     : false;

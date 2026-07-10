@@ -19,13 +19,13 @@ function NavMountainMark() {
     <svg
       aria-hidden="true"
       viewBox="0 0 24 24"
-      className="h-6 w-6 shrink-0"
+      className="h-6 w-6 shrink-0 text-primary"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
         d="M3.5 18.5L9.25 9.5L12.75 14L16.25 8L20.5 18.5"
-        stroke="#023D54"
+        stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -93,7 +93,7 @@ export function AppLogo({
       )}
       {showWordmark || isNavBrand ? (
         <div className="min-w-0 text-left">
-          <p className={isNavBrand ? styles.title : ["font-light tracking-headline text-foreground", styles.title].join(" ")}>
+          <p className={isNavBrand ? [styles.title, "font-semibold"].join(" ") : ["font-semibold tracking-headline text-foreground", styles.title].join(" ")}>
             NSA Connect
           </p>
           {showTagline ? (
@@ -164,7 +164,7 @@ export function HomeHeroBrand({
         <p className="ds-section-label">
           {eyebrow}
         </p>
-        <h1 className="mt-2 text-3xl font-light tracking-headline text-foreground md:text-4xl">
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground md:text-4xl">
           {title}
         </h1>
         <p

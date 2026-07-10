@@ -18,6 +18,7 @@ import {
   groupUpcomingEvents,
 } from "../lib/calendar-upcoming";
 import { EventRsvpButton } from "./EventRsvpButton";
+import { AppIcon } from "./ui/AppIcon";
 
 type EventDayPanelProps = {
   selectedDate: string | null;
@@ -75,17 +76,14 @@ function UpcomingEventsSidebar({
 
         return (
           <section key={group}>
-            <div className="flex items-center gap-1.5">
+            <div className="ds-icon-label">
               {group === "this_week" ? (
-                <Clock
-                  className="h-3.5 w-3.5 text-[#E8590C]"
-                  aria-hidden="true"
-                />
+                <AppIcon icon={Clock} size="sm" className="text-overdue" />
               ) : null}
               <h3
                 className={[
                   "text-xs font-semibold uppercase tracking-wide",
-                  group === "this_week" ? "text-[#E8590C]" : "text-label",
+                  group === "this_week" ? "text-overdue" : "text-label",
                 ].join(" ")}
               >
                 {UPCOMING_GROUP_LABELS[group]}

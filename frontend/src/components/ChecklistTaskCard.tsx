@@ -1,3 +1,5 @@
+import { Check } from "lucide-react";
+
 import type { MemberResponse } from "../lib/auth-api";
 import type { EventTaskResponse } from "../lib/event-tasks-api";
 import { formatEventDateTime } from "../lib/format-datetime";
@@ -7,6 +9,7 @@ import {
 } from "../lib/task-progress";
 import { PrepProgressBar } from "./PrepProgressBar";
 import { PrepTaskAssigneeSelect } from "./PrepTaskAssigneeSelect";
+import { AppIcon } from "./ui/AppIcon";
 
 type ChecklistTaskCardProps = {
   task: EventTaskResponse;
@@ -125,7 +128,7 @@ export function ChecklistTaskCard({
                     onToggleItem(task.id, item.id, !item.is_completed)
                   }
                   className={[
-                    "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px] font-bold transition-colors",
+                    "mt-0.5 ds-icon-btn h-4 w-4 shrink-0 rounded border transition-colors",
                     item.is_completed
                       ? "border-accent bg-accent text-white"
                       : "border-gray-300 bg-white text-transparent",
@@ -137,7 +140,9 @@ export function ChecklistTaskCard({
                     .filter(Boolean)
                     .join(" ")}
                 >
-                  ✓
+                  {item.is_completed ? (
+                    <AppIcon icon={Check} size="xs" className="text-white" />
+                  ) : null}
                 </button>
                 <span
                   className={

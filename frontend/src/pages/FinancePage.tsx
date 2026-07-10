@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { MoreHorizontal } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 
 import { getApiErrorMessage } from "../lib/api-error";
@@ -15,6 +16,7 @@ import {
 } from "../components/FinanceSummaryCard";
 import { LogFinanceEntryForm } from "../components/LogFinanceEntryForm";
 import { RoleBadge } from "../components/RoleBadge";
+import { AppIcon } from "../components/ui/AppIcon";
 import { useAuth } from "../context/useAuth";
 import { fetchEvents } from "../lib/events-api";
 import { isEventFinanceEditable } from "../lib/event-finance";
@@ -28,7 +30,7 @@ import {
   type FinanceExpenseCategorySummary,
   type FinanceSummaryResponse,
 } from "../lib/finance-api";
-import { isRoleAtLeast } from "../lib/roles";
+import { canManageTreasury } from "../lib/roles";
 import {
   financeTabSearchParams,
   parseFinanceTab,
@@ -94,9 +96,9 @@ function FinancePageMenuButton() {
     <button
       type="button"
       aria-label="More actions"
-      className="inline-flex h-9 w-9 items-center justify-center rounded-full text-xl leading-none text-label transition-colors hover:bg-gray-100 hover:text-foreground"
+      className="ds-icon-btn h-9 w-9 rounded-full text-label transition-colors hover:bg-gray-100 hover:text-foreground"
     >
-      ⋯
+      <AppIcon icon={MoreHorizontal} size="sm" className="text-current" />
     </button>
   );
 }
@@ -119,7 +121,7 @@ export function FinancePage() {
   );
 
   const canViewTreasury = member
-    ? isRoleAtLeast(member.role, "treasurer")
+    ? canManageTreasury(member.role, member.position)
     : false;
 
   function switchTab(tab: FinanceTabId) {

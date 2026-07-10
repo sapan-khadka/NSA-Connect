@@ -73,7 +73,7 @@ describe("RecentMemoriesStrip", () => {
 
     expect(screen.getByText("Recent memories")).toBeInTheDocument();
     expect(screen.getByText("From Dashain · 16 photos")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View all photos ›" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "View all photos" })).toHaveAttribute(
       "href",
       "/events/photos",
     );

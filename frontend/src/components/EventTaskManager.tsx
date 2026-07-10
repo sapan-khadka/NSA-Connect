@@ -10,6 +10,7 @@ import { Trash2 } from "lucide-react";
 
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/auth-api";
+import { AppIcon } from "./ui/AppIcon";
 import {
   createEventTask,
   deleteEventTask,
@@ -220,9 +221,9 @@ function SimpleTaskRow({
             aria-label={`Delete task ${task.title}`}
             disabled={isBusy}
             onClick={onDelete}
-            className="shrink-0 rounded-full p-1.5 text-label transition-colors hover:bg-surface-muted hover:text-overdue disabled:cursor-not-allowed disabled:opacity-60"
+            className="ds-icon-btn shrink-0 rounded-full p-1.5 text-label transition-colors hover:bg-surface-muted hover:text-overdue disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <Trash2 className="h-4 w-4" aria-hidden="true" />
+            <AppIcon icon={Trash2} size="sm" className="text-current" />
           </button>
         ) : null}
       </div>

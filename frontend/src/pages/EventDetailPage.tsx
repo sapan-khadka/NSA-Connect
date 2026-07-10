@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 
 import { EventAttendeesPanel } from "../components/EventAttendeesPanel";
 import { EventAttendanceSummaryPanel } from "../components/EventAttendanceSummaryPanel";
+import { DiscussionFeed } from "../components/DiscussionFeed";
 import { canCreateEventTasks } from "../lib/event-finance";
 import { EventFinanceCloseoutBanner } from "../components/EventFinanceCloseoutBanner";
 import { EventRsvpButton } from "../components/EventRsvpButton";
@@ -38,6 +39,7 @@ import {
   canManageEventTasks,
   isRoleAtLeast,
 } from "../lib/roles";
+
 import { fetchMyEventTasks } from "../lib/event-tasks-api";
 
 export function EventDetailPage() {
@@ -355,6 +357,18 @@ export function EventDetailPage() {
           </div>
         ) : null}
       </HomeCard>
+
+      {canViewBoard || event.current_member_volunteer_signup ? (
+        <DiscussionFeed
+          title="Discussion"
+          description={
+            canViewBoard
+              ? "Board members and volunteers for this event can post here."
+              : "Volunteers for this event can post here."
+          }
+          scope={{ type: "event", eventId: event.id }}
+        />
+      ) : null}
 
       {canViewBoard ? (
         <HomeCard>

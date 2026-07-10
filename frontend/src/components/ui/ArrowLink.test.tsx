@@ -16,8 +16,9 @@ describe("ArrowLink", () => {
       </MemoryRouter>,
     );
 
-    const link = screen.getByRole("link", { name: "Calendar ›" });
+    const link = screen.getByRole("link", { name: "Calendar" });
     expect(link).toHaveAttribute("href", "/events/calendar");
     expect(link.className).toContain("ds-link");
+    expect(link.querySelector("svg")).toBeTruthy();
   });
 });

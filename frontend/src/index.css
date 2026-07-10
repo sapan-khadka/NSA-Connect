@@ -1,26 +1,27 @@
 @import "tailwindcss";
+@import "./design-system/tokens.css";
 @config "../tailwind.config.ts";
 
 @layer base {
   :root {
-    --ds-card-shadow:
-      0 1px 3px rgba(0, 0, 0, 0.08),
-      0 6px 16px rgba(0, 0, 0, 0.08);
-    --ds-card-shadow-hover:
-      0 2px 6px rgba(0, 0, 0, 0.1),
-      0 14px 32px rgba(0, 0, 0, 0.12);
+    /* Legacy aliases kept for existing CSS that references --badge-* / --ds-* */
+    --ds-card-shadow: var(--shadow-card);
+    --ds-card-shadow-hover: var(--shadow-card-hover);
+    --ds-border: var(--color-border);
   }
 
   html {
-    @apply font-light text-foreground antialiased;
-    font-weight: 300;
+    @apply font-sans text-foreground antialiased;
+    font-family: var(--font-sans);
+    font-weight: 400;
     overflow-x: clip;
   }
 
   body {
-    @apply m-0 bg-surface font-light text-foreground antialiased;
-    font-weight: 300;
-    letter-spacing: -0.005em;
+    @apply m-0 bg-surface font-sans text-foreground antialiased;
+    font-family: var(--font-sans);
+    font-weight: 400;
+    letter-spacing: var(--tracking-subhead);
   }
 
   h1,
@@ -29,9 +30,10 @@
   h4,
   h5,
   h6 {
-    @apply font-light text-foreground;
-    font-weight: 300;
-    letter-spacing: -0.02em;
+    @apply font-sans text-foreground;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    letter-spacing: var(--tracking-headline);
   }
 
   p,
@@ -42,8 +44,8 @@
   th,
   blockquote,
   figcaption {
-    font-weight: 300;
-    letter-spacing: -0.005em;
+    font-weight: 400;
+    letter-spacing: var(--tracking-subhead);
   }
 
   button,
@@ -53,15 +55,61 @@
   select,
   label[for],
   a {
-    font-weight: 400;
+    font-weight: 500;
   }
 }
 
 @layer components {
   .ds-section-label {
     @apply text-xs uppercase text-label;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  .ds-app-shell {
+    @apply min-h-screen bg-surface;
+  }
+
+  .ds-sidebar {
+    @apply flex h-full w-[var(--sidebar-width)] flex-col border-r border-gray-200 bg-surface-card;
+  }
+
+  .ds-sidebar-link {
+    @apply ds-icon-label w-full gap-2.5 rounded-card px-2.5 py-2 text-sm text-foreground transition-all duration-200 ease-out;
     font-weight: 500;
-    letter-spacing: 0.03em;
+  }
+
+  .ds-sidebar-link:hover {
+    @apply bg-surface-muted text-foreground;
+  }
+
+  .ds-sidebar-link--active {
+    @apply bg-badge-teal-bg text-primary shadow-none;
+    font-weight: 600;
+  }
+
+  .ds-sidebar-link--active:hover {
+    @apply bg-badge-teal-bg text-primary;
+  }
+
+  .ds-topbar {
+    @apply sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-gray-200 bg-white/90 px-4 backdrop-blur-md sm:px-6 lg:px-8;
+  }
+
+  .ds-topbar-search {
+    @apply w-full rounded-full border border-gray-200 bg-surface py-2.5 pl-11 pr-4 text-sm text-foreground outline-none transition duration-200 placeholder:text-label focus:border-primary/40 focus:bg-white focus:ring-2 focus:ring-primary/10;
+  }
+
+  .ds-main-canvas {
+    @apply mx-auto w-full max-w-canvas flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-8;
+  }
+
+  .ds-stat-card {
+    @apply flex items-start gap-3 rounded-card border border-gray-200 bg-surface-card p-4 shadow-card transition duration-200 ease-out;
+  }
+
+  .ds-help-card {
+    @apply rounded-card border border-gray-200 bg-badge-teal-bg/60 p-3;
   }
 
   .ds-app-header {
@@ -97,7 +145,7 @@
 
   .ds-nav-link:focus-visible {
     @apply rounded-sm outline outline-2 outline-offset-2;
-    outline-color: rgba(2, 124, 104, 0.35);
+    outline-color: rgba(15, 118, 110, 0.35);
   }
 
   .ds-nav-link--active {
@@ -140,17 +188,21 @@
 
   .ds-nav-account-trigger:focus-visible {
     @apply rounded-sm outline outline-2 outline-offset-2;
-    outline-color: rgba(2, 124, 104, 0.35);
+    outline-color: rgba(15, 118, 110, 0.35);
   }
 
   .ds-nav-account-avatar {
     @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-transparent text-xs font-medium text-accent;
-    border: 1.5px solid #e7f4f0;
+    border: 1.5px solid #ccfbf1;
   }
 
   .ds-card {
-    @apply rounded-card bg-surface-card;
-    box-shadow: var(--ds-card-shadow);
+    @apply rounded-card border border-gray-200 bg-surface-card;
+    box-shadow: var(--shadow-card);
+    transition:
+      box-shadow var(--motion-duration) var(--motion-easing),
+      border-color var(--motion-duration) var(--motion-easing),
+      transform var(--motion-duration) var(--motion-easing);
   }
 
   /* Mobile edge-to-edge member pages (< lg): full-width sections with dividers */
@@ -223,7 +275,7 @@
   }
 
   .ds-mobile-edge-announcement {
-    @apply rounded-none border-0 bg-transparent p-0 shadow-none lg:overflow-hidden lg:rounded-xl lg:border lg:border-gray-200 lg:bg-white lg:p-6;
+    @apply rounded-none border-0 bg-transparent p-0 shadow-none lg:overflow-hidden lg:rounded-card lg:border lg:border-gray-200 lg:bg-white lg:p-6;
   }
 
 
@@ -232,21 +284,22 @@
   }
 
   .ds-card.ds-card-interactive:hover {
-    box-shadow: var(--ds-card-shadow-hover);
-    transform: translateY(-3px);
+    box-shadow: var(--shadow-card-hover);
+    border-color: color-mix(in srgb, var(--color-border) 70%, #000 30%);
+    transform: translateY(-2px);
   }
 
   .ds-card-nested {
-    @apply rounded-card bg-surface-muted;
+    @apply rounded-card border border-gray-200 bg-surface-muted;
   }
 
   .ds-panel {
-    @apply rounded-card bg-surface-card p-6;
+    @apply rounded-card border border-gray-200 bg-surface-card p-6;
     box-shadow: var(--ds-card-shadow);
   }
 
   .ds-stat-tile {
-    @apply rounded-card bg-surface-card p-4;
+    @apply rounded-card border border-gray-200 bg-surface-card p-4;
     box-shadow: var(--ds-card-shadow);
   }
 
@@ -371,6 +424,10 @@
     }
   }
 
+  .ds-field-input {
+    @apply mt-1 w-full rounded-lg border border-gray-200 bg-surface-card px-3 py-3 text-base text-foreground transition duration-200 placeholder:text-label focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:py-2 sm:text-sm;
+  }
+
   .btn-primary {
     @apply inline-flex min-h-11 items-center justify-center rounded-pill bg-primary px-5 py-2.5 text-sm text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60;
     font-weight: 500;
@@ -378,10 +435,6 @@
 
   .ds-chip {
     @apply inline-flex min-h-11 items-center rounded-full px-3.5 py-2 text-sm font-medium transition-colors;
-  }
-
-  .ds-field-input {
-    @apply mt-1 w-full rounded-lg border border-gray-200 px-3 py-3 text-base text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:py-2 sm:text-sm;
   }
 
   .ds-btn-accent {
@@ -395,8 +448,18 @@
   }
 
   .ds-link {
-    @apply inline-flex min-h-11 items-center text-sm text-accent transition-colors hover:text-accent-hover;
+    @apply inline-flex min-h-11 items-center gap-1 text-sm text-accent transition-colors hover:text-accent-hover;
     font-weight: 400;
+  }
+
+  /* Icon + text pairing: vertical center + consistent gap */
+  .ds-icon-label {
+    @apply inline-flex items-center gap-1.5;
+  }
+
+  /* Icon-only control hit target centering */
+  .ds-icon-btn {
+    @apply inline-flex items-center justify-center;
   }
 
   .ds-tag {

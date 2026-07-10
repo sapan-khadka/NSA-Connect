@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Trash2 } from "lucide-react";
 
 import type { EventPhoto } from "../../lib/photo-archive-api";
+import { AppIcon } from "../ui/AppIcon";
 
 type EventPhotoGridProps = {
   photos: EventPhoto[];
@@ -53,9 +54,9 @@ export function EventPhotoGrid({
               aria-label={`Delete photo by ${photo.uploaded_by_name}`}
               disabled={deletingPhotoId === photo.id}
               onClick={() => onDeletePhoto(photo)}
-              className="absolute right-2 top-2 rounded-full bg-white/90 p-1.5 text-label opacity-0 shadow-sm transition hover:text-foreground group-hover:opacity-100 focus:opacity-100"
+              className="absolute right-2 top-2 ds-icon-btn rounded-full bg-white/90 p-1.5 text-label opacity-0 shadow-sm transition hover:text-foreground group-hover:opacity-100 focus:opacity-100"
             >
-              <Trash2 className="h-4 w-4" aria-hidden="true" />
+              <AppIcon icon={Trash2} size="sm" className="text-current" />
             </button>
           ) : null}
         </li>

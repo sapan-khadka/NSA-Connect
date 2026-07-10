@@ -1,8 +1,10 @@
 import type { ElementType, ReactNode } from "react";
 
+import { cx } from "../../design-system/cx";
+
 type CardPadding = "none" | "sm" | "md" | "lg";
 
-type CardProps = {
+export type CardProps = {
   as?: ElementType;
   children: ReactNode;
   className?: string;
@@ -32,6 +34,10 @@ function buildCardClass({
   return interactive ? "ds-card ds-card-interactive" : "ds-card";
 }
 
+/**
+ * CampusOS surface card. Styles come from design tokens via `.ds-card`.
+ * Existing callers (HomeCard, etc.) keep the same API and appearance.
+ */
 export function Card({
   as: Component = "section",
   children,
@@ -39,16 +45,16 @@ export function Card({
   interactive = false,
   nested = false,
   padding = "none",
-}: CardProps) {
+  ...rest
+}: CardProps & Record<string, unknown>) {
   return (
     <Component
-      className={[
+      className={cx(
         buildCardClass({ interactive, nested }),
         PADDING_CLASS[padding],
         className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
+      )}
+      {...rest}
     >
       {children}
     </Component>

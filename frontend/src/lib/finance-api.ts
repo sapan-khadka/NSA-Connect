@@ -117,6 +117,17 @@ export type ReceiptUploadResponse = {
   resource_type: string;
 };
 
+export type ReceiptScanResponse = {
+  readable: boolean;
+  vendor: string | null;
+  purchase_date: string | null;
+  purchase_time: string | null;
+  amount: string | null;
+  description: string | null;
+  category: string | null;
+  confidence: string;
+};
+
 export async function fetchFinanceEntries(params?: {
   semester?: string;
   type?: FinanceEntryType;
@@ -256,6 +267,21 @@ export async function uploadFinanceReceipt(
   formData.append("file", file);
   const response = await api.post<ReceiptUploadResponse>(
     "/v1/finance/receipts",
+    formData,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+    },
+  );
+  return response.data;
+}
+
+export async function scanFinanceReceipt(
+  file: File,
+): Promise<ReceiptScanResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await api.post<ReceiptScanResponse>(
+    "/v1/finance/receipts/scan",
     formData,
     {
       headers: { "Content-Type": "multipart/form-data" },

@@ -5,6 +5,7 @@ import {
   Sparkles,
   Users,
   Wallet,
+  Wrench,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -18,13 +19,15 @@ import { RecentMemoriesStrip } from "../components/RecentMemoriesStrip";
 import {
   HomeActivitySection,
   HomeBoardMeetingSection,
+  HomeStatCards,
   HomeUpNextSection,
-  HomeWelcomeHeader,
+  HomeWelcomeBanner,
   HomeYourWorkSection,
   QuickLinkCard,
   type QuickLink,
 } from "../components/home/HomeMemberSections";
 import { HomeCard } from "../components/ui/HomeCard";
+import { IconBadge } from "../components/ui/IconBadge";
 import { Modal } from "../components/ui/Modal";
 import { useAuth } from "../context/useAuth";
 import { useIsLgUp } from "../hooks/useMediaQuery";
@@ -42,6 +45,7 @@ import {
 } from "../lib/events-api";
 import { isEventFinanceEditable } from "../lib/event-finance";
 import {
+  fetchFinanceSummary,
   fetchPendingFinanceChangeRequests,
   fetchMyFinanceChangeRequestSummary,
 } from "../lib/finance-api";
@@ -51,11 +55,12 @@ import {
   type HomeActivity,
 } from "../lib/home-activities";
 import { getMyTasksPath, summarizeMyTasks } from "../lib/home-tasks";
-import { fetchPendingMembers } from "../lib/members-api";
+import { fetchMembers, fetchPendingMembers } from "../lib/members-api";
 import { fetchMeetings, type MeetingSummary } from "../lib/meetings-api";
 import { fetchRecentMemories, type RecentMemoriesPreview } from "../lib/recent-memories";
 import {
   canAccessFinance,
+  canBrowseMemberDirectory,
   canManageTreasury,
   canViewMemberDirectory,
   canViewTaskOversight,
@@ -82,28 +87,31 @@ function buildQuickLinks(member: MemberResponse): QuickLink[] {
 
   if (isRoleAtLeast(member.role, "board")) {
     links.push({
-      title: "Past events",
+      title: "Past Events",
       description: "Close-out status",
       to: "/events/past",
       icon: Archive,
+      category: "events",
     });
   }
 
   if (canViewMemberDirectory(member.role)) {
     links.push({
-      title: "Member directory",
+      title: "Member Directory",
       description: "Browse NSA members",
       to: "/members",
       icon: Users,
+      category: "members",
     });
   }
 
   if (canViewTaskOversight(member.role, member.position)) {
     links.push({
-      title: "Task oversight",
+      title: "Task Oversight",
       description: "Team completion progress",
       to: "/events/oversight",
       icon: ClipboardList,
+      category: "tasks",
     });
   }
 
@@ -113,6 +121,7 @@ function buildQuickLinks(member: MemberResponse): QuickLink[] {
       description: "Budgets and treasury",
       to: "/finance",
       icon: Wallet,
+      category: "finance",
     });
   }
 
@@ -122,6 +131,7 @@ function buildQuickLinks(member: MemberResponse): QuickLink[] {
       description: "Ask about NSA events",
       to: "/assistant",
       icon: Sparkles,
+      category: "assistant",
     });
   }
 
@@ -141,13 +151,13 @@ function PublicHomeView() {
           <>
             <Link
               to="/login"
-              className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-hover"
+              className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-hover"
             >
               Log in
             </Link>
             <Link
               to="/register"
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-foreground transition hover:border-accent hover:bg-accent/5"
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-foreground transition hover:border-primary hover:bg-badge-teal-bg/40"
             >
               Create account
             </Link>
@@ -163,6 +173,7 @@ type MemberHomeLayoutProps = {
   activities: HomeActivity[];
   mobileActivityPreview: HomeActivity[];
   nextEvent: EventResponse | null;
+  upcomingCount: number;
   tasksSummary: ReturnType<typeof summarizeMyTasks>;
   nextBoardMeeting: MeetingSummary | null;
   meetingAttendeeSummary: string | null;
@@ -172,6 +183,10 @@ type MemberHomeLayoutProps = {
   recentMemories: RecentMemoriesPreview | null;
   financePendingCount: number;
   showFinanceQuickActions: boolean;
+  memberCount: number | null;
+  budgetBalance: string | null;
+  canViewMembers: boolean;
+  canViewFinance: boolean;
   quickLinks: QuickLink[];
   tasksPath: string;
   isBoardMember: boolean;
@@ -179,10 +194,33 @@ type MemberHomeLayoutProps = {
   onLogTransaction: () => void;
 };
 
+function ToolsForRoleSection({ quickLinks }: { quickLinks: QuickLink[] }) {
+  if (quickLinks.length === 0) {
+    return null;
+  }
+
+  return (
+    <HomeCard className="flex h-full flex-col">
+      <div className="ds-icon-label">
+        <IconBadge icon={Wrench} category="tools" size="sm" />
+        <h2 className="text-lg font-semibold text-foreground">Quick Tools</h2>
+      </div>
+      <ul className="mt-4 grid flex-1 grid-cols-2 gap-4">
+        {quickLinks.map((link) => (
+          <li key={link.to + link.title} className="min-h-0">
+            <QuickLinkCard {...link} />
+          </li>
+        ))}
+      </ul>
+    </HomeCard>
+  );
+}
+
 function DesktopMemberHomeLayout({
   member,
   activities,
   nextEvent,
+  upcomingCount,
   tasksSummary,
   nextBoardMeeting,
   meetingAttendeeSummary,
@@ -192,6 +230,10 @@ function DesktopMemberHomeLayout({
   recentMemories,
   financePendingCount,
   showFinanceQuickActions,
+  memberCount,
+  budgetBalance,
+  canViewMembers,
+  canViewFinance,
   quickLinks,
   tasksPath,
   isBoardMember,
@@ -199,19 +241,21 @@ function DesktopMemberHomeLayout({
   onLogTransaction,
 }: MemberHomeLayoutProps) {
   return (
-    <div className="space-y-5">
-      <CoverBanner />
-
-      <HomeWelcomeHeader member={member} />
+    <div className="space-y-6">
+      <HomeWelcomeBanner
+        member={member}
+        showLogTransaction={showFinanceQuickActions}
+        onLogTransaction={onLogTransaction}
+        pendingApprovalCount={financePendingCount}
+      />
 
       {showFinanceQuickActions ? (
         <HomeFinanceQuickActions
           pendingApprovalCount={financePendingCount}
           onLogTransaction={onLogTransaction}
+          compact
         />
       ) : null}
-
-      <HomeAnnouncementsSection previewLimit={3} />
 
       {loadError ? (
         <div role="alert" className="ds-alert-banner">
@@ -219,7 +263,20 @@ function DesktopMemberHomeLayout({
         </div>
       ) : null}
 
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+      <HomeStatCards
+        tasksSummary={tasksSummary}
+        upcomingCount={upcomingCount}
+        nextEvent={nextEvent}
+        memberCount={memberCount}
+        budgetBalance={budgetBalance}
+        tasksPath={tasksPath}
+        canViewMembers={canViewMembers}
+        canViewFinance={canViewFinance}
+        isLoading={isLoading}
+      />
+
+      <div className="grid items-stretch gap-4 lg:grid-cols-3 lg:min-h-[28rem]">
+        <HomeAnnouncementsSection previewLimit={2} />
         <HomeActivitySection
           activities={activities}
           isLoading={isLoading}
@@ -234,13 +291,7 @@ function DesktopMemberHomeLayout({
         />
       </div>
 
-      <div
-        className={
-          isBoardMember && nextBoardMeeting
-            ? "grid items-start gap-5 lg:grid-cols-2"
-            : "grid items-start gap-5"
-        }
-      >
+      <div className="space-y-6">
         <HomeUpNextSection
           nextEvent={nextEvent}
           isLoading={isLoading}
@@ -255,22 +306,9 @@ function DesktopMemberHomeLayout({
         ) : null}
       </div>
 
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)]">
+      <div className="grid items-stretch gap-4 lg:grid-cols-2">
         <HomeProfileCard member={member} />
-        {quickLinks.length > 0 ? (
-          <HomeCard padding="sm" className="self-start">
-            <h2 className="text-base font-medium text-foreground">
-              More for your role
-            </h2>
-            <ul className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-              {quickLinks.map((link) => (
-                <li key={link.to + link.title}>
-                  <QuickLinkCard {...link} />
-                </li>
-              ))}
-            </ul>
-          </HomeCard>
-        ) : null}
+        <ToolsForRoleSection quickLinks={quickLinks} />
       </div>
 
       {recentMemories ? <RecentMemoriesStrip memories={recentMemories} /> : null}
@@ -283,6 +321,7 @@ function MobileMemberHomeLayout({
   activities,
   mobileActivityPreview,
   nextEvent,
+  upcomingCount,
   tasksSummary,
   nextBoardMeeting,
   meetingAttendeeSummary,
@@ -292,6 +331,10 @@ function MobileMemberHomeLayout({
   recentMemories,
   financePendingCount,
   showFinanceQuickActions,
+  memberCount,
+  budgetBalance,
+  canViewMembers,
+  canViewFinance,
   quickLinks,
   tasksPath,
   isBoardMember,
@@ -299,105 +342,84 @@ function MobileMemberHomeLayout({
   onLogTransaction,
 }: MemberHomeLayoutProps) {
   return (
-    <div className="ds-mobile-edge-stack">
-        <div className="ds-mobile-edge-section">
-          <HomeWelcomeHeader member={member} compact />
+    <div className="space-y-6">
+      <HomeWelcomeBanner
+        member={member}
+        showLogTransaction={showFinanceQuickActions}
+        onLogTransaction={onLogTransaction}
+        pendingApprovalCount={financePendingCount}
+      />
+
+      {loadError ? (
+        <div role="alert" className="ds-alert-banner">
+          {loadError}
         </div>
+      ) : null}
 
-        {loadError ? (
-          <div className="ds-mobile-edge-section">
-            <div role="alert" className="ds-alert-banner">
-              {loadError}
-            </div>
-          </div>
-        ) : null}
+      <HomeStatCards
+        tasksSummary={tasksSummary}
+        upcomingCount={upcomingCount}
+        nextEvent={nextEvent}
+        memberCount={memberCount}
+        budgetBalance={budgetBalance}
+        tasksPath={tasksPath}
+        canViewMembers={canViewMembers}
+        canViewFinance={canViewFinance}
+        isLoading={isLoading}
+      />
 
-        <div className="ds-mobile-edge-section">
-          <HomeUpNextSection
-            nextEvent={nextEvent}
-            isLoading={isLoading}
-            rsvpLoading={rsvpLoading}
-            onRsvpStatusChange={onRsvpStatusChange}
-          />
-        </div>
+      <HomeUpNextSection
+        nextEvent={nextEvent}
+        isLoading={isLoading}
+        rsvpLoading={rsvpLoading}
+        onRsvpStatusChange={onRsvpStatusChange}
+      />
 
-        <div className="ds-mobile-edge-section">
-          <HomeYourWorkSection
-            member={member}
-            tasksSummary={tasksSummary}
-            tasksPath={tasksPath}
-            isLoading={isLoading}
-          />
-        </div>
+      <HomeYourWorkSection
+        member={member}
+        tasksSummary={tasksSummary}
+        tasksPath={tasksPath}
+        isLoading={isLoading}
+      />
 
-        <div className="ds-mobile-edge-section">
-          <HomeActivitySection
-            activities={mobileActivityPreview}
-            isLoading={isLoading}
-            tasksPath={tasksPath}
-            truncatedFromTotal={activities.length}
-            scrollable={false}
-          />
-        </div>
+      <HomeActivitySection
+        activities={mobileActivityPreview}
+        isLoading={isLoading}
+        tasksPath={tasksPath}
+        truncatedFromTotal={activities.length}
+        scrollable={false}
+      />
 
-        {showFinanceQuickActions ? (
-          <div className="ds-mobile-edge-section">
-            <HomeFinanceQuickActions
-              pendingApprovalCount={financePendingCount}
-              onLogTransaction={onLogTransaction}
-            />
-          </div>
-        ) : null}
+      {showFinanceQuickActions ? (
+        <HomeFinanceQuickActions
+          pendingApprovalCount={financePendingCount}
+          onLogTransaction={onLogTransaction}
+          compact
+        />
+      ) : null}
 
-        {isBoardMember && nextBoardMeeting ? (
-          <div className="ds-mobile-edge-section">
-            <HomeBoardMeetingSection
-              meeting={nextBoardMeeting}
-              attendeeSummary={meetingAttendeeSummary}
-            />
-          </div>
-        ) : null}
+      {isBoardMember && nextBoardMeeting ? (
+        <HomeBoardMeetingSection
+          meeting={nextBoardMeeting}
+          attendeeSummary={meetingAttendeeSummary}
+        />
+      ) : null}
 
-        <div className="ds-mobile-edge-section">
-          <HomeAnnouncementsSection previewLimit={2} />
-        </div>
+      <HomeAnnouncementsSection previewLimit={2} />
 
-        <div className="ds-mobile-edge-section">
-          <HomeProfileCard member={member} />
-        </div>
+      <div className="grid items-stretch gap-4 sm:grid-cols-2">
+        <HomeProfileCard member={member} />
+        <ToolsForRoleSection quickLinks={quickLinks} />
+      </div>
 
-        {quickLinks.length > 0 ? (
-          <div className="ds-mobile-edge-section">
-            <HomeCard padding="sm" className="self-start">
-              <h2 className="text-base font-medium text-foreground">
-                More for your role
-              </h2>
-              <ul className="mt-3 grid grid-cols-2 gap-2">
-                {quickLinks.map((link) => (
-                  <li key={link.to + link.title}>
-                    <QuickLinkCard {...link} />
-                  </li>
-                ))}
-              </ul>
-            </HomeCard>
-          </div>
-        ) : null}
-
-        <div className="ds-mobile-edge-section !p-0">
-          <CoverBanner className="[&_img]:h-28" />
-        </div>
-
-        {recentMemories ? (
-          <div className="ds-mobile-edge-section">
-            <RecentMemoriesStrip memories={recentMemories} />
-          </div>
-        ) : null}
+      {recentMemories ? <RecentMemoriesStrip memories={recentMemories} /> : null}
     </div>
   );
 }
 
 function MemberHomeView({ member }: { member: MemberResponse }) {
   const [nextEvent, setNextEvent] = useState<EventResponse | null>(null);
+  const [upcomingCount, setUpcomingCount] = useState(0);
   const [tasksSummary, setTasksSummary] = useState(summarizeMyTasks([]));
   const [activities, setActivities] = useState<HomeActivity[]>([]);
   const [nextBoardMeeting, setNextBoardMeeting] = useState<MeetingSummary | null>(
@@ -413,6 +435,8 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
     null,
   );
   const [financePendingCount, setFinancePendingCount] = useState(0);
+  const [memberCount, setMemberCount] = useState<number | null>(null);
+  const [budgetBalance, setBudgetBalance] = useState<string | null>(null);
   const [financeEventOptions, setFinanceEventOptions] = useState<
     Array<{ id: number; name: string }>
   >([]);
@@ -420,7 +444,12 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
   const [homeRefreshKey, setHomeRefreshKey] = useState(0);
 
   const isBoardMember = isRoleAtLeast(member.role, "board");
-  const showFinanceQuickActions = canManageTreasury(member.role);
+  const showFinanceQuickActions = canManageTreasury(
+    member.role,
+    member.position,
+  );
+  const canViewMembers = canBrowseMemberDirectory(member.role);
+  const canViewFinance = canAccessFinance(member.role);
   const quickLinks = buildQuickLinks(member);
   const tasksPath = getMyTasksPath(member.role);
   const isLgUp = useIsLgUp();
@@ -431,6 +460,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
     activities,
     mobileActivityPreview,
     nextEvent,
+    upcomingCount,
     tasksSummary,
     nextBoardMeeting,
     meetingAttendeeSummary,
@@ -440,6 +470,10 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
     recentMemories,
     financePendingCount,
     showFinanceQuickActions,
+    memberCount,
+    budgetBalance,
+    canViewMembers,
+    canViewFinance,
     quickLinks,
     tasksPath,
     isBoardMember,
@@ -484,15 +518,33 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
           ? fetchMeetings().catch(() => ({ meetings: [], total: 0 }))
           : Promise.resolve(null);
 
-        const [upcoming, tasksResult, pendingMembers, financePending, myFinanceRequests, meetingsResult] =
-          await Promise.all([
-            upcomingPromise,
-            tasksPromise,
-            pendingMembersPromise,
-            financePendingPromise,
-            myFinanceRequestsPromise,
-            meetingsPromise,
-          ]);
+        const membersCountPromise = canViewMembers
+          ? fetchMembers({ page: 1, page_size: 1 }).catch(() => null)
+          : Promise.resolve(null);
+
+        const financeSummaryPromise = canViewFinance
+          ? fetchFinanceSummary().catch(() => null)
+          : Promise.resolve(null);
+
+        const [
+          upcoming,
+          tasksResult,
+          pendingMembers,
+          financePending,
+          myFinanceRequests,
+          meetingsResult,
+          membersPage,
+          financeSummary,
+        ] = await Promise.all([
+          upcomingPromise,
+          tasksPromise,
+          pendingMembersPromise,
+          financePendingPromise,
+          myFinanceRequestsPromise,
+          meetingsPromise,
+          membersCountPromise,
+          financeSummaryPromise,
+        ]);
 
         const nextMeeting = meetingsResult
           ? findNextBoardMeeting(meetingsResult.meetings)
@@ -513,7 +565,11 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
         }
 
         const summary = summarizeMyTasks(tasksResult.tasks);
+        const nonMeetingUpcoming = upcoming.events.filter(
+          (event) => event.event_type !== "meeting",
+        );
         setNextEvent(findNextNonMeetingEvent(upcoming.events));
+        setUpcomingCount(nonMeetingUpcoming.length);
         setTasksSummary(summary);
         setActivities(
           buildHomeActivities({
@@ -527,6 +583,8 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
         setNextBoardMeeting(nextMeeting);
         setMeetingAttendeeSummary(attendeeSummary);
         setFinancePendingCount(financePending?.total ?? 0);
+        setMemberCount(membersPage?.total ?? null);
+        setBudgetBalance(financeSummary?.balance ?? null);
       } catch (caught) {
         if (!cancelled) {
           setLoadError(getApiErrorMessage(caught));
@@ -543,7 +601,14 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
     return () => {
       cancelled = true;
     };
-  }, [isBoardMember, member, showFinanceQuickActions, homeRefreshKey]);
+  }, [
+    isBoardMember,
+    member,
+    showFinanceQuickActions,
+    canViewMembers,
+    canViewFinance,
+    homeRefreshKey,
+  ]);
 
   useEffect(() => {
     if (!showFinanceQuickActions) {

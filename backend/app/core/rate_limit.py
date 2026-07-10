@@ -28,6 +28,9 @@ RATE_LIMIT_GUEST_CHECKIN_MESSAGE = (
 RATE_LIMIT_PASSWORD_RESET_MESSAGE = (
     "Too many password reset requests — please try again later"
 )
+RATE_LIMIT_RECEIPT_SCAN_MESSAGE = (
+    "Too many receipt scans — please try again later"
+)
 RATE_LIMIT_GLOBAL_MESSAGE = (
     "Too many requests — please slow down and try again in a moment"
 )
@@ -197,6 +200,13 @@ def change_password_key(request: Request) -> str:
     return f"change-password:ip:{get_client_ip(request)}"
 
 
+def receipt_scan_key(request: Request) -> str:
+    member_id = _optional_member_id(request)
+    if member_id is not None:
+        return f"receipt-scan:user:{member_id}"
+    return f"receipt-scan:ip:{get_client_ip(request)}"
+
+
 def guest_checkin_event_key(request: Request) -> str:
     event_id = request.path_params.get("event_id", "unknown")
     return f"guest-checkin:event:{event_id}:ip:{get_client_ip(request)}"
@@ -217,6 +227,8 @@ def rate_limit_message_for_path(path: str) -> str:
         return RATE_LIMIT_GUEST_CHECKIN_MESSAGE
     if path.endswith("/auth/password-reset/request"):
         return RATE_LIMIT_PASSWORD_RESET_MESSAGE
+    if path.endswith("/finance/receipts/scan"):
+        return RATE_LIMIT_RECEIPT_SCAN_MESSAGE
     return RATE_LIMIT_GLOBAL_MESSAGE
 
 

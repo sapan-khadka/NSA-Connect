@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 
+import { AppIcon } from "./ui/AppIcon";
+
 import {
   WEEKDAY_LABELS,
   addMonths,
@@ -182,9 +184,10 @@ export function EventsCalendarPanel({
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <div className="relative min-w-[12rem] flex-1">
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-label"
-            aria-hidden="true"
+          <AppIcon
+            icon={Search}
+            size="sm"
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-label"
           />
           <input
             type="search"
@@ -224,9 +227,9 @@ export function EventsCalendarPanel({
             type="button"
             aria-label={viewMode === "year" ? "Previous year" : "Previous month"}
             onClick={goToPrevious}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-foreground transition-colors hover:bg-[#F5F5F7]"
+            className="ds-icon-btn h-11 w-11 rounded-lg text-foreground transition-colors hover:bg-[#F5F5F7]"
           >
-            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+            <AppIcon icon={ChevronLeft} size="sm" className="text-foreground" />
           </button>
           <button
             type="button"
@@ -246,9 +249,9 @@ export function EventsCalendarPanel({
             type="button"
             aria-label={viewMode === "year" ? "Next year" : "Next month"}
             onClick={goToNext}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-foreground transition-colors hover:bg-[#F5F5F7]"
+            className="ds-icon-btn h-11 w-11 rounded-lg text-foreground transition-colors hover:bg-[#F5F5F7]"
           >
-            <ChevronRight className="h-4 w-4" aria-hidden="true" />
+            <AppIcon icon={ChevronRight} size="sm" className="text-foreground" />
           </button>
         </div>
       </div>

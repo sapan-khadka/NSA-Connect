@@ -1,5 +1,8 @@
+import { ChevronDown } from "lucide-react";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { NavLink } from "react-router-dom";
+
+import { AppIcon } from "./ui/AppIcon";
 
 type NavDropdownItem = {
   label: string;
@@ -65,9 +68,7 @@ export function NavDropdown({ label, items, isActive = false }: NavDropdownProps
         className={buildNavLinkClass(isActive || open)}
       >
         {label}
-        <span aria-hidden="true" className="text-[10px] text-[#9A9A9A]">
-          ▾
-        </span>
+        <AppIcon icon={ChevronDown} size="xs" className="text-label" />
       </button>
 
       {open ? (
@@ -112,9 +113,15 @@ function getInitials(fullName: string): string {
 type AccountMenuProps = {
   fullName: string;
   onLogout: () => void;
+  /** Header variant: avatar only (name lives in the sidebar profile). */
+  avatarOnly?: boolean;
 };
 
-export function AccountMenu({ fullName, onLogout }: AccountMenuProps) {
+export function AccountMenu({
+  fullName,
+  onLogout,
+  avatarOnly = false,
+}: AccountMenuProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
@@ -154,17 +161,23 @@ export function AccountMenu({ fullName, onLogout }: AccountMenuProps) {
         aria-haspopup="menu"
         aria-controls={menuId}
         onClick={() => setOpen((current) => !current)}
-        className="ds-nav-account-trigger"
+        className={
+          avatarOnly
+            ? "ds-icon-btn rounded-full outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent/35"
+            : "ds-nav-account-trigger"
+        }
       >
         <span aria-hidden="true" className="ds-nav-account-avatar">
           {getInitials(fullName)}
         </span>
-        <span className="hidden max-w-[10rem] truncate text-sm text-foreground sm:block">
-          {fullName}
-        </span>
-        <span aria-hidden="true" className="text-[10px] text-[#9A9A9A]">
-          ▾
-        </span>
+        {!avatarOnly ? (
+          <>
+            <span className="hidden max-w-[10rem] truncate text-sm text-foreground sm:block">
+              {fullName}
+            </span>
+            <AppIcon icon={ChevronDown} size="xs" className="text-label" />
+          </>
+        ) : null}
       </button>
 
       {open ? (
@@ -173,7 +186,7 @@ export function AccountMenu({ fullName, onLogout }: AccountMenuProps) {
           role="menu"
           className="absolute right-0 top-full z-50 mt-2 w-56 ds-card py-1 "
         >
-          <div className="border-b border-gray-100 px-3 py-2 sm:hidden">
+          <div className="border-b border-gray-100 px-3 py-2">
             <p className="truncate text-sm text-foreground">{fullName}</p>
           </div>
           <NavLink

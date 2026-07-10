@@ -5,6 +5,7 @@ import { EVENT_TYPE_LABELS } from "../../lib/event-types";
 import { formatEventDateTime } from "../../lib/format-datetime";
 import { photoAlbumPath } from "../../lib/event-links";
 import type { PhotoAlbumSummary } from "../../lib/photo-archive-api";
+import { AppIcon } from "../ui/AppIcon";
 
 type PhotoAlbumGridProps = {
   albums: PhotoAlbumSummary[];
@@ -29,7 +30,7 @@ export function PhotoAlbumGrid({ albums }: PhotoAlbumGridProps) {
                 />
               ) : (
                 <div className="flex h-full flex-col items-center justify-center gap-2 text-label">
-                  <ImageIcon className="h-8 w-8" strokeWidth={1.5} aria-hidden="true" />
+                  <AppIcon icon={ImageIcon} size="xl" className="text-label" />
                   <span className="text-xs">No photos yet</span>
                 </div>
               )}
