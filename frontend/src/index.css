@@ -75,7 +75,7 @@
   }
 
   .ds-sidebar-link {
-    @apply ds-icon-label w-full gap-2.5 rounded-card px-2.5 py-2 text-sm text-foreground transition-all duration-200 ease-out;
+    @apply inline-flex w-full items-center gap-2.5 rounded-card px-2.5 py-2 text-sm text-foreground transition-all duration-200 ease-out;
     font-weight: 500;
   }
 
@@ -101,7 +101,7 @@
   }
 
   .ds-main-canvas {
-    @apply mx-auto w-full max-w-canvas flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-8;
+    @apply mx-auto w-full max-w-canvas flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 xl:px-10;
   }
 
   .ds-stat-card {
@@ -437,14 +437,20 @@
     font-weight: 400;
   }
 
-  /* Icon + text pairing: vertical center + consistent gap */
+  /* Icon + text pairing: vertical center + consistent gap.
+     Plain CSS (not @apply) so Tailwind does not treat the custom
+     class name as a missing utility during compile. */
   .ds-icon-label {
-    @apply inline-flex items-center gap-1.5;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem; /* gap-1.5 */
   }
 
   /* Icon-only control hit target centering */
   .ds-icon-btn {
-    @apply inline-flex items-center justify-center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .ds-tag {

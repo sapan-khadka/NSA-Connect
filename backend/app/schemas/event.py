@@ -81,6 +81,7 @@ class EventResponse(BaseModel):
     is_finance_grace_period: bool
     show_in_photo_archive: bool
     meeting_visibility: MeetingVisibility | None = None
+    event_photo_url: str | None = None
 
     @classmethod
     def from_event(
@@ -108,6 +109,7 @@ class EventResponse(BaseModel):
             is_finance_grace_period=is_event_finance_grace_period(event),
             show_in_photo_archive=event.show_in_photo_archive,
             meeting_visibility=event.meeting_visibility,
+            event_photo_url=event.event_photo_url,
         )
 
 

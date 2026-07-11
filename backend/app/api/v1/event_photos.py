@@ -5,8 +5,9 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_member
+from app.core.dependencies import get_current_member, require_board
 from app.models.member import Member
+from app.schemas.event import EventResponse
 from app.schemas.event_photo import (
     EventPhotoListResponse,
     EventPhotoResponse,
@@ -28,8 +29,11 @@ from app.services.event_photo_service import (
 from app.services.event_photo_upload_service import (
     EventPhotoUploadUnavailableError,
     EventPhotoValidationError,
+    upload_event_photo_file,
 )
-from app.services.event_service import EventNotFoundError
+from app.services.event_invitation_service import is_member_invited_to_event
+from app.services.event_service import EventNotFoundError, set_event_photo_url
+from app.services.rsvp_service import get_member_rsvp_status
 
 router = APIRouter(tags=["event-photos"])
 
@@ -176,3 +180,82 @@ def delete_event_photo_endpoint(
         ) from None
 
     return None
+
+
+@router.post(
+    "/{event_id}/event-photo",
+    response_model=EventResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def upload_event_cover_photo_endpoint(
+    event_id: int,
+    file: UploadFile = File(...),
+    current_member: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    """Upload an event-specific cover photo shown on home and event cards."""
+    file_bytes = await file.read()
+
+    try:
+        upload_result = upload_event_photo_file(
+            file_bytes=file_bytes,
+            content_type=file.content_type,
+        )
+        event = set_event_photo_url(
+            db,
+            event_id,
+            event_photo_url=upload_result.image_url,
+        )
+    except EventNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        ) from None
+    except EventPhotoValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    except EventPhotoUploadUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Photo upload is not configured",
+        ) from exc
+
+    return EventResponse.from_event(
+        event,
+        current_member_rsvp_status=get_member_rsvp_status(
+            db, event_id, current_member.id
+        ),
+        current_member_is_invited_participant=is_member_invited_to_event(
+            db, event_id, current_member.id
+        ),
+    )
+
+
+@router.delete(
+    "/{event_id}/event-photo",
+    response_model=EventResponse,
+)
+def delete_event_cover_photo_endpoint(
+    event_id: int,
+    current_member: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    try:
+        event = set_event_photo_url(db, event_id, event_photo_url=None)
+    except EventNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        ) from None
+
+    return EventResponse.from_event(
+        event,
+        current_member_rsvp_status=get_member_rsvp_status(
+            db, event_id, current_member.id
+        ),
+        current_member_is_invited_participant=is_member_invited_to_event(
+            db, event_id, current_member.id
+        ),
+    )

@@ -501,3 +501,52 @@ def test_download_returns_404_when_event_has_no_photos(
     )
 
     assert response.status_code == 404
+
+
+def test_board_can_upload_and_clear_event_cover_photo(
+    client,
+    db_session,
+    board_member_headers,
+    past_event,
+):
+    with patch_upload_event_photo():
+        upload_response = client.post(
+            f"/api/v1/events/{past_event.id}/event-photo",
+            headers=board_member_headers,
+            files={"file": ("cover.jpg", MINIMAL_JPEG, "image/jpeg")},
+        )
+
+    assert upload_response.status_code == 200
+    upload_body = upload_response.json()
+    assert (
+        upload_body["event_photo_url"]
+        == "https://res.cloudinary.com/test/image/upload/v1/photo.jpg"
+    )
+
+    db_session.refresh(past_event)
+    assert past_event.event_photo_url == upload_body["event_photo_url"]
+
+    delete_response = client.delete(
+        f"/api/v1/events/{past_event.id}/event-photo",
+        headers=board_member_headers,
+    )
+    assert delete_response.status_code == 200
+    assert delete_response.json()["event_photo_url"] is None
+
+    db_session.refresh(past_event)
+    assert past_event.event_photo_url is None
+
+
+def test_general_member_cannot_upload_event_cover_photo(
+    client,
+    general_member_headers,
+    past_event,
+):
+    with patch_upload_event_photo():
+        response = client.post(
+            f"/api/v1/events/{past_event.id}/event-photo",
+            headers=general_member_headers,
+            files={"file": ("cover.jpg", MINIMAL_JPEG, "image/jpeg")},
+        )
+
+    assert response.status_code == 403

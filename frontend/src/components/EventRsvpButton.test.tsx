@@ -163,4 +163,24 @@ describe("EventRsvpButton", () => {
 
     randomSpy.mockRestore();
   });
+
+  it("shows confirmation after selection in the segmented variant", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <EventRsvpButton
+        currentStatus={null}
+        canRsvp
+        loading={false}
+        variant="segmented"
+        onStatusChange={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Going" }));
+
+    const confirmation = screen.getByText("Yayyy! Can't wait to see you there.");
+    expect(confirmation).toHaveAttribute("role", "status");
+    expect(confirmation).toHaveClass("rsvp-confirmation-message");
+  });
 });

@@ -8,6 +8,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from sqlalchemy.exc import IntegrityError
 
 from app.api.v1.health import router as health_router
+from app.api.v1.discussion_ws import router as discussion_ws_router
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.exception_handlers import (
@@ -47,6 +48,7 @@ app.add_middleware(GlobalRateLimitMiddleware)
 
 app.include_router(health_router)
 app.include_router(api_router)
+app.include_router(discussion_ws_router)
 
 if is_local_event_photo_storage_enabled():
     upload_dir = event_photos_upload_dir()

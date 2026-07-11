@@ -5,8 +5,8 @@
  */
 
 export const colors = {
-  foreground: "#0F172A",
-  label: "#64748B",
+  foreground: "#18181B",
+  label: "#6B7280",
   primary: {
     DEFAULT: "#0F766E",
     hover: "#0D5F5A",

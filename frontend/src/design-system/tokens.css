@@ -5,8 +5,8 @@
 
 :root {
   /* ——— Color: semantic ——— */
-  --color-foreground: #0f172a;
-  --color-label: #64748b;
+  --color-foreground: #18181b;
+  --color-label: #6b7280;
   --color-primary: #0f766e;
   --color-primary-hover: #0d5f5a;
   --color-accent: #0f766e;
@@ -128,7 +128,7 @@
 
   /* ——— Layout ——— */
   --sidebar-width: 240px;
-  --main-max-width: 1400px;
+  --main-max-width: 1500px;
 }
 
 @keyframes ds-fade-in {

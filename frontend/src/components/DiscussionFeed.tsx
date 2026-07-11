@@ -1,19 +1,26 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
-
-import { getApiErrorMessage } from "../lib/auth-api";
 import {
-  fetchBoardDiscussion,
-  fetchEventDiscussion,
-  postBoardDiscussion,
-  postEventDiscussion,
-  type DiscussionMessage,
-} from "../lib/discussion-api";
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+  type RefObject,
+} from "react";
+
+import { Avatar } from "../design-system/components/Avatar";
+import { useAuth } from "../context/useAuth";
+import type { DiscussionMessage } from "../lib/discussion-api";
+import {
+  useDiscussion,
+  type DiscussionPresenceUser,
+  type DiscussionStatus,
+} from "../lib/useEventDiscussion";
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 import { formatRelativeTimestamp } from "../lib/format-datetime";
 
-const POLL_INTERVAL_MS = 20_000;
 const MAX_CONTENT_LENGTH = 2000;
+const MAX_VISIBLE_AVATARS = 4;
 
 type DiscussionFeedProps = {
   title: string;
@@ -23,132 +30,141 @@ type DiscussionFeedProps = {
   className?: string;
 };
 
-function mergeMessages(
-  current: DiscussionMessage[],
-  incoming: DiscussionMessage[],
-): DiscussionMessage[] {
-  if (incoming.length === 0) {
-    return current;
+function ConnectionStatusBadge({ status }: { status: DiscussionStatus }) {
+  if (status === "closed") {
+    return null;
   }
-  const knownIds = new Set(current.map((message) => message.id));
-  const fresh = incoming.filter((message) => !knownIds.has(message.id));
-  if (fresh.length === 0) {
-    return current;
-  }
-  return [...current, ...fresh];
+
+  const isLive = status === "live";
+  const label =
+    status === "live"
+      ? "Live"
+      : status === "reconnecting"
+        ? "Reconnecting…"
+        : "Connecting…";
+
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 text-xs font-medium text-label"
+      role="status"
+      aria-live="polite"
+    >
+      <span
+        aria-hidden="true"
+        className={[
+          "h-1.5 w-1.5 rounded-full",
+          isLive ? "bg-success" : "bg-marigold animate-pulse",
+        ].join(" ")}
+      />
+      {label}
+    </span>
+  );
 }
 
-export function DiscussionFeed({
+function PresenceAvatarStack({ users }: { users: DiscussionPresenceUser[] }) {
+  if (users.length === 0) {
+    return null;
+  }
+
+  const visible = users.slice(0, MAX_VISIBLE_AVATARS);
+  const overflow = users.length - visible.length;
+
+  return (
+    <div
+      className="flex items-center"
+      aria-label={`${users.length} people in this discussion`}
+    >
+      <div className="flex -space-x-2">
+        {visible.map((user) => (
+          <Avatar
+            key={user.user_id}
+            name={user.full_name}
+            size="sm"
+            className="ring-2 ring-surface-card"
+            title={user.full_name}
+          />
+        ))}
+      </div>
+      {overflow > 0 ? (
+        <span className="ml-2 text-xs font-medium text-label">+{overflow}</span>
+      ) : null}
+    </div>
+  );
+}
+
+function TypingIndicator({
+  users,
+}: {
+  users: DiscussionPresenceUser[];
+}) {
+  if (users.length === 0) {
+    return null;
+  }
+
+  const names = users.map((user) => user.full_name);
+  let label: string;
+  if (names.length === 1) {
+    label = `${names[0]} is typing…`;
+  } else if (names.length === 2) {
+    label = `${names[0]} and ${names[1]} are typing…`;
+  } else {
+    label = `${names[0]} and ${names.length - 1} others are typing…`;
+  }
+
+  return (
+    <p className="mt-2 text-xs text-label" role="status" aria-live="polite">
+      {label}
+    </p>
+  );
+}
+
+function LiveDiscussionFeed({
   title,
   description,
-  emptyLabel = "No messages yet. Start the conversation.",
+  emptyLabel,
+  className,
   scope,
-  className = "",
-}: DiscussionFeedProps) {
-  const [messages, setMessages] = useState<DiscussionMessage[]>([]);
+}: {
+  title: string;
+  description?: string;
+  emptyLabel: string;
+  className: string;
+  scope: DiscussionFeedProps["scope"];
+}) {
+  const {
+    messages,
+    presentUsers,
+    typingUsers,
+    status,
+    error,
+    loading,
+    sendMessage,
+    notifyTypingActivity,
+  } = useDiscussion(scope);
+  const { member } = useAuth();
   const [draft, setDraft] = useState("");
-  const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const latestIdRef = useRef<number | null>(null);
-  const eventId = scope.type === "event" ? scope.eventId : null;
-  const scopeKey = scope.type === "event" ? `event:${scope.eventId}` : "board";
-
-  useEffect(() => {
-    let cancelled = false;
-    latestIdRef.current = null;
-    setMessages([]);
-    setDraft("");
-    setErrorMessage(null);
-
-    async function loadInitial() {
-      setLoading(true);
-      setLoadError(null);
-      try {
-        const response =
-          eventId == null
-            ? await fetchBoardDiscussion()
-            : await fetchEventDiscussion(eventId);
-        if (cancelled) {
-          return;
-        }
-        setMessages(response.messages);
-        latestIdRef.current =
-          response.messages.at(-1)?.id ?? null;
-      } catch (error) {
-        if (!cancelled) {
-          setLoadError(getApiErrorMessage(error));
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    void loadInitial();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [eventId, scopeKey]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function poll() {
-      try {
-        const afterId = latestIdRef.current;
-        const response =
-          eventId == null
-            ? await fetchBoardDiscussion(
-                afterId != null ? { afterId } : undefined,
-              )
-            : await fetchEventDiscussion(
-                eventId,
-                afterId != null ? { afterId } : undefined,
-              );
-
-        if (cancelled || response.messages.length === 0) {
-          return;
-        }
-
-        if (afterId == null) {
-          setMessages(response.messages);
-          latestIdRef.current = response.messages.at(-1)?.id ?? null;
-          return;
-        }
-
-        setMessages((current) => {
-          const next = mergeMessages(current, response.messages);
-          latestIdRef.current = next.at(-1)?.id ?? latestIdRef.current;
-          return next;
-        });
-      } catch {
-        // Keep the open feed usable if a poll fails.
-      }
-    }
-
-    const timerId = window.setInterval(() => {
-      void poll();
-    }, POLL_INTERVAL_MS);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(timerId);
-    };
-  }, [eventId, scopeKey]);
+  const scopeKey =
+    scope.type === "board" ? "board" : `event:${scope.eventId}`;
+  const othersTyping = typingUsers.filter(
+    (user) => user.user_id !== member?.id,
+  );
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, [messages.length]);
+  }, [messages.length, othersTyping.length]);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  useEffect(() => {
+    setDraft("");
+    setErrorMessage(null);
+  }, [scopeKey]);
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const content = draft.trim();
-    if (!content || posting) {
+    if (!content || posting || status !== "live") {
       return;
     }
 
@@ -156,23 +172,85 @@ export function DiscussionFeed({
     setErrorMessage(null);
 
     try {
-      const created =
-        eventId == null
-          ? await postBoardDiscussion(content)
-          : await postEventDiscussion(eventId, content);
-      setMessages((current) => {
-        const next = mergeMessages(current, [created]);
-        latestIdRef.current = next.at(-1)?.id ?? created.id;
-        return next;
-      });
+      sendMessage(content);
       setDraft("");
-    } catch (error) {
-      setErrorMessage(getApiErrorMessage(error));
+    } catch (caught) {
+      setErrorMessage(
+        caught instanceof Error ? caught.message : "Failed to send message",
+      );
     } finally {
       setPosting(false);
     }
   }
 
+  return (
+    <DiscussionShell
+      title={title}
+      description={description}
+      className={className}
+      scopeKey={scopeKey}
+      messages={messages}
+      loading={loading}
+      loadError={error}
+      emptyLabel={emptyLabel}
+      draft={draft}
+      setDraft={(value) => {
+        setDraft(value);
+        if (value.trim()) {
+          notifyTypingActivity();
+        }
+      }}
+      posting={posting}
+      errorMessage={errorMessage}
+      onSubmit={handleSubmit}
+      bottomRef={bottomRef}
+      statusBadge={<ConnectionStatusBadge status={status} />}
+      presence={<PresenceAvatarStack users={presentUsers} />}
+      typing={<TypingIndicator users={othersTyping} />}
+      sendDisabled={status !== "live"}
+    />
+  );
+}
+
+function DiscussionShell({
+  title,
+  description,
+  className,
+  scopeKey,
+  messages,
+  loading,
+  loadError,
+  emptyLabel,
+  draft,
+  setDraft,
+  posting,
+  errorMessage,
+  onSubmit,
+  bottomRef,
+  statusBadge,
+  presence,
+  typing,
+  sendDisabled = false,
+}: {
+  title: string;
+  description?: string;
+  className: string;
+  scopeKey: string;
+  messages: DiscussionMessage[];
+  loading: boolean;
+  loadError: string | null;
+  emptyLabel: string;
+  draft: string;
+  setDraft: (value: string) => void;
+  posting: boolean;
+  errorMessage: string | null;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  bottomRef: RefObject<HTMLDivElement | null>;
+  statusBadge?: ReactNode;
+  presence?: ReactNode;
+  typing?: ReactNode;
+  sendDisabled?: boolean;
+}) {
   return (
     <Card
       padding="none"
@@ -182,7 +260,13 @@ export function DiscussionFeed({
       aria-label={title}
     >
       <div className="border-b border-gray-200 px-4 py-3 lg:px-5 lg:py-4">
-        <h2 className="text-base font-medium text-foreground">{title}</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <h2 className="text-base font-medium text-foreground">{title}</h2>
+            {presence}
+          </div>
+          {statusBadge}
+        </div>
         {description ? (
           <p className="mt-1 text-sm text-label">{description}</p>
         ) : null}
@@ -224,11 +308,12 @@ export function DiscussionFeed({
             </li>
           ))}
         </ul>
+        {typing}
         <div ref={bottomRef} />
       </div>
 
       <form
-        onSubmit={(event) => void handleSubmit(event)}
+        onSubmit={onSubmit}
         className="border-t border-gray-200 px-4 py-3 lg:px-5"
       >
         {errorMessage ? (
@@ -254,7 +339,7 @@ export function DiscussionFeed({
           </p>
           <Button
             type="submit"
-            disabled={posting || !draft.trim()}
+            disabled={posting || sendDisabled || !draft.trim()}
             loading={posting}
           >
             Post
@@ -262,5 +347,23 @@ export function DiscussionFeed({
         </div>
       </form>
     </Card>
+  );
+}
+
+export function DiscussionFeed({
+  title,
+  description,
+  emptyLabel = "No messages yet. Start the conversation.",
+  scope,
+  className = "",
+}: DiscussionFeedProps) {
+  return (
+    <LiveDiscussionFeed
+      title={title}
+      description={description}
+      emptyLabel={emptyLabel}
+      className={className}
+      scope={scope}
+    />
   );
 }

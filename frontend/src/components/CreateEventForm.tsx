@@ -22,6 +22,7 @@ import {
 import {
   addPrepTaskToEvent,
   createEvent,
+  uploadEventCoverPhoto,
   type EventResponse,
 } from "../lib/events-api";
 import { buildPrepTaskCreates } from "../lib/prep-task-create";
@@ -44,6 +45,7 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
   const [checklistError, setChecklistError] = useState<string | null>(null);
   const [draftChecklist, setDraftChecklist] = useState<ChecklistCategory[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [eventPhotoFile, setEventPhotoFile] = useState<File | null>(null);
 
   function updateField<K extends keyof CreateEventFormValues>(
     field: K,
@@ -106,6 +108,24 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
 
     try {
       const created = await createEvent(buildCreateEventPayload(values));
+      let result: EventResponse = created;
+
+      if (eventPhotoFile) {
+        try {
+          result = await uploadEventCoverPhoto(created.id, eventPhotoFile);
+        } catch (photoError) {
+          setServerError(
+            `Event created, but photo upload failed: ${getApiErrorMessage(photoError)}`,
+          );
+          setValues(initialCreateEventValues);
+          setEventPhotoFile(null);
+          setDraftChecklist([]);
+          setChecklistError(null);
+          setIsExpanded(false);
+          onCreated(created);
+          return;
+        }
+      }
 
       if (draftChecklist.length > 0) {
         const prepTasks = buildPrepTaskCreates(
@@ -119,10 +139,11 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
       }
 
       setValues(initialCreateEventValues);
+      setEventPhotoFile(null);
       setDraftChecklist([]);
       setChecklistError(null);
       setIsExpanded(false);
-      onCreated(created);
+      onCreated(result);
     } catch (error) {
       setServerError(getApiErrorMessage(error));
     } finally {
@@ -358,6 +379,35 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
                 <p className="mt-1 ds-field-error">{fieldErrors.event_time}</p>
               ) : null}
             </div>
+          </div>
+
+          <div>
+            <label
+              htmlFor="event-photo"
+              className="block text-sm font-medium text-foreground"
+            >
+              Event photo{" "}
+              <span className="font-normal text-label">(optional)</span>
+            </label>
+            <p className="mt-1 text-sm text-label">
+              A photo from this event (or a past celebration of the same kind) —
+              not a generic stock image. JPEG, PNG, or HEIC up to 15 MB.
+            </p>
+            <input
+              id="event-photo"
+              type="file"
+              accept="image/jpeg,image/png,image/heic,image/heif,.jpg,.jpeg,.png,.heic,.heif"
+              onChange={(changeEvent) => {
+                setEventPhotoFile(changeEvent.target.files?.[0] ?? null);
+                setServerError(null);
+              }}
+              className={`${inputClassName} cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white`}
+            />
+            {eventPhotoFile ? (
+              <p className="mt-1 text-sm text-label">
+                Selected: {eventPhotoFile.name}
+              </p>
+            ) : null}
           </div>
 
           <Card nested padding="sm">

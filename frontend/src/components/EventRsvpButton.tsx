@@ -51,21 +51,14 @@ type EventRsvpButtonProps = {
 function buttonClass(
   isSelected: boolean,
   variant: "default" | "segmented",
-  index: number,
-  total: number,
 ): string {
   if (variant === "segmented") {
-    const edges =
-      index === 0
-        ? "rounded-l-full rounded-r-none"
-        : index === total - 1
-          ? "rounded-r-full rounded-l-none"
-          : "rounded-none";
-    const base = `ds-icon-label min-w-0 flex-1 justify-center border px-3 py-2 text-sm font-semibold transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60 ${edges}`;
+    const base =
+      "min-w-0 flex-1 justify-center rounded-full border-0 px-4 py-1.5 text-sm font-medium transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60";
     if (isSelected) {
-      return `${base} z-[1] border-primary bg-primary text-white`;
+      return `${base} bg-primary text-white`;
     }
-    return `${base} -ml-px border-gray-200 bg-white text-foreground hover:bg-surface-muted first:ml-0`;
+    return `${base} bg-transparent text-gray-600 hover:bg-gray-100`;
   }
 
   const base =
@@ -150,11 +143,11 @@ export function EventRsvpButton({
             aria-label="RSVP options"
             className={
               isSegmented
-                ? "inline-flex w-full max-w-md overflow-hidden rounded-full shadow-sm"
+                ? "inline-flex w-full max-w-md rounded-full border border-gray-200 bg-white p-0.5"
                 : "mt-3 flex flex-wrap gap-2"
             }
           >
-            {RSVP_OPTIONS.map((option, index) => {
+            {RSVP_OPTIONS.map((option) => {
               const isSelected = displayStatus === option.value;
               return (
                 <div
@@ -174,12 +167,7 @@ export function EventRsvpButton({
                     aria-pressed={isSelected}
                     disabled={loading}
                     onClick={() => handleOptionClick(option.value)}
-                    className={buttonClass(
-                      isSelected,
-                      variant,
-                      index,
-                      RSVP_OPTIONS.length,
-                    )}
+                    className={`ds-icon-label ${buttonClass(isSelected, variant)}`}
                   >
                     <AppIcon
                       icon={option.icon}
@@ -193,11 +181,11 @@ export function EventRsvpButton({
             })}
           </div>
 
-          {displayStatus && !isSegmented ? (
+          {displayStatus ? (
             <p
               key={displayStatus}
               role="status"
-              className={`rsvp-confirmation-message mt-2 text-sm ${RSVP_CONFIRMATIONS[displayStatus].className}`}
+              className={`rsvp-confirmation-message mt-3 text-sm font-normal leading-relaxed tracking-[-0.01em] ${RSVP_CONFIRMATIONS[displayStatus].className}`}
             >
               {RSVP_CONFIRMATIONS[displayStatus].message}
             </p>

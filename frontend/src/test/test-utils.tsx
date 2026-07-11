@@ -56,6 +56,8 @@ export function createMockEventResponse(
     is_past: false,
     is_finance_grace_period: false,
     show_in_photo_archive: true,
+    meeting_visibility: null,
+    event_photo_url: null,
     ...overrides,
   };
 }

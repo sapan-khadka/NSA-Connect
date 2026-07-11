@@ -13,18 +13,20 @@ type IconBadgeProps = {
   icon: LucideIcon;
   tone?: BadgeTone;
   category?: BadgeCategory;
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
   shape?: "rounded" | "circle";
   className?: string;
 };
 
 const BADGE_BOX: Record<NonNullable<IconBadgeProps["size"]>, string> = {
+  xs: "h-7 w-7",
   sm: "h-8 w-8",
   md: "h-9 w-9",
   lg: "h-10 w-10",
 };
 
 const ICON_SIZE: Record<NonNullable<IconBadgeProps["size"]>, IconSize> = {
+  xs: "xs",
   sm: "sm",
   md: "sm",
   lg: "md",

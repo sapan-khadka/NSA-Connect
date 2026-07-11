@@ -97,6 +97,22 @@ def update_event(
     return event
 
 
+def set_event_photo_url(
+    db: Session,
+    event_id: int,
+    *,
+    event_photo_url: str | None,
+) -> Event:
+    event = db.get(Event, event_id)
+    if event is None:
+        raise EventNotFoundError
+
+    event.event_photo_url = event_photo_url
+    db.commit()
+    db.refresh(event)
+    return event
+
+
 def list_events(
     db: Session,
     *,

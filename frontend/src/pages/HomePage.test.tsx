@@ -77,11 +77,19 @@ vi.mock("../lib/finance-api", async () => {
   };
 });
 
+vi.mock("../lib/discussion-api", () => ({
+  fetchBoardDiscussion: vi.fn().mockResolvedValue({ messages: [], total: 0 }),
+  postBoardDiscussion: vi.fn(),
+  fetchEventDiscussion: vi.fn(),
+  postEventDiscussion: vi.fn(),
+}));
+
 vi.mock("../lib/recent-memories", () => ({
   fetchRecentMemories: vi.fn(),
 }));
 
 import { fetchMyEventTasks } from "../lib/event-tasks-api";
+import { fetchBoardDiscussion } from "../lib/discussion-api";
 import { fetchEventAttendees, fetchUpcomingEvents } from "../lib/events-api";
 import {
   fetchMyFinanceChangeRequestSummary,
@@ -99,6 +107,7 @@ const mockedFinancePending = vi.mocked(fetchPendingFinanceChangeRequests);
 const mockedMyFinanceSummary = vi.mocked(fetchMyFinanceChangeRequestSummary);
 const mockedMeetings = vi.mocked(fetchMeetings);
 const mockedRecentMemories = vi.mocked(fetchRecentMemories);
+const mockedBoardDiscussion = vi.mocked(fetchBoardDiscussion);
 
 const sampleEvent = createMockEventResponse({
   id: 5,
@@ -114,6 +123,7 @@ afterEach(() => {
 
 beforeEach(() => {
   mockedRecentMemories.mockResolvedValue(null);
+  mockedBoardDiscussion.mockResolvedValue({ messages: [], total: 0 });
 });
 
 describe("HomePage", () => {
@@ -145,7 +155,7 @@ describe("HomePage", () => {
     expect(mockedUpcoming).not.toHaveBeenCalled();
   });
 
-  it("shows a compact member dashboard with activity and role tools", async () => {
+  it("shows a compact member dashboard with Your Work and role tools", async () => {
     mockedUpcoming.mockResolvedValue({ events: [sampleEvent], total: 1 });
     mockedMyTasks.mockResolvedValue({
       tasks: [
@@ -218,48 +228,40 @@ describe("HomePage", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: /Good (Morning|Afternoon|Evening), Test/,
+        name: /Welcome back, Test/,
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("navigation", { name: "Finance quick actions" }),
+      screen.getByRole("button", { name: /Log transaction/i }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /Log Transaction/i }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Review approvals/ })).toHaveAttribute(
+
+    expect(await screen.findByText("Your Work")).toBeInTheDocument();
+    expect(screen.getByText("Discussion")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Start a discussion/i })).toHaveAttribute(
       "href",
-      "/finance?tab=approvals",
+      "/board/discussion",
     );
-
-    expect(await screen.findByLabelText("Activity")).toBeInTheDocument();
-    expect(screen.getByText("1 assigned task past due")).toBeInTheDocument();
-    expect(screen.getByText("2 member signups waiting for approval")).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: /^Review$/ })).toHaveLength(2);
-
-    expect(screen.getByText("Your Work")).toBeInTheDocument();
     expect(screen.getByText("Print flyers")).toBeInTheDocument();
+    expect(screen.getByText(/Overdue: Print flyers/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText("Activity")).not.toBeInTheDocument();
+    expect(screen.queryByText("1 assigned task past due")).not.toBeInTheDocument();
+    expect(screen.queryByText("Announcements")).not.toBeInTheDocument();
 
-    expect(screen.getByText("You're invited")).toBeInTheDocument();
     expect(
       screen.getAllByRole("link", { name: "Dashain Celebration" })[0],
     ).toHaveAttribute("href", "/events/5");
-    expect(screen.getByRole("link", { name: /View Calendar/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /View calendar/i })).toHaveAttribute(
       "href",
       "/events/calendar",
     );
-
-    expect(screen.getByText("Next board meeting")).toBeInTheDocument();
-    expect(screen.getByText("March Board Meeting")).toBeInTheDocument();
-    expect(screen.getByText("2 going · 7 not yet responded")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /^Manage$/i })).toHaveAttribute(
       "href",
-      "/events/meetings/9",
+      "/events/5/manage",
     );
 
-    expect(screen.getByText("Quick Tools")).toBeInTheDocument();
-    expect(screen.getByText("User Profile")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Edit Profile/i })).toHaveAttribute(
+    expect(screen.getByText("Tools for Your Role")).toBeInTheDocument();
+    expect(screen.getByText("Your Profile")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Edit profile/i })).toHaveAttribute(
       "href",
       "/profile",
     );
@@ -273,7 +275,7 @@ describe("HomePage", () => {
     );
   });
 
-  it("hides board meeting card for general members", async () => {
+  it("hides log transaction for general members", async () => {
     mockedUpcoming.mockResolvedValue({ events: [sampleEvent], total: 1 });
     mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
     mockedPendingMembers.mockResolvedValue({ members: [], total: 0 });
@@ -290,9 +292,8 @@ describe("HomePage", () => {
       expect(screen.getByText("Your Work")).toBeInTheDocument(),
     );
 
-    expect(screen.queryByText("Next board meeting")).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("navigation", { name: "Finance quick actions" }),
+      screen.queryByRole("button", { name: /Log transaction/i }),
     ).not.toBeInTheDocument();
     expect(mockedMeetings).not.toHaveBeenCalled();
   });
@@ -384,7 +385,7 @@ describe("HomePage", () => {
     expect(screen.queryByText("0", { selector: ".text-overdue" })).not.toBeInTheDocument();
   });
 
-  it("limits activity height when many items are present", async () => {
+  it("shows overdue task name in Your Work", async () => {
     mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
     mockedMyTasks.mockResolvedValue({
       tasks: [
@@ -412,13 +413,7 @@ describe("HomePage", () => {
       ],
       total: 1,
     });
-    mockedPendingMembers.mockResolvedValue({ members: [], total: 3 });
     mockedFinancePending.mockResolvedValue({ requests: [], total: 2 });
-    mockedMyFinanceSummary.mockResolvedValue({
-      pending_count: 1,
-      recently_rejected_count: 1,
-      recently_approved_count: 1,
-    });
     mockedMeetings.mockResolvedValue({ meetings: [], total: 0 });
 
     render(
@@ -429,24 +424,17 @@ describe("HomePage", () => {
       </MemoryRouter>,
     );
 
-    const activityList = await screen.findByLabelText("Activity");
-    expect(activityList.querySelector("ul")).toHaveClass(
-      "overflow-y-auto",
-      "min-h-0",
-      "flex-1",
+    await waitFor(() =>
+      expect(screen.getByText("Your Work")).toBeInTheDocument(),
     );
-    expect(screen.getAllByText("Recent · clears from this feed after 7 days")).toHaveLength(2);
 
-    expect(screen.getByText("Task Assigned")).toBeInTheDocument();
-    expect(screen.getByText("Expense Approved")).toBeInTheDocument();
-    expect(screen.getAllByText(/assigned task/).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/approved this week/)).toBeInTheDocument();
+    expect(screen.getByText(/Overdue: Late task/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText("Activity")).not.toBeInTheDocument();
   });
 
-  it("shows an activity empty state when counts are zero", async () => {
+  it("shows Your Work empty state when counts are zero", async () => {
     mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
     mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
-    mockedPendingMembers.mockResolvedValue({ members: [], total: 0 });
 
     render(
       <MemoryRouter>
@@ -464,14 +452,10 @@ describe("HomePage", () => {
     expect(screen.getAllByText("Overdue").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Next Due")).toBeInTheDocument();
     expect(screen.getByText("No upcoming due dates")).toBeInTheDocument();
-    expect(screen.getByLabelText("Activity")).toBeInTheDocument();
-    expect(screen.getByText("You're all caught up")).toBeInTheDocument();
-    expect(
-      screen.getByText("No action items right now — check back after the next event."),
-    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Activity")).not.toBeInTheDocument();
+    expect(screen.queryByText("You're all caught up")).not.toBeInTheDocument();
   });
-
-  it("shows recent memories near the bottom when an album has photos", async () => {
+  it("keeps profile on the dashboard bottom row", async () => {
     mockedUpcoming.mockResolvedValue({ events: [sampleEvent], total: 1 });
     mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
     mockedPendingMembers.mockResolvedValue({ members: [], total: 0 });
@@ -508,12 +492,8 @@ describe("HomePage", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("Recent memories")).toBeInTheDocument();
-    expect(screen.getByText("From Dashain · 5 photos")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View all photos" })).toHaveAttribute(
-      "href",
-      "/events/photos",
-    );
+    expect(await screen.findByText("Your Profile")).toBeInTheDocument();
+    expect(screen.queryByText("Recent memories")).not.toBeInTheDocument();
   });
 
   it("opens the log transaction modal for treasurer users", async () => {
@@ -538,7 +518,7 @@ describe("HomePage", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", { name: /Log Transaction/i }),
+      await screen.findByRole("button", { name: /Log transaction/i }),
     );
 
     expect(screen.getByRole("dialog", { name: "Log transaction" })).toBeInTheDocument();

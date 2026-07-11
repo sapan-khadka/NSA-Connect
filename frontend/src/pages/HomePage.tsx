@@ -2,7 +2,6 @@ import { useEffect, useState, type ReactNode } from "react";
 import {
   Archive,
   ClipboardList,
-  Sparkles,
   Users,
   Wallet,
   Wrench,
@@ -10,15 +9,11 @@ import {
 import { Link } from "react-router-dom";
 
 import { CoverBanner } from "../components/CoverBanner";
-import { HomeAnnouncementsSection } from "../components/HomeAnnouncementsSection";
-import { HomeFinanceQuickActions } from "../components/HomeFinanceQuickActions";
+import { HomeDiscussionSection } from "../components/HomeDiscussionSection";
 import { HomeHeroBrand } from "../components/AppLogo";
 import { HomeProfileCard } from "../components/HomeProfileCard";
 import { LogFinanceEntryForm } from "../components/LogFinanceEntryForm";
-import { RecentMemoriesStrip } from "../components/RecentMemoriesStrip";
 import {
-  HomeActivitySection,
-  HomeBoardMeetingSection,
   HomeStatCards,
   HomeUpNextSection,
   HomeWelcomeBanner,
@@ -29,10 +24,7 @@ import {
 import { HomeCard } from "../components/ui/HomeCard";
 import { IconBadge } from "../components/ui/IconBadge";
 import { Modal } from "../components/ui/Modal";
-import { Card } from "../design-system/components/Card";
-import { Divider } from "../design-system/components/Divider";
 import { useAuth } from "../context/useAuth";
-import { useIsLgUp } from "../hooks/useMediaQuery";
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/auth-api";
 import { fetchMyEventTasks } from "../lib/event-tasks-api";
@@ -49,15 +41,9 @@ import { isEventFinanceEditable } from "../lib/event-finance";
 import {
   fetchFinanceSummary,
   fetchPendingFinanceChangeRequests,
-  fetchMyFinanceChangeRequestSummary,
 } from "../lib/finance-api";
-import { getMobileActivityPreview } from "../lib/home-activity-preview";
-import {
-  buildHomeActivities,
-  type HomeActivity,
-} from "../lib/home-activities";
 import { getMyTasksPath, summarizeMyTasks } from "../lib/home-tasks";
-import { fetchMembers, fetchPendingMembers } from "../lib/members-api";
+import { fetchMembers } from "../lib/members-api";
 import { fetchMeetings, type MeetingSummary } from "../lib/meetings-api";
 import { fetchRecentMemories, type RecentMemoriesPreview } from "../lib/recent-memories";
 import {
@@ -68,7 +54,6 @@ import {
   canViewTaskOversight,
   isRoleAtLeast,
 } from "../lib/roles";
-import { AppIcon } from "../components/ui/AppIcon";
 
 function findNextNonMeetingEvent(events: EventResponse[]): EventResponse | null {
   return events.find((event) => event.event_type !== "meeting") ?? null;
@@ -85,7 +70,7 @@ function findNextBoardMeeting(meetings: MeetingSummary[]): MeetingSummary | null
   );
 }
 
-function buildQuickLinks(member: MemberResponse): QuickLink[] {
+function buildRoleTools(member: MemberResponse): QuickLink[] {
   const links: QuickLink[] = [];
 
   if (isRoleAtLeast(member.role, "board")) {
@@ -128,16 +113,6 @@ function buildQuickLinks(member: MemberResponse): QuickLink[] {
     });
   }
 
-  if (member.role === "general") {
-    links.push({
-      title: "AI assistant",
-      description: "Ask about NSA events",
-      to: "/assistant",
-      icon: Sparkles,
-      category: "assistant",
-    });
-  }
-
   return links;
 }
 
@@ -173,17 +148,12 @@ function PublicHomeView() {
 
 type MemberHomeLayoutProps = {
   member: MemberResponse;
-  activities: HomeActivity[];
-  mobileActivityPreview: HomeActivity[];
   nextEvent: EventResponse | null;
   upcomingCount: number;
   tasksSummary: ReturnType<typeof summarizeMyTasks>;
-  nextBoardMeeting: MeetingSummary | null;
-  meetingAttendeeSummary: string | null;
   isLoading: boolean;
   loadError: string | null;
   rsvpLoading: boolean;
-  recentMemories: RecentMemoriesPreview | null;
   financePendingCount: number;
   showFinanceQuickActions: boolean;
   memberCount: number | null;
@@ -192,29 +162,145 @@ type MemberHomeLayoutProps = {
   canViewFinance: boolean;
   quickLinks: QuickLink[];
   tasksPath: string;
-  isBoardMember: boolean;
   onRsvpStatusChange: (status: RsvpStatus) => void;
   onLogTransaction: () => void;
 };
 
-function DashboardSection({
-  label,
+const DASHBOARD_GAP = "gap-6"; // 24px
+const DASHBOARD_SECTION_SPACE = "space-y-6"; // ~24px row rhythm like reference
+const DASHBOARD_GRID =
+  "grid grid-cols-1 md:grid-cols-6 xl:grid-cols-12 items-stretch";
+
+function dashboardSpan(
+  span: "full" | "half" | "third" | "profile" | "tools",
+): string {
+  switch (span) {
+    case "full":
+      return "col-span-1 md:col-span-6 xl:col-span-12";
+    case "half":
+      return "col-span-1 md:col-span-6 xl:col-span-6";
+    case "third":
+      return "col-span-1 md:col-span-6 xl:col-span-4";
+    case "profile":
+      return "col-span-1 md:col-span-6 xl:col-span-5";
+    case "tools":
+      return "col-span-1 md:col-span-6 xl:col-span-7";
+  }
+}
+
+function DashboardCell({
+  span,
   children,
-  className = "",
 }: {
-  label?: string;
+  span: "full" | "half" | "third" | "profile" | "tools";
   children: ReactNode;
-  className?: string;
 }) {
   return (
-    <section className={["space-y-3", className].filter(Boolean).join(" ")}>
-      {label ? (
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-label">
-          {label}
-        </h2>
+    <div className={`${dashboardSpan(span)} flex min-h-0 flex-col`}>
+      <div className="flex h-full min-h-0 flex-col [&_>_*]:h-full [&_>_*]:min-h-0">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function MemberHomeLayout({
+  member,
+  nextEvent,
+  upcomingCount,
+  tasksSummary,
+  isLoading,
+  loadError,
+  rsvpLoading,
+  financePendingCount,
+  showFinanceQuickActions,
+  memberCount,
+  budgetBalance,
+  canViewMembers,
+  canViewFinance,
+  quickLinks,
+  tasksPath,
+  onRsvpStatusChange,
+  onLogTransaction,
+}: MemberHomeLayoutProps) {
+  return (
+    <div className={`mx-auto w-full max-w-[1480px] ${DASHBOARD_SECTION_SPACE}`}>
+      {loadError ? (
+        <div role="alert" className="ds-alert-banner">
+          {loadError}
+        </div>
       ) : null}
-      {children}
-    </section>
+
+      {/* Row 1 — Hero (12) */}
+      <div className={`${DASHBOARD_GRID} ${DASHBOARD_GAP}`}>
+        <DashboardCell span="full">
+          <HomeWelcomeBanner
+            member={member}
+            pendingApprovalCount={financePendingCount}
+            nextEvent={nextEvent}
+            openTaskCount={tasksSummary.openCount}
+            budgetBalance={budgetBalance}
+            showBudgetChip={canViewFinance}
+            showLogTransaction={showFinanceQuickActions}
+            onLogTransaction={onLogTransaction}
+          />
+        </DashboardCell>
+      </div>
+
+      {/* Row 2 — KPIs 3|3|3|3 */}
+      <div className={`${DASHBOARD_GRID} ${DASHBOARD_GAP}`}>
+        <DashboardCell span="full">
+          <HomeStatCards
+            tasksSummary={tasksSummary}
+            upcomingCount={upcomingCount}
+            nextEvent={nextEvent}
+            memberCount={memberCount}
+            budgetBalance={budgetBalance}
+            tasksPath={tasksPath}
+            canViewMembers={canViewMembers}
+            canViewFinance={canViewFinance}
+            isLoading={isLoading}
+          />
+        </DashboardCell>
+      </div>
+
+      {/* Row 3 — Discussion | Your Work (6|6) */}
+      <div className={`${DASHBOARD_GRID} ${DASHBOARD_GAP}`}>
+        <DashboardCell span="half">
+          <HomeDiscussionSection previewLimit={3} />
+        </DashboardCell>
+        <DashboardCell span="half">
+          <HomeYourWorkSection
+            member={member}
+            tasksSummary={tasksSummary}
+            tasksPath={tasksPath}
+            isLoading={isLoading}
+          />
+        </DashboardCell>
+      </div>
+
+      {/* Row 4 — Upcoming Event (12) */}
+      <div className={`${DASHBOARD_GRID} ${DASHBOARD_GAP}`}>
+        <DashboardCell span="full">
+          <HomeUpNextSection
+            nextEvent={nextEvent}
+            isLoading={isLoading}
+            rsvpLoading={rsvpLoading}
+            onRsvpStatusChange={onRsvpStatusChange}
+          />
+        </DashboardCell>
+      </div>
+
+      {/* Row 5 — Profile (5) | Tools (7) */}
+      <div className={`${DASHBOARD_GRID} ${DASHBOARD_GAP}`}>
+        <DashboardCell span="profile">
+          <HomeProfileCard member={member} />
+        </DashboardCell>
+        <DashboardCell span="tools">
+          <ToolsForRoleSection quickLinks={quickLinks} />
+        </DashboardCell>
+      </div>
+    </div>
   );
 }
 
@@ -227,11 +313,20 @@ function ToolsForRoleSection({ quickLinks }: { quickLinks: QuickLink[] }) {
     <HomeCard className="flex h-full flex-col">
       <div className="ds-icon-label">
         <IconBadge icon={Wrench} category="tools" size="sm" />
-        <h2 className="text-lg font-semibold text-foreground">Quick Tools</h2>
+        <h2 className="text-lg font-semibold text-foreground">
+          Tools for Your Role
+        </h2>
       </div>
-      <ul className="mt-4 grid flex-1 grid-cols-2 gap-4">
+      <ul
+        className={[
+          "mt-5 grid flex-1 gap-4",
+          quickLinks.length >= 4
+            ? "grid-cols-2 xl:grid-cols-4"
+            : "grid-cols-2 sm:grid-cols-3",
+        ].join(" ")}
+      >
         {quickLinks.map((link) => (
-          <li key={link.to + link.title} className="min-h-0">
+          <li key={link.title} className="min-h-0">
             <QuickLinkCard {...link} />
           </li>
         ))}
@@ -240,301 +335,10 @@ function ToolsForRoleSection({ quickLinks }: { quickLinks: QuickLink[] }) {
   );
 }
 
-/** Layout shell for the assistant entry — reuses design-system Card, not a new feature. */
-function HomeAssistantPanel() {
-  return (
-    <Card
-      as="div"
-      padding="md"
-      interactive
-      className="flex h-full flex-col justify-between"
-    >
-      <div className="space-y-3">
-        <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-badge-teal-bg text-primary">
-          <AppIcon icon={Sparkles} size="md" className="text-current" />
-        </span>
-        <div className="space-y-1">
-          <h2 className="text-lg font-semibold tracking-headline text-foreground">
-            AI Assistant
-          </h2>
-          <p className="text-sm leading-relaxed text-label">
-            Ask about events, dues, members, and how to get things done in NSA
-            Connect.
-          </p>
-        </div>
-      </div>
-      <Link
-        to="/assistant"
-        className="mt-6 inline-flex items-center justify-center rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-hover"
-      >
-        Open assistant
-      </Link>
-    </Card>
-  );
-}
-
-function DesktopMemberHomeLayout({
-  member,
-  activities,
-  nextEvent,
-  upcomingCount,
-  tasksSummary,
-  nextBoardMeeting,
-  meetingAttendeeSummary,
-  isLoading,
-  loadError,
-  rsvpLoading,
-  recentMemories,
-  financePendingCount,
-  showFinanceQuickActions,
-  memberCount,
-  budgetBalance,
-  canViewMembers,
-  canViewFinance,
-  quickLinks,
-  tasksPath,
-  isBoardMember,
-  onRsvpStatusChange,
-  onLogTransaction,
-}: MemberHomeLayoutProps) {
-  return (
-    <div className="mx-auto w-full max-w-[1440px] space-y-8">
-      {/* 1. Hero */}
-      <DashboardSection>
-        <HomeWelcomeBanner
-          member={member}
-          pendingApprovalCount={financePendingCount}
-          nextEvent={nextEvent}
-          openTaskCount={tasksSummary.openCount}
-          budgetBalance={budgetBalance}
-          showBudgetChip={canViewFinance}
-        />
-        {loadError ? (
-          <div role="alert" className="ds-alert-banner">
-            {loadError}
-          </div>
-        ) : null}
-      </DashboardSection>
-
-      {/* 2. KPI cards */}
-      <DashboardSection label="Overview">
-        <HomeStatCards
-          tasksSummary={tasksSummary}
-          upcomingCount={upcomingCount}
-          nextEvent={nextEvent}
-          memberCount={memberCount}
-          budgetBalance={budgetBalance}
-          tasksPath={tasksPath}
-          canViewMembers={canViewMembers}
-          canViewFinance={canViewFinance}
-          isLoading={isLoading}
-        />
-      </DashboardSection>
-
-      {/* 3. Announcements + Activity */}
-      <DashboardSection label="Updates">
-        <div className="grid items-stretch gap-6 lg:grid-cols-2">
-          <HomeAnnouncementsSection previewLimit={2} />
-          <HomeActivitySection
-            activities={activities}
-            isLoading={isLoading}
-            tasksPath={tasksPath}
-            scrollable
-          />
-        </div>
-      </DashboardSection>
-
-      {/* 4. Upcoming event (full width) */}
-      <DashboardSection label="Upcoming">
-        <div className="space-y-6">
-          <HomeUpNextSection
-            nextEvent={nextEvent}
-            isLoading={isLoading}
-            rsvpLoading={rsvpLoading}
-            onRsvpStatusChange={onRsvpStatusChange}
-          />
-          {isBoardMember && nextBoardMeeting ? (
-            <HomeBoardMeetingSection
-              meeting={nextBoardMeeting}
-              attendeeSummary={meetingAttendeeSummary}
-            />
-          ) : null}
-          <HomeYourWorkSection
-            member={member}
-            tasksSummary={tasksSummary}
-            tasksPath={tasksPath}
-            isLoading={isLoading}
-          />
-        </div>
-      </DashboardSection>
-
-      <Divider />
-
-      {/* 5. Quick Actions + AI Assistant */}
-      <DashboardSection label="Actions">
-        <div className="grid items-stretch gap-6 lg:grid-cols-2">
-          <div className="flex min-h-0 flex-col gap-6">
-            {showFinanceQuickActions ? (
-              <HomeFinanceQuickActions
-                pendingApprovalCount={financePendingCount}
-                onLogTransaction={onLogTransaction}
-              />
-            ) : null}
-            <ToolsForRoleSection quickLinks={quickLinks} />
-          </div>
-          <HomeAssistantPanel />
-        </div>
-      </DashboardSection>
-
-      {/* 6. Profile */}
-      <DashboardSection label="Account">
-        <div className="max-w-xl">
-          <HomeProfileCard member={member} />
-        </div>
-      </DashboardSection>
-
-      {recentMemories ? (
-        <>
-          <Divider />
-          <DashboardSection>
-            <RecentMemoriesStrip memories={recentMemories} />
-          </DashboardSection>
-        </>
-      ) : null}
-    </div>
-  );
-}
-
-function MobileMemberHomeLayout({
-  member,
-  activities,
-  mobileActivityPreview,
-  nextEvent,
-  upcomingCount,
-  tasksSummary,
-  nextBoardMeeting,
-  meetingAttendeeSummary,
-  isLoading,
-  loadError,
-  rsvpLoading,
-  recentMemories,
-  financePendingCount,
-  showFinanceQuickActions,
-  memberCount,
-  budgetBalance,
-  canViewMembers,
-  canViewFinance,
-  quickLinks,
-  tasksPath,
-  isBoardMember,
-  onRsvpStatusChange,
-  onLogTransaction,
-}: MemberHomeLayoutProps) {
-  return (
-    <div className="space-y-8">
-      {/* 1. Hero */}
-      <DashboardSection>
-        <HomeWelcomeBanner
-          member={member}
-          pendingApprovalCount={financePendingCount}
-          nextEvent={nextEvent}
-          openTaskCount={tasksSummary.openCount}
-          budgetBalance={budgetBalance}
-          showBudgetChip={canViewFinance}
-        />
-        {loadError ? (
-          <div role="alert" className="ds-alert-banner">
-            {loadError}
-          </div>
-        ) : null}
-      </DashboardSection>
-
-      {/* 2. KPI cards */}
-      <DashboardSection label="Overview">
-        <HomeStatCards
-          tasksSummary={tasksSummary}
-          upcomingCount={upcomingCount}
-          nextEvent={nextEvent}
-          memberCount={memberCount}
-          budgetBalance={budgetBalance}
-          tasksPath={tasksPath}
-          canViewMembers={canViewMembers}
-          canViewFinance={canViewFinance}
-          isLoading={isLoading}
-        />
-      </DashboardSection>
-
-      {/* 3. Announcements + Activity */}
-      <DashboardSection label="Updates">
-        <div className="space-y-6">
-          <HomeAnnouncementsSection previewLimit={2} />
-          <HomeActivitySection
-            activities={mobileActivityPreview}
-            isLoading={isLoading}
-            tasksPath={tasksPath}
-            truncatedFromTotal={activities.length}
-            scrollable={false}
-          />
-        </div>
-      </DashboardSection>
-
-      {/* 4. Upcoming event */}
-      <DashboardSection label="Upcoming">
-        <div className="space-y-6">
-          <HomeUpNextSection
-            nextEvent={nextEvent}
-            isLoading={isLoading}
-            rsvpLoading={rsvpLoading}
-            onRsvpStatusChange={onRsvpStatusChange}
-          />
-          {isBoardMember && nextBoardMeeting ? (
-            <HomeBoardMeetingSection
-              meeting={nextBoardMeeting}
-              attendeeSummary={meetingAttendeeSummary}
-            />
-          ) : null}
-          <HomeYourWorkSection
-            member={member}
-            tasksSummary={tasksSummary}
-            tasksPath={tasksPath}
-            isLoading={isLoading}
-          />
-        </div>
-      </DashboardSection>
-
-      {/* 5. Quick Actions + AI Assistant */}
-      <DashboardSection label="Actions">
-        <div className="space-y-6">
-          {showFinanceQuickActions ? (
-            <HomeFinanceQuickActions
-              pendingApprovalCount={financePendingCount}
-              onLogTransaction={onLogTransaction}
-            />
-          ) : null}
-          <ToolsForRoleSection quickLinks={quickLinks} />
-          <HomeAssistantPanel />
-        </div>
-      </DashboardSection>
-
-      {/* 6. Profile */}
-      <DashboardSection label="Account">
-        <HomeProfileCard member={member} />
-      </DashboardSection>
-
-      {recentMemories ? (
-        <DashboardSection>
-          <RecentMemoriesStrip memories={recentMemories} />
-        </DashboardSection>
-      ) : null}
-    </div>
-  );
-}
-
 function MemberHomeView({ member }: { member: MemberResponse }) {
   const [nextEvent, setNextEvent] = useState<EventResponse | null>(null);
   const [upcomingCount, setUpcomingCount] = useState(0);
   const [tasksSummary, setTasksSummary] = useState(summarizeMyTasks([]));
-  const [activities, setActivities] = useState<HomeActivity[]>([]);
   const [nextBoardMeeting, setNextBoardMeeting] = useState<MeetingSummary | null>(
     null,
   );
@@ -563,24 +367,17 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
   );
   const canViewMembers = canBrowseMemberDirectory(member.role);
   const canViewFinance = canAccessFinance(member.role);
-  const quickLinks = buildQuickLinks(member);
+  const quickLinks = buildRoleTools(member);
   const tasksPath = getMyTasksPath(member.role);
-  const isLgUp = useIsLgUp();
-  const mobileActivityPreview = getMobileActivityPreview(activities, 2);
 
   const layoutProps: MemberHomeLayoutProps = {
     member,
-    activities,
-    mobileActivityPreview,
     nextEvent,
     upcomingCount,
     tasksSummary,
-    nextBoardMeeting,
-    meetingAttendeeSummary,
     isLoading,
     loadError,
     rsvpLoading,
-    recentMemories,
     financePendingCount,
     showFinanceQuickActions,
     memberCount,
@@ -589,7 +386,6 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
     canViewFinance,
     quickLinks,
     tasksPath,
-    isBoardMember,
     onRsvpStatusChange: (status) => void handleRsvpStatusChange(status),
     onLogTransaction: () => setIsLogTransactionOpen(true),
   };
@@ -608,22 +404,10 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
           total: 0,
         }));
 
-        const pendingMembersPromise = isBoardMember
-          ? fetchPendingMembers().catch(() => ({ members: [], total: 0 }))
-          : Promise.resolve(null);
-
         const financePendingPromise = showFinanceQuickActions
           ? fetchPendingFinanceChangeRequests().catch(() => ({
               requests: [],
               total: 0,
-            }))
-          : Promise.resolve(null);
-
-        const myFinanceRequestsPromise = showFinanceQuickActions
-          ? fetchMyFinanceChangeRequestSummary().catch(() => ({
-              pending_count: 0,
-              recently_rejected_count: 0,
-              recently_approved_count: 0,
             }))
           : Promise.resolve(null);
 
@@ -642,18 +426,14 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
         const [
           upcoming,
           tasksResult,
-          pendingMembers,
           financePending,
-          myFinanceRequests,
           meetingsResult,
           membersPage,
           financeSummary,
         ] = await Promise.all([
           upcomingPromise,
           tasksPromise,
-          pendingMembersPromise,
           financePendingPromise,
-          myFinanceRequestsPromise,
           meetingsPromise,
           membersCountPromise,
           financeSummaryPromise,
@@ -684,15 +464,6 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
         setNextEvent(findNextNonMeetingEvent(upcoming.events));
         setUpcomingCount(nonMeetingUpcoming.length);
         setTasksSummary(summary);
-        setActivities(
-          buildHomeActivities({
-            role: member.role,
-            tasksSummary: summary,
-            pendingMembersTotal: pendingMembers?.total ?? 0,
-            financePendingTotal: financePending?.total ?? 0,
-            myFinanceRequests,
-          }),
-        );
         setNextBoardMeeting(nextMeeting);
         setMeetingAttendeeSummary(attendeeSummary);
         setFinancePendingCount(financePending?.total ?? 0);
@@ -805,11 +576,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
 
   return (
     <>
-      {isLgUp ? (
-        <DesktopMemberHomeLayout {...layoutProps} />
-      ) : (
-        <MobileMemberHomeLayout {...layoutProps} />
-      )}
+      <MemberHomeLayout {...layoutProps} />
 
       <Modal
         open={isLogTransactionOpen}

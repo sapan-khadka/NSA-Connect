@@ -354,6 +354,17 @@ def client(db_session: Session):
         finally:
             pass
 
+    def override_create_db_session():
+        # Same shared test session; no-op close so the fixture owns lifecycle.
+        class _SharedSessionProxy:
+            def __getattr__(self, name: str):
+                return getattr(db_session, name)
+
+            def close(self) -> None:
+                return None
+
+        return _SharedSessionProxy()
+
     app.dependency_overrides[get_db] = override_get_db
 
     mock_connection = MagicMock()
@@ -369,6 +380,14 @@ def client(db_session: Session):
             ),
         ),
         patch.object(engine, "dispose"),
+        patch(
+            "app.core.database.create_db_session",
+            side_effect=override_create_db_session,
+        ),
+        patch(
+            "app.api.v1.discussion_ws.create_db_session",
+            side_effect=override_create_db_session,
+        ),
         TestClient(app) as test_client,
     ):
         yield test_client

@@ -11,7 +11,7 @@ import {
   fetchAnnouncements,
   type Announcement,
 } from "../lib/announcements-api";
-import { formatEventDateTime } from "../lib/format-datetime";
+import { formatRelativeTimestamp } from "../lib/format-datetime";
 import nsaCover from "../assets/nsa-cover.PNG";
 
 function AnnouncementCardShell({
@@ -22,16 +22,57 @@ function AnnouncementCardShell({
   headerAction?: ReactNode;
 }) {
   return (
-    <HomeCard className="flex h-full min-h-[28rem] flex-col">
-      <div className="flex shrink-0 items-center justify-between gap-4">
+    <HomeCard
+      padding="sm"
+      className="flex h-full flex-col"
+    >
+      <div className="flex shrink-0 items-center justify-between gap-3">
         <div className="ds-icon-label">
           <IconBadge icon={Megaphone} category="announcements" size="sm" />
           <h2 className="text-lg font-semibold text-foreground">Announcements</h2>
         </div>
         {headerAction}
       </div>
-      <div className="mt-4 flex min-h-0 flex-1 flex-col">{children}</div>
+      <div className="mt-3 flex flex-col">{children}</div>
     </HomeCard>
+  );
+}
+
+function AnnouncementPreviewRow({ announcement }: { announcement: Announcement }) {
+  return (
+    <Link
+      to="/announcements"
+      className="group flex gap-3 rounded-card p-1.5 transition duration-200 ease-out hover:bg-surface-muted"
+    >
+      <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-surface-muted ring-1 ring-inset ring-gray-200/80">
+        <img
+          src={nsaCover}
+          alt=""
+          aria-hidden="true"
+          className="h-full w-full object-cover object-center transition duration-300 group-hover:scale-[1.03]"
+        />
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <p className="line-clamp-2 text-sm font-semibold leading-snug text-foreground group-hover:text-primary">
+          {announcement.title}
+        </p>
+        <p className="mt-0.5 line-clamp-2 text-sm font-normal leading-snug text-gray-600">
+          {announcement.body}
+        </p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          <Badge variant="primary" className="px-2 py-0.5 text-xs font-medium">
+            {ANNOUNCEMENT_CATEGORY_LABELS[announcement.category]}
+          </Badge>
+          <time
+            dateTime={announcement.created_at}
+            className="text-xs font-normal tracking-[0.02em] text-gray-500"
+          >
+            {formatRelativeTimestamp(announcement.created_at)}
+          </time>
+        </div>
+      </div>
+    </Link>
   );
 }
 
@@ -73,7 +114,7 @@ export function HomeAnnouncementsSection({
   if (loading) {
     return (
       <AnnouncementCardShell>
-        <p className="text-sm text-label">Loading announcements…</p>
+        <p className="text-sm font-normal text-gray-600">Loading announcements…</p>
       </AnnouncementCardShell>
     );
   }
@@ -83,73 +124,24 @@ export function HomeAnnouncementsSection({
       <AnnouncementCardShell
         headerAction={<ArrowLink to="/announcements">View all</ArrowLink>}
       >
-        <p className="text-sm text-label">No announcements yet.</p>
+        <p className="text-sm font-normal text-gray-600">No announcements yet.</p>
       </AnnouncementCardShell>
     );
   }
 
   const visibleAnnouncements = announcements.slice(0, previewLimit);
-  const [featured, ...rest] = visibleAnnouncements;
 
   return (
     <AnnouncementCardShell
       headerAction={<ArrowLink to="/announcements">View all</ArrowLink>}
     >
-      {featured ? (
-        <Link
-          to="/announcements"
-          className="group flex min-h-0 flex-1 flex-col overflow-hidden rounded-card border border-gray-200 bg-surface-muted/60 transition duration-200 ease-out hover:border-gray-300 hover:shadow-card"
-        >
-          <div className="relative h-36 w-full shrink-0 overflow-hidden sm:h-40">
-            <img
-              src={nsaCover}
-              alt=""
-              aria-hidden="true"
-              className="h-full w-full object-cover object-center transition duration-300 group-hover:scale-[1.02]"
-            />
-            <div
-              aria-hidden="true"
-              className="absolute inset-0 bg-gradient-to-t from-black/35 to-transparent"
-            />
-          </div>
-          <div className="flex flex-1 flex-col p-4">
-            <p className="line-clamp-2 text-lg font-semibold text-foreground group-hover:text-primary">
-              {featured.title}
-            </p>
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <Badge variant="primary" className="px-2 py-1 text-sm">
-                {ANNOUNCEMENT_CATEGORY_LABELS[featured.category]}
-              </Badge>
-              <span className="text-sm text-label">
-                {formatEventDateTime(featured.created_at)}
-              </span>
-            </div>
-          </div>
-        </Link>
-      ) : null}
-
-      {rest.length > 0 ? (
-        <ul className="mt-4 space-y-2 border-t border-gray-200 pt-4">
-          {rest.map((announcement) => (
-            <li key={announcement.id}>
-              <Link
-                to="/announcements"
-                className="group flex items-start justify-between gap-4 rounded-card px-1 py-2 transition duration-200 hover:bg-surface-muted"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground group-hover:text-primary">
-                    {announcement.title}
-                  </p>
-                  <p className="mt-1 text-sm text-label">
-                    {ANNOUNCEMENT_CATEGORY_LABELS[announcement.category]} ·{" "}
-                    {formatEventDateTime(announcement.created_at)}
-                  </p>
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      <ul className="space-y-0.5">
+        {visibleAnnouncements.map((announcement) => (
+          <li key={announcement.id}>
+            <AnnouncementPreviewRow announcement={announcement} />
+          </li>
+        ))}
+      </ul>
     </AnnouncementCardShell>
   );
 }

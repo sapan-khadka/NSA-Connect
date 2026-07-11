@@ -14,12 +14,12 @@ import {
   MEMBER_TALENT_LABELS,
   type MemberTalent,
 } from "../lib/member-talents";
-import { canViewMemberDirectory, isRoleAtLeast } from "../lib/roles";
+import { isRoleAtLeast } from "../lib/roles";
 
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 import { InviteToEventModal } from "./InviteToEventModal";
-import { MemberDirectoryCard } from "./MemberDirectoryCard";
+import { MemberDirectoryRow } from "./MemberDirectoryCard";
 
 const PAGE_SIZE_OPTIONS = [12, 24, 48] as const;
 const SEARCH_FETCH_PAGE_SIZE = 100;
@@ -201,11 +201,11 @@ export function MemberDirectory() {
 
       {error ? <div className="ds-mobile-edge-section ds-alert-banner lg:mx-6 lg:mt-4">{error}</div> : null}
 
-      <div className="grid divide-y divide-gray-200 lg:grid-cols-2 lg:gap-4 lg:divide-y-0 lg:p-6 xl:grid-cols-3">
+      <div className="px-0 py-0">
         {isLoading ? (
-          <p className="px-4 py-4 text-sm text-label lg:px-0 lg:py-0">Loading members...</p>
+          <p className="px-4 py-4 text-sm text-label lg:px-6">Loading members...</p>
         ) : visibleMembers.length === 0 ? (
-          <p className="px-4 py-4 text-sm text-label lg:px-0 lg:py-0">
+          <p className="px-4 py-4 text-sm text-label lg:px-6">
             {selectedTalents.length > 0 && !isSearching
               ? "No members have this talent yet."
               : isSearching
@@ -213,13 +213,35 @@ export function MemberDirectory() {
                 : "No members found."}
           </p>
         ) : (
-          visibleMembers.map((member) => (
-            <MemberDirectoryCard
-              key={member.id}
-              member={member}
-              to={`/members/${member.id}`}
-            />
-          ))
+          <div>
+            <div
+              className="hidden grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] gap-4 border-b border-gray-100 px-4 py-2 sm:grid lg:px-6"
+              aria-hidden="true"
+            >
+              <span className="text-xs font-medium uppercase tracking-wide text-gray-400">
+                Name
+              </span>
+              <span className="text-xs font-medium uppercase tracking-wide text-gray-400">
+                Major / Year
+              </span>
+              <span className="text-xs font-medium uppercase tracking-wide text-gray-400">
+                Talents
+              </span>
+              <span className="text-right text-xs font-medium uppercase tracking-wide text-gray-400">
+                Email
+              </span>
+              <span className="w-5" />
+            </div>
+            <div className="divide-y divide-gray-100">
+              {visibleMembers.map((member) => (
+                <MemberDirectoryRow
+                  key={member.id}
+                  member={member}
+                  to={`/members/${member.id}`}
+                />
+              ))}
+            </div>
+          </div>
         )}
       </div>
 
@@ -227,7 +249,7 @@ export function MemberDirectory() {
         <div className="flex flex-col gap-4 border-t border-gray-200 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">
           <div className="flex items-center gap-2 text-sm text-label">
             <label htmlFor="page-size" className="font-medium text-foreground">
-              Cards per page
+              Members per page
             </label>
             <select
               id="page-size"

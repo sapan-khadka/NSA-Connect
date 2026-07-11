@@ -14,6 +14,11 @@ SessionLocal = sessionmaker(
 )
 
 
+def create_db_session() -> Session:
+    """Open a short-lived session (use for WebSockets — do not hold for the socket lifetime)."""
+    return SessionLocal()
+
+
 def get_db() -> Generator[Session]:
     db = SessionLocal()
     try:

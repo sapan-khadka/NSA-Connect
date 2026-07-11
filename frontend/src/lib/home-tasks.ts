@@ -12,11 +12,20 @@ export type MyTasksSummary = {
   openCount: number;
   overdueCount: number;
   nextTask: EventTaskResponse | null;
+  overdueTask: EventTaskResponse | null;
 };
 
 export function summarizeMyTasks(tasks: EventTaskResponse[]): MyTasksSummary {
   const open = tasks.filter((task) => !task.is_complete);
-  const overdue = open.filter((task) => task.is_overdue);
+  const overdue = open
+    .filter((task) => task.is_overdue)
+    .sort((left, right) => {
+      const leftDue = left.due_date ? new Date(left.due_date).getTime() : Number.POSITIVE_INFINITY;
+      const rightDue = right.due_date
+        ? new Date(right.due_date).getTime()
+        : Number.POSITIVE_INFINITY;
+      return leftDue - rightDue;
+    });
   const withDue = open
     .filter((task) => task.due_date)
     .sort(
@@ -28,6 +37,7 @@ export function summarizeMyTasks(tasks: EventTaskResponse[]): MyTasksSummary {
     openCount: open.length,
     overdueCount: overdue.length,
     nextTask: withDue[0] ?? open[0] ?? null,
+    overdueTask: overdue[0] ?? null,
   };
 }
 

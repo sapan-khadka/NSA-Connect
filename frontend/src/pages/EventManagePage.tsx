@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
+import { EventCoverPhotoSetting } from "../components/EventCoverPhotoSetting";
 import { EventCheckInPanel } from "../components/EventCheckInPanel";
 import { EventAttendanceSummaryPanel } from "../components/EventAttendanceSummaryPanel";
 import { EventDeleteSection } from "../components/EventDeleteSection";
@@ -258,6 +259,7 @@ export function EventManagePage() {
       {canViewBoard ? (
         <>
           <EventManageScheduleFields event={event} onUpdated={setEvent} />
+          <EventCoverPhotoSetting event={event} onUpdated={setEvent} />
           {isMeetingEvent ? (
             <EventMeetingVisibilitySetting
               event={event}

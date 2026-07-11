@@ -40,6 +40,8 @@ export type EventResponse = {
   is_finance_grace_period: boolean;
   show_in_photo_archive: boolean;
   meeting_visibility: MeetingVisibility | null;
+  /** Event-specific cover photo; null/undefined falls back to category color. */
+  event_photo_url?: string | null;
 };
 
 export type EventDetailResponse = EventResponse & {
@@ -198,6 +200,40 @@ export async function patchEvent(
 
 export async function deleteEvent(eventId: number): Promise<void> {
   await api.delete(`/v1/events/${eventId}`);
+}
+
+export async function uploadEventCoverPhoto(
+  eventId: number,
+  file: File,
+  onProgress?: (percent: number) => void,
+): Promise<EventResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await api.post<EventResponse>(
+    `/v1/events/${eventId}/event-photo`,
+    formData,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+      onUploadProgress: (event) => {
+        if (!onProgress || !event.total) {
+          return;
+        }
+        onProgress(Math.round((event.loaded / event.total) * 100));
+      },
+    },
+  );
+
+  return response.data;
+}
+
+export async function deleteEventCoverPhoto(
+  eventId: number,
+): Promise<EventResponse> {
+  const response = await api.delete<EventResponse>(
+    `/v1/events/${eventId}/event-photo`,
+  );
+  return response.data;
 }
 
 export async function updateEventRsvp(

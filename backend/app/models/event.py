@@ -47,6 +47,7 @@ class Event(Base):
     ends_at = Column(DateTime(timezone=True), nullable=True)
     location = Column(String(255), nullable=True)
     budget = Column(Numeric(10, 2), nullable=False)
+    event_photo_url = Column(String(2048), nullable=True)
     show_in_photo_archive = Column(Boolean, nullable=False, default=True)
     meeting_visibility = Column(
         SqlEnum(

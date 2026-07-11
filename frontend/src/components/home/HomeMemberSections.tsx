@@ -10,23 +10,26 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { useAuth } from "../../context/useAuth";
 import type { MemberResponse } from "../../lib/auth-api";
 import type { BadgeCategory } from "../../lib/badge-tones";
-import { EVENT_TYPE_BADGE_CLASS, EVENT_TYPE_LABELS } from "../../lib/event-types";
-import type { EventResponse, RsvpStatus } from "../../lib/events-api";
+import { EVENT_TYPE_BADGE_CLASS, EVENT_TYPE_COLOR, EVENT_TYPE_LABELS } from "../../lib/event-types";
+import {
+  fetchEventAttendees,
+  type EventResponse,
+  type RsvpStatus,
+} from "../../lib/events-api";
 import { eventDetailPath } from "../../lib/event-links";
 import { formatEventDateTime } from "../../lib/format-datetime";
 import { formatCurrency } from "../../lib/format-currency";
 import { FINANCE_APPROVALS_PATH } from "../../lib/finance-routes";
-import {
-  RECENT_ACTIVITY_FOOTNOTE,
-  type HomeActivity,
-} from "../../lib/home-activities";
+import { type HomeActivity } from "../../lib/home-activities";
 import { getTaskDisplayName, type MyTasksSummary } from "../../lib/home-tasks";
 import type { MeetingSummary } from "../../lib/meetings-api";
-import { formatRoleLabel } from "../../lib/roles";
+import { formatRoleLabel, isRoleAtLeast } from "../../lib/roles";
 import { EventRsvpButton } from "../EventRsvpButton";
 import { AppIcon } from "../ui/AppIcon";
 import { ArrowLink } from "../ui/ArrowLink";
@@ -161,6 +164,8 @@ export function HomeWelcomeBanner({
   openTaskCount = 0,
   budgetBalance = null,
   showBudgetChip = false,
+  showLogTransaction = false,
+  onLogTransaction,
 }: {
   member: MemberResponse;
   pendingApprovalCount?: number;
@@ -168,6 +173,8 @@ export function HomeWelcomeBanner({
   openTaskCount?: number;
   budgetBalance?: string | null;
   showBudgetChip?: boolean;
+  showLogTransaction?: boolean;
+  onLogTransaction?: () => void;
 }) {
   const firstName = member.full_name.split(/\s+/)[0] ?? member.full_name;
   const roleLabel = formatRoleLabel(member.role);
@@ -181,7 +188,7 @@ export function HomeWelcomeBanner({
 
   return (
     <section
-      className="relative min-h-[220px] overflow-hidden rounded-card"
+      className="relative min-h-[168px] overflow-hidden rounded-2xl"
       aria-label="Welcome"
     >
       <img
@@ -192,38 +199,35 @@ export function HomeWelcomeBanner({
       />
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/35"
+        className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/55 to-black/30"
       />
-      <div className="relative flex min-h-[220px] flex-col justify-between gap-6 p-8 sm:flex-row sm:items-center sm:gap-8">
+      <div className="relative flex min-h-[168px] flex-col justify-center gap-4 px-6 py-6 sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:px-8">
         <div className="min-w-0 flex-1 text-white">
-          <h1 className="text-[28px] font-bold leading-tight tracking-tight text-white sm:text-[32px]">
-            {greetingForNow()}, {firstName}{" "}
+          <h1 className="text-[26px] font-bold leading-tight tracking-tight text-white sm:text-[30px]">
+            Welcome back, {firstName}{" "}
             <span aria-hidden="true">👋</span>
           </h1>
-          <p className="mt-1.5 text-sm font-medium text-white/75">
+          <p className="mt-1.5 text-sm font-normal leading-relaxed text-white/80">
             {roleLabel}
             <span className="mx-1.5 text-white/40" aria-hidden="true">
               •
             </span>
-            NSA Connect
-          </p>
-          <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/85">
             Here&apos;s what&apos;s happening today.
           </p>
 
           {chips.length > 0 ? (
-            <ul className="mt-5 flex flex-wrap gap-2" aria-label="Today at a glance">
+            <ul className="mt-4 flex flex-wrap gap-2" aria-label="Today at a glance">
               {chips.map((chip) => (
                 <li key={chip.id}>
                   {chip.to ? (
                     <Link
                       to={chip.to}
-                      className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm transition hover:bg-white/18"
+                      className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium tracking-[0.02em] text-white backdrop-blur-sm transition hover:bg-white/18"
                     >
                       {chip.label}
                     </Link>
                   ) : (
-                    <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm">
+                    <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium tracking-[0.02em] text-white backdrop-blur-sm">
                       {chip.label}
                     </span>
                   )}
@@ -233,22 +237,18 @@ export function HomeWelcomeBanner({
           ) : null}
         </div>
 
-        <div className="flex shrink-0 flex-col gap-2.5 sm:items-stretch">
-          <Link
-            to="/events/calendar"
-            className="inline-flex items-center justify-center gap-1.5 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-white/90"
-          >
-            <AppIcon icon={Plus} size="sm" className="text-current" />
-            New Event
-          </Link>
-          <Link
-            to="/announcements"
-            className="inline-flex items-center justify-center gap-1.5 rounded-full border border-white/35 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/15"
-          >
-            <AppIcon icon={Plus} size="sm" className="text-current" />
-            Announcement
-          </Link>
-        </div>
+        {showLogTransaction && onLogTransaction ? (
+          <div className="flex shrink-0">
+            <button
+              type="button"
+              onClick={onLogTransaction}
+              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-white/90"
+            >
+              <AppIcon icon={Plus} size="sm" className="text-current" />
+              Log transaction
+            </button>
+          </div>
+        ) : null}
       </div>
     </section>
   );
@@ -363,35 +363,37 @@ export function HomeStatCards({
   ];
 
   return (
-    <ul className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {cards.map((card) => {
         const content = (
           <>
             <IconBadge
               icon={card.icon}
               category={card.category}
-              size="lg"
+              size="xs"
               shape="rounded"
             />
-            <p className="mt-4 text-sm font-semibold text-label">
-              {card.label}
-            </p>
-            <p className="mt-2 text-[32px] font-bold leading-none tracking-tight text-foreground">
+            <p className="mt-2.5 text-[26px] font-medium leading-none tracking-[-0.02em] tabular-nums text-foreground">
               {card.value}
             </p>
-            <p
-              className={[
-                "mt-2 line-clamp-2 text-sm",
-                card.hintUrgent ? "font-medium text-overdue" : "text-label",
-              ].join(" ")}
-            >
-              {card.hint}
-            </p>
+            <div className="mt-2 space-y-0.5">
+              <p className="text-xs font-medium tracking-[0.03em] text-gray-500">
+                {card.label}
+              </p>
+              <p
+                className={[
+                  "line-clamp-2 text-xs font-normal leading-tight",
+                  card.hintUrgent ? "font-medium text-overdue" : "text-gray-600",
+                ].join(" ")}
+              >
+                {card.hint}
+              </p>
+            </div>
           </>
         );
 
         const className =
-          "group flex h-full flex-col rounded-card border border-gray-200 bg-white p-4 shadow-card transition duration-200 ease-out hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-card-hover";
+          "group flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-4 shadow-card transition duration-200 ease-out hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-card-hover";
 
         return (
           <li key={card.key} className="min-w-0">
@@ -439,6 +441,10 @@ function activityTitle(activity: HomeActivity): string {
   }
 }
 
+function activityTimeLabel(activity: HomeActivity): string {
+  return activity.kind === "recent" ? "Recent" : "Needs attention";
+}
+
 export function ActivityRow({
   activity,
   isLast = false,
@@ -446,13 +452,15 @@ export function ActivityRow({
   activity: HomeActivity;
   isLast?: boolean;
 }) {
-  const isRecent = activity.kind === "recent";
   const visual = activityVisual(activity);
   const title = activityTitle(activity);
 
   return (
-    <li className="relative list-none pl-0">
-      <div className="flex gap-4">
+    <li className="relative list-none">
+      <Link
+        to={activity.to}
+        className="group relative flex gap-3 rounded-card px-1.5 py-2 transition duration-200 ease-out hover:bg-surface-muted"
+      >
         <div className="relative flex w-8 shrink-0 flex-col items-center">
           <IconBadge
             icon={visual.icon}
@@ -463,35 +471,24 @@ export function ActivityRow({
           {!isLast ? (
             <span
               aria-hidden="true"
-              className="mt-2 w-px flex-1 bg-gray-200"
+              className="mt-1.5 w-px flex-1 bg-gray-200"
             />
           ) : null}
         </div>
-        <div className="min-w-0 flex-1 pb-4">
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-sm font-semibold text-foreground">{title}</p>
-            <ArrowLink
-              to={activity.to}
-              className="shrink-0 !min-h-0 py-0 text-sm sm:whitespace-nowrap"
-            >
-              {activity.actionLabel}
-            </ArrowLink>
+        <div className="min-w-0 flex-1 space-y-0.5">
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-sm font-medium leading-snug text-foreground group-hover:text-primary">
+              {title}
+            </p>
+            <span className="shrink-0 pt-0.5 text-xs font-normal tracking-[0.02em] text-gray-500">
+              {activityTimeLabel(activity)}
+            </span>
           </div>
-          <p
-            className={[
-              "mt-1 text-sm",
-              !isRecent && activity.tone === "urgent"
-                ? "font-medium text-foreground"
-                : "text-label",
-            ].join(" ")}
-          >
+          <p className="text-sm font-normal leading-snug text-gray-600">
             {activity.message}
           </p>
-          {isRecent ? (
-            <p className="mt-1 text-sm text-label">{RECENT_ACTIVITY_FOOTNOTE}</p>
-          ) : null}
         </div>
-      </div>
+      </Link>
     </li>
   );
 }
@@ -513,8 +510,12 @@ export function HomeActivitySection({
     truncatedFromTotal !== undefined && truncatedFromTotal > activities.length;
 
   return (
-    <HomeCard className="flex h-full min-h-[28rem] flex-col" aria-label="Activity">
-      <div className="flex shrink-0 items-center justify-between gap-4">
+    <HomeCard
+      padding="sm"
+      className="flex h-full flex-col"
+      aria-label="Activity"
+    >
+      <div className="flex shrink-0 items-center justify-between gap-3">
         <div className="ds-icon-label">
           <IconBadge icon={ListTodo} category="tasks" size="sm" />
           <h2 className="text-lg font-semibold text-foreground">Activity</h2>
@@ -522,9 +523,9 @@ export function HomeActivitySection({
         {isTruncated ? <ArrowLink to={tasksPath}>View all</ArrowLink> : null}
       </div>
 
-      <div className="mt-4 flex min-h-0 flex-1 flex-col">
+      <div className="mt-3 flex flex-col">
         {isLoading ? (
-          <p className="text-sm text-label">Loading activity…</p>
+          <p className="text-sm font-normal text-gray-600">Loading activity…</p>
         ) : null}
 
         {!isLoading && activities.length === 0 ? (
@@ -538,8 +539,8 @@ export function HomeActivitySection({
         {!isLoading && activities.length > 0 ? (
           <ul
             className={[
-              "min-h-0 flex-1",
-              scrollable ? "overflow-y-auto pr-1" : "",
+              "space-y-0",
+              scrollable ? "max-h-64 overflow-y-auto pr-1" : "",
             ]
               .filter(Boolean)
               .join(" ")}
@@ -570,8 +571,8 @@ export function HomeYourWorkSection({
   isLoading: boolean;
 }) {
   return (
-    <HomeCard className="flex h-full min-h-[28rem] flex-col">
-      <div className="flex shrink-0 items-center justify-between gap-4">
+    <HomeCard padding="sm" className="flex h-full flex-col">
+      <div className="flex shrink-0 items-center justify-between gap-3">
         <div className="ds-icon-label">
           <IconBadge icon={ClipboardList} category="tasks" size="sm" />
           <h2 className="text-lg font-semibold text-foreground">Your Work</h2>
@@ -579,34 +580,34 @@ export function HomeYourWorkSection({
         <ArrowLink to={tasksPath}>View all</ArrowLink>
       </div>
 
-      <div className="mt-4 flex min-h-0 flex-1 flex-col">
+      <div className="mt-3 flex flex-col">
         {isLoading ? (
-          <p className="text-sm text-label">Loading tasks…</p>
+          <p className="text-sm font-normal text-gray-600">Loading tasks…</p>
         ) : null}
 
         {!isLoading ? (
-          <div className="flex flex-1 flex-col gap-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="rounded-card border border-gray-200 bg-success-surface p-4">
-                <p className="text-sm font-semibold text-success">
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="rounded-card border border-gray-200 bg-success-surface px-3 py-2.5">
+                <p className="text-xs font-medium tracking-[0.03em] text-gray-500">
                   Open Tasks
                 </p>
-                <p className="mt-2 text-[32px] font-bold leading-none tracking-tight text-foreground">
+                <p className="mt-1 text-[28px] font-medium leading-none tracking-[-0.02em] tabular-nums text-foreground">
                   {tasksSummary.openCount}
                 </p>
               </div>
               <div
                 className={
                   tasksSummary.overdueCount > 0
-                    ? "rounded-card border border-overdue/20 bg-overdue-surface p-4"
-                    : "rounded-card border border-gray-200 bg-surface-muted p-4"
+                    ? "rounded-card border border-overdue/20 bg-overdue-surface px-3 py-2.5"
+                    : "rounded-card border border-gray-200 bg-surface-muted px-3 py-2.5"
                 }
               >
                 <p
                   className={
                     tasksSummary.overdueCount > 0
-                      ? "text-sm font-semibold text-overdue"
-                      : "text-sm font-semibold text-label"
+                      ? "text-xs font-medium tracking-[0.03em] text-overdue"
+                      : "text-xs font-medium tracking-[0.03em] text-gray-500"
                   }
                 >
                   Overdue
@@ -614,25 +615,41 @@ export function HomeYourWorkSection({
                 <p
                   className={
                     tasksSummary.overdueCount > 0
-                      ? "mt-2 text-[32px] font-bold leading-none tracking-tight text-overdue"
-                      : "mt-2 text-[32px] font-bold leading-none tracking-tight text-foreground"
+                      ? "mt-1 text-[28px] font-medium leading-none tracking-[-0.02em] tabular-nums text-overdue"
+                      : "mt-1 text-[28px] font-medium leading-none tracking-[-0.02em] tabular-nums text-foreground"
                   }
                 >
                   {tasksSummary.overdueCount}
                 </p>
+                {tasksSummary.overdueTask ? (
+                  <p
+                    className={
+                      tasksSummary.overdueCount > 0
+                        ? "mt-1.5 truncate text-xs font-normal leading-tight text-overdue"
+                        : "mt-1.5 truncate text-xs font-normal leading-tight text-gray-600"
+                    }
+                  >
+                    Overdue: {getTaskDisplayName(tasksSummary.overdueTask)}
+                    {tasksSummary.overdueCount > 1
+                      ? ` +${tasksSummary.overdueCount - 1} more`
+                      : ""}
+                  </p>
+                ) : null}
               </div>
             </div>
 
-            <div className="mt-auto rounded-card border border-gray-200 bg-white p-4">
-              <p className="text-sm font-semibold text-label">
+            <div className="rounded-card border border-gray-200 bg-white px-3 py-2.5">
+              <p className="text-xs font-medium tracking-[0.03em] text-gray-500">
                 Next Due
               </p>
               {tasksSummary.nextTask ? (
-                <p className="mt-2 text-sm font-semibold text-foreground">
+                <p className="mt-1 text-sm font-medium text-foreground">
                   {getTaskDisplayName(tasksSummary.nextTask)}
                 </p>
               ) : (
-                <p className="mt-2 text-sm text-label">No upcoming due dates</p>
+                <p className="mt-1 text-sm font-normal text-gray-600">
+                  No upcoming due dates
+                </p>
               )}
             </div>
           </div>
@@ -640,6 +657,49 @@ export function HomeYourWorkSection({
       </div>
     </HomeCard>
   );
+}
+
+function formatUpcomingEventDate(isoDate: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(isoDate));
+}
+
+function formatUpcomingEventTime(isoDate: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    timeStyle: "short",
+  }).format(new Date(isoDate));
+}
+
+function formatEventCountdown(isoDate: string, now = new Date()): string {
+  const start = new Date(isoDate).getTime();
+  const diffMs = start - now.getTime();
+
+  if (!Number.isFinite(diffMs)) {
+    return "Soon";
+  }
+  if (diffMs <= 0) {
+    return "Happening now";
+  }
+
+  const days = Math.floor(diffMs / 86_400_000);
+  const hours = Math.floor((diffMs % 86_400_000) / 3_600_000);
+
+  if (days > 1) {
+    return `In ${days} days`;
+  }
+  if (days === 1) {
+    return "Tomorrow";
+  }
+  if (hours >= 1) {
+    return `In ${hours} hr`;
+  }
+
+  const minutes = Math.max(1, Math.floor(diffMs / 60_000));
+  return `In ${minutes} min`;
 }
 
 export function HomeUpNextSection({
@@ -653,23 +713,53 @@ export function HomeUpNextSection({
   rsvpLoading: boolean;
   onRsvpStatusChange: (status: RsvpStatus) => void;
 }) {
+  const { member } = useAuth();
+  const canManage = member ? isRoleAtLeast(member.role, "board") : false;
+  const [goingCount, setGoingCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!nextEvent) {
+      setGoingCount(null);
+      return;
+    }
+
+    const eventId = nextEvent.id;
+    let cancelled = false;
+
+    void fetchEventAttendees(eventId)
+      .then((response) => {
+        if (!cancelled) {
+          setGoingCount(response.going_count);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setGoingCount(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [nextEvent?.id]);
+
   if (isLoading) {
     return (
-      <HomeCard className="w-full">
+      <HomeCard className="w-full min-h-[10rem]">
         <div className="ds-icon-label">
           <IconBadge icon={CalendarDays} category="events" size="sm" />
           <h2 className="text-lg font-semibold text-foreground">
             Upcoming Event
           </h2>
         </div>
-        <p className="mt-4 text-sm text-label">Loading events…</p>
+        <p className="mt-4 text-sm font-normal text-gray-600">Loading events…</p>
       </HomeCard>
     );
   }
 
   if (!nextEvent) {
     return (
-      <HomeCard className="w-full">
+      <HomeCard className="w-full min-h-[10rem]">
         <div className="flex items-center justify-between gap-4">
           <div className="ds-icon-label">
             <IconBadge icon={CalendarDays} category="events" size="sm" />
@@ -681,7 +771,7 @@ export function HomeUpNextSection({
             to="/events/calendar"
             className="inline-flex items-center justify-center rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-foreground transition duration-200 hover:border-primary/40 hover:bg-badge-teal-bg"
           >
-            View Calendar
+            View calendar
           </Link>
         </div>
         <EmptyState
@@ -693,79 +783,101 @@ export function HomeUpNextSection({
     );
   }
 
+  const eventPath = eventDetailPath(nextEvent.id);
+  const managePath = `/events/${nextEvent.id}/manage`;
+
   return (
-    <section className="w-full overflow-hidden rounded-card border border-gray-200 bg-white shadow-card transition duration-200 ease-out hover:shadow-card-hover">
-      <div className="flex flex-col lg:flex-row">
-        {/* Left — invitation image */}
-        <div className="relative h-48 w-full shrink-0 overflow-hidden lg:h-auto lg:min-h-[240px] lg:w-[280px] xl:w-[320px]">
-          <img
-            src={nsaCover}
-            alt=""
-            aria-hidden="true"
-            className="absolute inset-0 h-full w-full object-cover object-center"
-          />
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent lg:bg-gradient-to-r lg:from-transparent lg:to-black/10"
-          />
-          <span
-            className={`absolute left-4 top-4 rounded-full px-2.5 py-1 text-xs font-semibold shadow-sm ${EVENT_TYPE_BADGE_CLASS[nextEvent.event_type]}`}
-          >
-            {EVENT_TYPE_LABELS[nextEvent.event_type]}
-          </span>
-        </div>
+    <section className="w-full overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-card transition duration-200 ease-out hover:shadow-card-hover">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch lg:gap-6">
+        <div className="flex min-w-0 flex-1 flex-col gap-4 sm:flex-row sm:items-start">
+          <div className="relative h-28 w-full shrink-0 overflow-hidden rounded-xl sm:h-28 sm:w-36">
+            {nextEvent.event_photo_url ? (
+              <img
+                src={nextEvent.event_photo_url}
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 h-full w-full object-cover object-center"
+              />
+            ) : (
+              <div
+                aria-hidden="true"
+                className="absolute inset-0"
+                style={{
+                  background: `linear-gradient(145deg, ${EVENT_TYPE_COLOR[nextEvent.event_type]}33 0%, ${EVENT_TYPE_COLOR[nextEvent.event_type]} 100%)`,
+                }}
+              />
+            )}
+            <span
+              className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-[11px] font-semibold shadow-sm ${EVENT_TYPE_BADGE_CLASS[nextEvent.event_type]}`}
+            >
+              {EVENT_TYPE_LABELS[nextEvent.event_type]}
+            </span>
+          </div>
 
-        {/* Middle — event details + RSVP */}
-        <div className="flex min-w-0 flex-1 flex-col justify-center p-4 sm:p-6">
-          <p className="text-sm font-semibold text-label">
-            You&apos;re invited
-          </p>
-          <Link
-            to={eventDetailPath(nextEvent.id)}
-            className="mt-2 text-lg font-semibold tracking-tight text-foreground hover:text-primary"
-          >
-            {nextEvent.name}
-          </Link>
+          <div className="min-w-0 flex-1 space-y-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0 space-y-1">
+                <div className="ds-icon-label text-label">
+                  <AppIcon icon={CalendarDays} size="xs" className="text-label" />
+                  <span className="text-xs font-medium uppercase tracking-[0.04em] text-gray-500">
+                    Upcoming Event
+                  </span>
+                </div>
+                <Link
+                  to={eventPath}
+                  className="block text-xl font-semibold tracking-tight text-foreground transition-colors hover:text-primary"
+                >
+                  {nextEvent.name}
+                </Link>
+                <p className="text-sm font-normal text-gray-600">
+                  {formatUpcomingEventDate(nextEvent.starts_at)}
+                  <span className="mx-1.5 text-gray-300" aria-hidden="true">
+                    ·
+                  </span>
+                  {formatUpcomingEventTime(nextEvent.starts_at)}
+                  <span className="mx-1.5 text-gray-300" aria-hidden="true">
+                    ·
+                  </span>
+                  {nextEvent.location?.trim() || "Location TBA"}
+                </p>
+                <p className="text-xs font-normal text-gray-500">
+                  {goingCount === null
+                    ? "Loading RSVPs…"
+                    : `${goingCount} going`}
+                  <span className="mx-1.5 text-gray-300" aria-hidden="true">
+                    ·
+                  </span>
+                  {formatEventCountdown(nextEvent.starts_at)}
+                </p>
+              </div>
 
-          <dl className="mt-4 space-y-2 text-sm">
-            <div className="flex gap-2">
-              <dt className="shrink-0 font-medium text-label">Date</dt>
-              <dd className="text-foreground">
-                {formatEventDateTime(nextEvent.starts_at)}
-              </dd>
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <Link
+                  to="/events/calendar"
+                  className="inline-flex min-h-9 items-center justify-center rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-foreground transition duration-200 hover:border-primary/40 hover:bg-badge-teal-bg"
+                >
+                  View calendar
+                </Link>
+                {canManage ? (
+                  <Link
+                    to={managePath}
+                    className="inline-flex min-h-9 items-center justify-center rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-foreground transition duration-200 hover:border-primary/40 hover:bg-badge-teal-bg"
+                  >
+                    Manage
+                  </Link>
+                ) : null}
+              </div>
             </div>
-            <div className="flex gap-2">
-              <dt className="shrink-0 font-medium text-label">Location</dt>
-              <dd className="text-foreground">
-                {nextEvent.location?.trim() || "Location TBA"}
-              </dd>
-            </div>
-          </dl>
 
-          {nextEvent.description.trim() ? (
-            <p className="mt-4 line-clamp-3 text-sm leading-relaxed text-label">
-              {nextEvent.description}
-            </p>
-          ) : null}
-
-          <EventRsvpButton
-            currentStatus={nextEvent.current_member_rsvp_status}
-            canRsvp
-            loading={rsvpLoading}
-            embedded
-            variant="segmented"
-            onStatusChange={onRsvpStatusChange}
-          />
-        </div>
-
-        {/* Right — calendar CTA */}
-        <div className="flex shrink-0 items-center justify-stretch border-t border-gray-200 p-4 lg:w-44 lg:flex-col lg:justify-center lg:border-l lg:border-t-0 xl:w-48">
-          <Link
-            to="/events/calendar"
-            className="inline-flex w-full items-center justify-center rounded-full bg-primary px-4 py-2 text-center text-sm font-semibold text-white transition duration-200 hover:bg-primary-hover"
-          >
-            View Calendar
-          </Link>
+            <EventRsvpButton
+              currentStatus={nextEvent.current_member_rsvp_status}
+              canRsvp
+              loading={rsvpLoading}
+              embedded
+              variant="segmented"
+              onStatusChange={onRsvpStatusChange}
+            />
+          </div>
         </div>
       </div>
     </section>
@@ -805,8 +917,9 @@ export function HomeBoardMeetingSection({
 
 export type QuickLink = {
   title: string;
-  description: string;
-  to: string;
+  description?: string;
+  to?: string;
+  onClick?: () => void;
   icon: LucideIcon;
   category?: BadgeCategory;
 };
@@ -814,28 +927,64 @@ export type QuickLink = {
 const QUICK_LINK_CATEGORY: Record<string, BadgeCategory> = {
   "Past Events": "events",
   "Past events": "events",
+  "New Event": "events",
   "Member Directory": "members",
   "Member directory": "members",
+  "New Member": "members",
   "Task Oversight": "tasks",
   "Task oversight": "tasks",
   Finance: "finance",
+  Transaction: "finance",
+  Announcement: "announcements",
   "AI assistant": "assistant",
 };
 
-export function QuickLinkCard({ title, description, to, icon, category }: QuickLink) {
+export function QuickLinkCard({
+  title,
+  description,
+  to,
+  onClick,
+  icon,
+  category,
+}: QuickLink) {
   const toneCategory =
     category ?? QUICK_LINK_CATEGORY[title] ?? ("tools" as BadgeCategory);
 
+  const className = [
+    "group flex h-full min-h-[7rem] flex-col items-start gap-3 rounded-2xl",
+    "border border-gray-200 bg-surface-muted/40 p-4 text-left",
+    "transition duration-200 ease-out",
+    "hover:-translate-y-0.5 hover:border-primary/30 hover:bg-white hover:shadow-card-hover",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2",
+  ].join(" ");
+
+  const content = (
+    <>
+      <IconBadge icon={icon} category={toneCategory} size="md" shape="rounded" />
+      <span className="text-sm font-medium text-foreground">{title}</span>
+      {description ? (
+        <span className="line-clamp-2 text-xs font-normal leading-snug text-gray-600">
+          {description}
+        </span>
+      ) : null}
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={className}>
+        {content}
+      </button>
+    );
+  }
+
+  if (!to) {
+    return <div className={className}>{content}</div>;
+  }
+
   return (
-    <Link
-      to={to}
-      className="group flex h-full min-h-[7.5rem] flex-col rounded-card border border-gray-200 bg-surface-muted/60 p-4 transition duration-200 ease-out hover:-translate-y-0.5 hover:border-primary/30 hover:bg-white hover:shadow-card-hover"
-    >
-      <IconBadge icon={icon} category={toneCategory} size="md" />
-      <p className="mt-4 text-sm font-semibold text-foreground">{title}</p>
-      <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-label">
-        {description}
-      </p>
+    <Link to={to} className={className}>
+      {content}
     </Link>
   );
 }
