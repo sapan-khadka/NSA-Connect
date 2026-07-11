@@ -6,6 +6,7 @@ import {
   ClipboardList,
   ListTodo,
   Megaphone,
+  Plus,
   Users,
   Wallet,
 } from "lucide-react";
@@ -25,6 +26,7 @@ import {
 } from "../../lib/home-activities";
 import { getTaskDisplayName, type MyTasksSummary } from "../../lib/home-tasks";
 import type { MeetingSummary } from "../../lib/meetings-api";
+import { formatRoleLabel } from "../../lib/roles";
 import { EventRsvpButton } from "../EventRsvpButton";
 import { AppIcon } from "../ui/AppIcon";
 import { ArrowLink } from "../ui/ArrowLink";
@@ -58,20 +60,128 @@ function activityVisual(activity: HomeActivity): {
   );
 }
 
+function greetingForNow(now = new Date()): string {
+  const hour = now.getHours();
+  if (hour < 12) {
+    return "Good Morning";
+  }
+  if (hour < 17) {
+    return "Good Afternoon";
+  }
+  return "Good Evening";
+}
+
+function startOfLocalDay(date: Date): number {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+}
+
+function formatNextEventChip(
+  event: EventResponse,
+  now = new Date(),
+): string {
+  const start = new Date(event.starts_at);
+  if (Number.isNaN(start.getTime())) {
+    return event.name;
+  }
+
+  const dayMs = 24 * 60 * 60 * 1000;
+  const diffDays = Math.round(
+    (startOfLocalDay(start) - startOfLocalDay(now)) / dayMs,
+  );
+
+  if (diffDays === 0) {
+    return `${event.name} today`;
+  }
+  if (diffDays === 1) {
+    return `${event.name} tomorrow`;
+  }
+  if (diffDays > 1 && diffDays < 7) {
+    return `${event.name} ${start.toLocaleDateString(undefined, { weekday: "short" })}`;
+  }
+  return event.name;
+}
+
+function buildHeroStatusChips({
+  pendingApprovalCount,
+  nextEvent,
+  openTaskCount,
+  budgetBalance,
+  showBudgetChip,
+}: {
+  pendingApprovalCount: number;
+  nextEvent: EventResponse | null;
+  openTaskCount: number;
+  budgetBalance: string | null;
+  showBudgetChip: boolean;
+}): Array<{ id: string; label: string; to?: string }> {
+  const chips: Array<{ id: string; label: string; to?: string }> = [];
+
+  if (pendingApprovalCount > 0) {
+    chips.push({
+      id: "approvals",
+      label: `${pendingApprovalCount} approval${pendingApprovalCount === 1 ? "" : "s"} waiting`,
+      to: FINANCE_APPROVALS_PATH,
+    });
+  }
+
+  if (nextEvent) {
+    chips.push({
+      id: "next-event",
+      label: formatNextEventChip(nextEvent),
+      to: eventDetailPath(nextEvent.id),
+    });
+  }
+
+  if (showBudgetChip && budgetBalance != null && budgetBalance !== "") {
+    const amount = Number(budgetBalance);
+    chips.push({
+      id: "budget",
+      label:
+        Number.isFinite(amount) && amount >= 0
+          ? "Budget healthy"
+          : "Budget needs attention",
+      to: "/finance",
+    });
+  }
+
+  if (openTaskCount > 0) {
+    chips.push({
+      id: "tasks",
+      label: `${openTaskCount} assigned task${openTaskCount === 1 ? "" : "s"}`,
+    });
+  }
+
+  return chips.slice(0, 4);
+}
+
 export function HomeWelcomeBanner({
   member,
-  showLogTransaction,
-  onLogTransaction,
   pendingApprovalCount = 0,
+  nextEvent = null,
+  openTaskCount = 0,
+  budgetBalance = null,
+  showBudgetChip = false,
 }: {
   member: MemberResponse;
-  showLogTransaction: boolean;
-  onLogTransaction: () => void;
   pendingApprovalCount?: number;
+  nextEvent?: EventResponse | null;
+  openTaskCount?: number;
+  budgetBalance?: string | null;
+  showBudgetChip?: boolean;
 }) {
+  const firstName = member.full_name.split(/\s+/)[0] ?? member.full_name;
+  const roleLabel = formatRoleLabel(member.role);
+  const chips = buildHeroStatusChips({
+    pendingApprovalCount,
+    nextEvent,
+    openTaskCount,
+    budgetBalance,
+    showBudgetChip,
+  });
+
   return (
     <section
-      className="relative h-[200px] overflow-hidden rounded-card"
+      className="relative min-h-[220px] overflow-hidden rounded-card"
       aria-label="Welcome"
     >
       <img
@@ -82,41 +192,63 @@ export function HomeWelcomeBanner({
       />
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-black/55"
+        className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/35"
       />
-      <div className="relative flex h-full flex-col justify-center gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
-        <div className="min-w-0 text-white">
-          <h1 className="text-[32px] font-bold leading-tight tracking-tight text-white">
-            Welcome back, {member.full_name}{" "}
+      <div className="relative flex min-h-[220px] flex-col justify-between gap-6 p-8 sm:flex-row sm:items-center sm:gap-8">
+        <div className="min-w-0 flex-1 text-white">
+          <h1 className="text-[28px] font-bold leading-tight tracking-tight text-white sm:text-[32px]">
+            {greetingForNow()}, {firstName}{" "}
             <span aria-hidden="true">👋</span>
           </h1>
-          <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/80">
-            Here&apos;s what&apos;s happening with your organization today.
+          <p className="mt-1.5 text-sm font-medium text-white/75">
+            {roleLabel}
+            <span className="mx-1.5 text-white/40" aria-hidden="true">
+              •
+            </span>
+            NSA Connect
           </p>
+          <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/85">
+            Here&apos;s what&apos;s happening today.
+          </p>
+
+          {chips.length > 0 ? (
+            <ul className="mt-5 flex flex-wrap gap-2" aria-label="Today at a glance">
+              {chips.map((chip) => (
+                <li key={chip.id}>
+                  {chip.to ? (
+                    <Link
+                      to={chip.to}
+                      className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm transition hover:bg-white/18"
+                    >
+                      {chip.label}
+                    </Link>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm">
+                      {chip.label}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
 
-        {showLogTransaction ? (
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={onLogTransaction}
-              className="inline-flex items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition hover:bg-white/90"
-            >
-              Log Transaction
-            </button>
-            <Link
-              to={FINANCE_APPROVALS_PATH}
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-white/35 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/15"
-            >
-              Review Approvals
-              {pendingApprovalCount > 0 ? (
-                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1.5 text-xs font-semibold text-foreground">
-                  {pendingApprovalCount}
-                </span>
-              ) : null}
-            </Link>
-          </div>
-        ) : null}
+        <div className="flex shrink-0 flex-col gap-2.5 sm:items-stretch">
+          <Link
+            to="/events/calendar"
+            className="inline-flex items-center justify-center gap-1.5 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-white/90"
+          >
+            <AppIcon icon={Plus} size="sm" className="text-current" />
+            New Event
+          </Link>
+          <Link
+            to="/announcements"
+            className="inline-flex items-center justify-center gap-1.5 rounded-full border border-white/35 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/15"
+          >
+            <AppIcon icon={Plus} size="sm" className="text-current" />
+            Announcement
+          </Link>
+        </div>
       </div>
     </section>
   );

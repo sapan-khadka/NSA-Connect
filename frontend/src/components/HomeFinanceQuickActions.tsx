@@ -6,7 +6,7 @@ import { FINANCE_APPROVALS_PATH } from "../lib/finance-routes";
 type HomeFinanceQuickActionsProps = {
   pendingApprovalCount: number;
   onLogTransaction: () => void;
-  /** When true, hide the Log transaction button (already on the welcome banner). */
+  /** When true, hide the Log transaction button. */
   compact?: boolean;
 };
 

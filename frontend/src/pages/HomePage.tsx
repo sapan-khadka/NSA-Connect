@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   Archive,
   ClipboardList,
@@ -29,6 +29,8 @@ import {
 import { HomeCard } from "../components/ui/HomeCard";
 import { IconBadge } from "../components/ui/IconBadge";
 import { Modal } from "../components/ui/Modal";
+import { Card } from "../design-system/components/Card";
+import { Divider } from "../design-system/components/Divider";
 import { useAuth } from "../context/useAuth";
 import { useIsLgUp } from "../hooks/useMediaQuery";
 import type { MemberResponse } from "../lib/auth-api";
@@ -66,6 +68,7 @@ import {
   canViewTaskOversight,
   isRoleAtLeast,
 } from "../lib/roles";
+import { AppIcon } from "../components/ui/AppIcon";
 
 function findNextNonMeetingEvent(events: EventResponse[]): EventResponse | null {
   return events.find((event) => event.event_type !== "meeting") ?? null;
@@ -194,6 +197,27 @@ type MemberHomeLayoutProps = {
   onLogTransaction: () => void;
 };
 
+function DashboardSection({
+  label,
+  children,
+  className = "",
+}: {
+  label?: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={["space-y-3", className].filter(Boolean).join(" ")}>
+      {label ? (
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-label">
+          {label}
+        </h2>
+      ) : null}
+      {children}
+    </section>
+  );
+}
+
 function ToolsForRoleSection({ quickLinks }: { quickLinks: QuickLink[] }) {
   if (quickLinks.length === 0) {
     return null;
@@ -213,6 +237,39 @@ function ToolsForRoleSection({ quickLinks }: { quickLinks: QuickLink[] }) {
         ))}
       </ul>
     </HomeCard>
+  );
+}
+
+/** Layout shell for the assistant entry — reuses design-system Card, not a new feature. */
+function HomeAssistantPanel() {
+  return (
+    <Card
+      as="div"
+      padding="md"
+      interactive
+      className="flex h-full flex-col justify-between"
+    >
+      <div className="space-y-3">
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-badge-teal-bg text-primary">
+          <AppIcon icon={Sparkles} size="md" className="text-current" />
+        </span>
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold tracking-headline text-foreground">
+            AI Assistant
+          </h2>
+          <p className="text-sm leading-relaxed text-label">
+            Ask about events, dues, members, and how to get things done in NSA
+            Connect.
+          </p>
+        </div>
+      </div>
+      <Link
+        to="/assistant"
+        className="mt-6 inline-flex items-center justify-center rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-hover"
+      >
+        Open assistant
+      </Link>
+    </Card>
   );
 }
 
@@ -241,77 +298,109 @@ function DesktopMemberHomeLayout({
   onLogTransaction,
 }: MemberHomeLayoutProps) {
   return (
-    <div className="space-y-6">
-      <HomeWelcomeBanner
-        member={member}
-        showLogTransaction={showFinanceQuickActions}
-        onLogTransaction={onLogTransaction}
-        pendingApprovalCount={financePendingCount}
-      />
-
-      {showFinanceQuickActions ? (
-        <HomeFinanceQuickActions
-          pendingApprovalCount={financePendingCount}
-          onLogTransaction={onLogTransaction}
-          compact
-        />
-      ) : null}
-
-      {loadError ? (
-        <div role="alert" className="ds-alert-banner">
-          {loadError}
-        </div>
-      ) : null}
-
-      <HomeStatCards
-        tasksSummary={tasksSummary}
-        upcomingCount={upcomingCount}
-        nextEvent={nextEvent}
-        memberCount={memberCount}
-        budgetBalance={budgetBalance}
-        tasksPath={tasksPath}
-        canViewMembers={canViewMembers}
-        canViewFinance={canViewFinance}
-        isLoading={isLoading}
-      />
-
-      <div className="grid items-stretch gap-4 lg:grid-cols-3 lg:min-h-[28rem]">
-        <HomeAnnouncementsSection previewLimit={2} />
-        <HomeActivitySection
-          activities={activities}
-          isLoading={isLoading}
-          tasksPath={tasksPath}
-          scrollable
-        />
-        <HomeYourWorkSection
+    <div className="mx-auto w-full max-w-[1440px] space-y-8">
+      {/* 1. Hero */}
+      <DashboardSection>
+        <HomeWelcomeBanner
           member={member}
-          tasksSummary={tasksSummary}
-          tasksPath={tasksPath}
-          isLoading={isLoading}
-        />
-      </div>
-
-      <div className="space-y-6">
-        <HomeUpNextSection
+          pendingApprovalCount={financePendingCount}
           nextEvent={nextEvent}
-          isLoading={isLoading}
-          rsvpLoading={rsvpLoading}
-          onRsvpStatusChange={onRsvpStatusChange}
+          openTaskCount={tasksSummary.openCount}
+          budgetBalance={budgetBalance}
+          showBudgetChip={canViewFinance}
         />
-        {isBoardMember && nextBoardMeeting ? (
-          <HomeBoardMeetingSection
-            meeting={nextBoardMeeting}
-            attendeeSummary={meetingAttendeeSummary}
-          />
+        {loadError ? (
+          <div role="alert" className="ds-alert-banner">
+            {loadError}
+          </div>
         ) : null}
-      </div>
+      </DashboardSection>
 
-      <div className="grid items-stretch gap-4 lg:grid-cols-2">
-        <HomeProfileCard member={member} />
-        <ToolsForRoleSection quickLinks={quickLinks} />
-      </div>
+      {/* 2. KPI cards */}
+      <DashboardSection label="Overview">
+        <HomeStatCards
+          tasksSummary={tasksSummary}
+          upcomingCount={upcomingCount}
+          nextEvent={nextEvent}
+          memberCount={memberCount}
+          budgetBalance={budgetBalance}
+          tasksPath={tasksPath}
+          canViewMembers={canViewMembers}
+          canViewFinance={canViewFinance}
+          isLoading={isLoading}
+        />
+      </DashboardSection>
 
-      {recentMemories ? <RecentMemoriesStrip memories={recentMemories} /> : null}
+      {/* 3. Announcements + Activity */}
+      <DashboardSection label="Updates">
+        <div className="grid items-stretch gap-6 lg:grid-cols-2">
+          <HomeAnnouncementsSection previewLimit={2} />
+          <HomeActivitySection
+            activities={activities}
+            isLoading={isLoading}
+            tasksPath={tasksPath}
+            scrollable
+          />
+        </div>
+      </DashboardSection>
+
+      {/* 4. Upcoming event (full width) */}
+      <DashboardSection label="Upcoming">
+        <div className="space-y-6">
+          <HomeUpNextSection
+            nextEvent={nextEvent}
+            isLoading={isLoading}
+            rsvpLoading={rsvpLoading}
+            onRsvpStatusChange={onRsvpStatusChange}
+          />
+          {isBoardMember && nextBoardMeeting ? (
+            <HomeBoardMeetingSection
+              meeting={nextBoardMeeting}
+              attendeeSummary={meetingAttendeeSummary}
+            />
+          ) : null}
+          <HomeYourWorkSection
+            member={member}
+            tasksSummary={tasksSummary}
+            tasksPath={tasksPath}
+            isLoading={isLoading}
+          />
+        </div>
+      </DashboardSection>
+
+      <Divider />
+
+      {/* 5. Quick Actions + AI Assistant */}
+      <DashboardSection label="Actions">
+        <div className="grid items-stretch gap-6 lg:grid-cols-2">
+          <div className="flex min-h-0 flex-col gap-6">
+            {showFinanceQuickActions ? (
+              <HomeFinanceQuickActions
+                pendingApprovalCount={financePendingCount}
+                onLogTransaction={onLogTransaction}
+              />
+            ) : null}
+            <ToolsForRoleSection quickLinks={quickLinks} />
+          </div>
+          <HomeAssistantPanel />
+        </div>
+      </DashboardSection>
+
+      {/* 6. Profile */}
+      <DashboardSection label="Account">
+        <div className="max-w-xl">
+          <HomeProfileCard member={member} />
+        </div>
+      </DashboardSection>
+
+      {recentMemories ? (
+        <>
+          <Divider />
+          <DashboardSection>
+            <RecentMemoriesStrip memories={recentMemories} />
+          </DashboardSection>
+        </>
+      ) : null}
     </div>
   );
 }
@@ -342,77 +431,101 @@ function MobileMemberHomeLayout({
   onLogTransaction,
 }: MemberHomeLayoutProps) {
   return (
-    <div className="space-y-6">
-      <HomeWelcomeBanner
-        member={member}
-        showLogTransaction={showFinanceQuickActions}
-        onLogTransaction={onLogTransaction}
-        pendingApprovalCount={financePendingCount}
-      />
-
-      {loadError ? (
-        <div role="alert" className="ds-alert-banner">
-          {loadError}
-        </div>
-      ) : null}
-
-      <HomeStatCards
-        tasksSummary={tasksSummary}
-        upcomingCount={upcomingCount}
-        nextEvent={nextEvent}
-        memberCount={memberCount}
-        budgetBalance={budgetBalance}
-        tasksPath={tasksPath}
-        canViewMembers={canViewMembers}
-        canViewFinance={canViewFinance}
-        isLoading={isLoading}
-      />
-
-      <HomeUpNextSection
-        nextEvent={nextEvent}
-        isLoading={isLoading}
-        rsvpLoading={rsvpLoading}
-        onRsvpStatusChange={onRsvpStatusChange}
-      />
-
-      <HomeYourWorkSection
-        member={member}
-        tasksSummary={tasksSummary}
-        tasksPath={tasksPath}
-        isLoading={isLoading}
-      />
-
-      <HomeActivitySection
-        activities={mobileActivityPreview}
-        isLoading={isLoading}
-        tasksPath={tasksPath}
-        truncatedFromTotal={activities.length}
-        scrollable={false}
-      />
-
-      {showFinanceQuickActions ? (
-        <HomeFinanceQuickActions
+    <div className="space-y-8">
+      {/* 1. Hero */}
+      <DashboardSection>
+        <HomeWelcomeBanner
+          member={member}
           pendingApprovalCount={financePendingCount}
-          onLogTransaction={onLogTransaction}
-          compact
+          nextEvent={nextEvent}
+          openTaskCount={tasksSummary.openCount}
+          budgetBalance={budgetBalance}
+          showBudgetChip={canViewFinance}
         />
-      ) : null}
+        {loadError ? (
+          <div role="alert" className="ds-alert-banner">
+            {loadError}
+          </div>
+        ) : null}
+      </DashboardSection>
 
-      {isBoardMember && nextBoardMeeting ? (
-        <HomeBoardMeetingSection
-          meeting={nextBoardMeeting}
-          attendeeSummary={meetingAttendeeSummary}
+      {/* 2. KPI cards */}
+      <DashboardSection label="Overview">
+        <HomeStatCards
+          tasksSummary={tasksSummary}
+          upcomingCount={upcomingCount}
+          nextEvent={nextEvent}
+          memberCount={memberCount}
+          budgetBalance={budgetBalance}
+          tasksPath={tasksPath}
+          canViewMembers={canViewMembers}
+          canViewFinance={canViewFinance}
+          isLoading={isLoading}
         />
-      ) : null}
+      </DashboardSection>
 
-      <HomeAnnouncementsSection previewLimit={2} />
+      {/* 3. Announcements + Activity */}
+      <DashboardSection label="Updates">
+        <div className="space-y-6">
+          <HomeAnnouncementsSection previewLimit={2} />
+          <HomeActivitySection
+            activities={mobileActivityPreview}
+            isLoading={isLoading}
+            tasksPath={tasksPath}
+            truncatedFromTotal={activities.length}
+            scrollable={false}
+          />
+        </div>
+      </DashboardSection>
 
-      <div className="grid items-stretch gap-4 sm:grid-cols-2">
+      {/* 4. Upcoming event */}
+      <DashboardSection label="Upcoming">
+        <div className="space-y-6">
+          <HomeUpNextSection
+            nextEvent={nextEvent}
+            isLoading={isLoading}
+            rsvpLoading={rsvpLoading}
+            onRsvpStatusChange={onRsvpStatusChange}
+          />
+          {isBoardMember && nextBoardMeeting ? (
+            <HomeBoardMeetingSection
+              meeting={nextBoardMeeting}
+              attendeeSummary={meetingAttendeeSummary}
+            />
+          ) : null}
+          <HomeYourWorkSection
+            member={member}
+            tasksSummary={tasksSummary}
+            tasksPath={tasksPath}
+            isLoading={isLoading}
+          />
+        </div>
+      </DashboardSection>
+
+      {/* 5. Quick Actions + AI Assistant */}
+      <DashboardSection label="Actions">
+        <div className="space-y-6">
+          {showFinanceQuickActions ? (
+            <HomeFinanceQuickActions
+              pendingApprovalCount={financePendingCount}
+              onLogTransaction={onLogTransaction}
+            />
+          ) : null}
+          <ToolsForRoleSection quickLinks={quickLinks} />
+          <HomeAssistantPanel />
+        </div>
+      </DashboardSection>
+
+      {/* 6. Profile */}
+      <DashboardSection label="Account">
         <HomeProfileCard member={member} />
-        <ToolsForRoleSection quickLinks={quickLinks} />
-      </div>
+      </DashboardSection>
 
-      {recentMemories ? <RecentMemoriesStrip memories={recentMemories} /> : null}
+      {recentMemories ? (
+        <DashboardSection>
+          <RecentMemoriesStrip memories={recentMemories} />
+        </DashboardSection>
+      ) : null}
     </div>
   );
 }

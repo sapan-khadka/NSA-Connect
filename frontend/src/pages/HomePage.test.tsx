@@ -218,7 +218,7 @@ describe("HomePage", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: /Welcome back, Test User/,
+        name: /Good (Morning|Afternoon|Evening), Test/,
       }),
     ).toBeInTheDocument();
     expect(
@@ -242,7 +242,7 @@ describe("HomePage", () => {
 
     expect(screen.getByText("You're invited")).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Dashain Celebration" }),
+      screen.getAllByRole("link", { name: "Dashain Celebration" })[0],
     ).toHaveAttribute("href", "/events/5");
     expect(screen.getByRole("link", { name: /View Calendar/i })).toHaveAttribute(
       "href",
@@ -322,8 +322,8 @@ describe("HomePage", () => {
     );
 
     expect(
-      await screen.findByRole("link", { name: "Dashain Celebration" }),
-    ).toBeInTheDocument();
+      await screen.findAllByRole("link", { name: "Dashain Celebration" }),
+    ).not.toHaveLength(0);
     expect(screen.queryByRole("link", { name: "April Board Meeting" })).not.toBeInTheDocument();
   });
 
@@ -439,7 +439,7 @@ describe("HomePage", () => {
 
     expect(screen.getByText("Task Assigned")).toBeInTheDocument();
     expect(screen.getByText("Expense Approved")).toBeInTheDocument();
-    expect(screen.getByText(/assigned task/)).toBeInTheDocument();
+    expect(screen.getAllByText(/assigned task/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/approved this week/)).toBeInTheDocument();
   });
 
