@@ -31,7 +31,7 @@ redis==5.2.1
 cloudinary==1.44.2
 anthropic==0.112.0
 pgvector==0.4.2
-pypdf==5.9.0
+pypdf==6.14.2
 tiktoken==0.13.0
 openai==1.109.1
 httpx==0.28.1
