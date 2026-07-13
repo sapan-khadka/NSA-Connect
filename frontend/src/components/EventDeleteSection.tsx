@@ -8,11 +8,14 @@ import { Card } from "./ui/Card";
 type EventDeleteSectionProps = {
   eventId: number;
   eventName: string;
+  /** Full-width danger zone styling for the manage dashboard. */
+  dangerZone?: boolean;
 };
 
 export function EventDeleteSection({
   eventId,
   eventName,
+  dangerZone = false,
 }: EventDeleteSectionProps) {
   const navigate = useNavigate();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -40,8 +43,21 @@ export function EventDeleteSection({
   }
 
   return (
-    <Card padding="md" className="border border-overdue/30">
-      <h2 className="text-lg font-light tracking-subhead text-foreground">
+    <Card
+      padding="md"
+      className={
+        dangerZone
+          ? "border-2 border-overdue/40 bg-overdue/5"
+          : "border border-overdue/30"
+      }
+    >
+      <h2
+        className={
+          dangerZone
+            ? "text-base font-medium text-overdue"
+            : "text-lg font-light tracking-subhead text-foreground"
+        }
+      >
         Delete event
       </h2>
       <p className="mt-2 text-sm text-label">

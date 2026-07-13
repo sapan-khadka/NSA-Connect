@@ -49,7 +49,7 @@ describe("AccountMenu", () => {
 
     await user.click(screen.getByRole("button", { name: "Account menu for Mukesh Mahato" }));
 
-    expect(screen.getByRole("menuitem", { name: "Account settings" })).toHaveAttribute(
+    expect(screen.getByRole("menuitem", { name: "Profile" })).toHaveAttribute(
       "href",
       "/profile",
     );

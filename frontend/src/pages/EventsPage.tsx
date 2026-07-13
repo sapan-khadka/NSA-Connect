@@ -34,6 +34,7 @@ export function EventsPage() {
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   const [selectedDate, setSelectedDate] = useState<string | null>(todayIso);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+  const [panelMode, setPanelMode] = useState<"upcoming" | "detail">("upcoming");
   const [searchQuery, setSearchQuery] = useState("");
   const [events, setEvents] = useState<EventResponse[]>([]);
   const [yearEvents, setYearEvents] = useState<EventResponse[]>([]);
@@ -68,6 +69,7 @@ export function EventsPage() {
       const eventId = Number(eventParam);
       if (Number.isFinite(eventId)) {
         setSelectedEventId(eventId);
+        setPanelMode("detail");
       }
     }
   }, [searchParams]);
@@ -228,8 +230,9 @@ export function EventsPage() {
       return;
     }
 
+    // Keep deep-linked / in-flight selections while month data catches up.
+    // Empty-day clicks clear selection in handleSelectDate instead.
     if (selectedDayEvents.length === 0) {
-      setSelectedEventId(null);
       return;
     }
 
@@ -352,6 +355,16 @@ export function EventsPage() {
 
   function handleSelectDate(isoDate: string) {
     setSelectedDate(isoDate);
+    const dayEvents = events.filter(
+      (event) => toLocalIsoDate(new Date(event.starts_at)) === isoDate,
+    );
+    if (dayEvents.length === 0) {
+      setSelectedEventId(null);
+      setPanelMode("upcoming");
+      return;
+    }
+    setSelectedEventId(dayEvents[0].id);
+    setPanelMode("detail");
   }
 
   const navigateToEvent = useCallback((event: EventResponse) => {
@@ -361,8 +374,13 @@ export function EventsPage() {
     setViewMode("month");
     setSelectedDate(toLocalIsoDate(eventDate));
     setSelectedEventId(event.id);
+    setPanelMode("detail");
     setSearchQuery("");
   }, []);
+
+  function handleBackToUpcoming() {
+    setPanelMode("upcoming");
+  }
 
   const handleEventCreated = useCallback(async (event: EventResponse) => {
     const eventDate = new Date(event.starts_at);
@@ -374,6 +392,7 @@ export function EventsPage() {
     setViewMode("month");
     setSelectedDate(toLocalIsoDate(eventDate));
     setSelectedEventId(event.id);
+    setPanelMode("detail");
     setError(null);
 
     try {
@@ -460,6 +479,8 @@ export function EventsPage() {
 
         <div className="ds-mobile-edge-section order-1 min-w-0 xl:order-2">
         <EventDayPanel
+          panelMode={panelMode}
+          onBackToUpcoming={handleBackToUpcoming}
           selectedDate={selectedDate}
           dayEvents={selectedDayEvents}
           selectedEventId={selectedEventId}

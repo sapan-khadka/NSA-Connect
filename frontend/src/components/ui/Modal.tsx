@@ -1,13 +1,28 @@
 import { useEffect, useId, type ReactNode } from "react";
 
+type ModalSize = "md" | "lg" | "xl";
+
 type ModalProps = {
   open: boolean;
   title: string;
   onClose: () => void;
   children: ReactNode;
+  size?: ModalSize;
 };
 
-export function Modal({ open, title, onClose, children }: ModalProps) {
+const SIZE_CLASS: Record<ModalSize, string> = {
+  md: "max-w-2xl",
+  lg: "max-w-3xl",
+  xl: "max-w-5xl",
+};
+
+export function Modal({
+  open,
+  title,
+  onClose,
+  children,
+  size = "md",
+}: ModalProps) {
   const titleId = useId();
 
   useEffect(() => {
@@ -47,7 +62,10 @@ export function Modal({ open, title, onClose, children }: ModalProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative z-10 flex max-h-[min(90vh,48rem)] w-full max-w-2xl flex-col overflow-hidden rounded-card border border-gray-200 bg-surface-card shadow-card"
+        className={[
+          "relative z-10 flex max-h-[min(90vh,48rem)] w-full flex-col overflow-hidden rounded-card border border-gray-200 bg-surface-card shadow-card",
+          SIZE_CLASS[size],
+        ].join(" ")}
       >
         <div className="flex items-center justify-between gap-4 border-b border-gray-100 px-5 py-4">
           <h2 id={titleId} className="text-base font-medium text-foreground">
@@ -61,7 +79,7 @@ export function Modal({ open, title, onClose, children }: ModalProps) {
             Close
           </button>
         </div>
-        <div className="overflow-y-auto px-5 py-5">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">{children}</div>
       </div>
     </div>
   );

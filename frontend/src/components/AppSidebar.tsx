@@ -401,35 +401,22 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       </nav>
 
       <div className="shrink-0 space-y-2.5 border-t border-gray-100 px-2.5 pb-3 pt-3">
-        <div className="rounded-lg border border-gray-200/80 bg-surface-muted/70 p-3">
-          <div className="flex items-start gap-2.5">
-            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-badge-teal-bg text-primary">
-              <AppIcon icon={Sparkles} size="sm" className="text-current" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-[13px] font-semibold text-foreground">
-                Need help?
-              </p>
-              <p className="mt-0.5 text-[11px] leading-snug text-label">
-                Ask the assistant about events, dues, and member tools.
-              </p>
-            </div>
-          </div>
-          <Link
-            to="/assistant"
-            onClick={onNavigate}
-            className={[
-              "mt-2.5 inline-flex w-full items-center justify-center gap-1 rounded-md",
-              "bg-surface-card px-2.5 py-1.5 text-[12px] font-semibold text-primary",
-              "ring-1 ring-inset ring-gray-200/90 transition duration-150",
-              "hover:bg-badge-teal-bg hover:ring-primary/20",
-              focusRingClass,
-            ].join(" ")}
-          >
-            Ask Assistant
-            <AppIcon icon={ChevronRight} size="xs" className="text-current" />
-          </Link>
-        </div>
+        <Link
+          to="/assistant"
+          onClick={onNavigate}
+          className={[
+            "inline-flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2",
+            "text-[13px] font-medium text-label transition duration-150",
+            "hover:bg-surface-muted hover:text-foreground",
+            focusRingClass,
+          ].join(" ")}
+        >
+          <span className="inline-flex items-center gap-2">
+            <AppIcon icon={Sparkles} size="sm" className="text-primary" />
+            Need help?
+          </span>
+          <AppIcon icon={ChevronRight} size="xs" className="text-current" />
+        </Link>
 
         {member ? (
           <SidebarAccountMenu

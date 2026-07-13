@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { Button } from "./ui/Button";
-import { Card } from "./ui/Card";
+import { HomeCard } from "./ui/HomeCard";
 import { inputFieldClassName } from "./ui/Input";
 import { getApiErrorMessage } from "../lib/auth-api";
 import {
@@ -18,11 +18,14 @@ const inputClassName = `${inputFieldClassName} mt-1`;
 type EventManageScheduleFieldsProps = {
   event: EventDetailResponse;
   onUpdated: (event: EventDetailResponse) => void;
+  /** Compact Home-style card (manage dashboard). */
+  compact?: boolean;
 };
 
 export function EventManageScheduleFields({
   event,
   onUpdated,
+  compact = false,
 }: EventManageScheduleFieldsProps) {
   const initial = splitEventDateTime(event.starts_at);
   const [eventDate, setEventDate] = useState(initial.event_date);
@@ -85,16 +88,32 @@ export function EventManageScheduleFields({
     }
   }
 
-  return (
-    <Card padding="none" className="p-4 sm:p-6">
-      <h2 className="text-base font-medium text-foreground">Schedule</h2>
-      <p className="mt-1 text-sm text-label">
-        Currently scheduled for {formatEventDateTime(event.starts_at)}.
-      </p>
+  const fields = (
+    <>
+      {!compact ? (
+        <p className="mt-1 text-sm text-label">
+          Currently scheduled for {formatEventDateTime(event.starts_at)}.
+        </p>
+      ) : (
+        <p className="mt-1 text-xs text-gray-500">
+          {formatEventDateTime(event.starts_at)}
+        </p>
+      )}
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      <div
+        className={
+          compact ? "mt-3 grid grid-cols-2 gap-2" : "mt-4 grid gap-4 sm:grid-cols-2"
+        }
+      >
         <div>
-          <label htmlFor="manage-event-date" className="block text-sm font-medium text-foreground">
+          <label
+            htmlFor="manage-event-date"
+            className={
+              compact
+                ? "block text-xs font-medium text-label"
+                : "block text-sm font-medium text-foreground"
+            }
+          >
             Date
           </label>
           <input
@@ -115,7 +134,14 @@ export function EventManageScheduleFields({
         </div>
 
         <div>
-          <label htmlFor="manage-event-time" className="block text-sm font-medium text-foreground">
+          <label
+            htmlFor="manage-event-time"
+            className={
+              compact
+                ? "block text-xs font-medium text-label"
+                : "block text-sm font-medium text-foreground"
+            }
+          >
             Start time
           </label>
           <input
@@ -141,16 +167,33 @@ export function EventManageScheduleFields({
         </p>
       ) : null}
 
-      <div className="mt-4 flex justify-end">
+      <div className={compact ? "mt-3 flex justify-end" : "mt-4 flex justify-end"}>
         <Button
           type="button"
+          size={compact ? "sm" : "md"}
           disabled={!isDirty || isSaving}
           loading={isSaving}
           onClick={() => void handleSave()}
         >
-          Save schedule
+          {compact ? "Save" : "Save schedule"}
         </Button>
       </div>
-    </Card>
+    </>
+  );
+
+  if (compact) {
+    return (
+      <HomeCard padding="sm" className="flex h-full min-h-0 flex-col home-surface-quiet">
+        <h2 className="home-section-title">Schedule</h2>
+        {fields}
+      </HomeCard>
+    );
+  }
+
+  return (
+    <HomeCard padding="md" className="home-surface-quiet">
+      <h2 className="text-base font-medium text-foreground">Schedule</h2>
+      {fields}
+    </HomeCard>
   );
 }

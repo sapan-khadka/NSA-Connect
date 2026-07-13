@@ -1,117 +1,45 @@
-import { useEffect, useState } from "react";
-import {
-  Archive,
-  ClipboardList,
-  Users,
-  Wallet,
-} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { CoverBanner } from "../components/CoverBanner";
-import { HomeDiscussionSection } from "../components/HomeDiscussionSection";
 import { HomeHeroBrand } from "../components/AppLogo";
-import { HomeProfileCard } from "../components/HomeProfileCard";
-import { LogFinanceEntryForm } from "../components/LogFinanceEntryForm";
 import {
   HomeStatCards,
   HomeUpNextSection,
   HomeWelcomeBanner,
   HomeYourWorkSection,
-  type QuickLink,
 } from "../components/home/HomeMemberSections";
-import { HomeCard } from "../components/ui/HomeCard";
-import { IconBadge } from "../components/ui/IconBadge";
-import { Modal } from "../components/ui/Modal";
+import {
+  HomeBoardFeed,
+  HomeCampusAiCard,
+} from "../components/home/HomeWorkspacePanels";
 import { useAuth } from "../context/useAuth";
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/auth-api";
-import { fetchMyEventTasks } from "../lib/event-tasks-api";
-import { applyRsvpStatus, formatCompactAttendeeSummary } from "../lib/event-rsvp";
+import { fetchMyEventTasks, updateEventTask } from "../lib/event-tasks-api";
+import type { EventTaskResponse } from "../lib/event-tasks-api";
+import { applyRsvpStatus } from "../lib/event-rsvp";
 import {
-  fetchEventAttendees,
-  fetchEvents,
   fetchUpcomingEvents,
   updateEventRsvp,
   type EventResponse,
   type RsvpStatus,
 } from "../lib/events-api";
-import { isEventFinanceEditable } from "../lib/event-finance";
 import {
   fetchFinanceSummary,
   fetchPendingFinanceChangeRequests,
 } from "../lib/finance-api";
 import { getMyTasksPath, summarizeMyTasks } from "../lib/home-tasks";
-import { fetchMembers } from "../lib/members-api";
-import { fetchMeetings, type MeetingSummary } from "../lib/meetings-api";
-import { fetchRecentMemories, type RecentMemoriesPreview } from "../lib/recent-memories";
+import { fetchMembers, fetchPendingMembers } from "../lib/members-api";
 import {
   canAccessFinance,
   canBrowseMemberDirectory,
   canManageTreasury,
   canViewMemberDirectory,
-  canViewTaskOversight,
-  isRoleAtLeast,
 } from "../lib/roles";
 
 function findNextNonMeetingEvent(events: EventResponse[]): EventResponse | null {
   return events.find((event) => event.event_type !== "meeting") ?? null;
-}
-
-function findNextBoardMeeting(meetings: MeetingSummary[]): MeetingSummary | null {
-  return (
-    meetings
-      .filter((meeting) => !meeting.is_past)
-      .sort(
-        (left, right) =>
-          new Date(left.starts_at).getTime() - new Date(right.starts_at).getTime(),
-      )[0] ?? null
-  );
-}
-
-function buildRoleTools(member: MemberResponse): QuickLink[] {
-  const links: QuickLink[] = [];
-
-  if (isRoleAtLeast(member.role, "board")) {
-    links.push({
-      title: "Past Events",
-      description: "Close-out status",
-      to: "/events/past",
-      icon: Archive,
-      category: "events",
-    });
-  }
-
-  if (canViewMemberDirectory(member.role)) {
-    links.push({
-      title: "Member Directory",
-      description: "Browse NSA members",
-      to: "/members",
-      icon: Users,
-      category: "members",
-    });
-  }
-
-  if (canViewTaskOversight(member.role, member.position)) {
-    links.push({
-      title: "Task Oversight",
-      description: "Team completion progress",
-      to: "/events/oversight",
-      icon: ClipboardList,
-      category: "tasks",
-    });
-  }
-
-  if (canAccessFinance(member.role)) {
-    links.push({
-      title: "Finance",
-      description: "Budgets and treasury",
-      to: "/finance",
-      icon: Wallet,
-      category: "finance",
-    });
-  }
-
-  return links;
 }
 
 function PublicHomeView() {
@@ -153,18 +81,18 @@ type MemberHomeLayoutProps = {
   loadError: string | null;
   rsvpLoading: boolean;
   financePendingCount: number;
-  showFinanceQuickActions: boolean;
+  pendingMemberApprovals: number;
   memberCount: number | null;
   budgetBalance: string | null;
   canViewMembers: boolean;
   canViewFinance: boolean;
-  quickLinks: QuickLink[];
   tasksPath: string;
+  completingTaskId: number | null;
+  onCompleteTask: (taskId: number) => void;
   onRsvpStatusChange: (status: RsvpStatus) => void;
-  onLogTransaction: () => void;
 };
 
-const DASHBOARD_GAP = "gap-4"; // 16px
+const DASHBOARD_GAP = "gap-4";
 
 function MemberHomeLayout({
   member,
@@ -175,24 +103,25 @@ function MemberHomeLayout({
   loadError,
   rsvpLoading,
   financePendingCount,
-  showFinanceQuickActions,
+  pendingMemberApprovals,
   memberCount,
   budgetBalance,
   canViewMembers,
   canViewFinance,
-  quickLinks,
   tasksPath,
+  completingTaskId,
+  onCompleteTask,
   onRsvpStatusChange,
-  onLogTransaction,
 }: MemberHomeLayoutProps) {
   return (
-    <div className="home-dashboard mx-auto flex w-full max-w-[1280px] flex-col gap-4 xl:h-[calc(100dvh-7.5rem)] xl:overflow-hidden">
+    <div className="home-dashboard mx-auto flex w-full max-w-[1280px] flex-col gap-4 pb-6 xl:min-h-0">
       {loadError ? (
         <div role="alert" className="ds-alert-banner shrink-0">
           {loadError}
         </div>
       ) : null}
 
+      {/* Row 1 — Hero (12) */}
       <div className="shrink-0">
         <HomeWelcomeBanner
           member={member}
@@ -201,11 +130,10 @@ function MemberHomeLayout({
           openTaskCount={tasksSummary.openCount}
           budgetBalance={budgetBalance}
           showBudgetChip={canViewFinance}
-          showLogTransaction={showFinanceQuickActions}
-          onLogTransaction={onLogTransaction}
         />
       </div>
 
+      {/* Row 2 — KPIs (12) */}
       <div className="shrink-0">
         <HomeStatCards
           tasksSummary={tasksSummary}
@@ -220,26 +148,18 @@ function MemberHomeLayout({
         />
       </div>
 
-      {/* Middle — Discussion | Your Work | Upcoming Event */}
+      {/* Row 3 — Board Feed (6) + Upcoming Event (6) */}
       <div
         className={[
-          "grid min-h-0 grid-cols-1",
+          "grid grid-cols-1",
           DASHBOARD_GAP,
-          "lg:grid-cols-3 xl:min-h-0 xl:flex-1 xl:overflow-hidden",
+          "md:grid-cols-6 lg:grid-cols-12 lg:items-stretch",
         ].join(" ")}
       >
-        <div className="min-h-0 lg:h-full lg:min-h-0 [&_>_*]:h-full">
-          <HomeDiscussionSection previewLimit={4} />
+        <div className="min-h-[18rem] md:col-span-6 lg:col-span-6 [&_>_*]:h-full">
+          <HomeBoardFeed previewLimit={3} />
         </div>
-        <div className="min-h-0 lg:h-full lg:min-h-0 [&_>_*]:h-full">
-          <HomeYourWorkSection
-            member={member}
-            tasksSummary={tasksSummary}
-            tasksPath={tasksPath}
-            isLoading={isLoading}
-          />
-        </div>
-        <div className="min-h-0 lg:h-full lg:min-h-0 [&_>_*]:h-full">
+        <div className="min-h-[18rem] md:col-span-6 lg:col-span-6 [&_>_*]:h-full">
           <HomeUpNextSection
             nextEvent={nextEvent}
             isLoading={isLoading}
@@ -249,134 +169,76 @@ function MemberHomeLayout({
         </div>
       </div>
 
-      {/* Bottom — Profile ~40% | Tools ~60%, equal height */}
+      {/* Row 4 — My Tasks (6) + CampusOS AI (6) */}
       <div
         className={[
-          "grid shrink-0 grid-cols-1 items-stretch",
+          "grid grid-cols-1",
           DASHBOARD_GAP,
-          "lg:grid-cols-5",
+          "md:grid-cols-6 lg:grid-cols-12 lg:items-stretch",
         ].join(" ")}
       >
-        <div className="min-h-0 lg:col-span-2 [&_>_*]:h-full">
-          <HomeProfileCard member={member} />
+        <div className="min-h-[16rem] md:col-span-6 lg:col-span-6 [&_>_*]:h-full">
+          <HomeYourWorkSection
+            member={member}
+            tasksSummary={tasksSummary}
+            tasksPath={tasksPath}
+            isLoading={isLoading}
+            completingTaskId={completingTaskId}
+            onCompleteTask={onCompleteTask}
+            pendingMemberApprovals={pendingMemberApprovals}
+            financePendingCount={financePendingCount}
+          />
         </div>
-        <div className="min-h-0 lg:col-span-3 [&_>_*]:h-full">
-          <ToolsForRoleSection quickLinks={quickLinks} />
+        <div className="min-h-[16rem] md:col-span-6 lg:col-span-6 [&_>_*]:h-full">
+          <HomeCampusAiCard />
         </div>
       </div>
     </div>
   );
 }
 
-function ToolsForRoleSection({ quickLinks }: { quickLinks: QuickLink[] }) {
-  if (quickLinks.length === 0) {
-    return null;
-  }
-
-  return (
-    <HomeCard
-      padding="sm"
-      className="flex h-full min-h-0 flex-col home-surface-quiet"
-      aria-label="Tools for Your Role"
-    >
-      <h2 className="home-section-title shrink-0">Tools for Your Role</h2>
-      <ul className="mt-3 grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4">
-        {quickLinks.map((link) => {
-          const className = [
-            "group flex h-full min-h-[4.5rem] flex-col items-center justify-center gap-1.5 rounded-lg",
-            "border border-gray-100 bg-surface-muted/50 px-2 py-2.5 text-center",
-            "transition duration-150 hover:border-gray-200 hover:bg-surface-muted",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-          ].join(" ");
-
-          const content = (
-            <>
-              <IconBadge icon={link.icon} tone="gray" size="xs" shape="rounded" />
-              <span className="line-clamp-2 text-xs font-medium leading-snug text-foreground">
-                {link.title}
-              </span>
-            </>
-          );
-
-          return (
-            <li key={link.title} className="min-h-0">
-              {link.onClick ? (
-                <button
-                  type="button"
-                  onClick={link.onClick}
-                  className={`w-full ${className}`}
-                >
-                  {content}
-                </button>
-              ) : link.to ? (
-                <Link to={link.to} className={`block w-full ${className}`}>
-                  {content}
-                </Link>
-              ) : (
-                <div className={className}>{content}</div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </HomeCard>
-  );
-}
-
 function MemberHomeView({ member }: { member: MemberResponse }) {
   const [nextEvent, setNextEvent] = useState<EventResponse | null>(null);
   const [upcomingCount, setUpcomingCount] = useState(0);
-  const [tasksSummary, setTasksSummary] = useState(summarizeMyTasks([]));
-  const [nextBoardMeeting, setNextBoardMeeting] = useState<MeetingSummary | null>(
-    null,
-  );
-  const [meetingAttendeeSummary, setMeetingAttendeeSummary] = useState<
-    string | null
-  >(null);
+  const [myTasks, setMyTasks] = useState<EventTaskResponse[]>([]);
+  const [completingTaskId, setCompletingTaskId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [rsvpLoading, setRsvpLoading] = useState(false);
-  const [recentMemories, setRecentMemories] = useState<RecentMemoriesPreview | null>(
-    null,
-  );
   const [financePendingCount, setFinancePendingCount] = useState(0);
+  const [pendingMemberApprovals, setPendingMemberApprovals] = useState(0);
   const [memberCount, setMemberCount] = useState<number | null>(null);
   const [budgetBalance, setBudgetBalance] = useState<string | null>(null);
-  const [financeEventOptions, setFinanceEventOptions] = useState<
-    Array<{ id: number; name: string }>
-  >([]);
-  const [isLogTransactionOpen, setIsLogTransactionOpen] = useState(false);
-  const [homeRefreshKey, setHomeRefreshKey] = useState(0);
 
-  const isBoardMember = isRoleAtLeast(member.role, "board");
-  const showFinanceQuickActions = canManageTreasury(
-    member.role,
-    member.position,
-  );
+  const showFinancePending = canManageTreasury(member.role, member.position);
+  const canReviewMembers = canViewMemberDirectory(member.role);
   const canViewMembers = canBrowseMemberDirectory(member.role);
   const canViewFinance = canAccessFinance(member.role);
-  const quickLinks = buildRoleTools(member);
   const tasksPath = getMyTasksPath(member.role);
+  const tasksSummary = useMemo(() => summarizeMyTasks(myTasks), [myTasks]);
 
-  const layoutProps: MemberHomeLayoutProps = {
-    member,
-    nextEvent,
-    upcomingCount,
-    tasksSummary,
-    isLoading,
-    loadError,
-    rsvpLoading,
-    financePendingCount,
-    showFinanceQuickActions,
-    memberCount,
-    budgetBalance,
-    canViewMembers,
-    canViewFinance,
-    quickLinks,
-    tasksPath,
-    onRsvpStatusChange: (status) => void handleRsvpStatusChange(status),
-    onLogTransaction: () => setIsLogTransactionOpen(true),
-  };
+  async function handleCompleteTask(taskId: number) {
+    const snapshot = myTasks;
+    setCompletingTaskId(taskId);
+    setMyTasks((current) =>
+      current.map((task) =>
+        task.id === taskId
+          ? { ...task, is_complete: true, status: "done" as const }
+          : task,
+      ),
+    );
+
+    try {
+      const updated = await updateEventTask(taskId, { is_complete: true });
+      setMyTasks((current) =>
+        current.map((task) => (task.id === taskId ? updated : task)),
+      );
+    } catch {
+      setMyTasks(snapshot);
+    } finally {
+      setCompletingTaskId(null);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -392,15 +254,15 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
           total: 0,
         }));
 
-        const financePendingPromise = showFinanceQuickActions
+        const financePendingPromise = showFinancePending
           ? fetchPendingFinanceChangeRequests().catch(() => ({
               requests: [],
               total: 0,
             }))
           : Promise.resolve(null);
 
-        const meetingsPromise = isBoardMember
-          ? fetchMeetings().catch(() => ({ meetings: [], total: 0 }))
+        const pendingMembersPromise = canReviewMembers
+          ? fetchPendingMembers().catch(() => ({ members: [], total: 0 }))
           : Promise.resolve(null);
 
         const membersCountPromise = canViewMembers
@@ -415,46 +277,30 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
           upcoming,
           tasksResult,
           financePending,
-          meetingsResult,
+          pendingMembers,
           membersPage,
           financeSummary,
         ] = await Promise.all([
           upcomingPromise,
           tasksPromise,
           financePendingPromise,
-          meetingsPromise,
+          pendingMembersPromise,
           membersCountPromise,
           financeSummaryPromise,
         ]);
-
-        const nextMeeting = meetingsResult
-          ? findNextBoardMeeting(meetingsResult.meetings)
-          : null;
-
-        let attendeeSummary: string | null = null;
-        if (nextMeeting) {
-          try {
-            const attendees = await fetchEventAttendees(nextMeeting.event_id);
-            attendeeSummary = formatCompactAttendeeSummary(attendees);
-          } catch {
-            attendeeSummary = null;
-          }
-        }
 
         if (cancelled) {
           return;
         }
 
-        const summary = summarizeMyTasks(tasksResult.tasks);
         const nonMeetingUpcoming = upcoming.events.filter(
           (event) => event.event_type !== "meeting",
         );
         setNextEvent(findNextNonMeetingEvent(upcoming.events));
         setUpcomingCount(nonMeetingUpcoming.length);
-        setTasksSummary(summary);
-        setNextBoardMeeting(nextMeeting);
-        setMeetingAttendeeSummary(attendeeSummary);
+        setMyTasks(tasksResult.tasks);
         setFinancePendingCount(financePending?.total ?? 0);
+        setPendingMemberApprovals(pendingMembers?.total ?? 0);
         setMemberCount(membersPage?.total ?? null);
         setBudgetBalance(financeSummary?.balance ?? null);
       } catch (caught) {
@@ -474,70 +320,12 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
       cancelled = true;
     };
   }, [
-    isBoardMember,
     member,
-    showFinanceQuickActions,
+    showFinancePending,
+    canReviewMembers,
     canViewMembers,
     canViewFinance,
-    homeRefreshKey,
   ]);
-
-  useEffect(() => {
-    if (!showFinanceQuickActions) {
-      return;
-    }
-
-    let cancelled = false;
-
-    async function loadFinanceEventOptions() {
-      try {
-        const response = await fetchEvents();
-        if (!cancelled) {
-          setFinanceEventOptions(
-            response.events
-              .filter((event) => isEventFinanceEditable(event))
-              .map((event) => ({
-                id: event.id,
-                name: event.name,
-              })),
-          );
-        }
-      } catch {
-        if (!cancelled) {
-          setFinanceEventOptions([]);
-        }
-      }
-    }
-
-    void loadFinanceEventOptions();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [showFinanceQuickActions, homeRefreshKey]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadRecentMemories() {
-      try {
-        const memories = await fetchRecentMemories();
-        if (!cancelled) {
-          setRecentMemories(memories);
-        }
-      } catch {
-        if (!cancelled) {
-          setRecentMemories(null);
-        }
-      }
-    }
-
-    void loadRecentMemories();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   async function handleRsvpStatusChange(status: RsvpStatus) {
     if (!nextEvent) {
@@ -563,27 +351,27 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
   }
 
   return (
-    <>
-      <MemberHomeLayout {...layoutProps} />
-
-      <Modal
-        open={isLogTransactionOpen}
-        title="Log transaction"
-        onClose={() => setIsLogTransactionOpen(false)}
-      >
-        {isLogTransactionOpen ? (
-          <LogFinanceEntryForm
-            presentation="standalone"
-            idPrefix="home-log-transaction"
-            eventOptions={financeEventOptions}
-            onCreated={() => {
-              setIsLogTransactionOpen(false);
-              setHomeRefreshKey((current) => current + 1);
-            }}
-          />
-        ) : null}
-      </Modal>
-    </>
+    <MemberHomeLayout
+      member={member}
+      nextEvent={nextEvent}
+      upcomingCount={upcomingCount}
+      tasksSummary={tasksSummary}
+      isLoading={isLoading}
+      loadError={loadError}
+      rsvpLoading={rsvpLoading}
+      financePendingCount={financePendingCount}
+      pendingMemberApprovals={pendingMemberApprovals}
+      memberCount={memberCount}
+      budgetBalance={budgetBalance}
+      canViewMembers={canViewMembers}
+      canViewFinance={canViewFinance}
+      tasksPath={tasksPath}
+      completingTaskId={completingTaskId}
+      onCompleteTask={(taskId) => {
+        void handleCompleteTask(taskId);
+      }}
+      onRsvpStatusChange={handleRsvpStatusChange}
+    />
   );
 }
 

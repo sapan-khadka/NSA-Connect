@@ -1,31 +1,26 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
-import { EventCoverPhotoSetting } from "../components/EventCoverPhotoSetting";
-import { EventCheckInPanel } from "../components/EventCheckInPanel";
-import { EventAttendanceSummaryPanel } from "../components/EventAttendanceSummaryPanel";
-import { EventDeleteSection } from "../components/EventDeleteSection";
-import { EventInvitedParticipantsSection } from "../components/EventInvitedParticipantsSection";
-import { EventVolunteersSection } from "../components/EventVolunteersSection";
-import { EventFeedbackSection } from "../components/EventFeedbackSection";
-import { EventManageLogisticsSection } from "../components/EventManageLogisticsSection";
-import { EventManageScheduleFields } from "../components/EventManageScheduleFields";
-import { EventMeetingVisibilitySetting } from "../components/EventMeetingVisibilitySetting";
-import { EventPhotoArchiveSetting } from "../components/EventPhotoArchiveSetting";
-import { MeetingRecordSection } from "../components/MeetingRecordSection";
-import { canCreateEventTasks } from "../lib/event-finance";
+import { EventManageDashboard } from "../components/EventManageDashboard";
+import { Card } from "../components/ui/Card";
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage } from "../lib/auth-api";
+import { calendarDeepLink } from "../lib/event-links";
+import {
+  fetchEventAttendanceSummary,
+  type EventAttendanceSummary,
+} from "../lib/event-checkin-api";
 import { fetchEvent, type EventDetailResponse } from "../lib/events-api";
-import { fetchEventAttendanceSummary, type EventAttendanceSummary } from "../lib/event-checkin-api";
+import type { EventVolunteerSignupMember } from "../lib/events-api";
 import { fetchEventTasks, type EventTaskResponse } from "../lib/event-tasks-api";
 import { EVENT_TYPE_BADGE_CLASS, EVENT_TYPE_LABELS } from "../lib/event-types";
 import { fetchAssignableMembers } from "../lib/members-api";
-import { fetchEventBudgetForEvent } from "../lib/finance-api";
+import {
+  fetchEventBudgetForEvent,
+  type FinanceEventBudgetSummary,
+} from "../lib/finance-api";
 import type { MemberResponse } from "../lib/auth-api";
-import type { FinanceEventBudgetSummary } from "../lib/finance-api";
 import { formatEventDateTime } from "../lib/format-datetime";
-import { Card } from "../components/ui/Card";
 import {
   buildVolunteerTaskDraft,
   type EventTaskDraft,
@@ -35,8 +30,6 @@ import {
   canManageTreasury,
   isRoleAtLeast,
 } from "../lib/roles";
-
-type ManageTab = "meeting" | "logistics";
 
 export function EventManagePage() {
   const { eventId } = useParams();
@@ -52,10 +45,10 @@ export function EventManagePage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<ManageTab>("meeting");
   const [attendanceSummary, setAttendanceSummary] =
     useState<EventAttendanceSummary | null>(null);
   const [taskDraft, setTaskDraft] = useState<EventTaskDraft | null>(null);
+  const [openTasksModalToken, setOpenTasksModalToken] = useState(0);
 
   const canViewBoard = member ? isRoleAtLeast(member.role, "board") : false;
   const canViewTreasury = member
@@ -180,9 +173,13 @@ export function EventManagePage() {
   }
 
   if (error || !event) {
+    const calendarBackTo = Number.isFinite(numericEventId)
+      ? `/events/calendar?event=${numericEventId}`
+      : "/events/calendar";
+
     return (
       <div className="space-y-4">
-        <Link to="/events/calendar" className="ds-link">
+        <Link to={calendarBackTo} className="ds-link">
           ← Back to calendar
         </Link>
         <div role="alert" className="ds-alert-banner p-6">
@@ -192,54 +189,28 @@ export function EventManagePage() {
     );
   }
 
-  const logisticsSection = (
-    <EventManageLogisticsSection
-      event={event}
-      budget={budget}
-      tasks={tasks}
-      member={member}
-      canViewBoard={canViewBoard}
-      canViewTreasury={canViewTreasury}
-      canManageTasks={canManageTasks}
-      assignableMembers={assignableMembers}
-      refreshKey={refreshKey}
-      onRefresh={() => setRefreshKey((current) => current + 1)}
-      taskDraft={taskDraft}
-      onTaskDraftApplied={() => setTaskDraft(null)}
-    />
-  );
+  const calendarBackTo = calendarDeepLink(event);
 
-  function handleConvertVolunteerToTask(
-    signup: Parameters<typeof buildVolunteerTaskDraft>[1],
-  ) {
-    if (!event) {
-      return;
-    }
-
-    if (isMeetingEvent) {
-      setActiveTab("logistics");
-    }
-
+  function handleConvertVolunteerToTask(signup: EventVolunteerSignupMember) {
     setTaskDraft(buildVolunteerTaskDraft(event.name, signup));
+    setOpenTasksModalToken((current) => current + 1);
+  }
 
-    window.requestAnimationFrame(() => {
-      document
-        .getElementById("event-tasks-section")
-        ?.scrollIntoView?.({ behavior: "smooth", block: "start" });
-    });
+  function handleRefresh() {
+    setRefreshKey((current) => current + 1);
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-4">
       <div>
-        <Link to="/events/calendar" className="ds-link">
+        <Link to={calendarBackTo} className="ds-link">
           ← Back to calendar
         </Link>
       </div>
 
-      <Card padding="none" className="p-6 sm:p-8">
+      <Card padding="none" className="p-4 sm:p-5 home-surface-quiet">
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-3xl font-light tracking-headline text-foreground">
+          <h1 className="text-2xl font-light tracking-headline text-foreground sm:text-3xl">
             {event.name}
           </h1>
           <span
@@ -248,110 +219,34 @@ export function EventManagePage() {
             {EVENT_TYPE_LABELS[event.event_type]}
           </span>
         </div>
-        <p className="mt-2 text-label">{formatEventDateTime(event.starts_at)}</p>
+        <p className="mt-1.5 text-sm text-label">
+          {formatEventDateTime(event.starts_at)}
+        </p>
         {!isMeetingEvent && event.description ? (
-          <p className="mt-4 text-sm leading-relaxed text-foreground">
+          <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-foreground">
             {event.description}
           </p>
         ) : null}
       </Card>
 
-      {canViewBoard ? (
-        <>
-          <EventManageScheduleFields event={event} onUpdated={setEvent} />
-          <EventCoverPhotoSetting event={event} onUpdated={setEvent} />
-          {isMeetingEvent ? (
-            <EventMeetingVisibilitySetting
-              event={event}
-              onUpdated={setEvent}
-            />
-          ) : null}
-          <EventPhotoArchiveSetting
-            event={event}
-            onUpdated={setEvent}
-          />
-          <EventVolunteersSection
-            eventId={numericEventId}
-            refreshKey={refreshKey}
-            eventName={event.name}
-            canAssignTasks={canManageTasks && canCreateEventTasks(event)}
-            onConvertToTask={handleConvertVolunteerToTask}
-          />
-          {event.is_past ? (
-            <EventFeedbackSection
-              eventId={numericEventId}
-              eventName={event.name}
-              refreshKey={refreshKey}
-            />
-          ) : null}
-        </>
-      ) : null}
-
-      {isMeetingEvent ? (
-        <>
-          <nav
-            aria-label="Event manage sections"
-            className="border-b border-gray-200"
-          >
-            <div className="flex gap-1">
-              <button
-                type="button"
-                onClick={() => setActiveTab("meeting")}
-                className={[
-                  "border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
-                  activeTab === "meeting"
-                    ? "border-accent text-accent"
-                    : "border-transparent text-label hover:text-accent",
-                ].join(" ")}
-              >
-                Meeting
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("logistics")}
-                className={[
-                  "border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
-                  activeTab === "logistics"
-                    ? "border-accent text-accent"
-                    : "border-transparent text-label hover:text-accent",
-                ].join(" ")}
-              >
-                Logistics
-              </button>
-            </div>
-          </nav>
-
-          {activeTab === "meeting" ? (
-            <MeetingRecordSection
-              eventId={numericEventId}
-              eventName={event.name}
-            />
-          ) : (
-            logisticsSection
-          )}
-        </>
-      ) : (
-        logisticsSection
-      )}
-
-      {canViewBoard ? (
-        <EventInvitedParticipantsSection
-          eventId={numericEventId}
-          refreshKey={refreshKey}
-        />
-      ) : null}
-
-      {canViewBoard ? (
-        <EventCheckInPanel eventId={numericEventId} eventName={event.name} />
-      ) : null}
-
-      {canViewBoard && attendanceSummary ? (
-        <EventAttendanceSummaryPanel summary={attendanceSummary} />
-      ) : null}
-
-      {canViewBoard ? (
-        <EventDeleteSection eventId={numericEventId} eventName={event.name} />
-      ) : null}
+      <EventManageDashboard
+        event={event}
+        budget={budget}
+        tasks={tasks}
+        member={member}
+        canViewBoard={canViewBoard}
+        canViewTreasury={canViewTreasury}
+        canManageTasks={canManageTasks}
+        assignableMembers={assignableMembers}
+        refreshKey={refreshKey}
+        attendanceSummary={attendanceSummary}
+        taskDraft={taskDraft}
+        onUpdated={setEvent}
+        onRefresh={handleRefresh}
+        onTaskDraftApplied={() => setTaskDraft(null)}
+        onConvertVolunteerToTask={handleConvertVolunteerToTask}
+        openTasksModalToken={openTasksModalToken}
+      />
     </div>
   );
 }

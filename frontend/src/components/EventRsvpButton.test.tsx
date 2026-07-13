@@ -239,4 +239,30 @@ describe("EventRsvpButton", () => {
     expect(notGoing.querySelector("svg")).not.toBeNull();
     expect(maybe.querySelector("svg")).toBeNull();
   });
+
+  it("opens a compact RSVP menu and updates status", async () => {
+    const user = userEvent.setup();
+    const onStatusChange = vi.fn();
+
+    render(
+      <EventRsvpButton
+        currentStatus={null}
+        canRsvp
+        loading={false}
+        embedded
+        variant="menu"
+        onStatusChange={onStatusChange}
+      />,
+    );
+
+    expect(screen.queryByText("Your RSVP")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Set your RSVP/i }));
+    await user.click(screen.getByRole("menuitemradio", { name: "Going" }));
+
+    expect(onStatusChange).toHaveBeenCalledWith("going");
+    expect(
+      screen.getByRole("button", { name: /Change RSVP, currently Going/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("You're Going")).toBeInTheDocument();
+  });
 });

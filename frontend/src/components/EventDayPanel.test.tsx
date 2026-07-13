@@ -1,11 +1,17 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactElement } from "react";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, describe, expect, it, vi, type ReactElement } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { EventDayPanel } from "./EventDayPanel";
 import type { EventDetailResponse, EventResponse } from "../lib/events-api";
-import { createMockEventDetailResponse, createMockEventResponse } from "../test/test-utils";
+import {
+  createMockEventDetailResponse,
+  createMockEventResponse,
+  createMockMember,
+  MockAuthProvider,
+} from "../test/test-utils";
 
 const dayEvent: EventResponse = createMockEventResponse({
   id: 1,
@@ -21,10 +27,23 @@ const eventDetail: EventDetailResponse = createMockEventDetailResponse({
 const panelProps = {
   rsvpLoading: false,
   onRsvpStatusChange: vi.fn(),
+  onBackToUpcoming: vi.fn(),
 };
 
-function renderPanel(ui: ReactElement) {
-  return render(<MemoryRouter>{ui}</MemoryRouter>);
+function renderPanel(
+  ui: ReactElement,
+  role: "board" | "general" | null = null,
+) {
+  return render(
+    <MockAuthProvider
+      value={{
+        member: role ? createMockMember(role) : null,
+        isAuthenticated: role !== null,
+      }}
+    >
+      <MemoryRouter>{ui}</MemoryRouter>
+    </MockAuthProvider>,
+  );
 }
 
 describe("EventDayPanel", () => {
@@ -32,9 +51,10 @@ describe("EventDayPanel", () => {
     cleanup();
   });
 
-  it("prompts to select a day and shows a compact upcoming list", () => {
+  it("shows the upcoming list by default", () => {
     renderPanel(
       <EventDayPanel
+        panelMode="upcoming"
         selectedDate={null}
         dayEvents={[]}
         selectedEventId={null}
@@ -48,22 +68,20 @@ describe("EventDayPanel", () => {
       />,
     );
 
-    expect(
-      screen.getByText(/Select a day on the calendar/i),
-    ).toBeInTheDocument();
     expect(screen.getByText("Upcoming")).toBeInTheDocument();
     expect(document.querySelector(".events-upcoming-panel")).toBeInTheDocument();
     expect(
-      document.querySelector(".events-upcoming-panel-scroll"),
-    ).toBeInTheDocument();
-    expect(
       screen.getByRole("button", { name: /Dashain Celebration/i }),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Back to upcoming/i }),
+    ).not.toBeInTheDocument();
   });
 
-  it("shows event title, badge, time, and RSVP controls for a selected day", () => {
+  it("swaps to event detail with back control and RSVP", () => {
     renderPanel(
       <EventDayPanel
+        panelMode="detail"
         selectedDate="2030-06-15"
         dayEvents={[dayEvent]}
         selectedEventId={1}
@@ -71,23 +89,77 @@ describe("EventDayPanel", () => {
         eventDetail={eventDetail}
         detailLoading={false}
         detailError={null}
-        upcomingEvents={[]}
+        upcomingEvents={[dayEvent]}
         upcomingLoading={false}
         {...panelProps}
       />,
+      "board",
     );
 
-    expect(screen.getByText(/June 15, 2030/i)).toBeInTheDocument();
+    expect(screen.queryByText("Upcoming")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Dashain Celebration" }),
-    ).toHaveAttribute("href", "/events/1");
+      screen.getByRole("button", { name: /Back to upcoming/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Dashain Celebration")).toBeInTheDocument();
     expect(screen.getByText("Cultural")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Going" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^Manage$/i })).toHaveAttribute(
+      "href",
+      "/events/1/manage",
+    );
   });
 
-  it("shows selected RSVP state", () => {
+  it("hides Manage for general members", () => {
     renderPanel(
       <EventDayPanel
+        panelMode="detail"
+        selectedDate="2030-06-15"
+        dayEvents={[dayEvent]}
+        selectedEventId={1}
+        onSelectEvent={vi.fn()}
+        eventDetail={eventDetail}
+        detailLoading={false}
+        detailError={null}
+        upcomingEvents={[dayEvent]}
+        upcomingLoading={false}
+        {...panelProps}
+      />,
+      "general",
+    );
+
+    expect(screen.queryByRole("link", { name: /^Manage$/i })).not.toBeInTheDocument();
+  });
+
+  it("returns to upcoming when back is clicked", async () => {
+    const user = userEvent.setup();
+    const onBackToUpcoming = vi.fn();
+
+    renderPanel(
+      <EventDayPanel
+        panelMode="detail"
+        selectedDate="2030-06-15"
+        dayEvents={[dayEvent]}
+        selectedEventId={1}
+        onSelectEvent={vi.fn()}
+        eventDetail={eventDetail}
+        detailLoading={false}
+        detailError={null}
+        upcomingEvents={[dayEvent]}
+        upcomingLoading={false}
+        {...panelProps}
+        onBackToUpcoming={onBackToUpcoming}
+      />,
+      "board",
+    );
+
+    await user.click(screen.getByRole("button", { name: /Back to upcoming/i }));
+    expect(onBackToUpcoming).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows selected RSVP state in detail mode", () => {
+    renderPanel(
+      <EventDayPanel
+        panelMode="detail"
         selectedDate="2030-06-15"
         dayEvents={[dayEvent]}
         selectedEventId={1}
@@ -122,6 +194,7 @@ describe("EventDayPanel", () => {
 
     renderPanel(
       <EventDayPanel
+        panelMode="detail"
         selectedDate="2030-06-15"
         dayEvents={[dayEvent, secondEvent]}
         selectedEventId={1}
@@ -133,6 +206,7 @@ describe("EventDayPanel", () => {
         upcomingLoading={false}
         {...panelProps}
       />,
+      "board",
     );
 
     await user.click(screen.getByRole("button", { name: "Board Meeting" }));

@@ -1,5 +1,5 @@
-import { Check, Circle, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Check, ChevronDown, Circle, X } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import type { RsvpStatus } from "../lib/events-api";
 import { formatRsvpStatus, RSVP_STATUS_LABELS } from "../lib/event-rsvp";
@@ -45,8 +45,12 @@ type EventRsvpButtonProps = {
   loading: boolean;
   onStatusChange: (status: RsvpStatus) => void;
   embedded?: boolean;
-  /** Compact joined pill group for invitation-style cards. */
-  variant?: "default" | "segmented";
+  /**
+   * default — pill buttons
+   * segmented — joined control for dense cards
+   * menu — compact status trigger + dropdown (dashboard)
+   */
+  variant?: "default" | "segmented" | "menu";
 };
 
 function defaultButtonClass(isSelected: boolean): string {
@@ -85,6 +89,22 @@ function playReaction(status: RsvpStatus, anchor: HTMLElement): void {
   playNotGoingCries(anchor);
 }
 
+function menuTriggerLabel(status: RsvpStatus | null, loading: boolean): string {
+  if (loading) {
+    return "Updating…";
+  }
+  if (status === "going") {
+    return "You're Going";
+  }
+  if (status === "maybe") {
+    return "You're a Maybe";
+  }
+  if (status === "not_going") {
+    return "Not Going";
+  }
+  return "RSVP";
+}
+
 export function EventRsvpButton({
   currentStatus,
   canRsvp,
@@ -94,6 +114,9 @@ export function EventRsvpButton({
   variant = "default",
 }: EventRsvpButtonProps) {
   const buttonRefs = useRef<Partial<Record<RsvpStatus, HTMLButtonElement>>>({});
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuId = useId();
+  const [menuOpen, setMenuOpen] = useState(false);
   const [displayStatus, setDisplayStatus] = useState<RsvpStatus | null>(
     currentStatus,
   );
@@ -102,11 +125,41 @@ export function EventRsvpButton({
     setDisplayStatus(currentStatus);
   }, [currentStatus]);
 
+  useEffect(() => {
+    if (!menuOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: MouseEvent): void {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target as Node)
+      ) {
+        setMenuOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent): void {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [menuOpen]);
+
   const showPrompt = canRsvp && displayStatus === null;
   const isSegmented = variant === "segmented";
+  const isMenu = variant === "menu";
 
   function handleOptionClick(status: RsvpStatus): void {
     setDisplayStatus(status);
+    setMenuOpen(false);
 
     const anchor = buttonRefs.current[status];
     if (anchor) {
@@ -115,16 +168,107 @@ export function EventRsvpButton({
     onStatusChange(status);
   }
 
+  const shellClass = embedded
+    ? isSegmented || isMenu
+      ? ""
+      : "mt-3 border-t border-gray-100 pt-3"
+    : "ds-card p-3";
+
+  if (isMenu) {
+    const selectedOption = RSVP_OPTIONS.find(
+      (option) => option.value === displayStatus,
+    );
+    const triggerLabel = menuTriggerLabel(displayStatus, loading);
+
+    return (
+      <div className={shellClass} ref={menuRef}>
+        {canRsvp ? (
+          <div className="relative">
+            <button
+              type="button"
+              data-rsvp-reaction-host
+              aria-label={
+                displayStatus
+                  ? `Change RSVP, currently ${formatRsvpStatus(displayStatus)}`
+                  : "Set your RSVP"
+              }
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              aria-controls={menuId}
+              disabled={loading}
+              onClick={() => setMenuOpen((open) => !open)}
+              className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
+                displayStatus === "going"
+                  ? "border-primary/25 bg-badge-teal-bg text-primary hover:border-primary/40"
+                  : "border-gray-200 bg-white text-foreground hover:border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              {selectedOption ? (
+                <AppIcon
+                  icon={selectedOption.icon}
+                  size="xs"
+                  className="text-current"
+                />
+              ) : null}
+              <span>{triggerLabel}</span>
+              <AppIcon
+                icon={ChevronDown}
+                size="xs"
+                className={`text-current opacity-60 transition duration-150 ${menuOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {menuOpen ? (
+              <div
+                id={menuId}
+                role="menu"
+                aria-label="RSVP options"
+                className="absolute bottom-full right-0 z-20 mb-2 min-w-[11rem] overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-md transition duration-150"
+              >
+                {RSVP_OPTIONS.map((option) => {
+                  const isSelected = displayStatus === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      ref={(element) => {
+                        buttonRefs.current[option.value] = element ?? undefined;
+                      }}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={isSelected}
+                      disabled={loading}
+                      onClick={() => handleOptionClick(option.value)}
+                      className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition duration-150 ease-out focus-visible:bg-gray-50 focus-visible:outline-none hover:bg-gray-50 ${
+                        isSelected
+                          ? "font-medium text-primary"
+                          : "font-normal text-foreground"
+                      }`}
+                    >
+                      <AppIcon
+                        icon={option.icon}
+                        size="xs"
+                        className="text-current"
+                      />
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-sm text-label">
+            {displayStatus
+              ? `Your response: ${formatRsvpStatus(displayStatus)}.`
+              : "RSVP is closed for past events."}
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
-    <div
-      className={
-        embedded
-          ? isSegmented
-            ? "mt-1"
-            : "mt-3 border-t border-gray-100 pt-3"
-          : "ds-card p-3"
-      }
-    >
+    <div className={shellClass}>
       {!isSegmented ? (
         <p className="text-sm font-medium text-foreground">Your RSVP</p>
       ) : null}

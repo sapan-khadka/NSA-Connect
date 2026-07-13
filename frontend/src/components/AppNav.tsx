@@ -202,7 +202,7 @@ export function AccountMenu({
               ].join(" ")
             }
           >
-            Account settings
+            Profile
           </NavLink>
           <button
             type="button"

@@ -35,6 +35,8 @@ vi.mock("../components/EventAttendanceSummaryPanel", () => ({
 vi.mock("../lib/events-api", () => ({
   fetchEvent: vi.fn(),
   fetchEventVolunteerSignups: vi.fn().mockResolvedValue({ total: 0, signups: [] }),
+  fetchEventInvitedParticipants: vi.fn().mockResolvedValue({ invitations: [] }),
+  patchEvent: vi.fn(),
 }));
 
 vi.mock("../lib/event-tasks-api", () => ({
@@ -43,6 +45,7 @@ vi.mock("../lib/event-tasks-api", () => ({
 
 vi.mock("../lib/event-checkin-api", () => ({
   fetchEventAttendanceSummary: vi.fn().mockResolvedValue(null),
+  fetchEventCheckIns: vi.fn().mockResolvedValue({ checkins: [] }),
 }));
 
 vi.mock("../lib/finance-api", () => ({
@@ -100,179 +103,172 @@ function renderPage(role: "board" | "treasurer" = "board") {
   );
 }
 
+async function mockBoardEventLoad(overrides: Partial<typeof mockEvent> = {}) {
+  const { fetchEvent } = await import("../lib/events-api");
+  const { fetchEventTasks } = await import("../lib/event-tasks-api");
+  const { fetchEventBudgetForEvent } = await import("../lib/finance-api");
+
+  vi.mocked(fetchEvent).mockResolvedValue({ ...mockEvent, ...overrides });
+  vi.mocked(fetchEventTasks).mockResolvedValue({
+    tasks: [
+      {
+        id: 1,
+        event_id: 1,
+        event_name: "Dashain Celebration",
+        task_kind: "simple",
+        title: "Setup",
+        group_name: null,
+        description: "",
+        status: "done",
+        assignee_id: 2,
+        assignee_name: "Alex",
+        due_date: null,
+        is_overdue: false,
+        is_complete: true,
+        checklist_items: [],
+        completion_note: null,
+        completion_photo_url: null,
+        completed_at: "2030-05-02T12:00:00Z",
+        created_by_id: 1,
+        created_at: "2030-05-01T12:00:00Z",
+      },
+      {
+        id: 2,
+        event_id: 1,
+        event_name: "Dashain Celebration",
+        task_kind: "simple",
+        title: "Cleanup",
+        group_name: null,
+        description: "",
+        status: "in_progress",
+        assignee_id: 3,
+        assignee_name: "Sam",
+        due_date: null,
+        is_overdue: false,
+        is_complete: false,
+        checklist_items: [],
+        completion_note: null,
+        completion_photo_url: null,
+        completed_at: null,
+        created_by_id: 1,
+        created_at: "2030-05-01T12:00:00Z",
+      },
+    ],
+    total: 2,
+  });
+  vi.mocked(fetchEventBudgetForEvent).mockResolvedValue({
+    event_id: 1,
+    event_name: overrides.name ?? "Dashain Celebration",
+    planned_budget: "500.00",
+    actual_expense: "120.00",
+    actual_income: "80.00",
+    budget_remaining: "380.00",
+    over_budget: false,
+    entry_count: 2,
+  });
+}
+
 describe("EventManagePage", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
   });
 
-  it("shows event details, task completion, and budget for board", async () => {
-    const { fetchEvent } = await import("../lib/events-api");
-    const { fetchEventTasks } = await import("../lib/event-tasks-api");
-    const { fetchEventBudgetForEvent } = await import("../lib/finance-api");
-
-    vi.mocked(fetchEvent).mockResolvedValue(mockEvent);
-    vi.mocked(fetchEventTasks).mockResolvedValue({
-      tasks: [
-        {
-          id: 1,
-          event_id: 1,
-          event_name: "Dashain Celebration",
-          task_kind: "simple",
-          title: "Setup",
-          group_name: null,
-          description: "",
-          status: "done",
-          assignee_id: 2,
-          assignee_name: "Alex",
-          due_date: null,
-          is_overdue: false,
-          is_complete: true,
-          checklist_items: [],
-          completion_note: null,
-          completion_photo_url: null,
-          completed_at: "2030-05-02T12:00:00Z",
-          created_by_id: 1,
-          created_at: "2030-05-01T12:00:00Z",
-        },
-        {
-          id: 2,
-          event_id: 1,
-          event_name: "Dashain Celebration",
-          task_kind: "simple",
-          title: "Cleanup",
-          group_name: null,
-          description: "",
-          status: "in_progress",
-          assignee_id: 3,
-          assignee_name: "Sam",
-          due_date: null,
-          is_overdue: false,
-          is_complete: false,
-          checklist_items: [],
-          completion_note: null,
-          completion_photo_url: null,
-          completed_at: null,
-          created_by_id: 1,
-          created_at: "2030-05-01T12:00:00Z",
-        },
-      ],
-      total: 2,
-    });
-    vi.mocked(fetchEventBudgetForEvent).mockResolvedValue({
-      event_id: 1,
-      event_name: "Dashain Celebration",
-      planned_budget: "500.00",
-      actual_expense: "120.00",
-      actual_income: "80.00",
-      budget_remaining: "380.00",
-      over_budget: false,
-      entry_count: 2,
-    });
-
+  it("renders a Home-style card grid with schedule and photo on the page", async () => {
+    await mockBoardEventLoad();
     renderPage("board");
 
     expect(await screen.findByText("Dashain Celebration")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Schedule" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Event photo" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Tasks" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Budget" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Check-in" })).toBeInTheDocument();
     expect(
       screen.getByRole("checkbox", { name: /Show in photo archive/i }),
     ).toBeChecked();
-    expect(screen.queryByRole("button", { name: "Meeting" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Logistics" })).not.toBeInTheDocument();
-    expect(screen.getByText("Task completion")).toBeInTheDocument();
-    expect(screen.getByText("1/2 done (50%)")).toBeInTheDocument();
-    expect(screen.getByText("Event budget")).toBeInTheDocument();
-    expect(screen.getByTestId("event-task-manager")).toBeInTheDocument();
-    expect(screen.getByTestId("event-volunteers-section")).toBeInTheDocument();
-    expect(screen.queryByTestId("finance-entry-list")).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Delete event" }),
     ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Overview" })).not.toBeInTheDocument();
+
+    const backLink = screen.getByRole("link", { name: /Back to calendar/i });
+    expect(backLink.getAttribute("href")).toMatch(
+      /^\/events\/calendar\?date=\d{4}-\d{2}-\d{2}&event=1$/,
+    );
   });
 
-  it("shows meeting tools on the Meeting tab for meeting events", async () => {
+  it("opens the tasks modal from View all tasks", async () => {
     const user = userEvent.setup();
-    const { fetchEvent } = await import("../lib/events-api");
-    const { fetchEventTasks } = await import("../lib/event-tasks-api");
-    const { fetchEventBudgetForEvent } = await import("../lib/finance-api");
-
-    vi.mocked(fetchEvent).mockResolvedValue({
-      ...mockEvent,
-      event_type: "meeting",
-      name: "March Board Meeting",
-    });
-    vi.mocked(fetchEventTasks).mockResolvedValue({ tasks: [], total: 0 });
-    vi.mocked(fetchEventBudgetForEvent).mockResolvedValue({
-      event_id: 1,
-      event_name: "March Board Meeting",
-      planned_budget: "0.00",
-      actual_expense: "0.00",
-      actual_income: "0.00",
-      budget_remaining: "0.00",
-      over_budget: false,
-      entry_count: 0,
-    });
-
+    await mockBoardEventLoad();
     renderPage("board");
 
-    expect(await screen.findByTestId("meeting-record-section")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Meeting" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Logistics" })).toBeInTheDocument();
-    expect(screen.queryByText("Task completion")).not.toBeInTheDocument();
+    await screen.findByText("Dashain Celebration");
+    expect(screen.getByText(/1\/2 done · 50%/)).toBeInTheDocument();
+    expect(screen.getByText("Cleanup")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Logistics" }));
-
-    expect(await screen.findByText("Task completion")).toBeInTheDocument();
-    expect(screen.queryByTestId("meeting-record-section")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /View all tasks/i }));
+    expect(screen.getByTestId("event-task-manager")).toBeInTheDocument();
   });
 
-  it("does not show meeting tabs for non-meeting events", async () => {
-    const { fetchEvent } = await import("../lib/events-api");
+  it("opens transactions modal for treasurer", async () => {
+    const user = userEvent.setup();
+    await mockBoardEventLoad();
     const { fetchEventTasks } = await import("../lib/event-tasks-api");
-    const { fetchEventBudgetForEvent } = await import("../lib/finance-api");
-
-    vi.mocked(fetchEvent).mockResolvedValue(mockEvent);
     vi.mocked(fetchEventTasks).mockResolvedValue({ tasks: [], total: 0 });
-    vi.mocked(fetchEventBudgetForEvent).mockResolvedValue({
-      event_id: 1,
-      event_name: "Dashain Celebration",
-      planned_budget: "500.00",
-      actual_expense: "0.00",
-      actual_income: "0.00",
-      budget_remaining: "500.00",
-      over_budget: false,
-      entry_count: 0,
-    });
-
-    renderPage("board");
-
-    expect(await screen.findByText("Task completion")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Meeting" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Logistics" })).not.toBeInTheDocument();
-    expect(screen.queryByTestId("meeting-record-section")).not.toBeInTheDocument();
-  });
-
-  it("shows finance entries for treasurer", async () => {
-    const { fetchEvent } = await import("../lib/events-api");
-    const { fetchEventTasks } = await import("../lib/event-tasks-api");
-    const { fetchEventBudgetForEvent } = await import("../lib/finance-api");
-
-    vi.mocked(fetchEvent).mockResolvedValue(mockEvent);
-    vi.mocked(fetchEventTasks).mockResolvedValue({ tasks: [], total: 0 });
-    vi.mocked(fetchEventBudgetForEvent).mockResolvedValue({
-      event_id: 1,
-      event_name: "Dashain Celebration",
-      planned_budget: "500.00",
-      actual_expense: "0.00",
-      actual_income: "0.00",
-      budget_remaining: "500.00",
-      over_budget: false,
-      entry_count: 0,
-    });
 
     renderPage("treasurer");
+
+    await screen.findByText("Dashain Celebration");
+    await user.click(screen.getByRole("button", { name: /View transactions/i }));
 
     await waitFor(() =>
       expect(screen.getByTestId("finance-entry-list")).toBeInTheDocument(),
     );
+  });
+
+  it("opens check-in and attendance detail modals", async () => {
+    const user = userEvent.setup();
+    const { fetchEventAttendanceSummary } = await import(
+      "../lib/event-checkin-api"
+    );
+    vi.mocked(fetchEventAttendanceSummary).mockResolvedValue({
+      event_id: 1,
+      event_name: "Dashain Celebration",
+      going_attended: { count: 4, members: [] },
+      going_no_show: { count: 2, members: [] },
+      walk_ins: { count: 1, members: [] },
+      not_going: { count: 3, members: [] },
+      guests_checked_in: { count: 0 },
+    });
+
+    await mockBoardEventLoad();
+    renderPage("board");
+
+    await screen.findByText("Dashain Celebration");
+    await user.click(screen.getByRole("button", { name: "Show check-in QR" }));
+    expect(screen.getByTestId("event-checkin-panel")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    await user.click(
+      screen.getAllByRole("button", { name: /View details/i })[1],
+    );
+    expect(screen.getByTestId("event-attendance-summary")).toBeInTheDocument();
+  });
+
+  it("shows meeting record card for meeting events", async () => {
+    const user = userEvent.setup();
+    await mockBoardEventLoad({
+      event_type: "meeting",
+      name: "March Board Meeting",
+    });
+    const { fetchEventTasks } = await import("../lib/event-tasks-api");
+    vi.mocked(fetchEventTasks).mockResolvedValue({ tasks: [], total: 0 });
+
+    renderPage("board");
+
+    expect(await screen.findByRole("heading", { name: "Meeting record" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /^View all$/i }));
+    expect(screen.getByTestId("meeting-record-section")).toBeInTheDocument();
   });
 });

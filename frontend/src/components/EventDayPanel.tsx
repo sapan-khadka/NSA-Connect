@@ -1,7 +1,7 @@
-import { Clock } from "lucide-react";
+import { ArrowLeft, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { eventDetailPath } from "../lib/event-links";
+import { useAuth } from "../context/useAuth";
 import {
   EVENT_TYPE_DOT_CLASS,
   EVENT_TYPE_LABELS,
@@ -17,11 +17,16 @@ import {
   UPCOMING_GROUP_ORDER,
   groupUpcomingEvents,
 } from "../lib/calendar-upcoming";
+import { isRoleAtLeast } from "../lib/roles";
 import { EventRsvpButton } from "./EventRsvpButton";
 import { Badge } from "./ui/Badge";
 import { AppIcon } from "./ui/AppIcon";
 
+export type EventPanelMode = "upcoming" | "detail";
+
 type EventDayPanelProps = {
+  panelMode: EventPanelMode;
+  onBackToUpcoming: () => void;
   selectedDate: string | null;
   dayEvents: EventResponse[];
   selectedEventId: number | null;
@@ -120,7 +125,134 @@ function UpcomingEventsSidebar({
   );
 }
 
+function EventDetailPanel({
+  selectedDate,
+  dayEvents,
+  selectedEventId,
+  onSelectEvent,
+  eventDetail,
+  detailLoading,
+  detailError,
+  rsvpLoading,
+  onRsvpStatusChange,
+  onBackToUpcoming,
+}: {
+  selectedDate: string | null;
+  dayEvents: EventResponse[];
+  selectedEventId: number | null;
+  onSelectEvent: (eventId: number) => void;
+  eventDetail: EventDetailResponse | null;
+  detailLoading: boolean;
+  detailError: string | null;
+  rsvpLoading: boolean;
+  onRsvpStatusChange: (status: RsvpStatus) => void;
+  onBackToUpcoming: () => void;
+}) {
+  const { member } = useAuth();
+  const canManage = member ? isRoleAtLeast(member.role, "board") : false;
+  const previewEvent =
+    eventDetail ??
+    dayEvents.find((event) => event.id === selectedEventId) ??
+    dayEvents[0] ??
+    null;
+  const manageEventId = previewEvent?.id ?? selectedEventId;
+
+  return (
+    <div className="events-sidebar-card p-5">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <button
+          type="button"
+          onClick={onBackToUpcoming}
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary-hover"
+        >
+          <AppIcon icon={ArrowLeft} size="sm" className="text-current" />
+          Back to upcoming
+        </button>
+        {canManage && manageEventId != null ? (
+          <Link
+            to={`/events/${manageEventId}/manage`}
+            className="text-sm font-medium text-primary hover:text-primary-hover"
+          >
+            Manage
+          </Link>
+        ) : null}
+      </div>
+
+      {selectedDate ? (
+        <p className="mt-4 text-xs text-label">
+          {formatIsoDateLabel(selectedDate)}
+        </p>
+      ) : null}
+
+      {dayEvents.length === 0 && !detailLoading ? (
+        <p className="mt-3 text-sm text-label">No events on this day.</p>
+      ) : null}
+
+      {dayEvents.length > 1 ? (
+        <ul className="mt-3 flex flex-wrap gap-2">
+          {dayEvents.map((event) => {
+            const isActive = event.id === selectedEventId;
+            return (
+              <li key={event.id}>
+                <button
+                  type="button"
+                  aria-pressed={isActive}
+                  onClick={() => onSelectEvent(event.id)}
+                  className={[
+                    "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                    isActive
+                      ? "bg-primary text-white"
+                      : "bg-[#F5F5F7] text-foreground hover:bg-[#EBEBED]",
+                  ].join(" ")}
+                >
+                  {event.name}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+
+      {detailLoading ? (
+        <p className="mt-3 text-sm text-label">Loading event…</p>
+      ) : null}
+
+      {detailError ? (
+        <p className="mt-3 ds-field-error">{detailError}</p>
+      ) : null}
+
+      {previewEvent ? (
+        <div className="mt-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-lg font-medium text-foreground">
+              {previewEvent.name}
+            </h3>
+            <Badge variant="primary" size="sm">
+              {EVENT_TYPE_LABELS[previewEvent.event_type]}
+            </Badge>
+          </div>
+          <p className="mt-2 text-sm text-label">
+            {formatEventDateTime(previewEvent.starts_at)}
+          </p>
+
+          {eventDetail ? (
+            <EventRsvpButton
+              currentStatus={eventDetail.current_member_rsvp_status}
+              canRsvp={isEventUpcoming(eventDetail.starts_at)}
+              loading={rsvpLoading}
+              onStatusChange={onRsvpStatusChange}
+              embedded
+            />
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function EventDayPanel({
+  panelMode,
+  onBackToUpcoming,
   selectedDate,
   dayEvents,
   selectedEventId,
@@ -134,109 +266,38 @@ export function EventDayPanel({
   upcomingLoading = false,
   onSelectUpcomingEvent,
 }: EventDayPanelProps) {
-  const previewEvent =
-    eventDetail ??
-    dayEvents.find((event) => event.id === selectedEventId) ??
-    dayEvents[0] ??
-    null;
-
   return (
     <aside
       aria-label="Event details"
       className="space-y-4 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto"
     >
-      <div className="events-upcoming-panel p-5">
-        <div className="relative z-10">
-          <h2 className="text-base font-medium text-foreground">Upcoming</h2>
+      {panelMode === "detail" ? (
+        <EventDetailPanel
+          selectedDate={selectedDate}
+          dayEvents={dayEvents}
+          selectedEventId={selectedEventId}
+          onSelectEvent={onSelectEvent}
+          eventDetail={eventDetail}
+          detailLoading={detailLoading}
+          detailError={detailError}
+          rsvpLoading={rsvpLoading}
+          onRsvpStatusChange={onRsvpStatusChange}
+          onBackToUpcoming={onBackToUpcoming}
+        />
+      ) : (
+        <div className="events-upcoming-panel p-5">
+          <div className="relative z-10">
+            <h2 className="text-base font-medium text-foreground">Upcoming</h2>
+          </div>
+          <div className="events-upcoming-panel-scroll mt-4">
+            <UpcomingEventsSidebar
+              events={upcomingEvents}
+              loading={upcomingLoading}
+              onSelectEvent={onSelectUpcomingEvent}
+            />
+          </div>
         </div>
-        <div className="events-upcoming-panel-scroll mt-4">
-          <UpcomingEventsSidebar
-            events={upcomingEvents}
-            loading={upcomingLoading}
-            onSelectEvent={onSelectUpcomingEvent}
-          />
-        </div>
-      </div>
-
-      <div className="events-sidebar-card p-5">
-        {selectedDate ? (
-          <>
-            <p className="text-xs text-label">{formatIsoDateLabel(selectedDate)}</p>
-
-            {dayEvents.length === 0 && !detailLoading ? (
-              <p className="mt-3 text-sm text-label">No events on this day.</p>
-            ) : null}
-
-            {dayEvents.length > 1 ? (
-              <ul className="mt-3 flex flex-wrap gap-2">
-                {dayEvents.map((event) => {
-                  const isActive = event.id === selectedEventId;
-                  return (
-                    <li key={event.id}>
-                      <button
-                        type="button"
-                        aria-pressed={isActive}
-                        onClick={() => onSelectEvent(event.id)}
-                        className={[
-                          "rounded-full px-3 py-1 text-xs font-medium transition-colors",
-                          isActive
-                            ? "bg-primary text-white"
-                            : "bg-[#F5F5F7] text-foreground hover:bg-[#EBEBED]",
-                        ].join(" ")}
-                      >
-                        {event.name}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : null}
-
-            {detailLoading ? (
-              <p className="mt-3 text-sm text-label">Loading event…</p>
-            ) : null}
-
-            {detailError ? (
-              <p className="mt-3 ds-field-error">{detailError}</p>
-            ) : null}
-
-            {previewEvent ? (
-              <div className="mt-4 rounded-[10px] border border-[#F0F0EE] bg-[#FAFAF9] p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-lg font-medium text-foreground">
-                    <Link
-                      to={eventDetailPath(previewEvent.id)}
-                      className="hover:text-accent"
-                    >
-                      {previewEvent.name}
-                    </Link>
-                  </h3>
-                  <Badge variant="primary" size="sm">
-                    {EVENT_TYPE_LABELS[previewEvent.event_type]}
-                  </Badge>
-                </div>
-                <p className="mt-2 text-sm text-label">
-                  {formatEventDateTime(previewEvent.starts_at)}
-                </p>
-
-                {eventDetail ? (
-                  <EventRsvpButton
-                    currentStatus={eventDetail.current_member_rsvp_status}
-                    canRsvp={isEventUpcoming(eventDetail.starts_at)}
-                    loading={rsvpLoading}
-                    onStatusChange={onRsvpStatusChange}
-                    embedded
-                  />
-                ) : null}
-              </div>
-            ) : null}
-          </>
-        ) : (
-          <p className="text-sm text-label">
-            Select a day on the calendar to see event details and RSVP.
-          </p>
-        )}
-      </div>
+      )}
     </aside>
   );
 }

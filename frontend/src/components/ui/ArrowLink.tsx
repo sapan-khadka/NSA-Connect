@@ -17,3 +17,25 @@ export function ArrowLink({ to, children, className = "" }: ArrowLinkProps) {
     </Link>
   );
 }
+
+/** Same visual language as ArrowLink, for opening modals/drawers in place. */
+export function ArrowAction({
+  onClick,
+  children,
+  className = "",
+}: {
+  onClick: () => void;
+  children: string;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={["ds-link", className].join(" ")}
+    >
+      {children}
+      <AppIcon icon={ChevronRight} size="sm" className="text-current" />
+    </button>
+  );
+}

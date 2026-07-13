@@ -8,6 +8,7 @@ import { Card } from "./ui/Card";
 type EventMeetingVisibilitySettingProps = {
   event: EventDetailResponse;
   onUpdated: (event: EventDetailResponse) => void;
+  compact?: boolean;
 };
 
 const VISIBILITY_OPTIONS: {
@@ -31,6 +32,7 @@ const VISIBILITY_OPTIONS: {
 export function EventMeetingVisibilitySetting({
   event,
   onUpdated,
+  compact = false,
 }: EventMeetingVisibilitySettingProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,18 +59,26 @@ export function EventMeetingVisibilitySetting({
     }
   }
 
-  return (
-    <Card padding="none" className="p-4 sm:p-6">
-      <h2 className="text-sm font-medium text-foreground">Meeting visibility</h2>
-      <p className="mt-1 text-sm text-label">
-        Control whether general members can see this meeting on the calendar.
-      </p>
-      <fieldset className="mt-4 space-y-3" disabled={isSaving}>
+  const fields = (
+    <>
+      {!compact ? (
+        <p className="mt-1 text-sm text-label">
+          Control whether general members can see this meeting on the calendar.
+        </p>
+      ) : null}
+      <fieldset
+        className={compact ? "mt-1 space-y-2" : "mt-4 space-y-3"}
+        disabled={isSaving}
+      >
         <legend className="sr-only">Meeting visibility</legend>
         {VISIBILITY_OPTIONS.map((option) => (
           <label
             key={option.value}
-            className="flex cursor-pointer items-start gap-3 rounded-md border border-gray-200 p-3"
+            className={
+              compact
+                ? "flex cursor-pointer items-start gap-2"
+                : "flex cursor-pointer items-start gap-3 rounded-md border border-gray-200 p-3"
+            }
           >
             <input
               type="radio"
@@ -79,12 +89,20 @@ export function EventMeetingVisibilitySetting({
               className="mt-0.5 h-4 w-4 border-gray-300 text-accent focus:ring-accent"
             />
             <span>
-              <span className="text-sm font-medium text-foreground">
+              <span
+                className={
+                  compact
+                    ? "text-xs font-medium text-foreground"
+                    : "text-sm font-medium text-foreground"
+                }
+              >
                 {option.label}
               </span>
-              <span className="mt-0.5 block text-sm text-label">
-                {option.description}
-              </span>
+              {!compact ? (
+                <span className="mt-0.5 block text-sm text-label">
+                  {option.description}
+                </span>
+              ) : null}
             </span>
           </label>
         ))}
@@ -94,6 +112,22 @@ export function EventMeetingVisibilitySetting({
           {error}
         </p>
       ) : null}
+    </>
+  );
+
+  if (compact) {
+    return (
+      <div>
+        <p className="text-xs font-medium text-label">Meeting visibility</p>
+        {fields}
+      </div>
+    );
+  }
+
+  return (
+    <Card padding="none" className="p-4 sm:p-6">
+      <h2 className="text-sm font-medium text-foreground">Meeting visibility</h2>
+      {fields}
     </Card>
   );
 }

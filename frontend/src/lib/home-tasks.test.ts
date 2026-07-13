@@ -68,6 +68,11 @@ describe("home-tasks", () => {
     expect(summary.overdueCount).toBe(1);
     expect(summary.nextTask?.title).toBe("Late task");
     expect(summary.overdueTask?.title).toBe("Late task");
+    expect(summary.previewTasks.map((task) => task.title)).toEqual([
+      "Late task",
+      "Soon task",
+      "No due date",
+    ]);
   });
 
   it("routes every member role to the shared kanban tasks page", () => {

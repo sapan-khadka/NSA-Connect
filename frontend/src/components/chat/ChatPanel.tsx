@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import {
   streamChatMessage,
@@ -37,6 +38,8 @@ function statusLabelForPhase(phase: string): string {
 }
 
 export function ChatPanel() {
+  const [searchParams] = useSearchParams();
+  const initialQuery = searchParams.get("q")?.trim() ?? "";
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: createMessageId(),
@@ -45,12 +48,13 @@ export function ChatPanel() {
         "Hi! I can answer constitution questions and look up live NSA Connect data about events, members, and finances.",
     },
   ]);
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState(initialQuery);
   const [error, setError] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [statusLabel, setStatusLabel] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const autoSentRef = useRef(false);
 
   useEffect(() => {
     const container = scrollRef.current;

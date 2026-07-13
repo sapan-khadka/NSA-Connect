@@ -49,7 +49,14 @@ class Settings(BaseSettings):
     RATE_LIMIT_GUEST_CHECKIN_EVENT_IP_WINDOW_SECONDS: int = 3600
     RATE_LIMIT_GUEST_CHECKIN_GLOBAL_IP_MAX: int = 30
     RATE_LIMIT_GUEST_CHECKIN_GLOBAL_IP_WINDOW_SECONDS: int = 60
-    RATE_LIMIT_GLOBAL_MAX: int = 120
+    RATE_LIMIT_GLOBAL_MAX: int = Field(
+        default=300,
+        description=(
+            "Max API requests per window per authenticated user (or IP). "
+            "Sized for SPA page loads with parallel fetches and inbox polling; "
+            "stricter limits still apply to auth and other sensitive endpoints."
+        ),
+    )
     RATE_LIMIT_GLOBAL_WINDOW_SECONDS: int = 60
     RATE_LIMIT_PASSWORD_RESET_EMAIL_MAX: int = 3
     RATE_LIMIT_PASSWORD_RESET_EMAIL_WINDOW_SECONDS: int = 3600

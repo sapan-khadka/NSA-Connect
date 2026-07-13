@@ -4,8 +4,14 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/useAuth";
 import { useLogout } from "../context/useLogout";
-import { AppIcon } from "./ui/AppIcon";
+import { isEventFinanceEditable } from "../lib/event-finance";
+import { fetchEvents } from "../lib/events-api";
+import { canManageTreasury } from "../lib/roles";
 import { AccountMenu } from "./AppNav";
+import { CreateMenu } from "./CreateMenu";
+import { LogFinanceEntryForm } from "./LogFinanceEntryForm";
+import { AppIcon } from "./ui/AppIcon";
+import { Modal } from "./ui/Modal";
 
 type AppTopBarProps = {
   onOpenSidebar?: () => void;
@@ -13,7 +19,7 @@ type AppTopBarProps = {
 };
 
 /**
- * Top header only: search + notifications + avatar.
+ * Top header: search + Create + notifications + avatar.
  * Primary navigation lives in AppSidebar — not here.
  */
 export function AppTopBar({
@@ -24,6 +30,41 @@ export function AppTopBar({
   const logout = useLogout();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
+  const [isLogOpen, setIsLogOpen] = useState(false);
+  const [eventOptions, setEventOptions] = useState<
+    Array<{ id: number; name: string }>
+  >([]);
+
+  const canLog =
+    member != null && canManageTreasury(member.role, member.position);
+
+  useEffect(() => {
+    if (!canLog || !isLogOpen) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void fetchEvents()
+      .then((response) => {
+        if (!cancelled) {
+          setEventOptions(
+            response.events
+              .filter((event) => isEventFinanceEditable(event))
+              .map((event) => ({ id: event.id, name: event.name })),
+          );
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setEventOptions([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canLog, isLogOpen]);
 
   function handleSearch(event: FormEvent) {
     event.preventDefault();
@@ -35,61 +76,79 @@ export function AppTopBar({
   }
 
   return (
-    <header className="ds-topbar">
-      {showMenuButton ? (
-        <button
-          type="button"
-          aria-label="Open navigation"
-          onClick={onOpenSidebar}
-          className="ds-icon-btn h-10 w-10 shrink-0 rounded-xl text-label transition duration-200 hover:bg-surface-muted hover:text-foreground lg:hidden"
+    <>
+      <header className="ds-topbar">
+        {showMenuButton ? (
+          <button
+            type="button"
+            aria-label="Open navigation"
+            onClick={onOpenSidebar}
+            className="ds-icon-btn h-10 w-10 shrink-0 rounded-xl text-label transition duration-200 hover:bg-surface-muted hover:text-foreground lg:hidden"
+          >
+            <AppIcon icon={Menu} size="md" className="text-current" />
+          </button>
+        ) : (
+          <span className="hidden w-10 shrink-0 lg:block" aria-hidden="true" />
+        )}
+
+        <form
+          onSubmit={handleSearch}
+          className="relative mx-auto min-w-0 w-full max-w-2xl flex-1"
+          role="search"
         >
-          <AppIcon icon={Menu} size="md" className="text-current" />
-        </button>
-      ) : (
-        <span className="hidden w-10 shrink-0 lg:block" aria-hidden="true" />
-      )}
-
-      <form
-        onSubmit={handleSearch}
-        className="relative mx-auto min-w-0 w-full max-w-2xl flex-1"
-        role="search"
-      >
-        <AppIcon
-          icon={Search}
-          size="sm"
-          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-label"
-        />
-        <input
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search events, members, announcements…"
-          aria-label="Search"
-          className="ds-topbar-search"
-        />
-        <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-md border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-label sm:inline">
-          ⌘ K
-        </kbd>
-      </form>
-
-      <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
-        <Link
-          to="/announcements"
-          aria-label="Notifications"
-          className="relative ds-icon-btn h-10 w-10 rounded-xl text-label transition duration-200 hover:bg-surface-muted hover:text-foreground"
-        >
-          <AppIcon icon={Bell} size="sm" className="text-current" />
-        </Link>
-
-        {member ? (
-          <AccountMenu
-            fullName={member.full_name}
-            onLogout={logout}
-            avatarOnly
+          <AppIcon
+            icon={Search}
+            size="sm"
+            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-label"
           />
-        ) : null}
-      </div>
-    </header>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search events, members, announcements…"
+            aria-label="Search"
+            className="ds-topbar-search"
+          />
+          <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-md border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-label sm:inline">
+            ⌘ K
+          </kbd>
+        </form>
+
+        <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
+          <CreateMenu
+            onLogTransaction={canLog ? () => setIsLogOpen(true) : undefined}
+          />
+
+          <Link
+            to="/announcements"
+            aria-label="Notifications"
+            className="relative ds-icon-btn h-10 w-10 rounded-xl text-label transition duration-200 hover:bg-surface-muted hover:text-foreground"
+          >
+            <AppIcon icon={Bell} size="sm" className="text-current" />
+          </Link>
+
+          {member ? (
+            <AccountMenu
+              fullName={member.full_name}
+              onLogout={logout}
+              avatarOnly
+            />
+          ) : null}
+        </div>
+      </header>
+
+      <Modal
+        open={isLogOpen}
+        title="Log transaction"
+        onClose={() => setIsLogOpen(false)}
+      >
+        <LogFinanceEntryForm
+          idPrefix="header-log-transaction"
+          eventOptions={eventOptions}
+          onCreated={() => setIsLogOpen(false)}
+        />
+      </Modal>
+    </>
   );
 }
 
