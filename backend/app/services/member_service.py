@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.password_validation import validate_password_strength
 from app.core.security import hash_password, verify_password
+from app.lib.member_majors import normalize_major
 from app.models.member import (
     EXCLUSIVE_AUTH_ROLES,
     EXCLUSIVE_MEMBER_POSITIONS,
@@ -69,7 +70,7 @@ def create_member(db: Session, data: MemberCreateRequest) -> Member:
         full_name=data.full_name,
         email=data.email,
         student_id=data.student_id,
-        major=data.major,
+        major=normalize_major(data.major),
         graduation_year=data.graduation_year,
         hashed_password=hash_password(data.password),
         role=MemberRole.GENERAL,
@@ -318,7 +319,7 @@ def update_member_profile(
         member.full_name = data.full_name
 
     if data.major is not None:
-        member.major = data.major
+        member.major = normalize_major(data.major)
 
     if data.graduation_year is not None:
         member.graduation_year = data.graduation_year

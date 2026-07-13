@@ -779,55 +779,47 @@ export function HomeUpNextSection({
   const managePath = `/events/${nextEvent.id}/manage`;
 
   return (
-    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-none">
-      <div className="relative h-16 w-full shrink-0 overflow-hidden sm:h-[4.5rem]">
+    <section className="grid h-full min-h-0 grid-cols-1 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-none md:grid-cols-[minmax(0,30%)_minmax(0,70%)] md:max-h-[18rem]">
+      <div className="relative h-16 w-full min-w-0 shrink-0 overflow-hidden sm:h-[4.5rem] md:h-auto md:min-h-0 md:self-stretch">
         {nextEvent.event_photo_url ? (
           <img
             src={nextEvent.event_photo_url}
             alt=""
             aria-hidden="true"
-            className="absolute inset-0 h-full w-full object-cover object-center"
+            className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center"
           />
         ) : (
           <div
             aria-hidden="true"
-            className="absolute inset-0"
+            className="pointer-events-none absolute inset-0"
             style={{
               background: `linear-gradient(145deg, ${EVENT_TYPE_COLOR[nextEvent.event_type]}33 0%, ${EVENT_TYPE_COLOR[nextEvent.event_type]} 100%)`,
             }}
           />
         )}
         <span
-          className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-medium shadow-sm ${EVENT_TYPE_BADGE_CLASS[nextEvent.event_type]}`}
+          className={`pointer-events-none absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-medium shadow-sm ${EVENT_TYPE_BADGE_CLASS[nextEvent.event_type]}`}
         >
           {EVENT_TYPE_LABELS[nextEvent.event_type]}
         </span>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-2 p-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-[11px] font-normal uppercase tracking-[0.06em] text-gray-500">
-              Upcoming Event
-            </p>
-            <Link
-              to={eventPath}
-              className="mt-0.5 block truncate text-base font-medium tracking-tight text-foreground transition-colors hover:text-primary"
-            >
-              {nextEvent.name}
-            </Link>
-          </div>
-          <div className="flex shrink-0 flex-col items-end gap-1">
+      <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-y-auto p-3">
+        <div className="flex flex-col gap-1">
+          <p className="text-[10px] font-normal uppercase tracking-[0.06em] text-gray-500">
+            Upcoming Event
+          </p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <Link
               to="/events/calendar"
-              className="text-xs font-medium text-primary hover:text-primary-hover"
+              className="relative z-10 text-xs font-medium text-primary hover:text-primary-hover"
             >
               View calendar
             </Link>
             {canManage ? (
               <Link
                 to={managePath}
-                className="text-xs font-medium text-primary hover:text-primary-hover"
+                className="relative z-10 text-xs font-medium text-primary hover:text-primary-hover"
               >
                 Manage
               </Link>
@@ -835,26 +827,35 @@ export function HomeUpNextSection({
           </div>
         </div>
 
-        <p className="truncate text-xs font-normal leading-relaxed text-gray-600">
-          {formatUpcomingEventDate(nextEvent.starts_at)}
-          <span className="mx-1 text-gray-300" aria-hidden="true">
-            ·
-          </span>
-          {formatUpcomingEventTime(nextEvent.starts_at)}
-        </p>
-        <p className="truncate text-xs font-normal text-gray-500">
-          {nextEvent.location?.trim() || "Location TBA"}
-          <span className="mx-1 text-gray-300" aria-hidden="true">
-            ·
-          </span>
-          {goingCount === null ? "…" : `${goingCount} going`}
-          <span className="mx-1 text-gray-300" aria-hidden="true">
-            ·
-          </span>
-          {formatEventCountdown(nextEvent.starts_at)}
-        </p>
+        <Link
+          to={eventPath}
+          className="relative z-10 mb-1 block text-base font-medium leading-snug tracking-tight text-foreground transition-colors hover:text-primary md:text-lg md:leading-snug"
+        >
+          {nextEvent.name}
+        </Link>
 
-        <div className="mt-auto pt-1">
+        <div className="min-w-0 space-y-1">
+          <p className="break-words text-xs font-normal leading-relaxed text-gray-600">
+            {formatUpcomingEventDate(nextEvent.starts_at)}
+            <span className="mx-1 text-gray-300" aria-hidden="true">
+              ·
+            </span>
+            {formatUpcomingEventTime(nextEvent.starts_at)}
+          </p>
+          <p className="break-words text-xs font-normal leading-relaxed text-gray-500">
+            {nextEvent.location?.trim() || "Location TBA"}
+            <span className="mx-1 text-gray-300" aria-hidden="true">
+              ·
+            </span>
+            {goingCount === null ? "…" : `${goingCount} going`}
+            <span className="mx-1 text-gray-300" aria-hidden="true">
+              ·
+            </span>
+            {formatEventCountdown(nextEvent.starts_at)}
+          </p>
+        </div>
+
+        <div className="relative z-10 mt-auto min-w-0 max-w-full shrink-0 pt-1">
           <EventRsvpButton
             currentStatus={nextEvent.current_member_rsvp_status}
             canRsvp

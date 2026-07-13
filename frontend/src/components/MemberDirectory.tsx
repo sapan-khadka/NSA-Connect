@@ -5,6 +5,10 @@ import { useDismissibleMenu } from "../design-system";
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/auth-api";
 import { useAuth } from "../context/useAuth";
+import {
+  memberMatchesMajors,
+  uniqueNormalizedMajors,
+} from "../lib/member-majors";
 import { memberMatchesSearch } from "../lib/member-search";
 import {
   fetchMembers,
@@ -12,9 +16,9 @@ import {
 } from "../lib/members-api";
 import {
   formatTalentFilterSummary,
+  MEMBER_TALENTS,
   memberHasAnyTalent,
   MEMBER_TALENT_LABELS,
-  type MemberTalent,
 } from "../lib/member-talents";
 import { isRoleAtLeast } from "../lib/roles";
 
@@ -27,6 +31,24 @@ import { MemberDirectoryRow } from "./MemberDirectoryCard";
 const PAGE_SIZE_OPTIONS = [12, 24, 48] as const;
 const SEARCH_FETCH_PAGE_SIZE = 100;
 
+const FILTER_CHIP_BASE =
+  "inline-flex min-h-11 w-full items-center justify-center rounded-full border px-2.5 py-1.5 text-center text-xs font-medium leading-snug whitespace-normal transition-colors";
+
+function filterChipClass(active: boolean): string {
+  return [
+    FILTER_CHIP_BASE,
+    active
+      ? "border-primary bg-primary text-white"
+      : "border-gray-200 bg-white text-label hover:text-foreground",
+  ].join(" ");
+}
+
+function toggleValue<T extends string | number>(current: T[], value: T): T[] {
+  return current.includes(value)
+    ? current.filter((item) => item !== value)
+    : [...current, value];
+}
+
 export function MemberDirectory() {
   const { member: currentMember } = useAuth();
   const [members, setMembers] = useState<MemberResponse[]>([]);
@@ -37,6 +59,10 @@ export function MemberDirectory() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedTalents, setSelectedTalents] = useState<string[]>([]);
+  const [selectedMajors, setSelectedMajors] = useState<string[]>([]);
+  const [selectedYears, setSelectedYears] = useState<number[]>([]);
+  const [facetMajors, setFacetMajors] = useState<string[]>([]);
+  const [facetYears, setFacetYears] = useState<number[]>([]);
   const [talentLabels, setTalentLabels] = useState<Record<string, string>>(
     MEMBER_TALENT_LABELS,
   );
@@ -52,8 +78,10 @@ export function MemberDirectory() {
 
   const isBoard = currentMember ? isRoleAtLeast(currentMember.role, "board") : false;
   const canInvite = isBoard && selectedTalents.length > 0;
-  const activeFilterCount = selectedTalents.length;
-  const talentOptions = Object.keys(talentLabels) as MemberTalent[];
+  const activeFilterCount =
+    selectedTalents.length + selectedMajors.length + selectedYears.length;
+  const hasClientFilters =
+    selectedMajors.length > 0 || selectedYears.length > 0;
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -66,11 +94,30 @@ export function MemberDirectory() {
 
   useEffect(() => {
     void fetchTalentOptions()
-      .then((response) => setTalentLabels(response.labels))
+      .then((response) => {
+        if (response.labels && Object.keys(response.labels).length > 0) {
+          setTalentLabels({ ...MEMBER_TALENT_LABELS, ...response.labels });
+        }
+      })
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    void fetchMembers({ page: 1, page_size: SEARCH_FETCH_PAGE_SIZE })
+      .then((data) => {
+        setFacetMajors(
+          uniqueNormalizedMajors(data.members.map((member) => member.major)),
+        );
+        const years = [
+          ...new Set(data.members.map((member) => member.graduation_year)),
+        ].sort((a, b) => b - a);
+        setFacetYears(years);
+      })
       .catch(() => undefined);
   }, []);
 
   const isSearching = debouncedSearch.trim().length > 0;
+  const useClientResultSet = isSearching || hasClientFilters;
 
   const loadMembers = useCallback(async () => {
     setIsLoading(true);
@@ -78,8 +125,8 @@ export function MemberDirectory() {
 
     try {
       const data = await fetchMembers({
-        page: isSearching ? 1 : page,
-        page_size: isSearching ? SEARCH_FETCH_PAGE_SIZE : pageSize,
+        page: useClientResultSet ? 1 : page,
+        page_size: useClientResultSet ? SEARCH_FETCH_PAGE_SIZE : pageSize,
         talents: selectedTalents.length > 0 ? selectedTalents : undefined,
       });
       setMembers(data.members);
@@ -90,7 +137,7 @@ export function MemberDirectory() {
     } finally {
       setIsLoading(false);
     }
-  }, [isSearching, page, pageSize, selectedTalents]);
+  }, [useClientResultSet, page, pageSize, selectedTalents]);
 
   useEffect(() => {
     void loadMembers();
@@ -99,9 +146,22 @@ export function MemberDirectory() {
   const visibleMembers = useMemo(() => {
     let result = members;
 
+    // Within talents/majors/years: OR. Across sections: AND.
     if (selectedTalents.length > 0) {
       result = result.filter((member) =>
         memberHasAnyTalent(member, selectedTalents),
+      );
+    }
+
+    if (selectedMajors.length > 0) {
+      result = result.filter((member) =>
+        memberMatchesMajors(member, selectedMajors),
+      );
+    }
+
+    if (selectedYears.length > 0) {
+      result = result.filter((member) =>
+        selectedYears.includes(member.graduation_year),
       );
     }
 
@@ -112,26 +172,28 @@ export function MemberDirectory() {
     }
 
     return result;
-  }, [debouncedSearch, isSearching, members, selectedTalents]);
+  }, [
+    debouncedSearch,
+    isSearching,
+    members,
+    selectedMajors,
+    selectedTalents,
+    selectedYears,
+  ]);
 
-  const filteredCount = isSearching ? visibleMembers.length : total;
+  const filteredCount = useClientResultSet ? visibleMembers.length : total;
 
   const filterSummary =
     selectedTalents.length > 0
       ? formatTalentFilterSummary(selectedTalents, filteredCount, talentLabels)
-      : null;
+      : activeFilterCount > 0
+        ? `Showing ${filteredCount} member${filteredCount === 1 ? "" : "s"}`
+        : null;
 
-  function toggleTalent(talent: string) {
-    setSelectedTalents((current) =>
-      current.includes(talent)
-        ? current.filter((item) => item !== talent)
-        : [...current, talent],
-    );
-    setPage(1);
-  }
-
-  function clearTalentFilter() {
+  function clearAllFilters() {
     setSelectedTalents([]);
+    setSelectedMajors([]);
+    setSelectedYears([]);
     setPage(1);
   }
 
@@ -147,9 +209,10 @@ export function MemberDirectory() {
               {filterSummary ??
                 `${filteredCount} member${filteredCount === 1 ? "" : "s"}`}
             </p>
-            {selectedTalents.length > 0 ? (
+            {activeFilterCount > 0 ? (
               <p className="mt-1 text-xs text-label">
-                Talent filter uses any-match (OR) — members with at least one selected talent.
+                Within each section, any match counts (OR). Across sections,
+                members must match every active section (AND).
               </p>
             ) : null}
           </div>
@@ -181,43 +244,107 @@ export function MemberDirectory() {
                 <div
                   id={filtersMenuId}
                   role="dialog"
-                  aria-label="Talent filters"
-                  className="absolute left-0 top-full z-20 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-lg border border-gray-200 bg-white p-3 shadow-lg sm:w-80"
+                  aria-label="Member filters"
+                  className="absolute left-0 top-full z-20 mt-2 flex w-[min(24rem,calc(100vw-2rem))] max-h-[min(28rem,70vh)] flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg sm:w-96"
                 >
-                  <div className="mb-2 flex items-center justify-between gap-3">
-                    <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                      Talents
-                    </p>
+                  <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-100 px-3 py-2.5">
+                    <p className="text-sm font-medium text-foreground">Filters</p>
                     {activeFilterCount > 0 ? (
                       <button
                         type="button"
-                        onClick={clearTalentFilter}
+                        onClick={clearAllFilters}
                         className="text-xs font-medium text-accent hover:underline"
                       >
                         Clear all
                       </button>
                     ) : null}
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {talentOptions.map((talent) => {
-                      const active = selectedTalents.includes(talent);
-                      return (
-                        <button
-                          key={talent}
-                          type="button"
-                          aria-pressed={active}
-                          onClick={() => toggleTalent(talent)}
-                          className={[
-                            "ds-chip justify-center px-2.5 py-1.5 text-xs sm:text-sm",
-                            active
-                              ? "bg-primary text-white"
-                              : "border border-gray-200 bg-white text-label hover:text-foreground",
-                          ].join(" ")}
-                        >
-                          {talentLabels[talent] ?? talent}
-                        </button>
-                      );
-                    })}
+
+                  <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-3">
+                    <section>
+                      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">
+                        Talents
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {MEMBER_TALENTS.map((talent) => {
+                          const active = selectedTalents.includes(talent);
+                          return (
+                            <button
+                              key={talent}
+                              type="button"
+                              aria-pressed={active}
+                              onClick={() => {
+                                setSelectedTalents((current) =>
+                                  toggleValue(current, talent),
+                                );
+                                setPage(1);
+                              }}
+                              className={filterChipClass(active)}
+                            >
+                              {talentLabels[talent] ?? talent}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </section>
+
+                    {facetMajors.length > 0 ? (
+                      <section>
+                        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">
+                          Major
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {facetMajors.map((major) => {
+                            const active = selectedMajors.includes(major);
+                            return (
+                              <button
+                                key={major}
+                                type="button"
+                                aria-pressed={active}
+                                onClick={() => {
+                                  setSelectedMajors((current) =>
+                                    toggleValue(current, major),
+                                  );
+                                  setPage(1);
+                                }}
+                                className={filterChipClass(active)}
+                              >
+                                {major}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </section>
+                    ) : null}
+
+                    {facetYears.length > 0 ? (
+                      <section>
+                        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">
+                          Class year
+                        </p>
+                        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                          {facetYears.map((year) => {
+                            const active = selectedYears.includes(year);
+                            return (
+                              <button
+                                key={year}
+                                type="button"
+                                aria-pressed={active}
+                                onClick={() => {
+                                  setSelectedYears((current) =>
+                                    toggleValue(current, year),
+                                  );
+                                  setPage(1);
+                                }}
+                                className={filterChipClass(active)}
+                              >
+                                {year}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </section>
+                    ) : null}
                   </div>
                 </div>
               ) : null}
@@ -256,8 +383,8 @@ export function MemberDirectory() {
           <p className="px-4 py-4 text-sm text-label lg:px-6">Loading members...</p>
         ) : visibleMembers.length === 0 ? (
           <p className="px-4 py-4 text-sm text-label lg:px-6">
-            {selectedTalents.length > 0 && !isSearching
-              ? "No members have this talent yet."
+            {activeFilterCount > 0 && !isSearching
+              ? "No members match the selected filters."
               : isSearching
                 ? "No members match your search."
                 : "No members found."}
@@ -295,7 +422,7 @@ export function MemberDirectory() {
         )}
       </div>
 
-      {!isSearching && totalPages > 1 ? (
+      {!useClientResultSet && totalPages > 1 ? (
         <div className="flex flex-col gap-4 border-t border-gray-200 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">
           <div className="flex items-center gap-2 text-sm text-label">
             <label htmlFor="page-size" className="font-medium text-foreground">
