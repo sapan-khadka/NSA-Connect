@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { EventManageDashboard } from "../components/EventManageDashboard";
-import { Card } from "../components/ui/Card";
+import { EventManageHero } from "../components/EventManageHero";
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage } from "../lib/auth-api";
 import { calendarDeepLink } from "../lib/event-links";
@@ -13,14 +13,12 @@ import {
 import { fetchEvent, type EventDetailResponse } from "../lib/events-api";
 import type { EventVolunteerSignupMember } from "../lib/events-api";
 import { fetchEventTasks, type EventTaskResponse } from "../lib/event-tasks-api";
-import { EVENT_TYPE_BADGE_CLASS, EVENT_TYPE_LABELS } from "../lib/event-types";
 import { fetchAssignableMembers } from "../lib/members-api";
 import {
   fetchEventBudgetForEvent,
   type FinanceEventBudgetSummary,
 } from "../lib/finance-api";
 import type { MemberResponse } from "../lib/auth-api";
-import { formatEventDateTime } from "../lib/format-datetime";
 import {
   buildVolunteerTaskDraft,
   type EventTaskDraft,
@@ -49,6 +47,7 @@ export function EventManagePage() {
     useState<EventAttendanceSummary | null>(null);
   const [taskDraft, setTaskDraft] = useState<EventTaskDraft | null>(null);
   const [openTasksModalToken, setOpenTasksModalToken] = useState(0);
+  const [openCheckInModalToken, setOpenCheckInModalToken] = useState(0);
 
   const canViewBoard = member ? isRoleAtLeast(member.role, "board") : false;
   const canViewTreasury = member
@@ -57,7 +56,6 @@ export function EventManagePage() {
   const canManageTasks = member
     ? canManageEventTasks(member.role, member.position)
     : false;
-  const isMeetingEvent = event?.event_type === "meeting";
 
   useEffect(() => {
     if (!Number.isFinite(numericEventId)) {
@@ -200,34 +198,25 @@ export function EventManagePage() {
     setRefreshKey((current) => current + 1);
   }
 
+  function handleEditEvent() {
+    const schedule = document.getElementById("event-manage-schedule");
+    schedule?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const dateInput = document.getElementById("manage-event-date");
+    if (dateInput instanceof HTMLElement) {
+      window.setTimeout(() => dateInput.focus(), 280);
+    }
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-4">
-      <div>
-        <Link to={calendarBackTo} className="ds-link">
-          ← Back to calendar
-        </Link>
-      </div>
-
-      <Card padding="none" className="p-4 sm:p-5 home-surface-quiet">
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-light tracking-headline text-foreground sm:text-3xl">
-            {event.name}
-          </h1>
-          <span
-            className={`rounded-full px-2 py-0.5 text-xs font-medium ${EVENT_TYPE_BADGE_CLASS[event.event_type]}`}
-          >
-            {EVENT_TYPE_LABELS[event.event_type]}
-          </span>
-        </div>
-        <p className="mt-1.5 text-sm text-label">
-          {formatEventDateTime(event.starts_at)}
-        </p>
-        {!isMeetingEvent && event.description ? (
-          <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-foreground">
-            {event.description}
-          </p>
-        ) : null}
-      </Card>
+      <EventManageHero
+        event={event}
+        budget={budget}
+        tasks={tasks}
+        backTo={calendarBackTo}
+        onEditEvent={handleEditEvent}
+        onCheckIn={() => setOpenCheckInModalToken((current) => current + 1)}
+      />
 
       <EventManageDashboard
         event={event}
@@ -246,6 +235,7 @@ export function EventManagePage() {
         onTaskDraftApplied={() => setTaskDraft(null)}
         onConvertVolunteerToTask={handleConvertVolunteerToTask}
         openTasksModalToken={openTasksModalToken}
+        openCheckInModalToken={openCheckInModalToken}
       />
     </div>
   );

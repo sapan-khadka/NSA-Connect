@@ -64,6 +64,7 @@ type EventManageDashboardProps = {
   onTaskDraftApplied: () => void;
   onConvertVolunteerToTask: (signup: EventVolunteerSignupMember) => void;
   openTasksModalToken?: number;
+  openCheckInModalToken?: number;
 };
 
 function ManageCardShell({
@@ -126,6 +127,7 @@ export function EventManageDashboard({
   onTaskDraftApplied,
   onConvertVolunteerToTask,
   openTasksModalToken = 0,
+  openCheckInModalToken = 0,
 }: EventManageDashboardProps) {
   const [modal, setModal] = useState<ManageModal>(null);
   const [volunteers, setVolunteers] = useState<EventVolunteerSignupMember[]>(
@@ -150,6 +152,12 @@ export function EventManageDashboard({
       setModal("tasks");
     }
   }, [openTasksModalToken]);
+
+  useEffect(() => {
+    if (openCheckInModalToken > 0) {
+      setModal("checkin");
+    }
+  }, [openCheckInModalToken]);
 
   useEffect(() => {
     if (!canViewBoard) {

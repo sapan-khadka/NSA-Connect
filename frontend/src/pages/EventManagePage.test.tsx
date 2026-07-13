@@ -36,6 +36,13 @@ vi.mock("../lib/events-api", () => ({
   fetchEvent: vi.fn(),
   fetchEventVolunteerSignups: vi.fn().mockResolvedValue({ total: 0, signups: [] }),
   fetchEventInvitedParticipants: vi.fn().mockResolvedValue({ invitations: [] }),
+  fetchEventAttendees: vi.fn().mockResolvedValue({
+    going_count: 84,
+    maybe_count: 0,
+    not_going_count: 0,
+    no_response_count: 0,
+    attendees: [],
+  }),
   patchEvent: vi.fn(),
 }));
 
@@ -179,6 +186,16 @@ describe("EventManagePage", () => {
     renderPage("board");
 
     expect(await screen.findByText("Dashain Celebration")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Back to Events/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit Event" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View Public Page" })).toHaveAttribute(
+      "href",
+      "/events/1",
+    );
+    expect(screen.getByRole("button", { name: "Share Event" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Check In" })).toBeInTheDocument();
+    expect(screen.getByText("Attendees")).toBeInTheDocument();
+    expect(screen.getByText("Published")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Schedule" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Event photo" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Tasks" })).toBeInTheDocument();
@@ -192,7 +209,7 @@ describe("EventManagePage", () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Overview" })).not.toBeInTheDocument();
 
-    const backLink = screen.getByRole("link", { name: /Back to calendar/i });
+    const backLink = screen.getByRole("link", { name: /Back to Events/i });
     expect(backLink.getAttribute("href")).toMatch(
       /^\/events\/calendar\?date=\d{4}-\d{2}-\d{2}&event=1$/,
     );

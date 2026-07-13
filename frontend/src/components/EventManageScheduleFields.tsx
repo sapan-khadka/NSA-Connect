@@ -183,10 +183,12 @@ export function EventManageScheduleFields({
 
   if (compact) {
     return (
-      <HomeCard padding="sm" className="flex h-full min-h-0 flex-col home-surface-quiet">
-        <h2 className="home-section-title">Schedule</h2>
-        {fields}
-      </HomeCard>
+      <div id="event-manage-schedule">
+        <HomeCard padding="sm" className="flex h-full min-h-0 flex-col home-surface-quiet">
+          <h2 className="home-section-title">Schedule</h2>
+          {fields}
+        </HomeCard>
+      </div>
     );
   }
 
