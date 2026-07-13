@@ -18,6 +18,12 @@ import { Link } from "react-router-dom";
 import { EVENT_TYPE_BADGE_CLASS, EVENT_TYPE_LABELS } from "../lib/event-types";
 import { eventDetailPath } from "../lib/event-links";
 import {
+  EVENT_MANAGE_EYEBROW,
+  EVENT_MANAGE_PRIMARY_BTN,
+  EVENT_MANAGE_SECTION_CARD_CLASS,
+  EVENT_MANAGE_SECONDARY_BTN,
+} from "../lib/event-manage-ui";
+import {
   fetchEventAttendees,
   fetchEventVolunteerSignups,
   type EventDetailResponse,
@@ -26,6 +32,7 @@ import type { EventTaskResponse } from "../lib/event-tasks-api";
 import type { FinanceEventBudgetSummary } from "../lib/finance-api";
 import { formatCurrency } from "../lib/format-currency";
 import { AppIcon } from "./ui/AppIcon";
+import { Card } from "./ui/Card";
 
 type EventManageHeroProps = {
   event: EventDetailResponse;
@@ -102,7 +109,7 @@ function HeroMetric({
   label: string;
 }) {
   return (
-    <div className="flex min-w-0 items-start gap-3 rounded-xl border border-gray-100 bg-white/80 px-3.5 py-3 transition duration-150 hover:border-gray-200">
+    <div className="flex min-w-0 items-start gap-3 rounded-xl border border-gray-100 bg-white px-3.5 py-3 transition duration-150 hover:border-gray-200">
       <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-50 text-gray-500">
         <AppIcon icon={icon} size="sm" className="text-current" />
       </span>
@@ -118,12 +125,12 @@ function HeroMetric({
 
 function secondaryActionClassName(active = false): string {
   return [
-    "inline-flex h-9 items-center justify-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition duration-150 ease-out",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2",
-    active
-      ? "border-primary/25 bg-badge-teal-bg text-primary"
-      : "border-gray-200 bg-white text-foreground hover:border-gray-300 hover:bg-gray-50",
-  ].join(" ");
+    EVENT_MANAGE_SECONDARY_BTN,
+    "gap-1.5",
+    active ? "border-primary/25 bg-badge-teal-bg text-primary hover:bg-badge-teal-bg" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 export function EventManageHero({
@@ -192,9 +199,11 @@ export function EventManageHero({
   }
 
   return (
-    <section
+    <Card
+      as="section"
+      padding="none"
       aria-label="Event overview"
-      className="rounded-2xl border border-gray-100 bg-white px-5 py-5 shadow-none sm:px-6 sm:py-6"
+      className={`${EVENT_MANAGE_SECTION_CARD_CLASS} px-5 py-5 sm:px-6 sm:py-6`}
     >
       <Link
         to={backTo}
@@ -264,13 +273,11 @@ export function EventManageHero({
         </div>
 
         <div className="flex flex-col gap-2.5 lg:items-stretch">
-          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-gray-400">
-            Actions
-          </p>
+          <p className={EVENT_MANAGE_EYEBROW}>Actions</p>
           <button
             type="button"
             onClick={onEditEvent}
-            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-primary px-4 text-sm font-medium text-white transition duration-150 ease-out hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2"
+            className={`${EVENT_MANAGE_PRIMARY_BTN} gap-1.5`}
           >
             <AppIcon icon={Pencil} size="xs" className="text-current" />
             Edit Event
@@ -323,6 +330,6 @@ export function EventManageHero({
           label="Tasks"
         />
       </div>
-    </section>
+    </Card>
   );
 }

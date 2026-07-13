@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { EventManageDashboard } from "../components/EventManageDashboard";
@@ -48,6 +48,7 @@ export function EventManagePage() {
   const [taskDraft, setTaskDraft] = useState<EventTaskDraft | null>(null);
   const [openTasksModalToken, setOpenTasksModalToken] = useState(0);
   const [openCheckInModalToken, setOpenCheckInModalToken] = useState(0);
+  const hasLoadedOnceRef = useRef(false);
 
   const canViewBoard = member ? isRoleAtLeast(member.role, "board") : false;
   const canViewTreasury = member
@@ -56,6 +57,12 @@ export function EventManagePage() {
   const canManageTasks = member
     ? canManageEventTasks(member.role, member.position)
     : false;
+
+  useEffect(() => {
+    hasLoadedOnceRef.current = false;
+    setOpenTasksModalToken(0);
+    setOpenCheckInModalToken(0);
+  }, [numericEventId]);
 
   useEffect(() => {
     if (!Number.isFinite(numericEventId)) {
@@ -67,7 +74,11 @@ export function EventManagePage() {
     let cancelled = false;
 
     async function load() {
-      setIsLoading(true);
+      // Soft refresh keeps the page mounted (and modals closable). Full skeletons
+      // only for the initial load for this event id.
+      if (!hasLoadedOnceRef.current) {
+        setIsLoading(true);
+      }
       setError(null);
 
       try {
@@ -91,6 +102,7 @@ export function EventManagePage() {
           setEvent(eventDetail);
           setTasks(taskResponse.tasks);
           setBudget(budgetSummary);
+          hasLoadedOnceRef.current = true;
         }
       } catch (caught) {
         if (!cancelled) {
@@ -167,7 +179,22 @@ export function EventManagePage() {
   }, [canViewBoard, numericEventId, refreshKey]);
 
   if (isLoading) {
-    return <p className="text-sm text-label">Loading event…</p>;
+    return (
+      <div
+        className="event-manage-page mx-auto flex w-full max-w-[1280px] flex-col gap-5"
+        aria-busy="true"
+        aria-live="polite"
+      >
+        <p className="event-manage-loading">Loading event…</p>
+        <div className="event-manage-skeleton h-44 w-full" />
+        <div className="event-manage-skeleton h-64 w-full" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="event-manage-skeleton h-56" />
+          <div className="event-manage-skeleton h-56" />
+          <div className="event-manage-skeleton h-56" />
+        </div>
+      </div>
+    );
   }
 
   if (error || !event) {
@@ -176,11 +203,14 @@ export function EventManagePage() {
       : "/events/calendar";
 
     return (
-      <div className="space-y-4">
-        <Link to={calendarBackTo} className="ds-link">
-          ← Back to calendar
+      <div className="event-manage-page mx-auto flex w-full max-w-[1280px] flex-col gap-5">
+        <Link
+          to={calendarBackTo}
+          className="inline-flex items-center text-sm font-medium text-gray-500 transition duration-150 hover:text-primary"
+        >
+          ← Back to Events
         </Link>
-        <div role="alert" className="ds-alert-banner p-6">
+        <div role="alert" className="ds-alert-banner rounded-2xl p-6">
           {error ?? "Event not found."}
         </div>
       </div>
@@ -208,7 +238,7 @@ export function EventManagePage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-4">
+    <div className="event-manage-page mx-auto flex w-full max-w-[1280px] flex-col gap-5 px-0">
       <EventManageHero
         event={event}
         budget={budget}
@@ -236,6 +266,10 @@ export function EventManagePage() {
         onConvertVolunteerToTask={handleConvertVolunteerToTask}
         openTasksModalToken={openTasksModalToken}
         openCheckInModalToken={openCheckInModalToken}
+        onDismissOpenTokens={() => {
+          setOpenTasksModalToken(0);
+          setOpenCheckInModalToken(0);
+        }}
       />
     </div>
   );

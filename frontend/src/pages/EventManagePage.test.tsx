@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -53,6 +53,18 @@ vi.mock("../lib/event-tasks-api", () => ({
 vi.mock("../lib/event-checkin-api", () => ({
   fetchEventAttendanceSummary: vi.fn().mockResolvedValue(null),
   fetchEventCheckIns: vi.fn().mockResolvedValue({ checkins: [] }),
+  fetchEventCheckInQr: vi.fn().mockResolvedValue({
+    event_id: 1,
+    event_name: "Dashain Celebration",
+    checkin_url: "https://example.com/checkin/token",
+    token: "token",
+  }),
+  regenerateEventCheckInQr: vi.fn().mockResolvedValue({
+    event_id: 1,
+    event_name: "Dashain Celebration",
+    checkin_url: "https://example.com/checkin/token-new",
+    token: "token-new",
+  }),
 }));
 
 vi.mock("../lib/finance-api", () => ({
@@ -185,7 +197,9 @@ describe("EventManagePage", () => {
     await mockBoardEventLoad();
     renderPage("board");
 
-    expect(await screen.findByText("Dashain Celebration")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Dashain Celebration" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Back to Events/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Edit Event" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View Public Page" })).toHaveAttribute(
@@ -196,11 +210,59 @@ describe("EventManagePage", () => {
     expect(screen.getByRole("button", { name: "Check In" })).toBeInTheDocument();
     expect(screen.getByText("Attendees")).toBeInTheDocument();
     expect(screen.getByText("Published")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Schedule" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Event photo" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Event Details" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Event Readiness" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Resolve Issues" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Volunteers")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Invite Volunteers" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Assign Roles" })).toBeInTheDocument();
+    expect(screen.getByText("Needed roles")).toBeInTheDocument();
+    expect(screen.getByText("No volunteers yet")).toBeInTheDocument();
+    expect(screen.getByText("General Information")).toBeInTheDocument();
+    expect(screen.getAllByText("Date & Time").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Cover Image/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByRole("heading", { name: "Schedule" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Event photo" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Tasks" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Budget" })).toBeInTheDocument();
+    const budgetCard = screen.getByLabelText("Budget");
+    expect(budgetCard).toBeInTheDocument();
+    expect(within(budgetCard).getByText("Budget Health")).toBeInTheDocument();
+    expect(
+      within(budgetCard).getByText(/Healthy|Warning|Over Budget/),
+    ).toBeInTheDocument();
+    expect(within(budgetCard).getAllByText("Remaining").length).toBeGreaterThan(0);
+    expect(within(budgetCard).getAllByText("Spent").length).toBeGreaterThan(0);
+    expect(within(budgetCard).getByText("Planned")).toBeInTheDocument();
+    expect(within(budgetCard).getByText("Net Balance")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Check-in" })).toBeInTheDocument();
+    expect(
+      await screen.findByLabelText("RSVP Analytics"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Attendance Prediction")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Open Check-in" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Generate QR" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download QR" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Event Communications")).toBeInTheDocument();
+    expect(screen.getByText("Invitation Email")).toBeInTheDocument();
+    expect(screen.getByText("Reminder Email")).toBeInTheDocument();
+    expect(screen.getByText("No messages sent yet")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Send Reminder" })).toHaveAttribute(
+      "href",
+      "/board/announcement-email",
+    );
+    expect(screen.getByRole("link", { name: "Create Announcement" })).toHaveAttribute(
+      "href",
+      "/announcements",
+    );
+    expect(
+      await screen.findByLabelText("Event Activity Timeline"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Activity Timeline")).toBeInTheDocument();
+    expect(screen.getByText("Budget updated")).toBeInTheDocument();
     expect(
       screen.getByRole("checkbox", { name: /Show in photo archive/i }),
     ).toBeChecked();
@@ -220,11 +282,14 @@ describe("EventManagePage", () => {
     await mockBoardEventLoad();
     renderPage("board");
 
-    await screen.findByText("Dashain Celebration");
-    expect(screen.getByText(/1\/2 done · 50%/)).toBeInTheDocument();
-    expect(screen.getByText("Cleanup")).toBeInTheDocument();
+    await screen.findByRole("heading", { name: "Dashain Celebration" });
+    expect(screen.getByText("50%")).toBeInTheDocument();
+    expect(screen.getByText("1/2 done")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /View all/i }),
+    ).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /View all tasks/i }));
+    await user.click(screen.getByRole("button", { name: /View all/i }));
     expect(screen.getByTestId("event-task-manager")).toBeInTheDocument();
   });
 
@@ -236,7 +301,7 @@ describe("EventManagePage", () => {
 
     renderPage("treasurer");
 
-    await screen.findByText("Dashain Celebration");
+    await screen.findByRole("heading", { name: "Dashain Celebration" });
     await user.click(screen.getByRole("button", { name: /View transactions/i }));
 
     await waitFor(() =>
@@ -262,13 +327,24 @@ describe("EventManagePage", () => {
     await mockBoardEventLoad();
     renderPage("board");
 
-    await screen.findByText("Dashain Celebration");
-    await user.click(screen.getByRole("button", { name: "Show check-in QR" }));
+    await screen.findByRole("heading", { name: "Dashain Celebration" });
+    await user.click(screen.getByRole("button", { name: "Open Check-in" }));
     expect(screen.getByTestId("event-checkin-panel")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Close" }));
+    await waitFor(() =>
+      expect(screen.queryByTestId("event-checkin-panel")).not.toBeInTheDocument(),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Check In" }));
+    expect(screen.getByTestId("event-checkin-panel")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    await waitFor(() =>
+      expect(screen.queryByTestId("event-checkin-panel")).not.toBeInTheDocument(),
+    );
+
     await user.click(
-      screen.getAllByRole("button", { name: /View details/i })[1],
+      screen.getByRole("button", { name: /View details/i }),
     );
     expect(screen.getByTestId("event-attendance-summary")).toBeInTheDocument();
   });
@@ -285,7 +361,7 @@ describe("EventManagePage", () => {
     renderPage("board");
 
     expect(await screen.findByRole("heading", { name: "Meeting record" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /^View all$/i }));
+    await user.click(screen.getByRole("button", { name: /Open meeting record/i }));
     expect(screen.getByTestId("meeting-record-section")).toBeInTheDocument();
   });
 });
