@@ -3,7 +3,6 @@ import {
   AlertCircle,
   CalendarDays,
   CheckCircle2,
-  ClipboardList,
   ListTodo,
   Megaphone,
   Plus,
@@ -188,7 +187,7 @@ export function HomeWelcomeBanner({
 
   return (
     <section
-      className="relative min-h-[168px] overflow-hidden rounded-2xl"
+      className="relative overflow-hidden rounded-xl"
       aria-label="Welcome"
     >
       <img
@@ -199,35 +198,38 @@ export function HomeWelcomeBanner({
       />
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/55 to-black/30"
+        className="absolute inset-0 bg-gradient-to-r from-teal-950 via-teal-950/75 to-teal-950/40"
       />
-      <div className="relative flex min-h-[168px] flex-col justify-center gap-4 px-6 py-6 sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:px-8">
-        <div className="min-w-0 flex-1 text-white">
-          <h1 className="text-[26px] font-bold leading-tight tracking-tight text-white sm:text-[30px]">
-            Welcome back, {firstName}{" "}
-            <span aria-hidden="true">👋</span>
-          </h1>
-          <p className="mt-1.5 text-sm font-normal leading-relaxed text-white/80">
-            {roleLabel}
-            <span className="mx-1.5 text-white/40" aria-hidden="true">
-              •
-            </span>
-            Here&apos;s what&apos;s happening today.
-          </p>
+      <div className="relative flex min-h-[80px] flex-col gap-2 px-4 py-3 sm:min-h-[88px] sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
+        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <div className="min-w-0 shrink-0 text-white">
+            <h1 className="truncate text-lg font-bold leading-tight tracking-tight text-white sm:text-xl">
+              Welcome back, {firstName}
+              <span className="mx-1.5 font-normal text-white/40" aria-hidden="true">
+                ·
+              </span>
+              <span className="text-sm font-normal tracking-[0.01em] text-white/80">
+                {roleLabel}
+              </span>
+            </h1>
+          </div>
 
           {chips.length > 0 ? (
-            <ul className="mt-4 flex flex-wrap gap-2" aria-label="Today at a glance">
+            <ul
+              className="flex min-w-0 flex-wrap items-center gap-1.5"
+              aria-label="Today at a glance"
+            >
               {chips.map((chip) => (
                 <li key={chip.id}>
                   {chip.to ? (
                     <Link
                       to={chip.to}
-                      className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium tracking-[0.02em] text-white backdrop-blur-sm transition hover:bg-white/18"
+                      className="inline-flex items-center rounded-md border border-white/30 bg-white/5 px-2 py-0.5 text-[11px] font-normal leading-relaxed tracking-[0.03em] text-white/90 transition hover:border-white/45 hover:bg-white/10"
                     >
                       {chip.label}
                     </Link>
                   ) : (
-                    <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium tracking-[0.02em] text-white backdrop-blur-sm">
+                    <span className="inline-flex items-center rounded-md border border-white/30 bg-white/5 px-2 py-0.5 text-[11px] font-normal leading-relaxed tracking-[0.03em] text-white/90">
                       {chip.label}
                     </span>
                   )}
@@ -242,7 +244,7 @@ export function HomeWelcomeBanner({
             <button
               type="button"
               onClick={onLogTransaction}
-              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-white/90"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-white/95 px-3.5 py-1.5 text-sm font-medium text-foreground transition hover:bg-white"
             >
               <AppIcon icon={Plus} size="sm" className="text-current" />
               Log transaction
@@ -363,37 +365,35 @@ export function HomeStatCards({
   ];
 
   return (
-    <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {cards.map((card) => {
         const content = (
           <>
-            <IconBadge
-              icon={card.icon}
-              category={card.category}
-              size="xs"
-              shape="rounded"
-            />
-            <p className="mt-2.5 text-[26px] font-medium leading-none tracking-[-0.02em] tabular-nums text-foreground">
-              {card.value}
-            </p>
-            <div className="mt-2 space-y-0.5">
-              <p className="text-xs font-medium tracking-[0.03em] text-gray-500">
+            <div className="flex items-center gap-2">
+              <IconBadge
+                icon={card.icon}
+                tone="gray"
+                size="xs"
+                shape="rounded"
+              />
+              <p className="truncate text-xs font-normal leading-relaxed tracking-[0.04em] text-gray-500">
                 {card.label}
               </p>
-              <p
-                className={[
-                  "line-clamp-2 text-xs font-normal leading-tight",
-                  card.hintUrgent ? "font-medium text-overdue" : "text-gray-600",
-                ].join(" ")}
-              >
-                {card.hint}
-              </p>
             </div>
+            <p className="home-stat-value mt-2">{card.value}</p>
+            <p
+              className={[
+                "mt-1 line-clamp-1 text-xs font-normal leading-relaxed tracking-[0.01em]",
+                card.hintUrgent ? "text-overdue" : "text-gray-500",
+              ].join(" ")}
+            >
+              {card.hint}
+            </p>
           </>
         );
 
         const className =
-          "group flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-4 shadow-card transition duration-200 ease-out hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-card-hover";
+          "group flex h-full min-h-0 flex-col justify-center rounded-xl bg-white px-3.5 py-3 shadow-sm transition duration-200 ease-out hover:shadow-md xl:min-h-[96px]";
 
         return (
           <li key={card.key} className="min-w-0">
@@ -571,43 +571,39 @@ export function HomeYourWorkSection({
   isLoading: boolean;
 }) {
   return (
-    <HomeCard padding="sm" className="flex h-full flex-col">
+    <HomeCard
+      padding="sm"
+      className="flex h-full min-h-0 flex-col home-surface-quiet"
+    >
       <div className="flex shrink-0 items-center justify-between gap-3">
-        <div className="ds-icon-label">
-          <IconBadge icon={ClipboardList} category="tasks" size="sm" />
-          <h2 className="text-lg font-semibold text-foreground">Your Work</h2>
-        </div>
+        <h2 className="home-section-title">Your Work</h2>
         <ArrowLink to={tasksPath}>View all</ArrowLink>
       </div>
 
-      <div className="mt-3 flex flex-col">
+      <div className="mt-2 flex flex-col gap-2">
         {isLoading ? (
           <p className="text-sm font-normal text-gray-600">Loading tasks…</p>
-        ) : null}
-
-        {!isLoading ? (
-          <div className="flex flex-col gap-3">
-            <div className="grid grid-cols-2 gap-2.5">
-              <div className="rounded-card border border-gray-200 bg-success-surface px-3 py-2.5">
-                <p className="text-xs font-medium tracking-[0.03em] text-gray-500">
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-lg bg-surface-muted px-2.5 py-2">
+                <p className="text-xs font-normal leading-relaxed tracking-[0.04em] text-gray-500">
                   Open Tasks
                 </p>
-                <p className="mt-1 text-[28px] font-medium leading-none tracking-[-0.02em] tabular-nums text-foreground">
-                  {tasksSummary.openCount}
-                </p>
+                <p className="home-stat-value mt-1">{tasksSummary.openCount}</p>
               </div>
               <div
                 className={
                   tasksSummary.overdueCount > 0
-                    ? "rounded-card border border-overdue/20 bg-overdue-surface px-3 py-2.5"
-                    : "rounded-card border border-gray-200 bg-surface-muted px-3 py-2.5"
+                    ? "rounded-lg border border-overdue/15 bg-overdue-surface px-2.5 py-2"
+                    : "rounded-lg bg-surface-muted px-2.5 py-2"
                 }
               >
                 <p
                   className={
                     tasksSummary.overdueCount > 0
-                      ? "text-xs font-medium tracking-[0.03em] text-overdue"
-                      : "text-xs font-medium tracking-[0.03em] text-gray-500"
+                      ? "text-xs font-normal leading-relaxed tracking-[0.04em] text-overdue"
+                      : "text-xs font-normal leading-relaxed tracking-[0.04em] text-gray-500"
                   }
                 >
                   Overdue
@@ -615,8 +611,8 @@ export function HomeYourWorkSection({
                 <p
                   className={
                     tasksSummary.overdueCount > 0
-                      ? "mt-1 text-[28px] font-medium leading-none tracking-[-0.02em] tabular-nums text-overdue"
-                      : "mt-1 text-[28px] font-medium leading-none tracking-[-0.02em] tabular-nums text-foreground"
+                      ? "home-stat-value mt-1 text-overdue"
+                      : "home-stat-value mt-1"
                   }
                 >
                   {tasksSummary.overdueCount}
@@ -625,35 +621,35 @@ export function HomeYourWorkSection({
                   <p
                     className={
                       tasksSummary.overdueCount > 0
-                        ? "mt-1.5 truncate text-xs font-normal leading-tight text-overdue"
-                        : "mt-1.5 truncate text-xs font-normal leading-tight text-gray-600"
+                        ? "mt-1 truncate text-xs font-normal leading-relaxed text-overdue"
+                        : "mt-1 truncate text-xs font-normal leading-relaxed text-gray-600"
                     }
                   >
                     Overdue: {getTaskDisplayName(tasksSummary.overdueTask)}
                     {tasksSummary.overdueCount > 1
-                      ? ` +${tasksSummary.overdueCount - 1} more`
+                      ? ` +${tasksSummary.overdueCount - 1}`
                       : ""}
                   </p>
                 ) : null}
               </div>
             </div>
 
-            <div className="rounded-card border border-gray-200 bg-white px-3 py-2.5">
-              <p className="text-xs font-medium tracking-[0.03em] text-gray-500">
+            <div className="rounded-lg bg-surface-muted/60 px-2.5 py-2">
+              <p className="text-xs font-normal leading-relaxed tracking-[0.04em] text-gray-500">
                 Next Due
               </p>
               {tasksSummary.nextTask ? (
-                <p className="mt-1 text-sm font-medium text-foreground">
+                <p className="mt-0.5 truncate text-sm font-medium text-foreground">
                   {getTaskDisplayName(tasksSummary.nextTask)}
                 </p>
               ) : (
-                <p className="mt-1 text-sm font-normal text-gray-600">
+                <p className="mt-0.5 text-sm font-normal text-gray-600">
                   No upcoming due dates
                 </p>
               )}
             </div>
-          </div>
-        ) : null}
+          </>
+        )}
       </div>
     </HomeCard>
   );
@@ -745,31 +741,27 @@ export function HomeUpNextSection({
 
   if (isLoading) {
     return (
-      <HomeCard className="w-full min-h-[10rem]">
-        <div className="ds-icon-label">
-          <IconBadge icon={CalendarDays} category="events" size="sm" />
-          <h2 className="text-lg font-semibold text-foreground">
-            Upcoming Event
-          </h2>
-        </div>
-        <p className="mt-4 text-sm font-normal text-gray-600">Loading events…</p>
+      <HomeCard
+        padding="sm"
+        className="flex h-full min-h-0 flex-col home-surface-quiet"
+      >
+        <h2 className="home-section-title">Upcoming Event</h2>
+        <p className="mt-2 text-sm font-normal text-gray-600">Loading events…</p>
       </HomeCard>
     );
   }
 
   if (!nextEvent) {
     return (
-      <HomeCard className="w-full min-h-[10rem]">
-        <div className="flex items-center justify-between gap-4">
-          <div className="ds-icon-label">
-            <IconBadge icon={CalendarDays} category="events" size="sm" />
-            <h2 className="text-lg font-semibold text-foreground">
-              Upcoming Event
-            </h2>
-          </div>
+      <HomeCard
+        padding="sm"
+        className="flex h-full min-h-0 flex-col home-surface-quiet"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="home-section-title">Upcoming Event</h2>
           <Link
             to="/events/calendar"
-            className="inline-flex items-center justify-center rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-foreground transition duration-200 hover:border-primary/40 hover:bg-badge-teal-bg"
+            className="text-sm font-medium text-primary hover:text-primary-hover"
           >
             View calendar
           </Link>
@@ -787,97 +779,90 @@ export function HomeUpNextSection({
   const managePath = `/events/${nextEvent.id}/manage`;
 
   return (
-    <section className="w-full overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-card transition duration-200 ease-out hover:shadow-card-hover">
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch lg:gap-6">
-        <div className="flex min-w-0 flex-1 flex-col gap-4 sm:flex-row sm:items-start">
-          <div className="relative h-28 w-full shrink-0 overflow-hidden rounded-xl sm:h-28 sm:w-36">
-            {nextEvent.event_photo_url ? (
-              <img
-                src={nextEvent.event_photo_url}
-                alt=""
-                aria-hidden="true"
-                className="absolute inset-0 h-full w-full object-cover object-center"
-              />
-            ) : (
-              <div
-                aria-hidden="true"
-                className="absolute inset-0"
-                style={{
-                  background: `linear-gradient(145deg, ${EVENT_TYPE_COLOR[nextEvent.event_type]}33 0%, ${EVENT_TYPE_COLOR[nextEvent.event_type]} 100%)`,
-                }}
-              />
-            )}
-            <span
-              className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-[11px] font-semibold shadow-sm ${EVENT_TYPE_BADGE_CLASS[nextEvent.event_type]}`}
+    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-none">
+      <div className="relative h-16 w-full shrink-0 overflow-hidden sm:h-[4.5rem]">
+        {nextEvent.event_photo_url ? (
+          <img
+            src={nextEvent.event_photo_url}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full object-cover object-center"
+          />
+        ) : (
+          <div
+            aria-hidden="true"
+            className="absolute inset-0"
+            style={{
+              background: `linear-gradient(145deg, ${EVENT_TYPE_COLOR[nextEvent.event_type]}33 0%, ${EVENT_TYPE_COLOR[nextEvent.event_type]} 100%)`,
+            }}
+          />
+        )}
+        <span
+          className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-medium shadow-sm ${EVENT_TYPE_BADGE_CLASS[nextEvent.event_type]}`}
+        >
+          {EVENT_TYPE_LABELS[nextEvent.event_type]}
+        </span>
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col gap-2 p-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-[11px] font-normal uppercase tracking-[0.06em] text-gray-500">
+              Upcoming Event
+            </p>
+            <Link
+              to={eventPath}
+              className="mt-0.5 block truncate text-base font-medium tracking-tight text-foreground transition-colors hover:text-primary"
             >
-              {EVENT_TYPE_LABELS[nextEvent.event_type]}
-            </span>
+              {nextEvent.name}
+            </Link>
           </div>
-
-          <div className="min-w-0 flex-1 space-y-3">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0 space-y-1">
-                <div className="ds-icon-label text-label">
-                  <AppIcon icon={CalendarDays} size="xs" className="text-label" />
-                  <span className="text-xs font-medium uppercase tracking-[0.04em] text-gray-500">
-                    Upcoming Event
-                  </span>
-                </div>
-                <Link
-                  to={eventPath}
-                  className="block text-xl font-semibold tracking-tight text-foreground transition-colors hover:text-primary"
-                >
-                  {nextEvent.name}
-                </Link>
-                <p className="text-sm font-normal text-gray-600">
-                  {formatUpcomingEventDate(nextEvent.starts_at)}
-                  <span className="mx-1.5 text-gray-300" aria-hidden="true">
-                    ·
-                  </span>
-                  {formatUpcomingEventTime(nextEvent.starts_at)}
-                  <span className="mx-1.5 text-gray-300" aria-hidden="true">
-                    ·
-                  </span>
-                  {nextEvent.location?.trim() || "Location TBA"}
-                </p>
-                <p className="text-xs font-normal text-gray-500">
-                  {goingCount === null
-                    ? "Loading RSVPs…"
-                    : `${goingCount} going`}
-                  <span className="mx-1.5 text-gray-300" aria-hidden="true">
-                    ·
-                  </span>
-                  {formatEventCountdown(nextEvent.starts_at)}
-                </p>
-              </div>
-
-              <div className="flex shrink-0 flex-wrap items-center gap-2">
-                <Link
-                  to="/events/calendar"
-                  className="inline-flex min-h-9 items-center justify-center rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-foreground transition duration-200 hover:border-primary/40 hover:bg-badge-teal-bg"
-                >
-                  View calendar
-                </Link>
-                {canManage ? (
-                  <Link
-                    to={managePath}
-                    className="inline-flex min-h-9 items-center justify-center rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-foreground transition duration-200 hover:border-primary/40 hover:bg-badge-teal-bg"
-                  >
-                    Manage
-                  </Link>
-                ) : null}
-              </div>
-            </div>
-
-            <EventRsvpButton
-              currentStatus={nextEvent.current_member_rsvp_status}
-              canRsvp
-              loading={rsvpLoading}
-              embedded
-              variant="segmented"
-              onStatusChange={onRsvpStatusChange}
-            />
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <Link
+              to="/events/calendar"
+              className="text-xs font-medium text-primary hover:text-primary-hover"
+            >
+              View calendar
+            </Link>
+            {canManage ? (
+              <Link
+                to={managePath}
+                className="text-xs font-medium text-primary hover:text-primary-hover"
+              >
+                Manage
+              </Link>
+            ) : null}
           </div>
+        </div>
+
+        <p className="truncate text-xs font-normal leading-relaxed text-gray-600">
+          {formatUpcomingEventDate(nextEvent.starts_at)}
+          <span className="mx-1 text-gray-300" aria-hidden="true">
+            ·
+          </span>
+          {formatUpcomingEventTime(nextEvent.starts_at)}
+        </p>
+        <p className="truncate text-xs font-normal text-gray-500">
+          {nextEvent.location?.trim() || "Location TBA"}
+          <span className="mx-1 text-gray-300" aria-hidden="true">
+            ·
+          </span>
+          {goingCount === null ? "…" : `${goingCount} going`}
+          <span className="mx-1 text-gray-300" aria-hidden="true">
+            ·
+          </span>
+          {formatEventCountdown(nextEvent.starts_at)}
+        </p>
+
+        <div className="mt-auto pt-1">
+          <EventRsvpButton
+            currentStatus={nextEvent.current_member_rsvp_status}
+            canRsvp
+            loading={rsvpLoading}
+            embedded
+            variant="segmented"
+            onStatusChange={onRsvpStatusChange}
+          />
         </div>
       </div>
     </section>
@@ -924,46 +909,31 @@ export type QuickLink = {
   category?: BadgeCategory;
 };
 
-const QUICK_LINK_CATEGORY: Record<string, BadgeCategory> = {
-  "Past Events": "events",
-  "Past events": "events",
-  "New Event": "events",
-  "Member Directory": "members",
-  "Member directory": "members",
-  "New Member": "members",
-  "Task Oversight": "tasks",
-  "Task oversight": "tasks",
-  Finance: "finance",
-  Transaction: "finance",
-  Announcement: "announcements",
-  "AI assistant": "assistant",
-};
-
 export function QuickLinkCard({
   title,
   description,
   to,
   onClick,
   icon,
-  category,
-}: QuickLink) {
-  const toneCategory =
-    category ?? QUICK_LINK_CATEGORY[title] ?? ("tools" as BadgeCategory);
-
+  compact = false,
+}: QuickLink & { compact?: boolean }) {
   const className = [
-    "group flex h-full min-h-[7rem] flex-col items-start gap-3 rounded-2xl",
-    "border border-gray-200 bg-surface-muted/40 p-4 text-left",
-    "transition duration-200 ease-out",
-    "hover:-translate-y-0.5 hover:border-primary/30 hover:bg-white hover:shadow-card-hover",
+    "group flex items-center gap-2 rounded-lg border border-gray-100 bg-white text-left shadow-sm",
+    compact
+      ? "px-2.5 py-2"
+      : "h-auto min-h-0 flex-col items-start gap-1.5 px-3 py-2.5",
+    "transition duration-200 ease-out hover:border-gray-200 hover:shadow-md",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2",
   ].join(" ");
 
   const content = (
     <>
-      <IconBadge icon={icon} category={toneCategory} size="md" shape="rounded" />
-      <span className="text-sm font-medium text-foreground">{title}</span>
-      {description ? (
-        <span className="line-clamp-2 text-xs font-normal leading-snug text-gray-600">
+      <IconBadge icon={icon} tone="gray" size="xs" shape="rounded" />
+      <span className="min-w-0 truncate text-sm font-medium text-foreground">
+        {title}
+      </span>
+      {!compact && description ? (
+        <span className="line-clamp-1 text-xs font-normal leading-relaxed text-gray-500">
           {description}
         </span>
       ) : null}

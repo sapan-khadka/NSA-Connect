@@ -33,6 +33,10 @@ export const BADGE_TONES = {
     bg: colors.badge.red.bg,
     fg: colors.badge.red.fg,
   },
+  gray: {
+    bg: colors.surface.muted,
+    fg: colors.label,
+  },
 } as const;
 
 export type BadgeTone = keyof typeof BADGE_TONES;

@@ -36,6 +36,7 @@ describe("AuthProvider", () => {
 
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
     vi.clearAllMocks();
     localStorage.clear();
     syncAccessToken(null);
@@ -68,6 +69,25 @@ describe("AuthProvider", () => {
 
     expect(await screen.findByText("Signed out")).toBeInTheDocument();
     expect(localStorage.getItem("nsa_connect_access_token")).toBeNull();
+  });
+
+  it("retries through rate limits without clearing the session", async () => {
+    localStorage.setItem("nsa_connect_access_token", "stored-jwt");
+    mockedFetchCurrentMember
+      .mockRejectedValueOnce({ response: { status: 429 } })
+      .mockResolvedValueOnce(createMockMember("board"));
+
+    render(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>,
+    );
+
+    expect(
+      await screen.findByText("Signed in as Test User", {}, { timeout: 4000 }),
+    ).toBeInTheDocument();
+    expect(localStorage.getItem("nsa_connect_access_token")).toBe("stored-jwt");
+    expect(mockedFetchCurrentMember).toHaveBeenCalledTimes(2);
   });
 
   it("starts signed out when no token is stored", async () => {

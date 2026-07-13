@@ -78,6 +78,9 @@ vi.mock("../lib/finance-api", async () => {
 });
 
 vi.mock("../lib/discussion-api", () => ({
+  fetchDiscussionInbox: vi.fn().mockResolvedValue({ rooms: [] }),
+  markDiscussionRoomRead: vi.fn(),
+  toggleDiscussionRoomPin: vi.fn(),
   fetchBoardDiscussion: vi.fn().mockResolvedValue({ messages: [], total: 0 }),
   postBoardDiscussion: vi.fn(),
   fetchEventDiscussion: vi.fn(),
@@ -89,7 +92,7 @@ vi.mock("../lib/recent-memories", () => ({
 }));
 
 import { fetchMyEventTasks } from "../lib/event-tasks-api";
-import { fetchBoardDiscussion } from "../lib/discussion-api";
+import { fetchDiscussionInbox } from "../lib/discussion-api";
 import { fetchEventAttendees, fetchUpcomingEvents } from "../lib/events-api";
 import {
   fetchMyFinanceChangeRequestSummary,
@@ -107,7 +110,7 @@ const mockedFinancePending = vi.mocked(fetchPendingFinanceChangeRequests);
 const mockedMyFinanceSummary = vi.mocked(fetchMyFinanceChangeRequestSummary);
 const mockedMeetings = vi.mocked(fetchMeetings);
 const mockedRecentMemories = vi.mocked(fetchRecentMemories);
-const mockedBoardDiscussion = vi.mocked(fetchBoardDiscussion);
+const mockedDiscussionInbox = vi.mocked(fetchDiscussionInbox);
 
 const sampleEvent = createMockEventResponse({
   id: 5,
@@ -123,7 +126,7 @@ afterEach(() => {
 
 beforeEach(() => {
   mockedRecentMemories.mockResolvedValue(null);
-  mockedBoardDiscussion.mockResolvedValue({ messages: [], total: 0 });
+  mockedDiscussionInbox.mockResolvedValue({ rooms: [] });
 });
 
 describe("HomePage", () => {
@@ -237,10 +240,10 @@ describe("HomePage", () => {
 
     expect(await screen.findByText("Your Work")).toBeInTheDocument();
     expect(screen.getByText("Discussion")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Start a discussion/i })).toHaveAttribute(
-      "href",
-      "/board/discussion",
-    );
+    expect(screen.getByText("No discussions yet")).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("link", { name: /View all/i })[0],
+    ).toHaveAttribute("href", "/discussions");
     expect(screen.getByText("Print flyers")).toBeInTheDocument();
     expect(screen.getByText(/Overdue: Print flyers/i)).toBeInTheDocument();
     expect(screen.queryByLabelText("Activity")).not.toBeInTheDocument();
@@ -377,12 +380,17 @@ describe("HomePage", () => {
       expect(screen.getByText("Your Work")).toBeInTheDocument(),
     );
 
-    const overdueTile = screen.getByText("Overdue").closest("div.rounded-card");
+    const overdueLabel = screen.getAllByText("Overdue").find((el) =>
+      el.className.includes("tracking-[0.04em]"),
+    );
+    const overdueTile = overdueLabel?.closest("div.rounded-lg") ?? null;
     expect(overdueTile).not.toBeNull();
     expect(within(overdueTile as HTMLElement).getByText("0")).toHaveClass(
-      "text-foreground",
+      "home-stat-value",
     );
-    expect(screen.queryByText("0", { selector: ".text-overdue" })).not.toBeInTheDocument();
+    expect(within(overdueTile as HTMLElement).getByText("0")).not.toHaveClass(
+      "text-overdue",
+    );
   });
 
   it("shows overdue task name in Your Work", async () => {

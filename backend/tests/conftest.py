@@ -6,6 +6,10 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+import app.models.discussion_message_reaction  # noqa: F401 — register table for create_all
+import app.models.discussion_read_state  # noqa: F401 — register table for create_all
+import app.models.discussion_room_pin  # noqa: F401 — register table for create_all
+import app.models.discussion_room_read  # noqa: F401 — register table for create_all
 import app.models.password_reset_token  # noqa: F401 — register table for create_all
 from app.core.config import settings
 from app.core.database import engine, get_db

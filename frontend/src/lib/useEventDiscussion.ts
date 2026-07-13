@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getAccessToken } from "./auth-token";
-import type { DiscussionMessage } from "./discussion-api";
+import type {
+  DiscussionMessage,
+  DiscussionReactionSummary,
+} from "./discussion-api";
 
 export type DiscussionStatus = "connecting" | "live" | "reconnecting" | "closed";
 
@@ -26,6 +29,36 @@ type HistoryPayload = {
 type MessagePayload = {
   type: "message";
   message: DiscussionMessage;
+};
+
+type ReactionPayload = {
+  type: "reaction";
+  message_id: number;
+  user_id: number;
+  emoji: string;
+  action: "add" | "remove";
+};
+
+export type DiscussionReadReceipt = {
+  user_id: number;
+  room_id: string;
+  last_read_message_id: number;
+  full_name: string;
+  initials: string;
+};
+
+type ReadReceiptsSnapshotPayload = {
+  type: "read_receipts_snapshot";
+  receipts: DiscussionReadReceipt[];
+};
+
+type ReadReceiptPayload = {
+  type: "read_receipt";
+  user_id: number;
+  room_id: string;
+  last_read_message_id: number;
+  full_name?: string;
+  initials?: string;
 };
 
 type PresenceSnapshotPayload = {
@@ -53,6 +86,9 @@ type ErrorPayload = {
 type ServerPayload =
   | HistoryPayload
   | MessagePayload
+  | ReactionPayload
+  | ReadReceiptsSnapshotPayload
+  | ReadReceiptPayload
   | PresenceSnapshotPayload
   | PresencePayload
   | TypingPayload
@@ -65,6 +101,7 @@ const TYPING_DEBOUNCE_MS = 2_000;
 const TYPING_IDLE_MS = 3_000;
 const TYPING_EXPIRE_MS = 5_000;
 const PRESENCE_HEARTBEAT_MS = 15_000;
+const READ_RECEIPT_DEBOUNCE_MS = 2_500;
 
 function scopeKey(scope: DiscussionScope | null): string | null {
   if (scope == null) {
@@ -84,6 +121,12 @@ function buildDiscussionWsUrl(scope: DiscussionScope, token: string): string {
   return `${protocol}//${host}${path}?${params.toString()}`;
 }
 
+function normalizeReactions(
+  reactions: DiscussionMessage["reactions"],
+): Record<string, DiscussionReactionSummary> {
+  return reactions ?? {};
+}
+
 function mergeMessages(
   current: DiscussionMessage[],
   incoming: DiscussionMessage[],
@@ -96,7 +139,49 @@ function mergeMessages(
   if (fresh.length === 0) {
     return current;
   }
-  return [...current, ...fresh];
+  return [
+    ...current,
+    ...fresh.map((message) => ({
+      ...message,
+      reactions: normalizeReactions(message.reactions),
+    })),
+  ];
+}
+
+/** Exported for unit tests. */
+export function applyReactionEvent(
+  current: DiscussionMessage[],
+  payload: ReactionPayload,
+  viewerUserId: number | null,
+): DiscussionMessage[] {
+  return current.map((message) => {
+    if (message.id !== payload.message_id) {
+      return message;
+    }
+
+    const reactions = { ...normalizeReactions(message.reactions) };
+    const existing = reactions[payload.emoji];
+    const isViewer = viewerUserId != null && payload.user_id === viewerUserId;
+
+    if (payload.action === "add") {
+      reactions[payload.emoji] = {
+        count: (existing?.count ?? 0) + 1,
+        reacted_by_me: isViewer ? true : Boolean(existing?.reacted_by_me),
+      };
+    } else {
+      const nextCount = Math.max(0, (existing?.count ?? 0) - 1);
+      if (nextCount === 0) {
+        delete reactions[payload.emoji];
+      } else {
+        reactions[payload.emoji] = {
+          count: nextCount,
+          reacted_by_me: isViewer ? false : Boolean(existing?.reacted_by_me),
+        };
+      }
+    }
+
+    return { ...message, reactions };
+  });
 }
 
 function upsertPresence(
@@ -107,6 +192,50 @@ function upsertPresence(
   return [...without, user].sort((a, b) =>
     a.full_name.localeCompare(b.full_name, undefined, { sensitivity: "base" }),
   );
+}
+
+/** Exported for unit tests. */
+export function upsertReadReceipt(
+  current: DiscussionReadReceipt[],
+  incoming: DiscussionReadReceipt,
+): DiscussionReadReceipt[] {
+  const without = current.filter((row) => row.user_id !== incoming.user_id);
+  return [...without, incoming].sort((a, b) =>
+    a.full_name.localeCompare(b.full_name, undefined, { sensitivity: "base" }),
+  );
+}
+
+/**
+ * Lightweight group seen indicator: one cluster at the furthest message
+ * other participants have read up to (excluding the viewer).
+ */
+export function getSeenIndicator(
+  messages: DiscussionMessage[],
+  receipts: DiscussionReadReceipt[],
+  viewerUserId: number | null,
+): { messageId: number; readers: DiscussionReadReceipt[] } | null {
+  if (messages.length === 0) {
+    return null;
+  }
+  const messageIds = new Set(messages.map((message) => message.id));
+  const others = receipts.filter(
+    (receipt) =>
+      receipt.user_id !== viewerUserId &&
+      messageIds.has(receipt.last_read_message_id),
+  );
+  if (others.length === 0) {
+    return null;
+  }
+  const frontier = Math.max(
+    ...others.map((receipt) => receipt.last_read_message_id),
+  );
+  const readers = others.filter(
+    (receipt) => receipt.last_read_message_id === frontier,
+  );
+  if (readers.length === 0) {
+    return null;
+  }
+  return { messageId: frontier, readers };
 }
 
 function closeSocket(socket: WebSocket | null): void {
@@ -129,12 +258,31 @@ function closeSocket(socket: WebSocket | null): void {
   }
 }
 
-export function useDiscussion(scope: DiscussionScope | null) {
+function pendingReactionKey(
+  messageId: number,
+  emoji: string,
+  action: "add" | "remove",
+  userId: number,
+): string {
+  return `${messageId}:${emoji}:${action}:${userId}`;
+}
+
+export function useDiscussion(
+  scope: DiscussionScope | null,
+  options?: { viewerUserId?: number | null },
+) {
+  const viewerUserId = options?.viewerUserId ?? null;
+  const viewerUserIdRef = useRef(viewerUserId);
+  viewerUserIdRef.current = viewerUserId;
+
   const [messages, setMessages] = useState<DiscussionMessage[]>([]);
   const [presentUsers, setPresentUsers] = useState<DiscussionPresenceUser[]>(
     [],
   );
   const [typingUsers, setTypingUsers] = useState<DiscussionPresenceUser[]>([]);
+  const [readReceipts, setReadReceipts] = useState<DiscussionReadReceipt[]>(
+    [],
+  );
   const [status, setStatus] = useState<DiscussionStatus>("closed");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(Boolean(scope));
@@ -150,9 +298,48 @@ export function useDiscussion(scope: DiscussionScope | null) {
   const typingIdleTimerRef = useRef<number | null>(null);
   const isTypingRef = useRef(false);
   const heartbeatTimerRef = useRef<number | null>(null);
+  const messagesRef = useRef(messages);
+  const tabFocusedRef = useRef(
+    typeof document === "undefined" ? true : document.visibilityState === "visible",
+  );
+  const lastSentReadIdRef = useRef<number | null>(null);
+  const pendingReadIdRef = useRef<number | null>(null);
+  const readDebounceTimerRef = useRef<number | null>(null);
+  const pendingReactionsRef = useRef<
+    Map<
+      string,
+      { messageId: number; emoji: string; action: "add" | "remove" }
+    >
+  >(new Map());
   const activeKey = scopeKey(scope);
 
   scopeRef.current = scope;
+  messagesRef.current = messages;
+
+  const rollbackPendingReactions = useCallback(() => {
+    const viewerId = viewerUserIdRef.current;
+    if (viewerId == null || pendingReactionsRef.current.size === 0) {
+      return;
+    }
+    const pending = [...pendingReactionsRef.current.values()];
+    pendingReactionsRef.current.clear();
+    for (const op of pending) {
+      const inverse = op.action === "add" ? "remove" : "add";
+      setMessages((current) =>
+        applyReactionEvent(
+          current,
+          {
+            type: "reaction",
+            message_id: op.messageId,
+            user_id: viewerId,
+            emoji: op.emoji,
+            action: inverse,
+          },
+          viewerId,
+        ),
+      );
+    }
+  }, []);
 
   const clearReconnectTimer = useCallback(() => {
     if (reconnectTimerRef.current != null) {
@@ -179,6 +366,13 @@ export function useDiscussion(scope: DiscussionScope | null) {
     }
   }, []);
 
+  const clearReadDebounce = useCallback(() => {
+    if (readDebounceTimerRef.current != null) {
+      window.clearTimeout(readDebounceTimerRef.current);
+      readDebounceTimerRef.current = null;
+    }
+  }, []);
+
   const sendRaw = useCallback((payload: Record<string, unknown>) => {
     const socket = socketRef.current;
     if (!socket || socket.readyState !== WebSocket.OPEN) {
@@ -187,6 +381,62 @@ export function useDiscussion(scope: DiscussionScope | null) {
     socket.send(JSON.stringify(payload));
     return true;
   }, []);
+
+  const flushReadReceipt = useCallback(() => {
+    const messageId = pendingReadIdRef.current;
+    if (messageId == null) {
+      return;
+    }
+    if (
+      lastSentReadIdRef.current != null &&
+      messageId <= lastSentReadIdRef.current
+    ) {
+      return;
+    }
+    if (!tabFocusedRef.current) {
+      return;
+    }
+    if (
+      sendRaw({
+        type: "read_receipt",
+        last_read_message_id: messageId,
+      })
+    ) {
+      lastSentReadIdRef.current = messageId;
+    }
+  }, [sendRaw]);
+
+  const scheduleReadReceipt = useCallback(
+    (messageId: number) => {
+      if (
+        lastSentReadIdRef.current != null &&
+        messageId <= lastSentReadIdRef.current
+      ) {
+        return;
+      }
+      pendingReadIdRef.current = Math.max(
+        pendingReadIdRef.current ?? 0,
+        messageId,
+      );
+      if (!tabFocusedRef.current) {
+        return;
+      }
+      clearReadDebounce();
+      readDebounceTimerRef.current = window.setTimeout(() => {
+        readDebounceTimerRef.current = null;
+        flushReadReceipt();
+      }, READ_RECEIPT_DEBOUNCE_MS);
+    },
+    [clearReadDebounce, flushReadReceipt],
+  );
+
+  /** Call when the discussion is scrolled near the bottom / actively viewed. */
+  const markLatestAsRead = useCallback(() => {
+    const latest = messagesRef.current.at(-1);
+    if (latest) {
+      scheduleReadReceipt(latest.id);
+    }
+  }, [scheduleReadReceipt]);
 
   const sendStoppedTyping = useCallback(() => {
     if (!isTypingRef.current) {
@@ -198,7 +448,10 @@ export function useDiscussion(scope: DiscussionScope | null) {
 
   const notifyTypingActivity = useCallback(() => {
     const now = Date.now();
-    if (!isTypingRef.current || now - lastTypingSentAtRef.current >= TYPING_DEBOUNCE_MS) {
+    if (
+      !isTypingRef.current ||
+      now - lastTypingSentAtRef.current >= TYPING_DEBOUNCE_MS
+    ) {
       isTypingRef.current = true;
       lastTypingSentAtRef.current = now;
       sendRaw({ type: "typing", is_typing: true });
@@ -223,6 +476,69 @@ export function useDiscussion(scope: DiscussionScope | null) {
       socket.send(JSON.stringify({ content: trimmed }));
     },
     [sendStoppedTyping],
+  );
+
+  const toggleReaction = useCallback(
+    (messageId: number, emoji: string) => {
+      const socket = socketRef.current;
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        return;
+      }
+      const viewerId = viewerUserIdRef.current;
+      if (viewerId == null) {
+        return;
+      }
+
+      const message = messagesRef.current.find((row) => row.id === messageId);
+      const alreadyReacted = Boolean(message?.reactions?.[emoji]?.reacted_by_me);
+      const action: "add" | "remove" = alreadyReacted ? "remove" : "add";
+      const key = pendingReactionKey(messageId, emoji, action, viewerId);
+
+      // Optimistic local update — WS echo is deduped via pendingReactionsRef.
+      setMessages((current) =>
+        applyReactionEvent(
+          current,
+          {
+            type: "reaction",
+            message_id: messageId,
+            user_id: viewerId,
+            emoji,
+            action,
+          },
+          viewerId,
+        ),
+      );
+      pendingReactionsRef.current.set(key, { messageId, emoji, action });
+
+      try {
+        socket.send(
+          JSON.stringify({
+            type: "reaction",
+            message_id: messageId,
+            emoji,
+            action,
+          }),
+        );
+      } catch {
+        pendingReactionsRef.current.delete(key);
+        const inverse = action === "add" ? "remove" : "add";
+        setMessages((current) =>
+          applyReactionEvent(
+            current,
+            {
+              type: "reaction",
+              message_id: messageId,
+              user_id: viewerId,
+              emoji,
+              action: inverse,
+            },
+            viewerId,
+          ),
+        );
+        setError("Failed to send reaction");
+      }
+    },
+    [],
   );
 
   const markTypingUser = useCallback((user: DiscussionPresenceUser) => {
@@ -250,17 +566,41 @@ export function useDiscussion(scope: DiscussionScope | null) {
   }, []);
 
   useEffect(() => {
+    function syncFocus() {
+      // Page Visibility is the reliable "tab focused" signal (hasFocus() is
+      // false in jsdom and when DevTools steals focus).
+      const focused = document.visibilityState === "visible";
+      tabFocusedRef.current = focused;
+      if (focused) {
+        const latest = messagesRef.current.at(-1);
+        if (latest) {
+          scheduleReadReceipt(latest.id);
+        }
+      }
+    }
+    syncFocus();
+    document.addEventListener("visibilitychange", syncFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", syncFocus);
+    };
+  }, [scheduleReadReceipt]);
+
+  useEffect(() => {
     if (scope == null) {
       intentionalCloseRef.current = true;
       clearReconnectTimer();
       clearHeartbeat();
       clearTypingTimers();
+      clearReadDebounce();
       sendStoppedTyping();
       closeSocket(socketRef.current);
       socketRef.current = null;
       setMessages([]);
       setPresentUsers([]);
       setTypingUsers([]);
+      setReadReceipts([]);
+      lastSentReadIdRef.current = null;
+      pendingReadIdRef.current = null;
       setStatus("closed");
       setLoading(false);
       setError(null);
@@ -270,6 +610,8 @@ export function useDiscussion(scope: DiscussionScope | null) {
     intentionalCloseRef.current = false;
     reconnectAttemptsRef.current = 0;
     backoffRef.current = INITIAL_BACKOFF_MS;
+    lastSentReadIdRef.current = null;
+    pendingReadIdRef.current = null;
     let cancelled = false;
 
     function scheduleReconnect() {
@@ -345,7 +687,12 @@ export function useDiscussion(scope: DiscussionScope | null) {
         }
 
         if (payload.type === "history") {
-          setMessages(payload.messages ?? []);
+          setMessages(
+            (payload.messages ?? []).map((message) => ({
+              ...message,
+              reactions: normalizeReactions(message.reactions),
+            })),
+          );
           setLoading(false);
           setError(null);
           return;
@@ -353,6 +700,21 @@ export function useDiscussion(scope: DiscussionScope | null) {
 
         if (payload.type === "presence_snapshot") {
           setPresentUsers(payload.users ?? []);
+          return;
+        }
+
+        if (payload.type === "read_receipts_snapshot") {
+          const receipts = payload.receipts ?? [];
+          setReadReceipts(receipts);
+          const mine = receipts.find(
+            (receipt) => receipt.user_id === viewerUserIdRef.current,
+          );
+          if (mine) {
+            lastSentReadIdRef.current = Math.max(
+              lastSentReadIdRef.current ?? 0,
+              mine.last_read_message_id,
+            );
+          }
           return;
         }
 
@@ -386,8 +748,61 @@ export function useDiscussion(scope: DiscussionScope | null) {
           return;
         }
 
+        if (payload.type === "reaction") {
+          const viewerId = viewerUserIdRef.current;
+          if (viewerId != null) {
+            const key = pendingReactionKey(
+              payload.message_id,
+              payload.emoji,
+              payload.action,
+              payload.user_id,
+            );
+            // Own optimistic update already applied — skip echo to avoid double-count.
+            if (
+              payload.user_id === viewerId &&
+              pendingReactionsRef.current.has(key)
+            ) {
+              pendingReactionsRef.current.delete(key);
+              return;
+            }
+          }
+          setMessages((current) =>
+            applyReactionEvent(current, payload, viewerUserIdRef.current),
+          );
+          return;
+        }
+
+        if (payload.type === "read_receipt") {
+          const roomId =
+            payload.room_id ||
+            (scopeRef.current
+              ? scopeRef.current.type === "board"
+                ? "board"
+                : `event:${scopeRef.current.eventId}`
+              : "");
+          const incoming: DiscussionReadReceipt = {
+            user_id: payload.user_id,
+            room_id: roomId,
+            last_read_message_id: payload.last_read_message_id,
+            full_name: payload.full_name ?? "Member",
+            initials: payload.initials ?? "?",
+          };
+          setReadReceipts((current) => upsertReadReceipt(current, incoming));
+          if (payload.user_id === viewerUserIdRef.current) {
+            lastSentReadIdRef.current = Math.max(
+              lastSentReadIdRef.current ?? 0,
+              payload.last_read_message_id,
+            );
+          }
+          return;
+        }
+
         if (payload.type === "error") {
-          setError(payload.detail || "Discussion error");
+          const detail = payload.detail || "Discussion error";
+          setError(detail);
+          if (/reaction/i.test(detail)) {
+            rollbackPendingReactions();
+          }
         }
       };
 
@@ -422,6 +837,8 @@ export function useDiscussion(scope: DiscussionScope | null) {
     setMessages([]);
     setPresentUsers([]);
     setTypingUsers([]);
+    setReadReceipts([]);
+    pendingReactionsRef.current.clear();
     connect();
 
     return () => {
@@ -430,6 +847,7 @@ export function useDiscussion(scope: DiscussionScope | null) {
       clearReconnectTimer();
       clearHeartbeat();
       clearTypingTimers();
+      clearReadDebounce();
       sendStoppedTyping();
       closeSocket(socketRef.current);
       socketRef.current = null;
@@ -438,27 +856,45 @@ export function useDiscussion(scope: DiscussionScope | null) {
   }, [
     activeKey,
     clearHeartbeat,
+    clearReadDebounce,
     clearReconnectTimer,
     clearTypingTimers,
     clearTypingUser,
     markTypingUser,
+    rollbackPendingReactions,
     sendRaw,
     sendStoppedTyping,
   ]);
+
+  const seenIndicator = getSeenIndicator(
+    messages,
+    readReceipts,
+    viewerUserId,
+  );
 
   return {
     messages,
     presentUsers,
     typingUsers,
+    readReceipts,
+    seenIndicator,
     status,
     error,
     loading,
     sendMessage,
+    toggleReaction,
+    markLatestAsRead,
     notifyTypingActivity,
   };
 }
 
 /** Convenience wrapper for event-scoped discussion. */
-export function useEventDiscussion(eventId: number | null) {
-  return useDiscussion(eventId == null ? null : { type: "event", eventId });
+export function useEventDiscussion(
+  eventId: number | null,
+  options?: { viewerUserId?: number | null },
+) {
+  return useDiscussion(
+    eventId == null ? null : { type: "event", eventId },
+    options,
+  );
 }

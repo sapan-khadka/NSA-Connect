@@ -22,6 +22,21 @@ type AuthProviderProps = {
   children: ReactNode;
 };
 
+function isRateLimitedError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error &&
+    (error as { response?: { status?: number } }).response?.status === 429
+  );
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [token, setToken] = useState<string | null>(null);
   const [member, setMember] = useState<AuthContextValue["member"]>(null);
@@ -52,42 +67,64 @@ export function AuthProvider({ children }: AuthProviderProps) {
         syncRefreshToken(storedRefreshToken);
       }
 
-      try {
-        const currentMember = await fetchCurrentMember();
-        if (!cancelled) {
-          setMember(currentMember);
-        }
-      } catch {
-        const refreshed = await refreshSession();
-        if (refreshed) {
-          const refreshedToken = readStoredAccessToken();
-          if (!cancelled && refreshedToken) {
-            setToken(refreshedToken);
+      let rateLimitDelayMs = 1000;
+
+      while (!cancelled) {
+        try {
+          const currentMember = await fetchCurrentMember();
+          if (!cancelled) {
+            setMember(currentMember);
+          }
+          break;
+        } catch (error) {
+          // Rate limiting during HMR/dev bursts must not wipe a valid session.
+          if (isRateLimitedError(error)) {
+            await sleep(rateLimitDelayMs);
+            rateLimitDelayMs = Math.min(rateLimitDelayMs * 2, 8000);
+            continue;
           }
 
-          try {
-            const currentMember = await fetchCurrentMember();
-            if (!cancelled) {
-              setMember(currentMember);
+          const refreshed = await refreshSession();
+          if (refreshed) {
+            const refreshedToken = readStoredAccessToken();
+            if (!cancelled && refreshedToken) {
+              setToken(refreshedToken);
             }
-          } catch {
-            if (!cancelled) {
-              setToken(null);
-              setMember(null);
-              syncAccessToken(null);
-              syncRefreshToken(null);
+
+            try {
+              const currentMember = await fetchCurrentMember();
+              if (!cancelled) {
+                setMember(currentMember);
+              }
+              break;
+            } catch (retryError) {
+              if (isRateLimitedError(retryError)) {
+                await sleep(rateLimitDelayMs);
+                rateLimitDelayMs = Math.min(rateLimitDelayMs * 2, 8000);
+                continue;
+              }
+              if (!cancelled) {
+                setToken(null);
+                setMember(null);
+                syncAccessToken(null);
+                syncRefreshToken(null);
+              }
+              break;
             }
           }
-        } else if (!cancelled) {
-          setToken(null);
-          setMember(null);
-          syncAccessToken(null);
-          syncRefreshToken(null);
+
+          if (!cancelled) {
+            setToken(null);
+            setMember(null);
+            syncAccessToken(null);
+            syncRefreshToken(null);
+          }
+          break;
         }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+      }
+
+      if (!cancelled) {
+        setIsLoading(false);
       }
     }
 
@@ -118,6 +155,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setMember(currentMember);
       return currentMember;
     } catch (error) {
+      if (isRateLimitedError(error)) {
+        // Keep tokens; caller can retry. Avoid wiping a fresh login on 429.
+        throw error;
+      }
       setToken(null);
       setMember(null);
       syncAccessToken(null);

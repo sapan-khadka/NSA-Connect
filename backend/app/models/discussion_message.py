@@ -35,3 +35,8 @@ class DiscussionMessage(Base):
 
     author = relationship("Member")
     event = relationship("Event")
+    reactions = relationship(
+        "DiscussionMessageReaction",
+        back_populates="message",
+        cascade="all, delete-orphan",
+    )

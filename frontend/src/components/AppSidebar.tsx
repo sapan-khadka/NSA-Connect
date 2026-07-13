@@ -238,7 +238,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const showAdmin = member ? canViewMemberDirectory(member.role) : false;
 
   const adminItems = [
-    { label: "Board discussion", to: "/board/discussion" },
+    { label: "Discussions", to: "/discussions" },
     { label: "Meeting minutes", to: "/board/meeting-minutes" },
     { label: "Announcement email", to: "/board/announcement-email" },
   ];

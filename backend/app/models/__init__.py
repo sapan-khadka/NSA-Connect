@@ -2,6 +2,10 @@ from app.models.announcement import Announcement, AnnouncementCategory
 from app.models.base import Base
 from app.models.constitutional_chunk import ConstitutionalChunk
 from app.models.discussion_message import DiscussionMessage
+from app.models.discussion_message_reaction import DiscussionMessageReaction
+from app.models.discussion_read_state import DiscussionReadState
+from app.models.discussion_room_pin import DiscussionRoomPin
+from app.models.discussion_room_read import DiscussionRoomRead
 from app.models.event import Event, EventType, MeetingVisibility
 from app.models.event_checkin import EventCheckIn
 from app.models.event_feedback import EventFeedback
@@ -44,6 +48,10 @@ __all__ = [
     "Base",
     "ConstitutionalChunk",
     "DiscussionMessage",
+    "DiscussionMessageReaction",
+    "DiscussionReadState",
+    "DiscussionRoomPin",
+    "DiscussionRoomRead",
     "Event",
     "EventCheckIn",
     "EventSuggestion",

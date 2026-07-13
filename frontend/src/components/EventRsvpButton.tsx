@@ -118,8 +118,8 @@ export function EventRsvpButton({
       className={
         embedded
           ? isSegmented
-            ? "mt-4"
-            : "mt-4 border-t border-gray-100 pt-4"
+            ? "mt-1"
+            : "mt-3 border-t border-gray-100 pt-3"
           : "ds-card p-3"
       }
     >

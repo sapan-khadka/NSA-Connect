@@ -191,13 +191,14 @@ const ROUTES: RouteMeta[] = [
     crumbs: () => [DASHBOARD, leaf("settings", "Settings")],
   },
   {
+    pattern: /^\/discussions(\/board|\/event\/\d+)?\/?$/,
+    title: "Discussions",
+    crumbs: () => [DASHBOARD, leaf("discussions", "Discussions")],
+  },
+  {
     pattern: /^\/board\/discussion\/?$/,
-    title: "Board discussion",
-    crumbs: () => [
-      DASHBOARD,
-      leaf("board", "Board tools"),
-      leaf("discussion", "Discussion"),
-    ],
+    title: "Discussions",
+    crumbs: () => [DASHBOARD, leaf("discussions", "Discussions")],
   },
   {
     pattern: /^\/board\/meeting-minutes\/?$/,

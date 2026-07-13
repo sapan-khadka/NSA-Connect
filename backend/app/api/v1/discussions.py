@@ -1,3 +1,5 @@
+from typing import NoReturn
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
@@ -5,18 +7,29 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_member, require_board
 from app.models.member import Member
 from app.schemas.discussion import (
+    DiscussionInboxResponse,
     DiscussionMessageCreateRequest,
     DiscussionMessageListResponse,
     DiscussionMessageResponse,
+    DiscussionPinToggleResponse,
+    DiscussionRoomIdRequest,
+    DiscussionRoomReadResponse,
+)
+from app.services.discussion_inbox_service import (
+    list_discussion_inbox,
+    mark_discussion_room_read,
+    toggle_discussion_room_pin,
 )
 from app.services.discussion_service import (
     DEFAULT_DISCUSSION_LIMIT,
     DiscussionForbiddenError,
     DiscussionValidationError,
+    build_message_response,
     create_board_discussion_message,
     create_event_discussion_message,
     list_board_discussion_messages,
     list_event_discussion_messages,
+    messages_to_responses,
 )
 from app.services.event_service import EventNotFoundError
 
@@ -25,8 +38,73 @@ router = APIRouter(tags=["discussions"])
 DISCUSSION_FORBIDDEN_DETAIL = "You do not have access to this discussion"
 
 
-def _to_response(message) -> DiscussionMessageResponse:
-    return DiscussionMessageResponse.model_validate(message)
+def _handle_room_access_errors(exc: Exception) -> NoReturn:
+    if isinstance(exc, EventNotFoundError):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        ) from None
+    if isinstance(exc, DiscussionForbiddenError):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=DISCUSSION_FORBIDDEN_DETAIL,
+        ) from None
+    if isinstance(exc, DiscussionValidationError):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from None
+    raise exc
+
+
+@router.get(
+    "/discussions/inbox",
+    response_model=DiscussionInboxResponse,
+)
+def list_discussion_inbox_endpoint(
+    db: Session = Depends(get_db),
+    current_member: Member = Depends(get_current_member),
+):
+    rooms = list_discussion_inbox(db, member=current_member)
+    return DiscussionInboxResponse(rooms=rooms)
+
+
+@router.post(
+    "/discussions/read",
+    response_model=DiscussionRoomReadResponse,
+)
+def mark_discussion_room_read_endpoint(
+    data: DiscussionRoomIdRequest,
+    db: Session = Depends(get_db),
+    current_member: Member = Depends(get_current_member),
+):
+    try:
+        return mark_discussion_room_read(
+            db,
+            member=current_member,
+            room_id=data.room_id,
+        )
+    except (EventNotFoundError, DiscussionForbiddenError, DiscussionValidationError) as exc:
+        _handle_room_access_errors(exc)
+
+
+@router.post(
+    "/discussions/pins/toggle",
+    response_model=DiscussionPinToggleResponse,
+)
+def toggle_discussion_room_pin_endpoint(
+    data: DiscussionRoomIdRequest,
+    db: Session = Depends(get_db),
+    current_member: Member = Depends(get_current_member),
+):
+    try:
+        return toggle_discussion_room_pin(
+            db,
+            member=current_member,
+            room_id=data.room_id,
+        )
+    except (EventNotFoundError, DiscussionForbiddenError, DiscussionValidationError) as exc:
+        _handle_room_access_errors(exc)
 
 
 @router.get(
@@ -60,7 +138,11 @@ def list_event_discussion_endpoint(
         ) from None
 
     return DiscussionMessageListResponse(
-        messages=[_to_response(message) for message in messages],
+        messages=messages_to_responses(
+            db,
+            messages,
+            viewer_user_id=current_member.id,
+        ),
         total=len(messages),
     )
 
@@ -99,7 +181,7 @@ def create_event_discussion_endpoint(
             detail=str(exc),
         ) from None
 
-    return _to_response(message)
+    return build_message_response(message)
 
 
 @router.get(
@@ -119,7 +201,11 @@ def list_board_discussion_endpoint(
         limit=limit,
     )
     return DiscussionMessageListResponse(
-        messages=[_to_response(message) for message in messages],
+        messages=messages_to_responses(
+            db,
+            messages,
+            viewer_user_id=current_member.id,
+        ),
         total=len(messages),
     )
 
@@ -146,4 +232,4 @@ def create_board_discussion_endpoint(
             detail=str(exc),
         ) from None
 
-    return _to_response(message)
+    return build_message_response(message)

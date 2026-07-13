@@ -205,6 +205,32 @@
       transform var(--motion-duration) var(--motion-easing);
   }
 
+  .ds-card.home-surface-quiet {
+    border-color: color-mix(in srgb, var(--color-border) 70%, transparent);
+    box-shadow: none;
+  }
+
+  .home-dashboard {
+    min-width: 0;
+  }
+
+  .home-section-title {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.35;
+    color: var(--color-foreground);
+  }
+
+  .home-stat-value {
+    font-size: 1.5rem;
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-foreground);
+  }
+
   /* Mobile edge-to-edge member pages (< lg): full-width sections with dividers */
   .ds-mobile-edge-stack {
     @apply flex flex-col divide-y divide-gray-200 border-t border-gray-200;
@@ -626,6 +652,45 @@
 
   .rsvp-confirmation-message {
     animation: rsvp-confirmation-fade-in 400ms ease-out forwards;
+  }
+
+  @keyframes discussion-reaction-picker-in {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .discussion-reaction-picker {
+    transform-origin: bottom center;
+    animation: discussion-reaction-picker-in 150ms ease-out forwards;
+  }
+
+  @keyframes discussion-reaction-pill-bounce {
+    0% {
+      transform: scale(1);
+    }
+    40% {
+      transform: scale(1.15);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  .discussion-reaction-pill-bounce {
+    animation: discussion-reaction-pill-bounce 200ms ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .discussion-reaction-picker,
+    .discussion-reaction-pill-bounce {
+      animation: none;
+    }
   }
 
   .report-section-title {

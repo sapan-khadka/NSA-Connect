@@ -1,10 +1,9 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import {
   Archive,
   ClipboardList,
   Users,
   Wallet,
-  Wrench,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -18,7 +17,6 @@ import {
   HomeUpNextSection,
   HomeWelcomeBanner,
   HomeYourWorkSection,
-  QuickLinkCard,
   type QuickLink,
 } from "../components/home/HomeMemberSections";
 import { HomeCard } from "../components/ui/HomeCard";
@@ -166,43 +164,7 @@ type MemberHomeLayoutProps = {
   onLogTransaction: () => void;
 };
 
-const DASHBOARD_GAP = "gap-6"; // 24px
-const DASHBOARD_SECTION_SPACE = "space-y-6"; // ~24px row rhythm like reference
-const DASHBOARD_GRID =
-  "grid grid-cols-1 md:grid-cols-6 xl:grid-cols-12 items-stretch";
-
-function dashboardSpan(
-  span: "full" | "half" | "third" | "profile" | "tools",
-): string {
-  switch (span) {
-    case "full":
-      return "col-span-1 md:col-span-6 xl:col-span-12";
-    case "half":
-      return "col-span-1 md:col-span-6 xl:col-span-6";
-    case "third":
-      return "col-span-1 md:col-span-6 xl:col-span-4";
-    case "profile":
-      return "col-span-1 md:col-span-6 xl:col-span-5";
-    case "tools":
-      return "col-span-1 md:col-span-6 xl:col-span-7";
-  }
-}
-
-function DashboardCell({
-  span,
-  children,
-}: {
-  span: "full" | "half" | "third" | "profile" | "tools";
-  children: ReactNode;
-}) {
-  return (
-    <div className={`${dashboardSpan(span)} flex min-h-0 flex-col`}>
-      <div className="flex h-full min-h-0 flex-col [&_>_*]:h-full [&_>_*]:min-h-0">
-        {children}
-      </div>
-    </div>
-  );
-}
+const DASHBOARD_GAP = "gap-4"; // 16px
 
 function MemberHomeLayout({
   member,
@@ -224,81 +186,83 @@ function MemberHomeLayout({
   onLogTransaction,
 }: MemberHomeLayoutProps) {
   return (
-    <div className={`mx-auto w-full max-w-[1480px] ${DASHBOARD_SECTION_SPACE}`}>
+    <div className="home-dashboard mx-auto flex w-full max-w-[1280px] flex-col gap-4 xl:h-[calc(100dvh-7.5rem)] xl:overflow-hidden">
       {loadError ? (
-        <div role="alert" className="ds-alert-banner">
+        <div role="alert" className="ds-alert-banner shrink-0">
           {loadError}
         </div>
       ) : null}
 
-      {/* Row 1 — Hero (12) */}
-      <div className={`${DASHBOARD_GRID} ${DASHBOARD_GAP}`}>
-        <DashboardCell span="full">
-          <HomeWelcomeBanner
-            member={member}
-            pendingApprovalCount={financePendingCount}
-            nextEvent={nextEvent}
-            openTaskCount={tasksSummary.openCount}
-            budgetBalance={budgetBalance}
-            showBudgetChip={canViewFinance}
-            showLogTransaction={showFinanceQuickActions}
-            onLogTransaction={onLogTransaction}
-          />
-        </DashboardCell>
+      <div className="shrink-0">
+        <HomeWelcomeBanner
+          member={member}
+          pendingApprovalCount={financePendingCount}
+          nextEvent={nextEvent}
+          openTaskCount={tasksSummary.openCount}
+          budgetBalance={budgetBalance}
+          showBudgetChip={canViewFinance}
+          showLogTransaction={showFinanceQuickActions}
+          onLogTransaction={onLogTransaction}
+        />
       </div>
 
-      {/* Row 2 — KPIs 3|3|3|3 */}
-      <div className={`${DASHBOARD_GRID} ${DASHBOARD_GAP}`}>
-        <DashboardCell span="full">
-          <HomeStatCards
-            tasksSummary={tasksSummary}
-            upcomingCount={upcomingCount}
-            nextEvent={nextEvent}
-            memberCount={memberCount}
-            budgetBalance={budgetBalance}
-            tasksPath={tasksPath}
-            canViewMembers={canViewMembers}
-            canViewFinance={canViewFinance}
-            isLoading={isLoading}
-          />
-        </DashboardCell>
+      <div className="shrink-0">
+        <HomeStatCards
+          tasksSummary={tasksSummary}
+          upcomingCount={upcomingCount}
+          nextEvent={nextEvent}
+          memberCount={memberCount}
+          budgetBalance={budgetBalance}
+          tasksPath={tasksPath}
+          canViewMembers={canViewMembers}
+          canViewFinance={canViewFinance}
+          isLoading={isLoading}
+        />
       </div>
 
-      {/* Row 3 — Discussion | Your Work (6|6) */}
-      <div className={`${DASHBOARD_GRID} ${DASHBOARD_GAP}`}>
-        <DashboardCell span="half">
-          <HomeDiscussionSection previewLimit={3} />
-        </DashboardCell>
-        <DashboardCell span="half">
+      {/* Middle — Discussion | Your Work | Upcoming Event */}
+      <div
+        className={[
+          "grid min-h-0 grid-cols-1",
+          DASHBOARD_GAP,
+          "lg:grid-cols-3 xl:min-h-0 xl:flex-1 xl:overflow-hidden",
+        ].join(" ")}
+      >
+        <div className="min-h-0 lg:h-full lg:min-h-0 [&_>_*]:h-full">
+          <HomeDiscussionSection previewLimit={4} />
+        </div>
+        <div className="min-h-0 lg:h-full lg:min-h-0 [&_>_*]:h-full">
           <HomeYourWorkSection
             member={member}
             tasksSummary={tasksSummary}
             tasksPath={tasksPath}
             isLoading={isLoading}
           />
-        </DashboardCell>
-      </div>
-
-      {/* Row 4 — Upcoming Event (12) */}
-      <div className={`${DASHBOARD_GRID} ${DASHBOARD_GAP}`}>
-        <DashboardCell span="full">
+        </div>
+        <div className="min-h-0 lg:h-full lg:min-h-0 [&_>_*]:h-full">
           <HomeUpNextSection
             nextEvent={nextEvent}
             isLoading={isLoading}
             rsvpLoading={rsvpLoading}
             onRsvpStatusChange={onRsvpStatusChange}
           />
-        </DashboardCell>
+        </div>
       </div>
 
-      {/* Row 5 — Profile (5) | Tools (7) */}
-      <div className={`${DASHBOARD_GRID} ${DASHBOARD_GAP}`}>
-        <DashboardCell span="profile">
+      {/* Bottom — Profile ~40% | Tools ~60%, equal height */}
+      <div
+        className={[
+          "grid shrink-0 grid-cols-1 items-stretch",
+          DASHBOARD_GAP,
+          "lg:grid-cols-5",
+        ].join(" ")}
+      >
+        <div className="min-h-0 lg:col-span-2 [&_>_*]:h-full">
           <HomeProfileCard member={member} />
-        </DashboardCell>
-        <DashboardCell span="tools">
+        </div>
+        <div className="min-h-0 lg:col-span-3 [&_>_*]:h-full">
           <ToolsForRoleSection quickLinks={quickLinks} />
-        </DashboardCell>
+        </div>
       </div>
     </div>
   );
@@ -310,26 +274,50 @@ function ToolsForRoleSection({ quickLinks }: { quickLinks: QuickLink[] }) {
   }
 
   return (
-    <HomeCard className="flex h-full flex-col">
-      <div className="ds-icon-label">
-        <IconBadge icon={Wrench} category="tools" size="sm" />
-        <h2 className="text-lg font-semibold text-foreground">
-          Tools for Your Role
-        </h2>
-      </div>
-      <ul
-        className={[
-          "mt-5 grid flex-1 gap-4",
-          quickLinks.length >= 4
-            ? "grid-cols-2 xl:grid-cols-4"
-            : "grid-cols-2 sm:grid-cols-3",
-        ].join(" ")}
-      >
-        {quickLinks.map((link) => (
-          <li key={link.title} className="min-h-0">
-            <QuickLinkCard {...link} />
-          </li>
-        ))}
+    <HomeCard
+      padding="sm"
+      className="flex h-full min-h-0 flex-col home-surface-quiet"
+      aria-label="Tools for Your Role"
+    >
+      <h2 className="home-section-title shrink-0">Tools for Your Role</h2>
+      <ul className="mt-3 grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4">
+        {quickLinks.map((link) => {
+          const className = [
+            "group flex h-full min-h-[4.5rem] flex-col items-center justify-center gap-1.5 rounded-lg",
+            "border border-gray-100 bg-surface-muted/50 px-2 py-2.5 text-center",
+            "transition duration-150 hover:border-gray-200 hover:bg-surface-muted",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+          ].join(" ");
+
+          const content = (
+            <>
+              <IconBadge icon={link.icon} tone="gray" size="xs" shape="rounded" />
+              <span className="line-clamp-2 text-xs font-medium leading-snug text-foreground">
+                {link.title}
+              </span>
+            </>
+          );
+
+          return (
+            <li key={link.title} className="min-h-0">
+              {link.onClick ? (
+                <button
+                  type="button"
+                  onClick={link.onClick}
+                  className={`w-full ${className}`}
+                >
+                  {content}
+                </button>
+              ) : link.to ? (
+                <Link to={link.to} className={`block w-full ${className}`}>
+                  {content}
+                </Link>
+              ) : (
+                <div className={className}>{content}</div>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </HomeCard>
   );

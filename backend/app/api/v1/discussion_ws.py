@@ -19,15 +19,22 @@ from app.core.ws_auth import (
 from app.models.member import Member
 from app.schemas.discussion import (
     DiscussionMessageCreateRequest,
-    DiscussionMessageResponse,
+    DiscussionReactionRequest,
+    DiscussionReadReceiptRequest,
 )
 from app.services.discussion_service import (
     DiscussionForbiddenError,
+    DiscussionMessageNotFoundError,
     DiscussionValidationError,
+    apply_discussion_message_reaction,
+    build_message_response,
     create_board_discussion_message,
     create_event_discussion_message,
     list_board_discussion_messages,
+    list_discussion_read_receipts,
     list_event_discussion_messages,
+    messages_to_responses,
+    upsert_discussion_read_state,
 )
 from app.services.discussion_ws_manager import (
     BOARD_ROOM_KEY,
@@ -45,10 +52,6 @@ router = APIRouter(tags=["discussions-ws"])
 WS_HISTORY_LIMIT = 50
 WS_CLOSE_UNAUTHORIZED = 4001
 WS_CLOSE_FORBIDDEN = 4003
-
-
-def _message_payload(message) -> dict:
-    return DiscussionMessageResponse.model_validate(message).model_dump(mode="json")
 
 
 def _load_event_history(db: Session, *, event_id: int, member: Member):
@@ -109,6 +112,7 @@ async def _discussion_websocket(
     *,
     token: str | None,
     room_key: str,
+    room_event_id: int | None,
     load_history: Callable,
     create_message: Callable,
 ):
@@ -127,6 +131,18 @@ async def _discussion_websocket(
 
         try:
             history = load_history(db, member=member)
+            history_payload = [
+                response.model_dump(mode="json")
+                for response in messages_to_responses(
+                    db,
+                    history,
+                    viewer_user_id=member.id,
+                )
+            ]
+            read_receipts_payload = [
+                receipt.model_dump(mode="json")
+                for receipt in list_discussion_read_receipts(db, room_id=room_key)
+            ]
         except EventNotFoundError:
             await websocket.close(code=WS_CLOSE_FORBIDDEN)
             return
@@ -134,7 +150,6 @@ async def _discussion_websocket(
             await websocket.close(code=WS_CLOSE_FORBIDDEN)
             return
 
-        history_payload = [_message_payload(message) for message in history]
         member_id = member.id
         presence_user = PresenceUser.from_member(member)
     finally:
@@ -157,6 +172,12 @@ async def _discussion_websocket(
             {
                 "type": "presence_snapshot",
                 "users": snapshot,
+            }
+        )
+        await websocket.send_json(
+            {
+                "type": "read_receipts_snapshot",
+                "receipts": read_receipts_payload,
             }
         )
 
@@ -201,6 +222,151 @@ async def _discussion_websocket(
                 )
                 continue
 
+            if event_type == "read_receipt":
+                try:
+                    receipt_request = DiscussionReadReceiptRequest.model_validate(
+                        body
+                    )
+                except ValidationError as exc:
+                    detail = (
+                        exc.errors()[0].get("msg", "Invalid read receipt")
+                        if exc.errors()
+                        else "Invalid read receipt"
+                    )
+                    await websocket.send_json(
+                        {"type": "error", "detail": str(detail)}
+                    )
+                    continue
+
+                db = create_db_session()
+                try:
+                    author = db.get(Member, member_id)
+                    if author is None or not author.can_authenticate():
+                        await websocket.close(code=WS_CLOSE_UNAUTHORIZED)
+                        return
+
+                    updated = upsert_discussion_read_state(
+                        db,
+                        member=author,
+                        room_id=room_key,
+                        last_read_message_id=receipt_request.last_read_message_id,
+                        room_event_id=room_event_id,
+                    )
+                except EventNotFoundError:
+                    await websocket.send_json(
+                        {"type": "error", "detail": "Event not found"}
+                    )
+                    continue
+                except DiscussionForbiddenError:
+                    await websocket.close(code=WS_CLOSE_FORBIDDEN)
+                    return
+                except DiscussionMessageNotFoundError:
+                    await websocket.send_json(
+                        {"type": "error", "detail": "Message not found"}
+                    )
+                    continue
+                except DiscussionValidationError as exc:
+                    await websocket.send_json(
+                        {"type": "error", "detail": str(exc)}
+                    )
+                    continue
+                except Exception:
+                    logger.exception("Failed to persist discussion read receipt")
+                    await websocket.send_json(
+                        {
+                            "type": "error",
+                            "detail": "Failed to save read receipt",
+                        }
+                    )
+                    continue
+                finally:
+                    db.close()
+
+                if updated is not None:
+                    await discussion_connection_manager.publish(
+                        room_key,
+                        {
+                            "type": "read_receipt",
+                            "fanout_id": new_fanout_id(),
+                            "user_id": updated.user_id,
+                            "room_id": updated.room_id,
+                            "last_read_message_id": updated.last_read_message_id,
+                            "full_name": updated.full_name,
+                            "initials": updated.initials,
+                        },
+                    )
+                continue
+
+            if event_type == "reaction":
+                try:
+                    reaction = DiscussionReactionRequest.model_validate(body)
+                except ValidationError as exc:
+                    detail = (
+                        exc.errors()[0].get("msg", "Invalid reaction")
+                        if exc.errors()
+                        else "Invalid reaction"
+                    )
+                    await websocket.send_json(
+                        {"type": "error", "detail": str(detail)}
+                    )
+                    continue
+
+                db = create_db_session()
+                try:
+                    author = db.get(Member, member_id)
+                    if author is None or not author.can_authenticate():
+                        await websocket.close(code=WS_CLOSE_UNAUTHORIZED)
+                        return
+
+                    changed = apply_discussion_message_reaction(
+                        db,
+                        member=author,
+                        message_id=reaction.message_id,
+                        emoji=reaction.emoji,
+                        action=reaction.action,
+                        room_event_id=room_event_id,
+                    )
+                except EventNotFoundError:
+                    await websocket.send_json(
+                        {"type": "error", "detail": "Event not found"}
+                    )
+                    continue
+                except DiscussionForbiddenError:
+                    await websocket.close(code=WS_CLOSE_FORBIDDEN)
+                    return
+                except DiscussionMessageNotFoundError:
+                    await websocket.send_json(
+                        {"type": "error", "detail": "Message not found"}
+                    )
+                    continue
+                except DiscussionValidationError as exc:
+                    await websocket.send_json(
+                        {"type": "error", "detail": str(exc)}
+                    )
+                    continue
+                except Exception:
+                    logger.exception("Failed to persist discussion reaction")
+                    await websocket.send_json(
+                        {"type": "error", "detail": "Failed to save reaction"}
+                    )
+                    continue
+                finally:
+                    db.close()
+
+                if changed:
+                    await discussion_connection_manager.publish(
+                        room_key,
+                        {
+                            "type": "reaction",
+                            "fanout_id": new_fanout_id(),
+                            "message_id": reaction.message_id,
+                            "user_id": member_id,
+                            "emoji": reaction.emoji.strip(),
+                            "action": reaction.action,
+                        },
+                    )
+                continue
+
             # Chat message — either plain `{content}` or `{type:"chat", content}`.
             try:
                 parsed = DiscussionMessageCreateRequest.model_validate(body)
@@ -225,7 +391,9 @@ async def _discussion_websocket(
                     member=author,
                     content=parsed.content,
                 )
-                message_payload = _message_payload(created)
+                message_payload = build_message_response(created).model_dump(
+                    mode="json"
+                )
             except EventNotFoundError:
                 await websocket.send_json(
                     {"type": "error", "detail": "Event not found"}
@@ -290,6 +458,7 @@ async def event_discussion_websocket(
         websocket,
         token=token,
         room_key=event_room_key(event_id),
+        room_event_id=event_id,
         load_history=lambda db, member: _load_event_history(
             db, event_id=event_id, member=member
         ),
@@ -308,6 +477,7 @@ async def board_discussion_websocket(
         websocket,
         token=token,
         room_key=BOARD_ROOM_KEY,
+        room_event_id=None,
         load_history=lambda db, member: _load_board_history(db, member=member),
         create_message=lambda db, member, content: _create_board_message(
             db, member=member, content=content

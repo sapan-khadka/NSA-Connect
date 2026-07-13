@@ -8,6 +8,7 @@ import { BoardTasksPage } from "./pages/BoardTasksPage";
 import { AnnouncementsPage } from "./pages/AnnouncementsPage";
 import { AiAssistantPage } from "./pages/AiAssistantPage";
 import { AnnouncementEmailPage } from "./pages/AnnouncementEmailPage";
+import { DiscussionsPage } from "./pages/DiscussionsPage";
 import { EventCheckInPage } from "./pages/EventCheckInPage";
 import { EventManagePage } from "./pages/EventManagePage";
 import { EventDetailPage } from "./pages/EventDetailPage";
@@ -96,6 +97,30 @@ export const appRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute minRole="board">
             <MeetingMinutesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "discussions",
+        element: (
+          <ProtectedRoute>
+            <DiscussionsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "discussions/board",
+        element: (
+          <ProtectedRoute>
+            <DiscussionsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "discussions/event/:eventId",
+        element: (
+          <ProtectedRoute>
+            <DiscussionsPage />
           </ProtectedRoute>
         ),
       },
