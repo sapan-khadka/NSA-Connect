@@ -1,5 +1,7 @@
+import { Filter } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { useDismissibleMenu } from "../design-system";
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/auth-api";
 import { useAuth } from "../context/useAuth";
@@ -16,6 +18,7 @@ import {
 } from "../lib/member-talents";
 import { isRoleAtLeast } from "../lib/roles";
 
+import { AppIcon } from "./ui/AppIcon";
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 import { InviteToEventModal } from "./InviteToEventModal";
@@ -40,9 +43,17 @@ export function MemberDirectory() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const {
+    open: filtersOpen,
+    setOpen: setFiltersOpen,
+    rootRef: filtersRootRef,
+    menuId: filtersMenuId,
+  } = useDismissibleMenu();
 
   const isBoard = currentMember ? isRoleAtLeast(currentMember.role, "board") : false;
   const canInvite = isBoard && selectedTalents.length > 0;
+  const activeFilterCount = selectedTalents.length;
+  const talentOptions = Object.keys(talentLabels) as MemberTalent[];
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -125,8 +136,8 @@ export function MemberDirectory() {
   }
 
   return (
-    <Card padding="none" className="ds-mobile-edge-directory overflow-hidden">
-      <div className="border-b border-gray-200 px-4 py-4 lg:px-6 lg:py-5">
+    <Card padding="none" className="ds-mobile-edge-directory overflow-visible">
+      <div className="relative z-10 border-b border-gray-200 px-4 py-4 lg:px-6 lg:py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h2 className="text-lg font-light tracking-subhead text-foreground">
@@ -143,47 +154,86 @@ export function MemberDirectory() {
             ) : null}
           </div>
 
-          <label className="block w-full lg:max-w-sm">
-            <span className="sr-only">Search members</span>
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search by name, major, interests..."
-              className="w-full rounded-md border border-gray-300 px-3 py-3 text-base text-foreground placeholder:text-label focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:py-2 sm:text-sm"
-            />
-          </label>
-        </div>
-
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          {(Object.keys(talentLabels) as MemberTalent[]).map((talent) => {
-            const active = selectedTalents.includes(talent);
-            return (
+          <div className="flex w-full items-center gap-2 lg:max-w-md">
+            <div ref={filtersRootRef} className="relative shrink-0">
               <button
-                key={talent}
                 type="button"
-                aria-pressed={active}
-                onClick={() => toggleTalent(talent)}
+                aria-expanded={filtersOpen}
+                aria-haspopup="dialog"
+                aria-controls={filtersMenuId}
+                onClick={() => setFiltersOpen((current) => !current)}
                 className={[
-                  "ds-chip",
-                  active
-                    ? "bg-primary text-white"
-                    : "border border-gray-200 bg-white text-label hover:text-foreground",
+                  "inline-flex min-h-11 items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition",
+                  activeFilterCount > 0 || filtersOpen
+                    ? "border-primary/40 bg-badge-teal-bg text-primary"
+                    : "border-gray-300 bg-white text-foreground hover:bg-gray-50",
                 ].join(" ")}
               >
-                {talentLabels[talent] ?? talent}
+                <AppIcon icon={Filter} size="sm" className="text-current" />
+                <span>
+                  {activeFilterCount > 0
+                    ? `Filters · ${activeFilterCount}`
+                    : "Filters"}
+                </span>
               </button>
-            );
-          })}
-          {selectedTalents.length > 0 ? (
-            <button
-              type="button"
-              onClick={clearTalentFilter}
-              className="ds-chip text-accent hover:underline"
-            >
-              Clear filter
-            </button>
-          ) : null}
+
+              {filtersOpen ? (
+                <div
+                  id={filtersMenuId}
+                  role="dialog"
+                  aria-label="Talent filters"
+                  className="absolute left-0 top-full z-20 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-lg border border-gray-200 bg-white p-3 shadow-lg sm:w-80"
+                >
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
+                      Talents
+                    </p>
+                    {activeFilterCount > 0 ? (
+                      <button
+                        type="button"
+                        onClick={clearTalentFilter}
+                        className="text-xs font-medium text-accent hover:underline"
+                      >
+                        Clear all
+                      </button>
+                    ) : null}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {talentOptions.map((talent) => {
+                      const active = selectedTalents.includes(talent);
+                      return (
+                        <button
+                          key={talent}
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() => toggleTalent(talent)}
+                          className={[
+                            "ds-chip justify-center px-2.5 py-1.5 text-xs sm:text-sm",
+                            active
+                              ? "bg-primary text-white"
+                              : "border border-gray-200 bg-white text-label hover:text-foreground",
+                          ].join(" ")}
+                        >
+                          {talentLabels[talent] ?? talent}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <label className="block min-w-0 flex-1">
+              <span className="sr-only">Search members</span>
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search by name, major, interests..."
+                className="w-full rounded-md border border-gray-300 px-3 py-3 text-base text-foreground placeholder:text-label focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:py-2 sm:text-sm"
+              />
+            </label>
+          </div>
         </div>
 
         {canInvite ? (
