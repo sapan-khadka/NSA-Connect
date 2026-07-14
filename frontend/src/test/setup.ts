@@ -1,11 +1,11 @@
 import "@testing-library/jest-dom/vitest";
 import { vi } from "vitest";
 
-// Default to desktop (lg+) so responsive layouts render a single variant in tests.
+// Default to desktop so responsive layouts render a single variant in tests.
 Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: vi.fn().mockImplementation((query: string) => ({
-    matches: /min-width:\s*1024px/.test(query),
+    matches: /min-width:\s*(768|1024)px/.test(query),
     media: query,
     onchange: null,
     addListener: vi.fn(),

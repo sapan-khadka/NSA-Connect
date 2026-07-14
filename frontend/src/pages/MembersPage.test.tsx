@@ -10,15 +10,6 @@ import { MembersPage } from "./MembersPage";
 
 vi.mock("../lib/members-api", () => ({
   fetchMembers: vi.fn(),
-  fetchTalentOptions: vi.fn().mockResolvedValue({
-    talents: ["dancing"],
-    labels: { dancing: "Dancing" },
-  }),
-  fetchPendingMembers: vi.fn(),
-  approveMember: vi.fn(),
-  rejectMember: vi.fn(),
-  updateMemberRole: vi.fn(),
-  updateMemberPosition: vi.fn(),
 }));
 
 const directoryMember: MemberResponse = {
@@ -33,59 +24,25 @@ const directoryMember: MemberResponse = {
   position: "member",
 };
 
-const pendingMember: MemberResponse = {
-  id: 2,
-  full_name: "Pending User",
-  email: "pending@semo.edu",
-  student_id: "S12345678",
-  major: "Biology",
-  graduation_year: 2027,
-  role: "general",
-  status: "pending",
-  position: "member",
-};
-
-function mockDirectoryResponse(members: MemberResponse[] = [directoryMember]) {
-  return {
-    members,
-    total: members.length,
-    page: 1,
-    page_size: 10,
-    total_pages: 1,
-  };
-}
-
-function renderMembersPage(
-  initialEntry = "/members?tab=pending",
-  authMember: Partial<MemberResponse> & { role: MemberResponse["role"] } = {
-    id: 1,
-    full_name: "Board User",
-    email: "board@semo.edu",
-    student_id: "87654321",
-    major: "Administration",
-    graduation_year: 2028,
-    role: "board",
-    status: "approved",
-  },
-) {
+function renderMembersPage() {
   return render(
     <MockAuthProvider
       value={{
         member: {
-          position: "member",
-          ...authMember,
           id: 1,
           full_name: "Board User",
           email: "board@semo.edu",
           student_id: "87654321",
           major: "Administration",
           graduation_year: 2028,
+          role: "board",
           status: "approved",
+          position: "member",
         },
         isAuthenticated: true,
       }}
     >
-      <MemoryRouter initialEntries={[initialEntry]}>
+      <MemoryRouter initialEntries={["/members"]}>
         <MembersPage />
       </MemoryRouter>
     </MockAuthProvider>,
@@ -98,195 +55,261 @@ describe("MembersPage", () => {
     vi.clearAllMocks();
   });
 
-  it("shows the pending approval queue by default", async () => {
-    const { fetchPendingMembers } = await import("../lib/members-api");
-    vi.mocked(fetchPendingMembers).mockResolvedValue({
-      members: [pendingMember],
-      total: 1,
-    });
-
-    renderMembersPage();
-
-    expect(await screen.findByText("Pending User")).toBeInTheDocument();
-    expect(screen.getByText("pending@semo.edu")).toBeInTheDocument();
-  });
-
-  it("shows the member directory when the directory tab is selected", async () => {
-    const user = userEvent.setup();
-    const { fetchMembers, fetchPendingMembers } = await import(
-      "../lib/members-api"
-    );
-    vi.mocked(fetchPendingMembers).mockResolvedValue({ members: [], total: 0 });
-    vi.mocked(fetchMembers).mockResolvedValue(mockDirectoryResponse());
-
-    renderMembersPage();
-    await user.click(screen.getByRole("button", { name: "Directory" }));
-
-    expect(await screen.findByText("Alex Member")).toBeInTheDocument();
-    expect(screen.getByText("alex@semo.edu")).toBeInTheDocument();
-    expect(screen.getByText(/Computer Science · 2028/)).toBeInTheDocument();
-  });
-
-  it("filters the directory with search", async () => {
-    const user = userEvent.setup({ delay: null });
-    const { fetchMembers, fetchPendingMembers } = await import(
-      "../lib/members-api"
-    );
-    vi.mocked(fetchPendingMembers).mockResolvedValue({ members: [], total: 0 });
-    vi.mocked(fetchMembers).mockResolvedValue(
-      mockDirectoryResponse([
-        directoryMember,
-        {
-          ...directoryMember,
-          id: 4,
-          full_name: "Jordan Smith",
-          email: "jordan@semo.edu",
-        },
-      ]),
-    );
-
-    renderMembersPage();
-    await user.click(screen.getByRole("button", { name: "Directory" }));
-    await screen.findByText("Alex Member");
-
-    await user.type(
-      screen.getByPlaceholderText(/search by name, major, interests/i),
-      "jordan",
-    );
-    expect(screen.getByText("Jordan Smith")).toBeInTheDocument();
-    await waitFor(
-      () => {
-        expect(screen.queryByText("Alex Member")).not.toBeInTheDocument();
-      },
-      { timeout: 1000 },
-    );
-    expect(screen.getByText("Jordan Smith")).toBeInTheDocument();
-  });
-
-  it("paginates the member directory", async () => {
-    const user = userEvent.setup();
-    const { fetchMembers, fetchPendingMembers } = await import(
-      "../lib/members-api"
-    );
-    vi.mocked(fetchPendingMembers).mockResolvedValue({ members: [], total: 0 });
-    vi.mocked(fetchMembers)
-      .mockResolvedValueOnce({
-        members: [directoryMember],
-        total: 12,
-        page: 1,
-        page_size: 10,
-        total_pages: 2,
-      })
-      .mockResolvedValueOnce({
-        members: [
-          {
-            ...directoryMember,
-            id: 5,
-            full_name: "Page Two Member",
-            email: "page2@semo.edu",
-          },
-        ],
-        total: 12,
-        page: 2,
-        page_size: 10,
-        total_pages: 2,
-      });
-
-    renderMembersPage();
-    await user.click(screen.getByRole("button", { name: "Directory" }));
-    await screen.findByText("Alex Member");
-
-    await user.click(screen.getByRole("button", { name: "Next" }));
-
-    expect(await screen.findByText("Page Two Member")).toBeInTheDocument();
-    expect(fetchMembers).toHaveBeenLastCalledWith({
-      page: 2,
-      page_size: 12,
-    });
-  });
-
-  it("lists pending members from the approval queue", async () => {
-    const { fetchPendingMembers } = await import("../lib/members-api");
-    vi.mocked(fetchPendingMembers).mockResolvedValue({
-      members: [pendingMember],
-      total: 1,
-    });
-
-    renderMembersPage();
-
-    expect(await screen.findByText("Pending User")).toBeInTheDocument();
-    expect(screen.getByText("pending@semo.edu")).toBeInTheDocument();
-  });
-
-  it("shows an empty state when no members are pending", async () => {
-    const { fetchPendingMembers } = await import("../lib/members-api");
-    vi.mocked(fetchPendingMembers).mockResolvedValue({
+  it("renders the Members header with actions", async () => {
+    const { fetchMembers } = await import("../lib/members-api");
+    vi.mocked(fetchMembers).mockResolvedValue({
       members: [],
       total: 0,
+      page: 1,
+      page_size: 48,
+      total_pages: 0,
     });
 
     renderMembersPage();
 
     expect(
-      await screen.findByText("No pending signups right now."),
+      screen.getByRole("heading", { level: 1, name: "Members" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Manage your organization members."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Invite Member" }),
     ).toBeInTheDocument();
   });
 
-  it("approves a pending member and removes them from the queue", async () => {
-    const user = userEvent.setup();
-    const { fetchPendingMembers, approveMember } = await import(
-      "../lib/members-api"
-    );
-    vi.mocked(fetchPendingMembers).mockResolvedValue({
-      members: [pendingMember],
-      total: 1,
-    });
-    vi.mocked(approveMember).mockResolvedValue({
-      ...pendingMember,
-      status: "approved",
+  it("renders four equal KPI cards in Statistics", async () => {
+    const { fetchMembers } = await import("../lib/members-api");
+    vi.mocked(fetchMembers).mockResolvedValue({
+      members: [],
+      total: 0,
+      page: 1,
+      page_size: 48,
+      total_pages: 0,
     });
 
     renderMembersPage();
-    await screen.findByText("Pending User");
 
-    const row = screen.getByText("Pending User").closest("li");
-    expect(row).not.toBeNull();
-
-    await user.click(
-      within(row!).getByRole("button", { name: "Approve Pending User" }),
-    );
-
-    await waitFor(() => {
-      expect(approveMember).toHaveBeenCalledWith(2);
-    });
-    expect(screen.queryByText("Pending User")).not.toBeInTheDocument();
+    expect(screen.getByText("Total Members")).toBeInTheDocument();
+    expect(screen.getByText("Active Members")).toBeInTheDocument();
+    expect(screen.getByText("Pending Requests")).toBeInTheDocument();
+    expect(screen.getByText("Outstanding Dues")).toBeInTheDocument();
   });
 
-  it("rejects a pending member and removes them from the queue", async () => {
+  it("renders the members filter toolbar controls", async () => {
     const user = userEvent.setup();
-    const { fetchPendingMembers, rejectMember } = await import(
-      "../lib/members-api"
-    );
-    vi.mocked(fetchPendingMembers).mockResolvedValue({
-      members: [pendingMember],
-      total: 1,
-    });
-    vi.mocked(rejectMember).mockResolvedValue({
-      ...pendingMember,
-      status: "rejected",
+    const { fetchMembers } = await import("../lib/members-api");
+    vi.mocked(fetchMembers).mockResolvedValue({
+      members: [],
+      total: 0,
+      page: 1,
+      page_size: 48,
+      total_pages: 0,
     });
 
     renderMembersPage();
-    await screen.findByText("Pending User");
 
-    const row = screen.getByText("Pending User").closest("li");
-    expect(row).not.toBeNull();
+    expect(screen.getByLabelText("Search members")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Show filters" }));
+    expect(screen.getByLabelText("Role")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Reset Filters" }),
+    ).toBeInTheDocument();
+  });
 
-    await user.click(within(row!).getByRole("button", { name: "Reject" }));
-
-    await waitFor(() => {
-      expect(rejectMember).toHaveBeenCalledWith(2);
+  it("shows an empty state when there are no members", async () => {
+    const { fetchMembers } = await import("../lib/members-api");
+    vi.mocked(fetchMembers).mockResolvedValue({
+      members: [],
+      total: 0,
+      page: 1,
+      page_size: 48,
+      total_pages: 0,
     });
-    expect(screen.queryByText("Pending User")).not.toBeInTheDocument();
+
+    renderMembersPage();
+
+    expect(await screen.findByText("No members yet")).toBeInTheDocument();
+  });
+
+  it("renders member rows with required columns and selection", async () => {
+    const user = userEvent.setup();
+    const { fetchMembers } = await import("../lib/members-api");
+    vi.mocked(fetchMembers).mockResolvedValue({
+      members: [directoryMember],
+      total: 1,
+      page: 1,
+      page_size: 48,
+      total_pages: 1,
+    });
+
+    renderMembersPage();
+
+    const tableRegion = await screen.findByRole("region", {
+      name: "Member Table",
+    });
+    expect(within(tableRegion).getByText("Alex Member")).toBeInTheDocument();
+    expect(within(tableRegion).getByText("Board")).toBeInTheDocument();
+    expect(within(tableRegion).getByText("Approved")).toBeInTheDocument();
+
+    const table = within(tableRegion).getByRole("table", {
+      name: "Organization members",
+    });
+    expect(within(table).getByText("Name")).toBeInTheDocument();
+    expect(within(table).getByText("Role")).toBeInTheDocument();
+    expect(within(table).getByText("Committee")).toBeInTheDocument();
+    expect(within(table).getByText("Attendance")).toBeInTheDocument();
+    expect(within(table).getByText("Dues")).toBeInTheDocument();
+    expect(within(table).getByText("Last Activity")).toBeInTheDocument();
+    expect(within(table).getByText("Status")).toBeInTheDocument();
+    expect(within(table).getByText("Actions")).toBeInTheDocument();
+
+    await user.click(
+      within(tableRegion).getByRole("checkbox", {
+        name: "Select Alex Member",
+      }),
+    );
+
+    const bulkBar = await screen.findByRole("toolbar", {
+      name: "Bulk member actions",
+    });
+    expect(within(bulkBar).getByText("1 member selected")).toBeInTheDocument();
+    expect(
+      within(bulkBar).getByRole("button", { name: /Email 1 selected member/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(bulkBar).getByRole("button", {
+        name: /Assign Role 1 selected member/i,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(bulkBar).getByRole("button", {
+        name: /Assign Committee 1 selected member/i,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(bulkBar).getByRole("button", {
+        name: /Export 1 selected member/i,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(bulkBar).getByRole("button", {
+        name: /Deactivate 1 selected member/i,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(bulkBar).getByRole("button", {
+        name: /Delete 1 selected member/i,
+      }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      within(bulkBar).getByRole("button", { name: "Clear selection" }),
+    );
+    expect(
+      screen.queryByRole("toolbar", { name: "Bulk member actions" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("opens the Member Quick View drawer when a row is activated", async () => {
+    const user = userEvent.setup();
+    const { fetchMembers } = await import("../lib/members-api");
+    vi.mocked(fetchMembers).mockResolvedValue({
+      members: [directoryMember],
+      total: 1,
+      page: 1,
+      page_size: 48,
+      total_pages: 1,
+    });
+
+    renderMembersPage();
+
+    await user.click(
+      await screen.findByRole("row", { name: "Quick view Alex Member" }),
+    );
+
+    const drawer = screen.getByRole("dialog", { name: "Member Quick View" });
+    expect(drawer).toBeInTheDocument();
+    expect(within(drawer).getAllByText("Alex Member").length).toBeGreaterThan(0);
+    expect(within(drawer).getAllByText("Board").length).toBeGreaterThan(0);
+    expect(within(drawer).getByText("Recent Activity")).toBeInTheDocument();
+    expect(within(drawer).getByText("Committee")).toBeInTheDocument();
+    expect(within(drawer).getByText("Attendance")).toBeInTheDocument();
+    expect(within(drawer).getByText("Payment Status")).toBeInTheDocument();
+    expect(
+      within(drawer).getByRole("button", { name: "View Profile" }),
+    ).toBeInTheDocument();
+    expect(
+      within(drawer).getByRole("button", { name: "Message" }),
+    ).toBeDisabled();
+    expect(within(drawer).getByRole("button", { name: "Edit" })).toBeInTheDocument();
+  });
+
+  it("opens the Invite Member side drawer from the header", async () => {
+    const user = userEvent.setup();
+    const { fetchMembers } = await import("../lib/members-api");
+    vi.mocked(fetchMembers).mockResolvedValue({
+      members: [],
+      total: 0,
+      page: 1,
+      page_size: 48,
+      total_pages: 0,
+    });
+
+    renderMembersPage();
+
+    await user.click(screen.getByRole("button", { name: "Invite Member" }));
+
+    const drawer = screen.getByRole("dialog", { name: "Invite Member" });
+    expect(drawer).toBeInTheDocument();
+    expect(
+      within(drawer).getByRole("heading", { name: "Personal Information" }),
+    ).toBeInTheDocument();
+    expect(
+      within(drawer).getByRole("heading", { name: "Role" }),
+    ).toBeInTheDocument();
+    expect(
+      within(drawer).getByRole("heading", { name: "Committee" }),
+    ).toBeInTheDocument();
+    expect(within(drawer).getByLabelText("Email address")).toBeInTheDocument();
+    expect(within(drawer).getByLabelText("Phone number")).toBeInTheDocument();
+    expect(
+      within(drawer).getByRole("heading", { name: "Expected Graduation" }),
+    ).toBeInTheDocument();
+    expect(
+      within(drawer).getByRole("button", { name: "Invite" }),
+    ).toBeInTheDocument();
+    expect(
+      within(drawer).getByRole("button", { name: "Save Draft" }),
+    ).toBeInTheDocument();
+    expect(
+      within(drawer).getByRole("button", { name: "Cancel" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows validation errors when inviting with an incomplete form", async () => {
+    const user = userEvent.setup();
+    const { fetchMembers } = await import("../lib/members-api");
+    vi.mocked(fetchMembers).mockResolvedValue({
+      members: [],
+      total: 0,
+      page: 1,
+      page_size: 48,
+      total_pages: 0,
+    });
+
+    renderMembersPage();
+    await user.click(screen.getByRole("button", { name: "Invite Member" }));
+
+    const drawer = screen.getByRole("dialog", { name: "Invite Member" });
+    await user.click(within(drawer).getByRole("button", { name: "Invite" }));
+
+    expect(
+      within(drawer).getByText(
+        "Fix the highlighted fields before sending the invite.",
+      ),
+    ).toBeInTheDocument();
+    expect(within(drawer).getByText("First name is required.")).toBeInTheDocument();
+    expect(within(drawer).getByText("Email is required.")).toBeInTheDocument();
   });
 });

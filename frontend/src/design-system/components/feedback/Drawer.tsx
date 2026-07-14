@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 
 import { cx } from "../../cx";
 import { useBodyScrollLock, useEscapeKey } from "./useOverlay";
@@ -26,8 +26,12 @@ const SIZE_CLASS: Record<DrawerSize, string> = {
   lg: "max-w-lg",
 };
 
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 /**
  * Side panel overlay. Consistent motion with Modal.
+ * Moves focus into the panel on open and restores it on close.
  */
 export function Drawer({
   open,
@@ -44,9 +48,76 @@ export function Drawer({
 }: DrawerProps) {
   const titleId = useId();
   const descriptionId = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
 
   useBodyScrollLock(open);
   useEscapeKey(open, onClose);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    previouslyFocused.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+
+    const frame = window.requestAnimationFrame(() => {
+      const panel = panelRef.current;
+      if (!panel) {
+        return;
+      }
+      const focusTarget =
+        panel.querySelector<HTMLElement>("[data-drawer-initial-focus]") ??
+        panel.querySelector<HTMLElement>(FOCUSABLE_SELECTOR) ??
+        panel;
+      focusTarget.focus();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      previouslyFocused.current?.focus();
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Tab" || !panelRef.current) {
+        return;
+      }
+
+      const focusable = [
+        ...panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      ].filter((element) => !element.hasAttribute("disabled"));
+
+      if (focusable.length === 0) {
+        event.preventDefault();
+        panelRef.current.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
 
   if (!open) {
     return null;
@@ -61,10 +132,12 @@ export function Drawer({
         onClick={closeOnBackdrop ? onClose : undefined}
       />
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
         aria-describedby={description ? descriptionId : undefined}
+        tabIndex={-1}
         className={cx(
           "absolute inset-y-0 flex w-full flex-col border-gray-200 bg-surface-card shadow-card-hover",
           side === "right"
@@ -94,8 +167,9 @@ export function Drawer({
             {showClose ? (
               <button
                 type="button"
+                data-drawer-initial-focus
                 onClick={onClose}
-                className="shrink-0 rounded-lg px-2 py-1 text-sm text-label transition hover:bg-surface-muted hover:text-foreground"
+                className="shrink-0 rounded-lg px-2 py-1 text-sm text-label transition hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2"
               >
                 Close
               </button>

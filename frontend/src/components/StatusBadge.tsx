@@ -14,12 +14,16 @@ type StatusBadgeProps = {
  * Member/account status chip built on the design-system Badge.
  */
 export function StatusBadge({ status }: StatusBadgeProps) {
+  const label = status
+    ? status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()
+    : status;
+
   return (
     <Badge
       variant={STATUS_VARIANT[status] ?? "neutral"}
       className="capitalize"
     >
-      {status}
+      {label}
     </Badge>
   );
 }
