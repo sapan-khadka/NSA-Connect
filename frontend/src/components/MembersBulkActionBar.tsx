@@ -35,16 +35,16 @@ const ACTIONS = [
     tone: "default" as const,
   },
   {
-    id: "export",
-    label: "Export",
-    icon: Download,
-    tone: "default" as const,
-  },
-  {
     id: "deactivate",
     label: "Deactivate",
     icon: UserMinus,
     tone: "warning" as const,
+  },
+  {
+    id: "export",
+    label: "Export",
+    icon: Download,
+    tone: "default" as const,
   },
   {
     id: "delete",
@@ -63,7 +63,9 @@ export function MembersBulkActionBar({
   }
 
   const countLabel =
-    selectedCount === 1 ? "1 member selected" : `${selectedCount} members selected`;
+    selectedCount === 1
+      ? "1 member selected"
+      : `${selectedCount} members selected`;
 
   return (
     <div
@@ -76,28 +78,48 @@ export function MembersBulkActionBar({
           {countLabel}
         </p>
 
-        <div className="members-bulk-bar-actions">
-          {ACTIONS.map((action) => (
-            <Button
-              key={action.id}
-              type="button"
-              variant={action.tone === "danger" ? "danger" : "ghost"}
-              size="sm"
-              className={
-                action.tone === "warning"
-                  ? "members-bulk-bar-action is-warning"
-                  : action.tone === "danger"
-                    ? "members-bulk-bar-action is-danger"
-                    : "members-bulk-bar-action"
-              }
-              aria-label={`${action.label} ${selectedCount} selected member${selectedCount === 1 ? "" : "s"}`}
-            >
-              <AppIcon icon={action.icon} size="xs" className="text-current" />
-              <span className="members-bulk-bar-action-label">
-                {action.label}
+        <div
+          className="members-bulk-bar-actions"
+          role="group"
+          aria-label="Actions"
+        >
+          {ACTIONS.map((action) => {
+            const showDivider =
+              action.id === "deactivate" || action.id === "delete";
+
+            return (
+              <span key={action.id} className="members-bulk-bar-action-wrap">
+                {showDivider ? (
+                  <span className="members-bulk-bar-divider" aria-hidden="true" />
+                ) : null}
+                <Button
+                  type="button"
+                  variant={action.tone === "danger" ? "danger" : "ghost"}
+                  size="sm"
+                  className={
+                    action.tone === "warning"
+                      ? "members-bulk-bar-action is-warning is-soon"
+                      : action.tone === "danger"
+                        ? "members-bulk-bar-action is-danger is-soon"
+                        : "members-bulk-bar-action is-soon"
+                  }
+                  aria-label={`${action.label} ${selectedCount} selected member${
+                    selectedCount === 1 ? "" : "s"
+                  }`}
+                  title="Coming soon"
+                >
+                  <AppIcon
+                    icon={action.icon}
+                    size="xs"
+                    className="text-current"
+                  />
+                  <span className="members-bulk-bar-action-label">
+                    {action.label}
+                  </span>
+                </Button>
               </span>
-            </Button>
-          ))}
+            );
+          })}
         </div>
 
         <Button

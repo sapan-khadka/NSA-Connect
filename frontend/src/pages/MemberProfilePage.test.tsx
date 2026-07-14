@@ -63,7 +63,31 @@ describe("MemberProfilePage membership admin", () => {
     vi.clearAllMocks();
   });
 
-  it("sends the selected position string when demoting a board officer to Member", async () => {
+  it("renders the balanced profile sections", async () => {
+    const { fetchMemberById } = await import("../lib/members-api");
+    vi.mocked(fetchMemberById).mockResolvedValue(secretaryMember);
+
+    renderMemberProfile();
+    expect(await screen.findByText("Secretary User")).toBeInTheDocument();
+
+    expect(screen.getByRole("region", { name: "Overview" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "Member Health" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "AI Insights" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Attendance" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Tasks" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Payments" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Documents" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Notes" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "Activity Timeline" }),
+    ).toBeInTheDocument();
+  });
+
+  it("saves the selected position string when demoting a board officer to Member", async () => {
     const user = userEvent.setup();
     const { fetchMemberById, updateMemberPosition, updateMemberRole } = await import(
       "../lib/members-api",

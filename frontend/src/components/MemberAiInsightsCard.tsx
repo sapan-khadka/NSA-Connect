@@ -1,3 +1,7 @@
+/**
+ * AI Insights card — premium placeholder UX. No backend AI calls.
+ */
+
 import { Sparkles } from "lucide-react";
 import { useState } from "react";
 
@@ -48,22 +52,25 @@ export function MemberAiInsightsCard({
   }
 
   return (
-    <div className="member-ai-insights" aria-label="AI Insights">
+    <div
+      className={
+        embedded
+          ? "member-ai-insights member-ai-insights--embedded"
+          : "member-ai-insights member-ai-insights--standalone"
+      }
+      aria-label="AI Insights"
+    >
       <div className="member-ai-insights-header">
         <span className="member-ai-insights-mark" aria-hidden="true">
-          <AppIcon icon={Sparkles} size="sm" className="text-accent" />
+          <AppIcon icon={Sparkles} size="sm" className="text-current" />
         </span>
         <div className="min-w-0 flex-1">
-          {embedded ? (
-            <div className="member-ai-insights-title-row">
-              <span className="member-ai-insights-preview">Preview</span>
-            </div>
-          ) : (
-            <div className="member-ai-insights-title-row">
+          <div className="member-ai-insights-title-row">
+            {embedded ? null : (
               <h3 className="member-ai-insights-title">AI Insights</h3>
-              <span className="member-ai-insights-preview">Preview</span>
-            </div>
-          )}
+            )}
+            <span className="member-ai-insights-preview">Preview</span>
+          </div>
           <p className="member-ai-insights-headline">{snapshot.headline}</p>
           <p className="member-ai-insights-summary">{snapshot.summary}</p>
         </div>
@@ -89,7 +96,11 @@ export function MemberAiInsightsCard({
 
       <div className="member-ai-insights-section">
         <p className="member-profile-eyebrow">Suggested actions</p>
-        <div className="member-ai-actions" role="group" aria-label="Suggested actions">
+        <div
+          className="member-ai-actions"
+          role="group"
+          aria-label="Suggested actions"
+        >
           {snapshot.actions.map((action) => {
             const isSelected = selectedActionId === action.id;
             return (
@@ -112,6 +123,10 @@ export function MemberAiInsightsCard({
           </p>
         ) : null}
       </div>
+
+      <p className="members-demo-note" role="note">
+        Placeholder UX only. No backend AI is generating these insights.
+      </p>
     </div>
   );
 }

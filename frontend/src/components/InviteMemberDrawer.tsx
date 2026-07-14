@@ -1,43 +1,44 @@
 /**
- * Invite Member side drawer — UX / validation only. No backend calls.
+ * Invite Member — professional side drawer. UX / validation only. No backend.
  */
 
-import { useEffect, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 
 import { Drawer } from "../design-system/components/feedback/Drawer";
 import { Input } from "../design-system/components/Input";
 import { Select } from "../design-system/components/Select";
+import {
+  clearInviteDraft,
+  EMPTY_INVITE_FORM,
+  firstInviteErrorField,
+  loadInviteDraft,
+  saveInviteDraft,
+  validateInviteField,
+  validateInviteForm,
+  type InviteFormErrors,
+  type InviteFormValues,
+} from "../lib/invite-member-form";
 import { MEMBER_ROLES } from "../lib/roles";
 import { Button } from "./ui/Button";
-
-const DRAFT_STORAGE_KEY = "nsa-connect.invite-member.draft";
-
-type InviteFormValues = {
-  firstName: string;
-  lastName: string;
-  role: string;
-  committee: string;
-  email: string;
-  phone: string;
-  graduationYear: string;
-};
-
-type InviteFormErrors = Partial<Record<keyof InviteFormValues, string>>;
-
-const EMPTY_FORM: InviteFormValues = {
-  firstName: "",
-  lastName: "",
-  role: "",
-  committee: "",
-  email: "",
-  phone: "",
-  graduationYear: "",
-};
 
 const ROLE_OPTIONS = MEMBER_ROLES.map((role) => ({
   value: role,
   label: role.charAt(0).toUpperCase() + role.slice(1),
 }));
+
+const ORGANIZATION_OPTIONS = [
+  { value: "nsa-main", label: "NSA — Main Chapter" },
+  { value: "nsa-grad", label: "NSA — Graduate Chapter" },
+  { value: "cultural", label: "Cultural Affairs" },
+  { value: "outreach", label: "Community Outreach" },
+];
 
 const COMMITTEE_OPTIONS = [
   { value: "events", label: "Events" },
@@ -56,63 +57,6 @@ type InviteMemberDrawerProps = {
   onClose: () => void;
 };
 
-function isValidEmail(value: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
-}
-
-function isValidPhone(value: string): boolean {
-  const digits = value.replace(/\D/g, "");
-  return digits.length === 0 || digits.length >= 10;
-}
-
-function validateInviteForm(values: InviteFormValues): InviteFormErrors {
-  const errors: InviteFormErrors = {};
-
-  if (!values.firstName.trim()) {
-    errors.firstName = "First name is required.";
-  }
-  if (!values.lastName.trim()) {
-    errors.lastName = "Last name is required.";
-  }
-  if (!values.role) {
-    errors.role = "Choose a role for this invitation.";
-  }
-  if (!values.email.trim()) {
-    errors.email = "Email is required.";
-  } else if (!isValidEmail(values.email)) {
-    errors.email = "Enter a valid email address.";
-  }
-  if (values.phone.trim() && !isValidPhone(values.phone)) {
-    errors.phone = "Enter a phone number with at least 10 digits.";
-  }
-  if (!values.graduationYear) {
-    errors.graduationYear = "Select an expected graduation year.";
-  }
-
-  return errors;
-}
-
-function loadDraft(): InviteFormValues | null {
-  try {
-    const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
-    if (!raw) {
-      return null;
-    }
-    const parsed = JSON.parse(raw) as Partial<InviteFormValues>;
-    return { ...EMPTY_FORM, ...parsed };
-  } catch {
-    return null;
-  }
-}
-
-function saveDraft(values: InviteFormValues): void {
-  window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(values));
-}
-
-function clearDraft(): void {
-  window.localStorage.removeItem(DRAFT_STORAGE_KEY);
-}
-
 function FormSection({
   title,
   description,
@@ -122,10 +66,14 @@ function FormSection({
   description?: string;
   children: ReactNode;
 }) {
+  const headingId = useId();
+
   return (
-    <section className="members-invite-section">
+    <section className="members-invite-section" aria-labelledby={headingId}>
       <div className="members-invite-section-header">
-        <h3 className="members-invite-section-title">{title}</h3>
+        <h3 id={headingId} className="members-invite-section-title">
+          {title}
+        </h3>
         {description ? (
           <p className="members-invite-section-desc">{description}</p>
         ) : null}
@@ -135,60 +83,112 @@ function FormSection({
   );
 }
 
+function RequiredMark() {
+  return (
+    <span className="members-invite-required" aria-hidden="true">
+      *
+    </span>
+  );
+}
+
 export function InviteMemberDrawer({ open, onClose }: InviteMemberDrawerProps) {
-  const [values, setValues] = useState<InviteFormValues>(EMPTY_FORM);
+  const [values, setValues] = useState<InviteFormValues>(EMPTY_INVITE_FORM);
   const [errors, setErrors] = useState<InviteFormErrors>({});
+  const [touched, setTouched] = useState<
+    Partial<Record<keyof InviteFormValues, boolean>>
+  >({});
   const [draftSaved, setDraftSaved] = useState(false);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (!open) {
       return;
     }
-    const draft = loadDraft();
-    setValues(draft ?? EMPTY_FORM);
+    const draft = loadInviteDraft();
+    setValues(draft ?? EMPTY_INVITE_FORM);
     setErrors({});
+    setTouched({});
     setDraftSaved(false);
+    setAttemptedSubmit(false);
   }, [open]);
 
   function updateField<K extends keyof InviteFormValues>(
     key: K,
     next: InviteFormValues[K],
   ) {
-    setValues((current) => ({ ...current, [key]: next }));
+    const nextValues = { ...values, [key]: next };
+    setValues(nextValues);
     setDraftSaved(false);
+
+    if (attemptedSubmit || touched[key]) {
+      const message = validateInviteField(key, nextValues);
+      setErrors((current) => {
+        const nextErrors = { ...current };
+        if (message) {
+          nextErrors[key] = message;
+        } else {
+          delete nextErrors[key];
+        }
+        return nextErrors;
+      });
+    }
+  }
+
+  function handleBlur(key: keyof InviteFormValues) {
+    setTouched((current) => ({ ...current, [key]: true }));
     setErrors((current) => {
-      if (!current[key]) {
-        return current;
-      }
+      const message = validateInviteField(key, values);
       const nextErrors = { ...current };
-      delete nextErrors[key];
+      if (message) {
+        nextErrors[key] = message;
+      } else {
+        delete nextErrors[key];
+      }
       return nextErrors;
     });
   }
 
   function handleCancel() {
     setErrors({});
+    setTouched({});
+    setAttemptedSubmit(false);
     onClose();
   }
 
   function handleSaveDraft() {
-    saveDraft(values);
+    saveInviteDraft(values);
     setDraftSaved(true);
   }
 
-  function handleInvite() {
+  function handleInvite(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAttemptedSubmit(true);
     const nextErrors = validateInviteForm(values);
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) {
+
+    const firstError = firstInviteErrorField(nextErrors);
+    if (firstError) {
+      const field = formRef.current?.querySelector<HTMLElement>(
+        `[name="${firstError}"]`,
+      );
+      field?.focus();
+      if (typeof field?.scrollIntoView === "function") {
+        field.scrollIntoView({ block: "center", behavior: "smooth" });
+      }
       return;
     }
 
-    // No backend invite endpoint wired — keep the invitation local-only for now.
-    clearDraft();
+    // No backend invite endpoint wired — keep invitation local-only for now.
+    clearInviteDraft();
     setDraftSaved(false);
-    setValues(EMPTY_FORM);
+    setValues(EMPTY_INVITE_FORM);
+    setTouched({});
+    setAttemptedSubmit(false);
     onClose();
   }
+
+  const errorCount = Object.keys(errors).length;
 
   return (
     <Drawer
@@ -200,60 +200,117 @@ export function InviteMemberDrawer({ open, onClose }: InviteMemberDrawerProps) {
       description="Add someone to your organization. Drafts stay on this device."
       className="members-invite-drawer"
       footer={
-        <>
-          <Button type="button" variant="ghost" size="sm" onClick={handleCancel}>
-            Cancel
-          </Button>
+        <div className="members-invite-footer">
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             size="sm"
-            onClick={handleSaveDraft}
+            className="members-invite-footer-cancel"
+            onClick={handleCancel}
           >
-            Save Draft
+            Cancel
           </Button>
-          <Button type="button" variant="primary" size="sm" onClick={handleInvite}>
-            Invite
-          </Button>
-        </>
+          <div className="members-invite-footer-actions">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleSaveDraft}
+            >
+              Save Draft
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={() => formRef.current?.requestSubmit()}
+            >
+              Invite
+            </Button>
+          </div>
+        </div>
       }
     >
-      <div className="members-invite-form">
+      <form
+        ref={formRef}
+        className="members-invite-form"
+        onSubmit={handleInvite}
+        noValidate
+      >
         {draftSaved ? (
           <p className="members-invite-banner is-success" role="status">
             Draft saved on this device.
           </p>
         ) : null}
-        {Object.keys(errors).length > 0 ? (
+        {attemptedSubmit && errorCount > 0 ? (
           <p className="members-invite-banner is-error" role="alert">
-            Fix the highlighted fields before sending the invite.
+            {errorCount === 1
+              ? "1 field needs attention before you can send the invite."
+              : `${errorCount} fields need attention before you can send the invite.`}
           </p>
         ) : null}
 
         <FormSection
-          title="Personal Information"
+          title="Personal"
           description="How this member will appear across CampusOS."
         >
           <div className="members-invite-grid">
             <Input
-              label="First name"
+              label={
+                <>
+                  First name <RequiredMark />
+                </>
+              }
               name="firstName"
               autoComplete="given-name"
               value={values.firstName}
               error={errors.firstName}
               onChange={(event) => updateField("firstName", event.target.value)}
+              onBlur={() => handleBlur("firstName")}
               placeholder="Alex"
+              required
+              maxLength={60}
             />
             <Input
-              label="Last name"
+              label={
+                <>
+                  Last name <RequiredMark />
+                </>
+              }
               name="lastName"
               autoComplete="family-name"
               value={values.lastName}
               error={errors.lastName}
               onChange={(event) => updateField("lastName", event.target.value)}
+              onBlur={() => handleBlur("lastName")}
               placeholder="Member"
+              required
+              maxLength={60}
             />
           </div>
+        </FormSection>
+
+        <FormSection
+          title="Organization"
+          description="Which chapter or group they are joining."
+        >
+          <Select
+            label={
+              <>
+                Organization <RequiredMark />
+              </>
+            }
+            name="organization"
+            options={ORGANIZATION_OPTIONS}
+            placeholder="Select an organization"
+            value={values.organization}
+            error={errors.organization}
+            onChange={(event) =>
+              updateField("organization", event.target.value)
+            }
+            onBlur={() => handleBlur("organization")}
+            required
+          />
         </FormSection>
 
         <FormSection
@@ -261,13 +318,19 @@ export function InviteMemberDrawer({ open, onClose }: InviteMemberDrawerProps) {
           description="Controls access level after they accept."
         >
           <Select
-            label="Member role"
+            label={
+              <>
+                Member role <RequiredMark />
+              </>
+            }
             name="role"
             options={ROLE_OPTIONS}
             placeholder="Select a role"
             value={values.role}
             error={errors.role}
             onChange={(event) => updateField("role", event.target.value)}
+            onBlur={() => handleBlur("role")}
+            required
           />
         </FormSection>
 
@@ -285,40 +348,16 @@ export function InviteMemberDrawer({ open, onClose }: InviteMemberDrawerProps) {
           />
         </FormSection>
 
-        <FormSection title="Email" description="Invitation will be sent here.">
-          <Input
-            label="Email address"
-            name="email"
-            type="email"
-            autoComplete="email"
-            inputMode="email"
-            value={values.email}
-            error={errors.email}
-            onChange={(event) => updateField("email", event.target.value)}
-            placeholder="name@semo.edu"
-          />
-        </FormSection>
-
-        <FormSection title="Phone" description="Optional contact number.">
-          <Input
-            label="Phone number"
-            name="phone"
-            type="tel"
-            autoComplete="tel"
-            inputMode="tel"
-            value={values.phone}
-            error={errors.phone}
-            onChange={(event) => updateField("phone", event.target.value)}
-            placeholder="(555) 555-5555"
-          />
-        </FormSection>
-
         <FormSection
-          title="Expected Graduation"
+          title="Graduation"
           description="Helps cohort planning and alumni transitions."
         >
           <Select
-            label="Graduation year"
+            label={
+              <>
+                Graduation year <RequiredMark />
+              </>
+            }
             name="graduationYear"
             options={GRADUATION_YEAR_OPTIONS}
             placeholder="Select a year"
@@ -327,9 +366,49 @@ export function InviteMemberDrawer({ open, onClose }: InviteMemberDrawerProps) {
             onChange={(event) =>
               updateField("graduationYear", event.target.value)
             }
+            onBlur={() => handleBlur("graduationYear")}
+            required
           />
         </FormSection>
-      </div>
+
+        <FormSection
+          title="Contact"
+          description="Where the invitation and follow-ups will go."
+        >
+          <div className="members-invite-stack">
+            <Input
+              label={
+                <>
+                  Email address <RequiredMark />
+                </>
+              }
+              name="email"
+              type="email"
+              autoComplete="email"
+              inputMode="email"
+              value={values.email}
+              error={errors.email}
+              onChange={(event) => updateField("email", event.target.value)}
+              onBlur={() => handleBlur("email")}
+              placeholder="name@semo.edu"
+              required
+            />
+            <Input
+              label="Phone number"
+              name="phone"
+              type="tel"
+              autoComplete="tel"
+              inputMode="tel"
+              value={values.phone}
+              error={errors.phone}
+              hint="Optional. Use a 10-digit mobile number when possible."
+              onChange={(event) => updateField("phone", event.target.value)}
+              onBlur={() => handleBlur("phone")}
+              placeholder="(555) 555-5555"
+            />
+          </div>
+        </FormSection>
+      </form>
     </Drawer>
   );
 }

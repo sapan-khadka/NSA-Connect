@@ -1,15 +1,21 @@
 /**
- * Member Profile — two-column premium layout.
- * Data fetching / edit / admin flows unchanged; new domain panels are presentation-only.
+ * Member Profile — balanced two-column premium layout.
+ * Data fetching / edit / admin flows unchanged; domain panels are presentation-first.
  */
 
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ChevronLeft } from "lucide-react";
+import {
+  ChevronLeft,
+  ClipboardList,
+  FileText,
+  StickyNote,
+} from "lucide-react";
 
 import { MemberActivityTimeline } from "../components/MemberActivityTimeline";
 import { MemberAiInsightsCard } from "../components/MemberAiInsightsCard";
 import { MemberAttendancePanel } from "../components/MemberAttendancePanel";
+import { MemberHealthPanel } from "../components/MemberHealthPanel";
 import { MemberPaymentsPanel } from "../components/MemberPaymentsPanel";
 import {
   MemberProfileForm,
@@ -54,11 +60,14 @@ function ProfileSection({
   description,
   children,
   actions,
+  scrollable = false,
 }: {
   title: string;
   description?: string;
   children: ReactNode;
   actions?: ReactNode;
+  /** Caps tall panel content so the page stays browseable. */
+  scrollable?: boolean;
 }) {
   return (
     <section className="member-profile-section" aria-label={title}>
@@ -71,13 +80,41 @@ function ProfileSection({
         </div>
         {actions}
       </div>
-      <div className="member-profile-section-body">{children}</div>
+      <div
+        className={
+          scrollable
+            ? "member-profile-section-body is-scrollable"
+            : "member-profile-section-body"
+        }
+        tabIndex={scrollable ? 0 : undefined}
+        aria-label={scrollable ? `${title} details` : undefined}
+      >
+        {children}
+      </div>
     </section>
   );
 }
 
-function EmptyHint({ children }: { children: ReactNode }) {
-  return <p className="member-profile-empty">{children}</p>;
+function EmptyHint({
+  icon,
+  title,
+  description,
+}: {
+  icon: typeof ClipboardList;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="member-profile-empty-card" role="status">
+      <span className="member-profile-empty-icon" aria-hidden="true">
+        <AppIcon icon={icon} size="sm" className="text-current" />
+      </span>
+      <div className="min-w-0">
+        <p className="member-profile-empty-title">{title}</p>
+        <p className="member-profile-empty-desc">{description}</p>
+      </div>
+    </div>
+  );
 }
 
 function MetaRow({ label, value }: { label: string; value: string }) {
@@ -238,7 +275,6 @@ export function MemberProfilePage() {
               <Skeleton height={16} width="35%" />
               <Skeleton height={12} width="100%" />
               <Skeleton height={12} width="90%" />
-              <Skeleton height={12} width="80%" />
             </div>
             <div className="member-profile-section space-y-3">
               <Skeleton height={16} width="40%" />
@@ -248,6 +284,10 @@ export function MemberProfilePage() {
           <div className="member-profile-column space-y-4">
             <div className="member-profile-section space-y-3">
               <Skeleton height={16} width="35%" />
+              <Skeleton height={72} width="100%" />
+            </div>
+            <div className="member-profile-section space-y-3">
+              <Skeleton height={16} width="40%" />
               <Skeleton height={96} width="100%" />
             </div>
           </div>
@@ -267,6 +307,10 @@ export function MemberProfilePage() {
   const contactLine = buildMemberContactLine(profile);
   const positionHolders = buildPositionHolders([profile]);
   const talents = profile.talents ?? [];
+  const showMembershipAdmin =
+    isPresident &&
+    Boolean(currentMember) &&
+    canViewMemberDirectory(currentMember!.role);
 
   return (
     <div className="member-profile-page">
@@ -283,7 +327,7 @@ export function MemberProfilePage() {
             <p className="member-profile-hero-meta">
               {profile.major} · Class of {profile.graduation_year}
             </p>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
+            <div className="member-profile-hero-badges">
               <RoleBadge role={profile.role} size="md" />
               <StatusBadge status={profile.status} />
               <span className="member-profile-position-chip">
@@ -297,6 +341,7 @@ export function MemberProfilePage() {
               type="button"
               variant="outline"
               size="sm"
+              className="member-profile-hero-action"
               onClick={() => setIsEditing(true)}
             >
               Edit profile
@@ -338,7 +383,7 @@ export function MemberProfilePage() {
               onChange={setValues}
               idPrefix={`member-${profile.id}`}
             />
-            <div className="mt-6 flex justify-end gap-2">
+            <div className="member-profile-edit-actions">
               <Button
                 type="button"
                 variant="outline"
@@ -388,9 +433,9 @@ export function MemberProfilePage() {
               </dl>
 
               {talents.length > 0 ? (
-                <div className="mt-4">
+                <div className="member-profile-block">
                   <p className="member-profile-eyebrow">Talents</p>
-                  <ul className="mt-2 flex flex-wrap gap-1.5">
+                  <ul className="member-profile-chip-list">
                     {talents.map((talent) => (
                       <li key={talent} className="member-profile-chip">
                         {formatTalentLabel(talent, profile.talent_other)}
@@ -401,20 +446,16 @@ export function MemberProfilePage() {
               ) : null}
 
               {profile.interests ? (
-                <div className="mt-4">
+                <div className="member-profile-block">
                   <p className="member-profile-eyebrow">Interests</p>
-                  <p className="mt-1.5 text-sm leading-relaxed text-foreground">
-                    {profile.interests}
-                  </p>
+                  <p className="member-profile-prose">{profile.interests}</p>
                 </div>
               ) : null}
 
               {profile.bio ? (
-                <div className="mt-4">
+                <div className="member-profile-block">
                   <p className="member-profile-eyebrow">Bio</p>
-                  <p className="mt-1.5 text-sm leading-relaxed text-foreground">
-                    {profile.bio}
-                  </p>
+                  <p className="member-profile-prose is-clamped">{profile.bio}</p>
                 </div>
               ) : null}
             </ProfileSection>
@@ -422,26 +463,43 @@ export function MemberProfilePage() {
             <ProfileSection
               title="Attendance"
               description="Event and meeting participation."
+              scrollable
             >
               <MemberAttendancePanel />
-            </ProfileSection>
-
-            <ProfileSection
-              title="Payments"
-              description="Dues and related balances."
-            >
-              <MemberPaymentsPanel />
             </ProfileSection>
 
             <ProfileSection
               title="Tasks"
               description="Assigned and completed work."
             >
-              <EmptyHint>No tasks linked to this member yet.</EmptyHint>
+              <EmptyHint
+                icon={ClipboardList}
+                title="No tasks yet"
+                description="Assigned board work will appear here."
+              />
+            </ProfileSection>
+
+            <ProfileSection
+              title="Payments"
+              description="Dues and related balances."
+              scrollable
+            >
+              <MemberPaymentsPanel />
             </ProfileSection>
           </div>
 
           <div className="member-profile-column">
+            <ProfileSection
+              title="Member Health"
+              description="Engagement score from attendance, tasks, dues, and activity."
+            >
+              <MemberHealthPanel
+                embedded
+                memberId={profile.id}
+                role={profile.role}
+              />
+            </ProfileSection>
+
             <ProfileSection
               title="AI Insights"
               description="Preview signals and suggested next steps."
@@ -453,34 +511,41 @@ export function MemberProfilePage() {
               title="Documents"
               description="Files shared with leadership."
             >
-              <EmptyHint>No documents uploaded yet.</EmptyHint>
+              <EmptyHint
+                icon={FileText}
+                title="No documents yet"
+                description="Uploaded files and forms will appear here."
+              />
             </ProfileSection>
 
             <ProfileSection
               title="Notes"
               description="Private board context for this member."
             >
-              <EmptyHint>No notes yet.</EmptyHint>
+              <EmptyHint
+                icon={StickyNote}
+                title="No notes yet"
+                description="Leadership notes stay private to the board."
+              />
             </ProfileSection>
 
             <ProfileSection
               title="Activity Timeline"
               description="Recent milestones and updates."
+              scrollable
             >
-              <MemberActivityTimeline />
+              <MemberActivityTimeline placeholdersWhenEmpty />
             </ProfileSection>
 
-            {isPresident &&
-            currentMember &&
-            canViewMemberDirectory(currentMember.role) ? (
+            {showMembershipAdmin ? (
               <ProfileSection
                 title="Membership admin"
                 description="Access level and board position."
               >
-                <div className="flex flex-wrap items-start gap-6">
-                  <div className="space-y-2">
+                <div className="member-profile-admin">
+                  <div className="member-profile-admin-field">
                     <p className="member-profile-eyebrow">Access level</p>
-                    {canPresidentPromoteMember(profile, currentMember.id) ? (
+                    {canPresidentPromoteMember(profile, currentMember!.id) ? (
                       <RolePromotionSelect
                         member={profile}
                         isUpdating={updatingRole}
@@ -491,10 +556,10 @@ export function MemberProfilePage() {
                     )}
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="member-profile-admin-field">
                     <p className="member-profile-eyebrow">Board position</p>
                     {profile.role === "general" ? (
-                      <p className="text-sm text-foreground">Member</p>
+                      <p className="member-profile-admin-static">Member</p>
                     ) : (
                       <PositionSelect
                         member={profile}

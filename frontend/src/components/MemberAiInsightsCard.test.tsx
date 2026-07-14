@@ -14,28 +14,29 @@ describe("MemberAiInsightsCard", () => {
 
     expect(screen.getByLabelText("AI Insights")).toBeInTheDocument();
     expect(
-      screen.getByText("This member hasn't attended in three events."),
+      screen.getByText("Member has missed four events."),
     ).toBeInTheDocument();
-    expect(screen.getByText("Outstanding dues detected.")).toBeInTheDocument();
-    expect(screen.getByText("Eligible for leadership.")).toBeInTheDocument();
-    expect(screen.getByText("Highly engaged member.")).toBeInTheDocument();
+    expect(screen.getByText("Member is highly engaged.")).toBeInTheDocument();
+    expect(screen.getByText("Recommend leadership role.")).toBeInTheDocument();
+    expect(screen.getByText("Outstanding dues.")).toBeInTheDocument();
     expect(
-      screen.getByText("Risk of becoming inactive."),
+      screen.getByText("Recommend sending reminder."),
     ).toBeInTheDocument();
     expect(screen.getByText("Suggestions")).toBeInTheDocument();
     expect(screen.getByText("Suggested actions")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Send attendance reminder" }),
+      screen.getByRole("button", { name: "Send reminder" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Placeholder UX only/i),
     ).toBeInTheDocument();
   });
 
-  it("acknowledges action clicks without navigating away", async () => {
+  it("acknowledges action clicks without calling a backend", async () => {
     const user = userEvent.setup();
     render(<MemberAiInsightsCard />);
 
-    await user.click(
-      screen.getByRole("button", { name: "Follow up on dues" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Follow up on dues" }));
 
     expect(
       screen.getByText(

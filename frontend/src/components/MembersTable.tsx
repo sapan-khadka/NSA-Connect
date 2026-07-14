@@ -1,9 +1,16 @@
 /**
- * Members directory table — presentation layer.
- * Uses existing MemberResponse fields as-is; missing domain fields show "—".
+ * Members directory table — Linear / GitHub Issues style.
+ * Uses existing MemberResponse fields; missing domain fields show "—".
+ * Client-side sort indicators only — does not change API data.
  */
 
-import { MoreHorizontal, Users } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronsUpDown,
+  MoreHorizontal,
+  Users,
+} from "lucide-react";
 import { useEffect, useId, useMemo, useState, type KeyboardEvent } from "react";
 import { Link } from "react-router-dom";
 
@@ -16,12 +23,22 @@ import { getApiErrorMessage } from "../lib/auth-api";
 import { fetchMembers } from "../lib/members-api";
 import { formatPositionLabel } from "../lib/roles";
 import { MembersBulkActionBar } from "./MembersBulkActionBar";
+import { MemberHealthBadge } from "./MemberHealthBadge";
 import { MemberQuickViewDrawer } from "./MemberQuickViewDrawer";
 import { StatusBadge } from "./StatusBadge";
 import { AppIcon } from "./ui/AppIcon";
 import { Button } from "./ui/Button";
 
 const MISSING = "—";
+
+type SortKey = "name" | "role" | "status";
+type SortDirection = "asc" | "desc";
+
+type MembersTableProps = {
+  members?: MemberResponse[];
+  isLoading?: boolean;
+  error?: string | null;
+};
 
 function formatRoleLabel(role: string): string {
   if (!role) {
@@ -30,24 +47,17 @@ function formatRoleLabel(role: string): string {
   return role.charAt(0).toUpperCase() + role.slice(1);
 }
 
-type MembersTableProps = {
-  /** Optional controlled rows — when omitted, the table loads via existing fetchMembers. */
-  members?: MemberResponse[];
-  isLoading?: boolean;
-  error?: string | null;
-};
-
 function MembersTableSkeleton({
   rows = 6,
-  isDesktop,
+  isMobile,
 }: {
   rows?: number;
-  isDesktop: boolean;
+  isMobile: boolean;
 }) {
-  if (!isDesktop) {
+  if (isMobile) {
     return (
       <div className="members-table-shell" aria-hidden="true">
-        <div className="space-y-3 p-3">
+        <div className="members-table-mobile-list">
           {Array.from({ length: 4 }).map((_, index) => (
             <div key={index} className="members-table-card">
               <div className="flex items-center gap-3">
@@ -71,9 +81,9 @@ function MembersTableSkeleton({
         <table className="members-table">
           <thead>
             <tr>
-              {Array.from({ length: 10 }).map((_, index) => (
+              {Array.from({ length: 11 }).map((_, index) => (
                 <th key={index}>
-                  <Skeleton height={12} width={index === 0 ? 16 : 64} />
+                  <Skeleton height={12} width={index === 0 ? 16 : 56} />
                 </th>
               ))}
             </tr>
@@ -85,7 +95,7 @@ function MembersTableSkeleton({
                   <Skeleton height={16} width={16} variant="rectangular" />
                 </td>
                 <td>
-                  <Skeleton height={32} width={32} variant="circular" />
+                  <Skeleton height={28} width={28} variant="circular" />
                 </td>
                 <td>
                   <div className="space-y-2">
@@ -93,9 +103,9 @@ function MembersTableSkeleton({
                     <Skeleton height={12} width="45%" />
                   </div>
                 </td>
-                {Array.from({ length: 7 }).map((__, cellIndex) => (
+                {Array.from({ length: 8 }).map((__, cellIndex) => (
                   <td key={cellIndex}>
-                    <Skeleton height={14} width="60%" />
+                    <Skeleton height={14} width="55%" />
                   </td>
                 ))}
               </tr>
@@ -104,6 +114,51 @@ function MembersTableSkeleton({
         </table>
       </div>
     </div>
+  );
+}
+
+function SortHeader({
+  label,
+  sortKey,
+  activeKey,
+  direction,
+  onSort,
+}: {
+  label: string;
+  sortKey: SortKey;
+  activeKey: SortKey | null;
+  direction: SortDirection;
+  onSort: (key: SortKey) => void;
+}) {
+  const active = activeKey === sortKey;
+  const ariaSort = active
+    ? direction === "asc"
+      ? "ascending"
+      : "descending"
+    : "none";
+
+  return (
+    <th scope="col" aria-sort={ariaSort}>
+      <button
+        type="button"
+        className="members-table-sort"
+        onClick={() => onSort(sortKey)}
+        aria-label={`Sort by ${label}${
+          active ? `, currently ${ariaSort}` : ""
+        }`}
+      >
+        <span>{label}</span>
+        <AppIcon
+          icon={
+            active ? (direction === "asc" ? ArrowUp : ArrowDown) : ChevronsUpDown
+          }
+          size="xs"
+          className={
+            active ? "text-foreground" : "text-label/70"
+          }
+        />
+      </button>
+    </th>
   );
 }
 
@@ -121,7 +176,7 @@ function MemberActions({ member }: { member: MemberResponse }) {
         type="button"
         variant="ghost"
         size="sm"
-        className="!min-h-8 !px-2"
+        className="members-table-more-btn"
         disabled
         title="Coming soon"
         aria-label={`More actions for ${member.full_name} (coming soon)`}
@@ -139,7 +194,7 @@ export function MembersTable({
   error: controlledError,
 }: MembersTableProps) {
   const selectAllId = useId();
-  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const isMobile = !useMediaQuery("(min-width: 768px)");
   const [internalMembers, setInternalMembers] = useState<MemberResponse[]>([]);
   const [internalLoading, setInternalLoading] = useState(
     controlledMembers === undefined,
@@ -149,6 +204,8 @@ export function MembersTable({
   const [quickViewMember, setQuickViewMember] = useState<MemberResponse | null>(
     null,
   );
+  const [sortKey, setSortKey] = useState<SortKey | null>("name");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
   const isControlled = controlledMembers !== undefined;
   const members = isControlled ? controlledMembers : internalMembers;
@@ -189,18 +246,46 @@ export function MembersTable({
     };
   }, [isControlled]);
 
-  const allVisibleSelected =
-    members.length > 0 && members.every((member) => selectedIds.has(member.id));
-  const someSelected = members.some((member) => selectedIds.has(member.id));
+  const displayedMembers = useMemo(() => {
+    if (!sortKey) {
+      return members;
+    }
+    const sorted = [...members];
+    sorted.sort((left, right) => {
+      const leftValue =
+        sortKey === "name"
+          ? left.full_name
+          : sortKey === "role"
+            ? left.role
+            : left.status;
+      const rightValue =
+        sortKey === "name"
+          ? right.full_name
+          : sortKey === "role"
+            ? right.role
+            : right.status;
+      const cmp = leftValue.localeCompare(rightValue, undefined, {
+        sensitivity: "base",
+      });
+      return sortDirection === "asc" ? cmp : -cmp;
+    });
+    return sorted;
+  }, [members, sortKey, sortDirection]);
 
-  const selectedCount = useMemo(() => selectedIds.size, [selectedIds]);
+  const allVisibleSelected =
+    displayedMembers.length > 0 &&
+    displayedMembers.every((member) => selectedIds.has(member.id));
+  const someSelected = displayedMembers.some((member) =>
+    selectedIds.has(member.id),
+  );
+  const selectedCount = selectedIds.size;
 
   function toggleAll() {
     if (allVisibleSelected) {
       setSelectedIds(new Set());
       return;
     }
-    setSelectedIds(new Set(members.map((member) => member.id)));
+    setSelectedIds(new Set(displayedMembers.map((member) => member.id)));
   }
 
   function toggleRow(memberId: number) {
@@ -213,6 +298,15 @@ export function MembersTable({
       }
       return next;
     });
+  }
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setSortKey(key);
+    setSortDirection("asc");
   }
 
   function openQuickView(member: MemberResponse) {
@@ -238,7 +332,7 @@ export function MembersTable({
     return (
       <div aria-busy="true" aria-live="polite">
         <p className="sr-only">Loading members…</p>
-        <MembersTableSkeleton isDesktop={isDesktop} />
+        <MembersTableSkeleton isMobile={isMobile} />
       </div>
     );
   }
@@ -265,8 +359,91 @@ export function MembersTable({
 
   return (
     <>
-      <div className="members-table-shell">
-        {isDesktop ? (
+      <div
+        className={
+          selectedCount > 0
+            ? "members-table-shell is-bulk-active"
+            : "members-table-shell"
+        }
+      >
+        {isMobile ? (
+          <ul className="members-table-mobile-list">
+            {displayedMembers.map((member) => {
+              const selected = selectedIds.has(member.id);
+              return (
+                <li key={member.id}>
+                  <article
+                    className="members-table-card"
+                    data-selected={selected ? "true" : undefined}
+                    tabIndex={0}
+                    aria-label={`Quick view ${member.full_name}`}
+                    onClick={() => openQuickView(member)}
+                    onKeyDown={(event) => handleRowKeyDown(event, member)}
+                  >
+                    <div className="members-table-card-top">
+                      <input
+                        type="checkbox"
+                        className="members-table-checkbox"
+                        checked={selected}
+                        onChange={() => toggleRow(member.id)}
+                        onClick={(event) => event.stopPropagation()}
+                        aria-label={`Select ${member.full_name}`}
+                      />
+                      <Avatar name={member.full_name} size="md" />
+                      <div className="min-w-0 flex-1">
+                        <div className="members-table-card-heading">
+                          <div className="min-w-0">
+                            <p className="members-table-name">
+                              {member.full_name}
+                            </p>
+                            <p className="members-table-meta">
+                              {formatRoleLabel(member.role)}
+                              {member.position !== "member"
+                                ? ` · ${formatPositionLabel(member.position)}`
+                                : ""}
+                            </p>
+                          </div>
+                          <StatusBadge status={member.status} />
+                        </div>
+                      </div>
+                    </div>
+
+                    <dl className="members-table-card-meta">
+                      <div>
+                        <dt>Attendance</dt>
+                        <dd>{MISSING}</dd>
+                      </div>
+                      <div>
+                        <dt>Health</dt>
+                        <dd>
+                          <MemberHealthBadge
+                            memberId={member.id}
+                            role={member.role}
+                          />
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Dues</dt>
+                        <dd>{MISSING}</dd>
+                      </div>
+                      <div>
+                        <dt>Activity</dt>
+                        <dd>{MISSING}</dd>
+                      </div>
+                    </dl>
+
+                    <div
+                      className="members-table-card-actions"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <MemberActions member={member} />
+                    </div>
+                  </article>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
           <div className="members-table-scroll">
             <table className="members-table">
               <caption className="sr-only">Organization members</caption>
@@ -291,20 +468,43 @@ export function MembersTable({
                   <th scope="col" className="members-table-avatar-col">
                     <span className="sr-only">Avatar</span>
                   </th>
-                  <th scope="col">Name</th>
-                  <th scope="col">Role</th>
+                  <SortHeader
+                    label="Name"
+                    sortKey="name"
+                    activeKey={sortKey}
+                    direction={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <SortHeader
+                    label="Role"
+                    sortKey="role"
+                    activeKey={sortKey}
+                    direction={sortDirection}
+                    onSort={handleSort}
+                  />
                   <th scope="col">Committee</th>
                   <th scope="col">Attendance</th>
-                  <th scope="col">Dues</th>
-                  <th scope="col">Last Activity</th>
-                  <th scope="col">Status</th>
-                  <th scope="col" className="text-right">
+                  <th scope="col" className="members-table-col-health">
+                    Member Health
+                  </th>
+                  <th scope="col">Outstanding Dues</th>
+                  <th scope="col" className="members-table-col-activity">
+                    Last Activity
+                  </th>
+                  <SortHeader
+                    label="Status"
+                    sortKey="status"
+                    activeKey={sortKey}
+                    direction={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <th scope="col" className="members-table-actions-col">
                     Actions
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {members.map((member) => {
+                {displayedMembers.map((member) => {
                   const selected = selectedIds.has(member.id);
                   return (
                     <tr
@@ -354,12 +554,19 @@ export function MembersTable({
                           {MISSING}
                         </span>
                       </td>
+                      <td className="members-table-col-health">
+                        <MemberHealthBadge
+                          memberId={member.id}
+                          role={member.role}
+                          showScore
+                        />
+                      </td>
                       <td>
                         <span className="members-table-cell-muted">
                           {MISSING}
                         </span>
                       </td>
-                      <td>
+                      <td className="members-table-col-activity">
                         <span className="members-table-cell-muted">
                           {MISSING}
                         </span>
@@ -368,7 +575,7 @@ export function MembersTable({
                         <StatusBadge status={member.status} />
                       </td>
                       <td
-                        className="text-right"
+                        className="members-table-actions-col"
                         onClick={(event) => event.stopPropagation()}
                       >
                         <MemberActions member={member} />
@@ -379,63 +586,6 @@ export function MembersTable({
               </tbody>
             </table>
           </div>
-        ) : (
-          <ul className="members-table-mobile-list">
-            {members.map((member) => {
-              const selected = selectedIds.has(member.id);
-              return (
-                <li key={member.id}>
-                  <article
-                    className="members-table-card"
-                    data-selected={selected ? "true" : undefined}
-                    tabIndex={0}
-                    aria-label={`Quick view ${member.full_name}`}
-                    onClick={() => openQuickView(member)}
-                    onKeyDown={(event) => handleRowKeyDown(event, member)}
-                  >
-                    <div className="flex items-start gap-3">
-                      <input
-                        type="checkbox"
-                        className="members-table-checkbox mt-1"
-                        checked={selected}
-                        onChange={() => toggleRow(member.id)}
-                        onClick={(event) => event.stopPropagation()}
-                        aria-label={`Select ${member.full_name}`}
-                      />
-                      <Avatar name={member.full_name} size="md" />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="members-table-name">
-                              {member.full_name}
-                            </p>
-                            <p className="members-table-meta">
-                              {formatRoleLabel(member.role)}
-                              {member.position !== "member"
-                                ? ` · ${formatPositionLabel(member.position)}`
-                                : ""}
-                            </p>
-                          </div>
-                          <StatusBadge status={member.status} />
-                        </div>
-
-                        <p className="members-table-card-hint">
-                          Open for full profile details.
-                        </p>
-
-                        <div
-                          className="mt-3 flex justify-end"
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          <MemberActions member={member} />
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-                </li>
-              );
-            })}
-          </ul>
         )}
       </div>
 
@@ -452,4 +602,3 @@ export function MembersTable({
     </>
   );
 }
-

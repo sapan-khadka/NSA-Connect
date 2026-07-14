@@ -5,8 +5,8 @@
 
 import type { LucideIcon } from "lucide-react";
 import {
-  AlertTriangle,
   Award,
+  Bell,
   CalendarOff,
   CircleDollarSign,
   Flame,
@@ -47,66 +47,69 @@ export type MemberAiInsightsSnapshot = {
   actions: MemberInsightAction[];
 };
 
-/** Static demo snapshot for the Member Profile AI Insights card. */
+/**
+ * Static demo snapshot for the Member Profile AI Insights card.
+ * Copy matches product examples — placeholder UX only.
+ */
 export const PLACEHOLDER_MEMBER_AI_INSIGHTS: MemberAiInsightsSnapshot = {
-  headline: "Engagement needs a nudge",
+  headline: "Balanced signals with clear next steps",
   summary:
-    "Recent signals suggest strong leadership potential, but attendance and dues need attention before outreach.",
+    "Placeholder insights combine engagement strengths with attendance and dues follow-ups. No live AI model is connected yet.",
   insights: [
     {
-      id: "attendance-gap",
+      id: "missed-events",
       tone: "attention",
-      title: "This member hasn't attended in three events.",
-      detail: "Last check-in pattern dropped after midterm week.",
+      title: "Member has missed four events.",
+      detail: "Recent RSVP pattern shows a widening attendance gap.",
       icon: CalendarOff,
     },
     {
-      id: "outstanding-dues",
-      tone: "attention",
-      title: "Outstanding dues detected.",
-      detail: "A partial or unpaid balance is still open this semester.",
-      icon: CircleDollarSign,
+      id: "highly-engaged",
+      tone: "positive",
+      title: "Member is highly engaged.",
+      detail: "Tasks and event interest remain stronger than peer average.",
+      icon: Flame,
     },
     {
       id: "leadership",
       tone: "opportunity",
-      title: "Eligible for leadership.",
-      detail: "Role history and reliability look ready for a committee seat.",
+      title: "Recommend leadership role.",
+      detail: "Reliability signals look ready for a committee or board seat.",
       icon: Award,
     },
     {
-      id: "engaged",
-      tone: "positive",
-      title: "Highly engaged member.",
-      detail: "Task completion and discussion activity stay above peer average.",
-      icon: Flame,
+      id: "outstanding-dues",
+      tone: "risk",
+      title: "Outstanding dues.",
+      detail: "An unpaid or partial balance is still open this semester.",
+      icon: CircleDollarSign,
     },
     {
-      id: "inactive-risk",
-      tone: "risk",
-      title: "Risk of becoming inactive.",
-      detail: "Quiet stretch across RSVPs may turn into a longer gap.",
-      icon: AlertTriangle,
+      id: "send-reminder",
+      tone: "attention",
+      title: "Recommend sending reminder.",
+      detail: "A short check-in could recover attendance before the next event.",
+      icon: Bell,
     },
   ],
   suggestions: [
     {
-      id: "suggest-checkin",
-      text: "Send a friendly check-in before the next cultural event.",
+      id: "suggest-reminder",
+      text: "Recommend sending reminder before the next cultural night.",
     },
     {
       id: "suggest-dues",
-      text: "Pair the dues reminder with a clear payment option.",
+      text: "Pair outstanding dues outreach with a clear payment path.",
     },
     {
-      id: "suggest-mentor",
-      text: "Invite them to shadow a current committee lead for one meeting.",
+      id: "suggest-leadership",
+      text: "Invite this member to shadow a current committee lead.",
     },
   ],
   actions: [
     {
-      id: "action-attendance",
-      label: "Send attendance reminder",
+      id: "action-reminder",
+      label: "Send reminder",
       intent: "primary",
     },
     {
@@ -116,12 +119,7 @@ export const PLACEHOLDER_MEMBER_AI_INSIGHTS: MemberAiInsightsSnapshot = {
     },
     {
       id: "action-leadership",
-      label: "Nominate for committee",
-      intent: "secondary",
-    },
-    {
-      id: "action-checkin",
-      label: "Schedule check-in",
+      label: "Recommend leadership",
       intent: "secondary",
     },
   ],

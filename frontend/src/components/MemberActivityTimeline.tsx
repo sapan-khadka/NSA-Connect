@@ -1,10 +1,18 @@
+/**
+ * Beautiful member activity timeline — icons, day groups, empty + loading.
+ * Presentation only; pass items or enable placeholdersWhenEmpty for demos.
+ */
+
 import { Activity } from "lucide-react";
 
 import { AppIcon } from "./ui/AppIcon";
 import {
+  buildPlaceholderMemberActivity,
   formatActivityTimeLabel,
   groupMemberActivityByDay,
   MEMBER_ACTIVITY_ICONS,
+  MEMBER_ACTIVITY_KINDS,
+  MEMBER_ACTIVITY_TITLES,
   type MemberActivityItem,
   type MemberActivityKind,
 } from "../lib/member-activity-timeline";
@@ -14,6 +22,12 @@ type MemberActivityTimelineProps = {
   loading?: boolean;
   /** Override "now" for stable day labels in tests. */
   now?: Date;
+  /**
+   * When there is no activity yet, show a polished sample timeline
+   * covering Joined / Paid dues / Attended event / Completed task /
+   * Assigned committee. Empty state remains the default.
+   */
+  placeholdersWhenEmpty?: boolean;
 };
 
 function ActivitySkeleton() {
@@ -43,14 +57,32 @@ function ActivitySkeleton() {
 function ActivityEmpty() {
   return (
     <div className="member-activity-empty" role="status">
-      <span className="member-activity-empty-icon" aria-hidden="true">
-        <AppIcon icon={Activity} size="md" className="text-label" />
-      </span>
-      <p className="member-activity-empty-title">No activity yet</p>
-      <p className="member-activity-empty-desc">
-        Milestones like joining, dues, events, tasks, and committee changes will
-        appear here.
-      </p>
+      <div className="member-activity-empty-hero">
+        <span className="member-activity-empty-icon" aria-hidden="true">
+          <AppIcon icon={Activity} size="md" className="text-current" />
+        </span>
+        <div className="min-w-0">
+          <p className="member-activity-empty-title">No activity yet</p>
+          <p className="member-activity-empty-desc">
+            Milestones will appear here as this member joins, pays dues, attends
+            events, completes tasks, and receives committee assignments.
+          </p>
+        </div>
+      </div>
+
+      <ul className="member-activity-empty-kinds" aria-label="Supported events">
+        {MEMBER_ACTIVITY_KINDS.map((kind) => {
+          const Icon = MEMBER_ACTIVITY_ICONS[kind];
+          return (
+            <li key={kind} className={`member-activity-empty-kind member-activity-empty-kind--${kind}`}>
+              <span className="member-activity-empty-kind-icon" aria-hidden="true">
+                <AppIcon icon={Icon} size="xs" className="text-current" />
+              </span>
+              <span>{MEMBER_ACTIVITY_TITLES[kind]}</span>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
@@ -78,20 +110,17 @@ function ActivityRow({
         </span>
         {!isLast ? <span className="member-activity-rail-line" /> : null}
       </div>
-      <div className="member-activity-body">
+      <article className="member-activity-card">
         <div className="member-activity-row-top">
-          <p className="member-activity-title">{item.title}</p>
-          <time
-            dateTime={item.occurredAt}
-            className="member-activity-time"
-          >
+          <h4 className="member-activity-title">{item.title}</h4>
+          <time dateTime={item.occurredAt} className="member-activity-time">
             {formatActivityTimeLabel(item.occurredAt, now)}
           </time>
         </div>
         {item.detail ? (
           <p className="member-activity-detail">{item.detail}</p>
         ) : null}
-      </div>
+      </article>
     </li>
   );
 }
@@ -100,6 +129,7 @@ export function MemberActivityTimeline({
   items = [],
   loading = false,
   now: nowProp,
+  placeholdersWhenEmpty = false,
 }: MemberActivityTimelineProps) {
   const now = nowProp ?? new Date();
 
@@ -107,26 +137,41 @@ export function MemberActivityTimeline({
     return <ActivitySkeleton />;
   }
 
-  if (items.length === 0) {
+  const usingPlaceholders = items.length === 0 && placeholdersWhenEmpty;
+  const resolvedItems = usingPlaceholders
+    ? buildPlaceholderMemberActivity(now)
+    : items;
+
+  if (resolvedItems.length === 0) {
     return <ActivityEmpty />;
   }
 
-  const groups = groupMemberActivityByDay(items, now);
+  const groups = groupMemberActivityByDay(resolvedItems, now);
 
   return (
     <div className="member-activity" aria-label="Member activity timeline">
+      {usingPlaceholders ? (
+        <p className="members-demo-note" role="note">
+          Sample timeline — real milestones will replace this when activity is
+          recorded.
+        </p>
+      ) : null}
+
       {groups.map((group) => (
         <section
           key={group.key}
           className="member-activity-group"
           aria-labelledby={`member-activity-${group.key}`}
         >
-          <h3
-            id={`member-activity-${group.key}`}
-            className="member-activity-day"
-          >
-            {group.label}
-          </h3>
+          <div className="member-activity-day-row">
+            <h3
+              id={`member-activity-${group.key}`}
+              className="member-activity-day"
+            >
+              {group.label}
+            </h3>
+            <span className="member-activity-day-rule" aria-hidden="true" />
+          </div>
           <ol className="member-activity-list">
             {group.items.map((entry, index) => (
               <ActivityRow
