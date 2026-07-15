@@ -1,6 +1,6 @@
 /**
  * Members page filter toolbar — Linear-style presentation.
- * Local UI state only; does not change directory filter logic.
+ * Controlled from MembersPage so search/filters apply to the directory table.
  */
 
 import { Filter } from "lucide-react";
@@ -10,6 +10,10 @@ import { Drawer } from "../design-system/components/feedback/Drawer";
 import { Search } from "../design-system/components/Search";
 import { Select } from "../design-system/components/Select";
 import { useMediaQuery } from "../hooks/useMediaQuery";
+import {
+  EMPTY_MEMBERS_DIRECTORY_FILTERS,
+  type MembersDirectoryFilters,
+} from "../lib/members-directory";
 import { MEMBER_ROLES } from "../lib/roles";
 import { AppIcon } from "./ui/AppIcon";
 import { Button } from "./ui/Button";
@@ -48,44 +52,24 @@ const ATTENDANCE_OPTIONS = [
 ];
 
 const PAYMENT_STATUS_OPTIONS = [
-  { value: EMPTY, label: "All payment statuses" },
+  { value: EMPTY, label: "All payments" },
   { value: "paid", label: "Paid" },
   { value: "outstanding", label: "Outstanding" },
   { value: "overdue", label: "Overdue" },
 ];
 
 const MEMBER_STATUS_OPTIONS = [
-  { value: EMPTY, label: "All member statuses" },
+  { value: EMPTY, label: "All statuses" },
   { value: "approved", label: "Approved" },
   { value: "pending", label: "Pending" },
   { value: "rejected", label: "Rejected" },
 ];
 
-type FilterValues = {
-  search: string;
-  role: string;
-  committee: string;
-  graduationYear: string;
-  attendance: string;
-  paymentStatus: string;
-  memberStatus: string;
-};
-
-const EMPTY_FILTERS: FilterValues = {
-  search: EMPTY,
-  role: EMPTY,
-  committee: EMPTY,
-  graduationYear: EMPTY,
-  attendance: EMPTY,
-  paymentStatus: EMPTY,
-  memberStatus: EMPTY,
-};
-
 type FilterFieldsProps = {
-  values: FilterValues;
-  updateField: <K extends keyof FilterValues>(
+  values: MembersDirectoryFilters;
+  updateField: <K extends keyof MembersDirectoryFilters>(
     key: K,
-    next: FilterValues[K],
+    next: MembersDirectoryFilters[K],
   ) => void;
   hasAnyFilter: boolean;
   onReset: () => void;
@@ -120,6 +104,9 @@ function FilterFields({
         value={values.committee}
         onChange={(event) => updateField("committee", event.target.value)}
         className="members-filters-control"
+        disabled
+        title="Coming soon — committee data is not on the members API yet"
+        aria-disabled="true"
       />
       <Select
         id={`${idPrefix}-graduation-year`}
@@ -138,6 +125,9 @@ function FilterFields({
         value={values.attendance}
         onChange={(event) => updateField("attendance", event.target.value)}
         className="members-filters-control"
+        disabled
+        title="Coming soon — attendance data is not on the members API yet"
+        aria-disabled="true"
       />
       <Select
         id={`${idPrefix}-payment-status`}
@@ -176,18 +166,23 @@ function FilterFields({
   );
 }
 
-export function MembersFiltersToolbar() {
+type MembersFiltersToolbarProps = {
+  values: MembersDirectoryFilters;
+  onChange: (next: MembersDirectoryFilters) => void;
+};
+
+export function MembersFiltersToolbar({
+  values,
+  onChange,
+}: MembersFiltersToolbarProps) {
   const drawerTitleId = useId();
   const isMobile = useMediaQuery("(max-width: 767px)");
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [values, setValues] = useState<FilterValues>(EMPTY_FILTERS);
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (values.role) count += 1;
-    if (values.committee) count += 1;
     if (values.graduationYear) count += 1;
-    if (values.attendance) count += 1;
     if (values.paymentStatus) count += 1;
     if (values.memberStatus) count += 1;
     return count;
@@ -196,15 +191,15 @@ export function MembersFiltersToolbar() {
   const hasAnyFilter =
     values.search.trim().length > 0 || activeFilterCount > 0;
 
-  function updateField<K extends keyof FilterValues>(
+  function updateField<K extends keyof MembersDirectoryFilters>(
     key: K,
-    next: FilterValues[K],
+    next: MembersDirectoryFilters[K],
   ) {
-    setValues((current) => ({ ...current, [key]: next }));
+    onChange({ ...values, [key]: next });
   }
 
   function resetFilters() {
-    setValues(EMPTY_FILTERS);
+    onChange(EMPTY_MEMBERS_DIRECTORY_FILTERS);
   }
 
   const fieldProps: FilterFieldsProps = {

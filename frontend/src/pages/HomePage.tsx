@@ -29,7 +29,12 @@ import {
   fetchFinanceSummary,
   fetchPendingFinanceChangeRequests,
 } from "../lib/finance-api";
-import { getMyTasksPath, summarizeMyTasks } from "../lib/home-tasks";
+import {
+  applyOptimisticTaskComplete,
+  buildMarkTaskCompleteRequest,
+  getMyTasksPath,
+  summarizeMyTasks,
+} from "../lib/home-tasks";
 import { fetchMembers, fetchPendingMembers } from "../lib/members-api";
 import {
   canAccessFinance,
@@ -88,6 +93,7 @@ type MemberHomeLayoutProps = {
   canViewFinance: boolean;
   tasksPath: string;
   completingTaskId: number | null;
+  taskCompleteError: string | null;
   onCompleteTask: (taskId: number) => void;
   onRsvpStatusChange: (status: RsvpStatus) => void;
 };
@@ -110,6 +116,7 @@ function MemberHomeLayout({
   canViewFinance,
   tasksPath,
   completingTaskId,
+  taskCompleteError,
   onCompleteTask,
   onRsvpStatusChange,
 }: MemberHomeLayoutProps) {
@@ -184,6 +191,7 @@ function MemberHomeLayout({
             tasksPath={tasksPath}
             isLoading={isLoading}
             completingTaskId={completingTaskId}
+            taskCompleteError={taskCompleteError}
             onCompleteTask={onCompleteTask}
             pendingMemberApprovals={pendingMemberApprovals}
             financePendingCount={financePendingCount}
@@ -202,6 +210,9 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
   const [upcomingCount, setUpcomingCount] = useState(0);
   const [myTasks, setMyTasks] = useState<EventTaskResponse[]>([]);
   const [completingTaskId, setCompletingTaskId] = useState<number | null>(null);
+  const [taskCompleteError, setTaskCompleteError] = useState<string | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [rsvpLoading, setRsvpLoading] = useState(false);
@@ -218,23 +229,31 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
   const tasksSummary = useMemo(() => summarizeMyTasks(myTasks), [myTasks]);
 
   async function handleCompleteTask(taskId: number) {
+    const target = myTasks.find((task) => task.id === taskId);
+    if (!target || target.is_complete) {
+      return;
+    }
+
     const snapshot = myTasks;
+    setTaskCompleteError(null);
     setCompletingTaskId(taskId);
     setMyTasks((current) =>
       current.map((task) =>
-        task.id === taskId
-          ? { ...task, is_complete: true, status: "done" as const }
-          : task,
+        task.id === taskId ? applyOptimisticTaskComplete(task) : task,
       ),
     );
 
     try {
-      const updated = await updateEventTask(taskId, { is_complete: true });
+      const updated = await updateEventTask(
+        taskId,
+        buildMarkTaskCompleteRequest(target),
+      );
       setMyTasks((current) =>
         current.map((task) => (task.id === taskId ? updated : task)),
       );
-    } catch {
+    } catch (error) {
       setMyTasks(snapshot);
+      setTaskCompleteError(getApiErrorMessage(error));
     } finally {
       setCompletingTaskId(null);
     }
@@ -367,6 +386,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
       canViewFinance={canViewFinance}
       tasksPath={tasksPath}
       completingTaskId={completingTaskId}
+      taskCompleteError={taskCompleteError}
       onCompleteTask={(taskId) => {
         void handleCompleteTask(taskId);
       }}

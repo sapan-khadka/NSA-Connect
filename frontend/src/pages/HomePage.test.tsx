@@ -72,7 +72,7 @@ vi.mock("../lib/recent-memories", () => ({
 }));
 
 import { fetchUpcomingEvents } from "../lib/events-api";
-import { fetchMyEventTasks } from "../lib/event-tasks-api";
+import { fetchMyEventTasks, updateEventTask } from "../lib/event-tasks-api";
 import { fetchPendingFinanceChangeRequests } from "../lib/finance-api";
 import { fetchPendingMembers } from "../lib/members-api";
 import { fetchDiscussionInbox } from "../lib/discussion-api";
@@ -80,6 +80,7 @@ import { fetchAnnouncements } from "../lib/announcements-api";
 
 const mockedUpcoming = vi.mocked(fetchUpcomingEvents);
 const mockedMyTasks = vi.mocked(fetchMyEventTasks);
+const mockedUpdateTask = vi.mocked(updateEventTask);
 const mockedPendingMembers = vi.mocked(fetchPendingMembers);
 const mockedFinancePending = vi.mocked(fetchPendingFinanceChangeRequests);
 const mockedDiscussionInbox = vi.mocked(fetchDiscussionInbox);
@@ -250,6 +251,106 @@ describe("HomePage", () => {
     const ai = await screen.findByLabelText("CampusOS AI");
     expect(within(ai).getByText("Draft announcement")).toBeInTheDocument();
     expect(within(ai).getByPlaceholderText("Ask anything…")).toBeInTheDocument();
+  });
+
+  it("marks a simple My Tasks row complete via status done", async () => {
+    const user = userEvent.setup();
+    const openTask = {
+      id: 1,
+      event_id: 5,
+      event_name: "Dashain Celebration",
+      task_kind: "simple" as const,
+      title: "Book venue",
+      group_name: null,
+      description: "",
+      assignee_id: 1,
+      assignee_name: "Board User",
+      status: "todo" as const,
+      due_date: "2030-05-20T12:00:00+00:00",
+      is_overdue: false,
+      is_complete: false,
+      checklist_items: [],
+      completion_note: null,
+      completion_photo_url: null,
+      completed_at: null,
+      created_by_id: 2,
+      created_at: "2030-05-01T12:00:00+00:00",
+    };
+    mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
+    mockedMyTasks.mockResolvedValue({ tasks: [openTask], total: 1 });
+    mockedUpdateTask.mockResolvedValue({
+      ...openTask,
+      status: "done",
+      is_complete: true,
+      completed_at: "2030-05-10T12:00:00+00:00",
+    });
+
+    render(
+      <MemoryRouter>
+        <MockAuthProvider value={{ member: createMockMember("board") }}>
+          <HomePage />
+        </MockAuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Book venue")).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Mark Book venue complete" }),
+    );
+
+    await waitFor(() => {
+      expect(mockedUpdateTask).toHaveBeenCalledWith(1, { status: "done" });
+    });
+    await waitFor(() => {
+      expect(screen.queryByText("Book venue")).not.toBeInTheDocument();
+    });
+    expect(screen.getByText("You're clear for now")).toBeInTheDocument();
+  });
+
+  it("rolls back and shows an error when completing a task fails", async () => {
+    const user = userEvent.setup();
+    const openTask = {
+      id: 1,
+      event_id: 5,
+      event_name: "Dashain Celebration",
+      task_kind: "simple" as const,
+      title: "Book venue",
+      group_name: null,
+      description: "",
+      assignee_id: 1,
+      assignee_name: "Board User",
+      status: "todo" as const,
+      due_date: null,
+      is_overdue: false,
+      is_complete: false,
+      checklist_items: [],
+      completion_note: null,
+      completion_photo_url: null,
+      completed_at: null,
+      created_by_id: 2,
+      created_at: "2030-05-01T12:00:00+00:00",
+    };
+    mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
+    mockedMyTasks.mockResolvedValue({ tasks: [openTask], total: 1 });
+    mockedUpdateTask.mockRejectedValue(new Error("Network down"));
+
+    render(
+      <MemoryRouter>
+        <MockAuthProvider value={{ member: createMockMember("board") }}>
+          <HomePage />
+        </MockAuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Book venue")).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Mark Book venue complete" }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Something went wrong. Please try again.",
+    );
+    expect(screen.getByText("Book venue")).toBeInTheDocument();
   });
 
   it("shows the public landing when logged out", () => {

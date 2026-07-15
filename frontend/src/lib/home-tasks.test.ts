@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import type { EventTaskResponse } from "./event-tasks-api";
 import {
+  applyOptimisticTaskComplete,
+  buildMarkTaskCompleteRequest,
   getTaskDisplayName,
   getMyTasksPath,
   summarizeMyTasks,
@@ -79,5 +81,34 @@ describe("home-tasks", () => {
     expect(getMyTasksPath("general")).toBe("/events/tasks");
     expect(getMyTasksPath("board")).toBe("/events/tasks");
     expect(getMyTasksPath("president")).toBe("/events/tasks");
+  });
+
+  it("marks simple tasks complete via status done", () => {
+    expect(buildMarkTaskCompleteRequest(makeTask())).toEqual({
+      status: "done",
+    });
+    expect(applyOptimisticTaskComplete(makeTask())).toMatchObject({
+      status: "done",
+      is_complete: true,
+    });
+  });
+
+  it("marks checklist tasks complete via is_complete", () => {
+    const checklist = makeTask({
+      task_kind: "checklist",
+      checklist_items: [
+        { id: 1, label: "A", is_completed: false, sort_order: 0 },
+        { id: 2, label: "B", is_completed: true, sort_order: 1 },
+      ],
+    });
+    expect(buildMarkTaskCompleteRequest(checklist)).toEqual({
+      is_complete: true,
+    });
+    const optimistic = applyOptimisticTaskComplete(checklist);
+    expect(optimistic.is_complete).toBe(true);
+    expect(optimistic.status).toBe("done");
+    expect(optimistic.checklist_items.every((item) => item.is_completed)).toBe(
+      true,
+    );
   });
 });

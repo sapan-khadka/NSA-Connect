@@ -565,6 +565,7 @@ export function HomeYourWorkSection({
   tasksPath,
   isLoading,
   completingTaskId = null,
+  taskCompleteError = null,
   onCompleteTask,
   pendingMemberApprovals = 0,
   financePendingCount = 0,
@@ -574,6 +575,7 @@ export function HomeYourWorkSection({
   tasksPath: string;
   isLoading: boolean;
   completingTaskId?: number | null;
+  taskCompleteError?: string | null;
   onCompleteTask?: (taskId: number) => void;
   pendingMemberApprovals?: number;
   financePendingCount?: number;
@@ -611,6 +613,12 @@ export function HomeYourWorkSection({
       <div className="mt-2 min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
         {isLoading ? (
           <p className="text-sm font-normal text-gray-600">Loading tasks…</p>
+        ) : null}
+
+        {taskCompleteError ? (
+          <p className="mb-2 text-sm text-overdue" role="alert">
+            {taskCompleteError}
+          </p>
         ) : null}
 
         {!isLoading && attentionItems.length > 0 ? (

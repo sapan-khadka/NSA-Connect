@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -10,6 +10,11 @@ import { MembersPage } from "./MembersPage";
 
 vi.mock("../lib/members-api", () => ({
   fetchMembers: vi.fn(),
+  fetchPendingMembers: vi.fn(),
+}));
+
+vi.mock("../lib/dues-api", () => ({
+  fetchDuesDashboard: vi.fn(),
 }));
 
 const directoryMember: MemberResponse = {
@@ -24,7 +29,83 @@ const directoryMember: MemberResponse = {
   position: "member",
 };
 
-function renderMembersPage() {
+async function mockDirectoryApis(options?: {
+  members?: MemberResponse[];
+  total?: number;
+  approvedTotal?: number;
+  pendingTotal?: number;
+  unpaidCount?: number;
+  partialCount?: number;
+  duesRecords?: Array<{
+    member_id: number;
+    amount_owed: string;
+    amount_paid: string;
+    status: "paid" | "unpaid" | "partial" | "exempt";
+  }>;
+}) {
+  const { fetchMembers, fetchPendingMembers } = await import(
+    "../lib/members-api"
+  );
+  const { fetchDuesDashboard } = await import("../lib/dues-api");
+
+  const members = options?.members ?? [];
+  const total = options?.total ?? members.length;
+
+  vi.mocked(fetchMembers).mockImplementation(async (params = {}) => {
+    if (params.status === "approved") {
+      return {
+        members: [],
+        total: options?.approvedTotal ?? members.filter((m) => m.status === "approved").length,
+        page: 1,
+        page_size: 1,
+        total_pages: 1,
+      };
+    }
+    return {
+      members,
+      total,
+      page: 1,
+      page_size: 100,
+      total_pages: 1,
+    };
+  });
+
+  vi.mocked(fetchPendingMembers).mockResolvedValue({
+    members: [],
+    total: options?.pendingTotal ?? 0,
+  });
+
+  vi.mocked(fetchDuesDashboard).mockResolvedValue({
+    summary: {
+      semester: "2026-summer",
+      default_amount: "20.00",
+      total_expected: "0",
+      total_collected: "0",
+      total_outstanding: "40.00",
+      paid_count: 0,
+      unpaid_count: options?.unpaidCount ?? 0,
+      partial_count: options?.partialCount ?? 0,
+      exempt_count: 0,
+      member_count: total,
+    },
+    records: (options?.duesRecords ?? []).map((record, index) => ({
+      id: index + 1,
+      member_id: record.member_id,
+      member_name: "Member",
+      member_email: "m@semo.edu",
+      semester: "2026-summer",
+      amount_owed: record.amount_owed,
+      amount_paid: record.amount_paid,
+      status: record.status,
+      paid_at: null,
+      payment_method: null,
+      note: null,
+      finance_entry_id: null,
+    })),
+  });
+}
+
+function renderMembersPage(role: "board" | "president" | "treasurer" = "president") {
   return render(
     <MockAuthProvider
       value={{
@@ -35,9 +116,9 @@ function renderMembersPage() {
           student_id: "87654321",
           major: "Administration",
           graduation_year: 2028,
-          role: "board",
+          role,
           status: "approved",
-          position: "member",
+          position: role === "president" ? "president" : "member",
         },
         isAuthenticated: true,
       }}
@@ -55,19 +136,8 @@ describe("MembersPage", () => {
     vi.clearAllMocks();
   });
 
-  async function mockEmptyMembers() {
-    const { fetchMembers } = await import("../lib/members-api");
-    vi.mocked(fetchMembers).mockResolvedValue({
-      members: [],
-      total: 0,
-      page: 1,
-      page_size: 48,
-      total_pages: 0,
-    });
-  }
-
   it("renders the header with subtitle and actions", async () => {
-    await mockEmptyMembers();
+    await mockDirectoryApis();
     renderMembersPage();
 
     expect(
@@ -79,24 +149,56 @@ describe("MembersPage", () => {
     expect(
       screen.getByRole("button", { name: "Invite Member" }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Import CSV" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Export" })).toBeDisabled();
   });
 
-  it("renders four equal KPI cards in Statistics", async () => {
-    await mockEmptyMembers();
-    renderMembersPage();
+  it("renders KPI cards from live member and dues totals", async () => {
+    await mockDirectoryApis({
+      members: [directoryMember],
+      total: 12,
+      approvedTotal: 10,
+      pendingTotal: 2,
+      unpaidCount: 3,
+      partialCount: 1,
+    });
+    renderMembersPage("president");
 
     const stats = screen.getByLabelText("Statistics");
-    expect(within(stats).getByLabelText("Members: 128")).toBeInTheDocument();
-    expect(within(stats).getByLabelText("Active: 116")).toBeInTheDocument();
-    expect(within(stats).getByLabelText("Pending: 6")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(within(stats).getByLabelText("Members: 12")).toBeInTheDocument();
+    });
+    expect(within(stats).getByLabelText("Active: 10")).toBeInTheDocument();
+    expect(within(stats).getByLabelText("Pending: 2")).toBeInTheDocument();
     expect(
-      within(stats).getByLabelText("Outstanding Dues: 18"),
+      within(stats).getByLabelText("Outstanding Dues: 4"),
+    ).toBeInTheDocument();
+  });
+
+  it("hides outstanding dues count when treasury access is unavailable", async () => {
+    await mockDirectoryApis({
+      members: [directoryMember],
+      total: 5,
+      approvedTotal: 5,
+      pendingTotal: 0,
+    });
+    renderMembersPage("board");
+
+    const stats = screen.getByLabelText("Statistics");
+    await waitFor(() => {
+      expect(within(stats).getByLabelText("Members: 5")).toBeInTheDocument();
+    });
+    expect(
+      within(stats).getByLabelText("Outstanding Dues: —"),
+    ).toBeInTheDocument();
+    expect(
+      within(stats).getByText("Treasury access required"),
     ).toBeInTheDocument();
   });
 
   it("renders the Linear-style search and filter toolbar", async () => {
     const user = userEvent.setup();
-    await mockEmptyMembers();
+    await mockDirectoryApis();
     renderMembersPage();
 
     expect(screen.getByLabelText("Search members")).toBeInTheDocument();
@@ -113,16 +215,21 @@ describe("MembersPage", () => {
   });
 
   it("renders the members table with redesigned columns", async () => {
-    const { fetchMembers } = await import("../lib/members-api");
-    vi.mocked(fetchMembers).mockResolvedValue({
+    await mockDirectoryApis({
       members: [directoryMember],
       total: 1,
-      page: 1,
-      page_size: 48,
-      total_pages: 1,
+      approvedTotal: 1,
+      duesRecords: [
+        {
+          member_id: 3,
+          amount_owed: "20.00",
+          amount_paid: "5.00",
+          status: "partial",
+        },
+      ],
     });
 
-    renderMembersPage();
+    renderMembersPage("treasurer");
 
     const tableRegion = await screen.findByRole("region", {
       name: "Member table",
@@ -134,28 +241,33 @@ describe("MembersPage", () => {
     expect(
       within(table).getByRole("button", { name: /Sort by Name/i }),
     ).toBeInTheDocument();
-    expect(within(table).getByText("Committee")).toBeInTheDocument();
-    expect(within(table).getByText("Attendance")).toBeInTheDocument();
-    expect(within(table).getByText("Member Health")).toBeInTheDocument();
-    expect(within(table).getByText("Outstanding Dues")).toBeInTheDocument();
-    expect(within(table).getByText("Last Activity")).toBeInTheDocument();
+    expect(
+      within(table).getByRole("button", { name: /Sort by Role/i }),
+    ).toBeInTheDocument();
     expect(
       within(table).getByRole("button", { name: /Sort by Status/i }),
     ).toBeInTheDocument();
+    expect(
+      within(table).getByRole("button", { name: /Sort by Graduation Year/i }),
+    ).toBeInTheDocument();
+    expect(within(table).getByText("Outstanding Dues")).toBeInTheDocument();
+    expect(within(table).getByText("Attendance")).toBeInTheDocument();
     expect(within(table).getByText("Actions")).toBeInTheDocument();
     expect(within(tableRegion).getByText("Alex Member")).toBeInTheDocument();
-    expect(within(tableRegion).getByText("Approved")).toBeInTheDocument();
+    expect(within(tableRegion).getByText("Active")).toBeInTheDocument();
+    expect(within(tableRegion).getByText("2028")).toBeInTheDocument();
+    expect(within(tableRegion).getByText("$15.00")).toBeInTheDocument();
+    expect(
+      within(tableRegion).getByLabelText("View Alex Member"),
+    ).toBeInTheDocument();
   });
 
   it("opens Member Quick View when a table row is clicked", async () => {
     const user = userEvent.setup();
-    const { fetchMembers } = await import("../lib/members-api");
-    vi.mocked(fetchMembers).mockResolvedValue({
+    await mockDirectoryApis({
       members: [directoryMember],
       total: 1,
-      page: 1,
-      page_size: 48,
-      total_pages: 1,
+      approvedTotal: 1,
     });
 
     renderMembersPage();
@@ -166,20 +278,20 @@ describe("MembersPage", () => {
     await user.click(row);
 
     const dialog = await screen.findByRole("dialog", {
-      name: "Alex Member",
+      name: /Alex Member/i,
     });
     expect(
-      within(dialog).getByRole("heading", { name: "Alex Member" }),
+      within(dialog).getByRole("heading", { name: /Alex Member/i }),
     ).toBeInTheDocument();
-    expect(within(dialog).getByText("Health Score")).toBeInTheDocument();
     expect(
-      within(dialog).getByRole("button", { name: "View Profile" }),
+      within(dialog).getByRole("button", { name: "View Full Profile" }),
     ).toBeInTheDocument();
+    expect(within(dialog).getByText("No recent activity yet.")).toBeInTheDocument();
   });
 
   it("opens the Invite Member drawer from the header", async () => {
     const user = userEvent.setup();
-    await mockEmptyMembers();
+    await mockDirectoryApis();
 
     renderMembersPage();
 

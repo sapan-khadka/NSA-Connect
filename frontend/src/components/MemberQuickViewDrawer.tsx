@@ -1,55 +1,159 @@
 /**
- * Member Quick View — premium side drawer for fast in-page management.
- * Presentation only; no backend changes.
+ * Member Quick View — GitHub / Linear / Slack-style preview drawer.
+ * Opens from the directory without changing the URL.
+ * Shows only MemberResponse + optional dues; never invents metrics.
  */
 
 import {
-  Activity,
   Banknote,
   CalendarCheck2,
-  HeartPulse,
+  GraduationCap,
   ListTodo,
   Mail,
   Pencil,
-  Shield,
   UserRound,
   UsersRound,
 } from "lucide-react";
+import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Avatar } from "../design-system/components/Avatar";
 import { Drawer } from "../design-system/components/feedback/Drawer";
 import type { MemberResponse } from "../lib/auth-api";
-import { placeholderMemberHealth } from "../lib/member-health";
-import { formatPositionLabel } from "../lib/roles";
-import { MemberHealthBadge } from "./MemberHealthBadge";
-import { StatusBadge } from "./StatusBadge";
+import type { DuesStatus, MemberDuesRecord } from "../lib/dues-api";
+import { formatCurrency } from "../lib/format-currency";
+import { formatOutstandingDuesCell } from "../lib/members-directory";
+import {
+  formatPositionLabel,
+  getRoleBadgeClassName,
+  isMemberRole,
+  type MemberRole,
+} from "../lib/roles";
 import { AppIcon } from "./ui/AppIcon";
 import { Button } from "./ui/Button";
 
 const MISSING = "—";
 
+export type MemberQuickViewActivityItem = {
+  id: string;
+  label: string;
+  detail?: string;
+  occurredAtLabel?: string;
+};
+
 type MemberQuickViewDrawerProps = {
   member: MemberResponse | null;
   open: boolean;
   onClose: () => void;
+  /** Real dues row from finance API when available. */
+  duesRecord?: MemberDuesRecord | null;
+  /**
+   * Real activity events when a caller has them.
+   * Omitted / empty → elegant empty state (no invented timeline).
+   */
+  activityItems?: MemberQuickViewActivityItem[];
 };
 
-type MetricItem = {
+type QuickStat = {
   label: string;
-  value: string;
-  icon: typeof Shield;
+  value: ReactNode;
+  icon: typeof Banknote;
   muted?: boolean;
 };
 
-function formatRoleLabel(role: string): string {
-  if (!role) {
-    return MISSING;
+function formatOutstandingDues(record: MemberDuesRecord | null | undefined): {
+  label: string;
+  muted: boolean;
+  toneClass?: string;
+} {
+  if (!record) {
+    return { label: MISSING, muted: true };
   }
-  return role.charAt(0).toUpperCase() + role.slice(1);
+
+  const status = record.status as DuesStatus;
+  if (status === "paid" || status === "exempt") {
+    return {
+      label: "Paid",
+      muted: false,
+      toneClass: "members-quick-view-dues--paid",
+    };
+  }
+
+  const outstanding = formatOutstandingDuesCell(record);
+  const label =
+    outstanding !== null ? formatCurrency(outstanding) : formatCurrency(0);
+
+  if (status === "partial") {
+    return {
+      label,
+      muted: false,
+      toneClass: "members-quick-view-dues--partial",
+    };
+  }
+
+  return {
+    label,
+    muted: false,
+    toneClass: "members-quick-view-dues--overdue",
+  };
 }
 
-function MetricRow({ label, value, icon, muted }: MetricItem) {
+function QuickViewStatusPill({ status }: { status: string }) {
+  const normalized = status.trim().toLowerCase();
+  const map: Record<
+    string,
+    { label: string; tone: "active" | "pending" | "alumni" | "inactive" }
+  > = {
+    approved: { label: "Active", tone: "active" },
+    pending: { label: "Pending", tone: "pending" },
+    alumni: { label: "Alumni", tone: "alumni" },
+    inactive: { label: "Inactive", tone: "inactive" },
+    rejected: { label: "Inactive", tone: "inactive" },
+  };
+
+  const resolved = map[normalized] ?? {
+    label: status
+      ? status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()
+      : MISSING,
+    tone: "alumni" as const,
+  };
+
+  return (
+    <span
+      className={`members-table-status-pill members-table-status-pill--${resolved.tone}`}
+    >
+      <span className="members-table-status-dot" aria-hidden="true" />
+      {resolved.label}
+    </span>
+  );
+}
+
+function QuickViewRoleBadge({
+  role,
+  position,
+}: {
+  role: string;
+  position: MemberResponse["position"];
+}) {
+  if (!role) {
+    return <span className="members-quick-view-value is-muted">{MISSING}</span>;
+  }
+
+  const memberRole: MemberRole = isMemberRole(role) ? role : "general";
+  const label = role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
+  const title =
+    position !== "member"
+      ? `${label} · ${formatPositionLabel(position)}`
+      : label;
+
+  return (
+    <span className={getRoleBadgeClassName(memberRole, "sm")} title={title}>
+      {label}
+    </span>
+  );
+}
+
+function QuickStatRow({ label, value, icon, muted }: QuickStat) {
   return (
     <div className="members-quick-view-metric">
       <span className="members-quick-view-metric-icon" aria-hidden="true">
@@ -75,6 +179,8 @@ export function MemberQuickViewDrawer({
   member,
   open,
   onClose,
+  duesRecord = null,
+  activityItems = [],
 }: MemberQuickViewDrawerProps) {
   const navigate = useNavigate();
 
@@ -82,48 +188,42 @@ export function MemberQuickViewDrawer({
     return null;
   }
 
-  const roleLabel = formatRoleLabel(member.role);
-  const positionLabel =
-    member.position !== "member"
-      ? formatPositionLabel(member.position)
-      : null;
   const profilePath = `/members/${member.id}`;
-  const health = placeholderMemberHealth(member.id, member.role);
-  const attendanceFactor = health.factors.find((f) => f.key === "attendance");
-  const taskFactor = health.factors.find((f) => f.key === "taskCompletion");
-  const paymentFactor = health.factors.find((f) => f.key === "paymentStatus");
-  const activityFactor = health.factors.find((f) => f.key === "recentActivity");
+  const dues = formatOutstandingDues(duesRecord);
+  const hasActivity = activityItems.length > 0;
 
-  const metrics: MetricItem[] = [
-    { label: "Role", value: roleLabel, icon: Shield },
-    { label: "Committee", value: MISSING, icon: UsersRound, muted: true },
-    {
-      label: "Health Score",
-      value: `${health.score} · ${health.bandLabel}`,
-      icon: HeartPulse,
-    },
+  const stats: QuickStat[] = [
     {
       label: "Attendance",
-      value: attendanceFactor
-        ? `${attendanceFactor.score}`
-        : MISSING,
+      value: MISSING,
       icon: CalendarCheck2,
+      muted: true,
     },
     {
-      label: "Task Completion",
-      value: taskFactor ? `${taskFactor.score}` : MISSING,
-      icon: ListTodo,
-    },
-    {
-      label: "Payment Status",
-      value: paymentFactor?.detail ?? MISSING,
+      label: "Outstanding Dues",
+      value: (
+        <span className={dues.toneClass ?? undefined}>{dues.label}</span>
+      ),
       icon: Banknote,
-      muted: !paymentFactor?.available,
+      muted: dues.muted,
     },
     {
-      label: "Recent Activity",
-      value: activityFactor ? `${activityFactor.score}` : MISSING,
-      icon: Activity,
+      label: "Active Tasks",
+      value: MISSING,
+      icon: ListTodo,
+      muted: true,
+    },
+    {
+      label: "Committee",
+      value: MISSING,
+      icon: UsersRound,
+      muted: true,
+    },
+    {
+      label: "Graduation Year",
+      value: member.graduation_year ? String(member.graduation_year) : MISSING,
+      icon: GraduationCap,
+      muted: !member.graduation_year,
     },
   ];
 
@@ -138,9 +238,38 @@ export function MemberQuickViewDrawer({
       onClose={onClose}
       side="right"
       size="md"
-      title={member.full_name}
-      description="Quick view — glance at key details without leaving the directory."
+      closeOnBackdrop
+      showClose
       className="members-quick-view-drawer"
+      title={
+        <span className="members-quick-view-title-block">
+          <span className="members-quick-view-title-row">
+            <Avatar
+              name={member.full_name}
+              size="lg"
+              className="members-quick-view-avatar"
+              aria-hidden="true"
+            />
+            <span className="members-quick-view-title-copy">
+              <span className="members-quick-view-title-name">
+                {member.full_name}
+              </span>
+              {member.email?.trim() ? (
+                <span className="members-quick-view-title-email">
+                  {member.email.trim()}
+                </span>
+              ) : null}
+            </span>
+          </span>
+          <span className="members-quick-view-title-badges">
+            <QuickViewRoleBadge
+              role={member.role}
+              position={member.position}
+            />
+            <QuickViewStatusPill status={member.status} />
+          </span>
+        </span>
+      }
       footer={
         <div className="members-quick-view-footer">
           <Button
@@ -151,102 +280,93 @@ export function MemberQuickViewDrawer({
             onClick={goToProfile}
           >
             <AppIcon icon={UserRound} size="xs" className="text-current" />
-            View Profile
+            View Full Profile
           </Button>
           <Button
             type="button"
             variant="outline"
             size="sm"
             disabled
-            title="Coming soon"
-            aria-label="Message (coming soon)"
+            title="Coming Soon."
+            aria-label="Edit Member (Coming Soon.)"
           >
-            <AppIcon icon={Mail} size="xs" className="text-current" />
-            Message
+            <AppIcon icon={Pencil} size="xs" className="text-current" />
+            Edit Member
           </Button>
           <Button
             type="button"
             variant="outline"
             size="sm"
-            onClick={goToProfile}
+            disabled
+            title="Coming Soon."
+            aria-label="Send Message (Coming Soon.)"
           >
-            <AppIcon icon={Pencil} size="xs" className="text-current" />
-            Edit
+            <AppIcon icon={Mail} size="xs" className="text-current" />
+            Send Message
           </Button>
         </div>
       }
     >
       <div className="members-quick-view">
-        <header className="members-quick-view-hero">
-          <div className="members-quick-view-avatar-wrap">
-            <Avatar name={member.full_name} size="xl" />
-          </div>
-          <div className="min-w-0 members-quick-view-hero-copy">
-            <div className="members-quick-view-hero-top">
-              <div className="min-w-0">
-                <p className="members-quick-view-subtitle">
-                  {roleLabel}
-                  {positionLabel ? ` · ${positionLabel}` : ""}
-                </p>
-                {member.email?.trim() ? (
-                  <p className="members-quick-view-email">{member.email.trim()}</p>
-                ) : null}
-              </div>
-              <div className="members-quick-view-hero-badges">
-                <StatusBadge status={member.status} />
-                <MemberHealthBadge snapshot={health} />
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <dl className="members-quick-view-metrics" aria-label="Member overview">
-          {metrics.map((metric, index) => (
-            <div
-              key={metric.label}
-              className="members-quick-view-metric-wrap"
-              style={{ ["--qv-stagger" as string]: String(index) }}
-            >
-              <MetricRow {...metric} />
-            </div>
-          ))}
-        </dl>
-
-        <section
-          className="members-quick-view-activity"
-          aria-labelledby="members-quick-view-activity-heading"
-        >
-          <h4
-            id="members-quick-view-activity-heading"
+        <section aria-labelledby="members-quick-view-stats-heading">
+          <h3
+            id="members-quick-view-stats-heading"
             className="members-quick-view-section-title"
           >
-            Suggestions
-          </h4>
-          <ul className="members-quick-view-suggestions">
-            {health.suggestions.slice(0, 3).map((suggestion) => (
-              <li key={suggestion.id}>{suggestion.text}</li>
+            Quick Stats
+          </h3>
+          <dl className="members-quick-view-metrics" aria-label="Quick stats">
+            {stats.map((stat, index) => (
+              <div
+                key={stat.label}
+                className="members-quick-view-metric-wrap"
+                style={{ ["--qv-stagger" as string]: String(index) }}
+              >
+                <QuickStatRow {...stat} />
+              </div>
             ))}
-          </ul>
+          </dl>
         </section>
 
         <section
           className="members-quick-view-activity"
           aria-labelledby="members-quick-view-recent-heading"
         >
-          <h4
+          <h3
             id="members-quick-view-recent-heading"
             className="members-quick-view-section-title"
           >
             Recent Activity
-          </h4>
-          <div className="members-quick-view-activity-empty">
-            <p className="members-quick-view-activity-empty-title">
-              No recent activity
-            </p>
-            <p className="members-quick-view-activity-empty-desc">
-              Attendance, tasks, and dues updates will show up here.
-            </p>
-          </div>
+          </h3>
+          {hasActivity ? (
+            <ul className="members-quick-view-activity-list">
+              {activityItems.map((item) => (
+                <li key={item.id} className="members-quick-view-activity-item">
+                  <div className="min-w-0">
+                    <p className="members-quick-view-activity-label">
+                      {item.label}
+                    </p>
+                    {item.detail ? (
+                      <p className="members-quick-view-activity-detail">
+                        {item.detail}
+                      </p>
+                    ) : null}
+                  </div>
+                  {item.occurredAtLabel ? (
+                    <time className="members-quick-view-activity-time">
+                      {item.occurredAtLabel}
+                    </time>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="members-quick-view-activity-empty">
+              <p className="members-quick-view-activity-empty-title">
+                No recent activity yet.
+              </p>
+            </div>
+          )}
         </section>
       </div>
     </Drawer>

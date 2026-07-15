@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { MemberResponse } from "../lib/auth-api";
+import type { MemberDuesRecord } from "../lib/dues-api";
 import { MemberQuickViewDrawer } from "./MemberQuickViewDrawer";
 
 const member: MemberResponse = {
@@ -18,52 +19,99 @@ const member: MemberResponse = {
   position: "member",
 };
 
+const duesRecord: MemberDuesRecord = {
+  id: 10,
+  member_id: 3,
+  member_name: "Alex Member",
+  member_email: "alex@semo.edu",
+  semester: "2026-summer",
+  amount_owed: "20.00",
+  amount_paid: "5.00",
+  status: "partial",
+  paid_at: null,
+  payment_method: null,
+  note: null,
+  finance_entry_id: null,
+};
+
 describe("MemberQuickViewDrawer", () => {
   afterEach(() => {
     cleanup();
   });
 
-  it("renders avatar summary, metrics, activity, and actions", () => {
+  it("renders header, honest quick stats, empty activity, and actions", () => {
     render(
       <MemoryRouter>
-        <MemberQuickViewDrawer member={member} open onClose={() => undefined} />
+        <MemberQuickViewDrawer
+          member={member}
+          open
+          onClose={() => undefined}
+          duesRecord={duesRecord}
+        />
       </MemoryRouter>,
     );
 
-    const dialog = screen.getByRole("dialog", { name: "Alex Member" });
-    expect(
-      within(dialog).getByRole("heading", { name: "Alex Member" }),
-    ).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog", { name: /Alex Member/i });
+    expect(within(dialog).getByText("Alex Member")).toBeInTheDocument();
     expect(within(dialog).getByText("alex@semo.edu")).toBeInTheDocument();
-    expect(within(dialog).getByText("Approved")).toBeInTheDocument();
+    expect(within(dialog).getByText("Board")).toBeInTheDocument();
+    expect(within(dialog).getByText("Active")).toBeInTheDocument();
 
-    const overview = within(dialog).getByLabelText("Member overview");
-    expect(within(overview).getByText("Role")).toBeInTheDocument();
-    expect(within(overview).getByText("Board")).toBeInTheDocument();
-    expect(within(overview).getByText("Committee")).toBeInTheDocument();
-    expect(within(overview).getByText("Health Score")).toBeInTheDocument();
+    const overview = within(dialog).getByLabelText("Quick stats");
     expect(within(overview).getByText("Attendance")).toBeInTheDocument();
-    expect(within(overview).getByText("Task Completion")).toBeInTheDocument();
-    expect(within(overview).getByText("Payment Status")).toBeInTheDocument();
-    expect(within(overview).getByText("Recent Activity")).toBeInTheDocument();
+    expect(within(overview).getByText("Outstanding Dues")).toBeInTheDocument();
+    expect(within(overview).getByText("$15.00")).toBeInTheDocument();
+    expect(within(overview).getByText("Active Tasks")).toBeInTheDocument();
+    expect(within(overview).getByText("Committee")).toBeInTheDocument();
+    expect(within(overview).getByText("Graduation Year")).toBeInTheDocument();
+    expect(within(overview).getByText("2028")).toBeInTheDocument();
+    expect(within(overview).getAllByText("—").length).toBeGreaterThanOrEqual(3);
 
-    expect(
-      within(dialog).getByRole("heading", { name: "Suggestions" }),
-    ).toBeInTheDocument();
     expect(
       within(dialog).getByRole("heading", { name: "Recent Activity" }),
     ).toBeInTheDocument();
-    expect(within(dialog).getByText("No recent activity")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("No recent activity yet."),
+    ).toBeInTheDocument();
 
     expect(
-      within(dialog).getByRole("button", { name: "View Profile" }),
+      within(dialog).getByRole("button", { name: "View Full Profile" }),
     ).toBeInTheDocument();
     expect(
-      within(dialog).getByRole("button", { name: "Message (coming soon)" }),
+      within(dialog).getByRole("button", {
+        name: "Edit Member (Coming Soon.)",
+      }),
     ).toBeDisabled();
     expect(
-      within(dialog).getByRole("button", { name: "Edit" }),
-    ).toBeInTheDocument();
+      within(dialog).getByRole("button", {
+        name: "Send Message (Coming Soon.)",
+      }),
+    ).toBeDisabled();
+  });
+
+  it("renders provided activity items when available", () => {
+    render(
+      <MemoryRouter>
+        <MemberQuickViewDrawer
+          member={member}
+          open
+          onClose={() => undefined}
+          activityItems={[
+            {
+              id: "1",
+              label: "Joined organization",
+              occurredAtLabel: "Jan 12",
+            },
+          ]}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Joined organization")).toBeInTheDocument();
+    expect(screen.getByText("Jan 12")).toBeInTheDocument();
+    expect(
+      screen.queryByText("No recent activity yet."),
+    ).not.toBeInTheDocument();
   });
 
   it("hides when closed", () => {

@@ -11,56 +11,98 @@ describe("MembersBulkActionBar", () => {
 
   it("hides when nothing is selected", () => {
     const { container } = render(
-      <MembersBulkActionBar selectedCount={0} onClear={() => undefined} />,
+      <MembersBulkActionBar
+        selectedCount={0}
+        onClear={() => undefined}
+        onSelectAll={() => undefined}
+      />,
     );
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("shows count and actions when members are selected", () => {
+  it("shows Selected count and coming-soon actions", () => {
     render(
-      <MembersBulkActionBar selectedCount={3} onClear={() => undefined} />,
+      <MembersBulkActionBar
+        selectedCount={3}
+        onClear={() => undefined}
+        onSelectAll={() => undefined}
+      />,
     );
 
-    expect(screen.getByText("3 members selected")).toBeInTheDocument();
+    expect(screen.getByText("Selected")).toBeInTheDocument();
+    expect(screen.getByText("3 Members")).toBeInTheDocument();
     expect(
       screen.getByRole("toolbar", { name: "Bulk member actions" }),
     ).toBeInTheDocument();
+
+    const email = screen.getByRole("button", { name: /Email \(Coming Soon\)/i });
+    expect(email).toBeDisabled();
+    expect(email).toHaveAttribute("title", "Coming Soon");
+
     expect(
-      screen.getByRole("button", { name: /Email 3 selected members/i }),
-    ).toBeInTheDocument();
+      screen.getByRole("button", { name: /Assign Role \(Coming Soon\)/i }),
+    ).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: /Assign Role 3 selected members/i }),
-    ).toBeInTheDocument();
+      screen.getByRole("button", { name: /Assign Committee \(Coming Soon\)/i }),
+    ).toBeDisabled();
     expect(
-      screen.getByRole("button", {
-        name: /Assign Committee 3 selected members/i,
-      }),
-    ).toBeInTheDocument();
+      screen.getByRole("button", { name: /Export \(Coming Soon\)/i }),
+    ).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: /Deactivate 3 selected members/i }),
-    ).toBeInTheDocument();
+      screen.getByRole("button", { name: /Archive \(Coming Soon\)/i }),
+    ).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: /Export 3 selected members/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /Delete 3 selected members/i }),
-    ).toBeInTheDocument();
+      screen.getByRole("button", { name: /Delete \(Coming Soon\)/i }),
+    ).toBeDisabled();
   });
 
-  it("uses singular label for one member", () => {
+  it("uses singular Member label for one selection", () => {
     render(
-      <MembersBulkActionBar selectedCount={1} onClear={() => undefined} />,
+      <MembersBulkActionBar
+        selectedCount={1}
+        onClear={() => undefined}
+        onSelectAll={() => undefined}
+      />,
     );
-    expect(screen.getByText("1 member selected")).toBeInTheDocument();
+    expect(screen.getByText("1 Member")).toBeInTheDocument();
   });
 
-  it("clears selection from the dismiss control", async () => {
+  it("clears selection and can select all", async () => {
     const user = userEvent.setup();
     const onClear = vi.fn();
+    const onSelectAll = vi.fn();
 
-    render(<MembersBulkActionBar selectedCount={2} onClear={onClear} />);
+    render(
+      <MembersBulkActionBar
+        selectedCount={2}
+        onClear={onClear}
+        onSelectAll={onSelectAll}
+      />,
+    );
 
-    await user.click(screen.getByRole("button", { name: "Clear selection" }));
+    await user.click(screen.getByRole("button", { name: "Clear Selection" }));
     expect(onClear).toHaveBeenCalledOnce();
+
+    await user.click(
+      screen.getByRole("button", { name: "Select All on this page" }),
+    );
+    expect(onSelectAll).toHaveBeenCalledOnce();
+  });
+
+  it("disables Select All when every visible row is selected", () => {
+    render(
+      <MembersBulkActionBar
+        selectedCount={4}
+        allVisibleSelected
+        onClear={() => undefined}
+        onSelectAll={() => undefined}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", {
+        name: "All visible members already selected",
+      }),
+    ).toBeDisabled();
   });
 });

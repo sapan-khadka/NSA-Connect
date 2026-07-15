@@ -1,4 +1,7 @@
-import type { EventTaskResponse } from "./event-tasks-api";
+import type {
+  EventTaskResponse,
+  UpdateEventTaskRequest,
+} from "./event-tasks-api";
 import type { MemberRole } from "./roles";
 
 export function getTaskDisplayName(task: EventTaskResponse): string {
@@ -6,6 +9,39 @@ export function getTaskDisplayName(task: EventTaskResponse): string {
     return task.group_name ?? task.title;
   }
   return task.title;
+}
+
+/**
+ * Payload for marking a home / My Tasks row complete.
+ * Simple tasks use `status: "done"` (Event Manage / kanban); checklist groups use
+ * `is_complete: true` — the backend ignores `is_complete` on simple tasks.
+ */
+export function buildMarkTaskCompleteRequest(
+  task: EventTaskResponse,
+): UpdateEventTaskRequest {
+  if (task.task_kind === "checklist") {
+    return { is_complete: true };
+  }
+  return { status: "done" };
+}
+
+/** Optimistic local shape after marking complete (before server response). */
+export function applyOptimisticTaskComplete(
+  task: EventTaskResponse,
+): EventTaskResponse {
+  if (task.task_kind === "checklist") {
+    const checklist_items = task.checklist_items.map((item) => ({
+      ...item,
+      is_completed: true,
+    }));
+    return {
+      ...task,
+      checklist_items,
+      is_complete: checklist_items.length > 0,
+      status: "done",
+    };
+  }
+  return { ...task, is_complete: true, status: "done" };
 }
 
 export type MyTasksSummary = {
