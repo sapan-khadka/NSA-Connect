@@ -11,6 +11,7 @@ from app.schemas.dues import (
     GenerateDuesRequest,
     GenerateDuesResponse,
     MarkDuesPaidRequest,
+    MemberDuesHistoryResponse,
     MemberDuesResponse,
     MemberDuesUpdateRequest,
     MyDuesStatusResponse,
@@ -23,6 +24,7 @@ from app.services.dues_service import (
     InvalidDuesOperationError,
     generate_dues_records,
     get_dues_dashboard,
+    get_member_dues_history,
     get_my_dues_status,
     get_semester_settings,
     mark_dues_paid,
@@ -30,6 +32,7 @@ from app.services.dues_service import (
     update_member_dues,
     upsert_semester_settings,
 )
+from app.services.member_service import MemberNotFoundError
 
 router = APIRouter(prefix="/finance/dues", tags=["dues"])
 
@@ -124,6 +127,34 @@ def get_my_dues_status_endpoint(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=str(exc),
         ) from exc
+
+
+@router.get("/mine/history", response_model=MemberDuesHistoryResponse)
+def get_my_dues_history_endpoint(
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    """All semester dues rows for the authenticated member."""
+    return get_member_dues_history(db, member_id=current_member.id)
+
+
+@router.get("/history", response_model=MemberDuesHistoryResponse)
+def get_member_dues_history_endpoint(
+    member_id: int = Query(..., ge=1),
+    _: Member = Depends(require_treasury_writer),
+    db: Session = Depends(get_db),
+):
+    """
+    All semester dues rows for another member.
+    Same privilege as the semester dues dashboard (treasury writer).
+    """
+    try:
+        return get_member_dues_history(db, member_id=member_id)
+    except MemberNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Member not found",
+        ) from None
 
 
 @router.patch("/{dues_id}", response_model=MemberDuesResponse)

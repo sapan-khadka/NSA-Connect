@@ -14,6 +14,16 @@ vi.mock("../lib/members-api", () => ({
 
 vi.mock("../lib/dues-api", () => ({
   fetchDuesDashboard: vi.fn(),
+  fetchMyDuesHistory: vi.fn().mockResolvedValue({
+    member_id: 2,
+    records: [],
+    total: 0,
+  }),
+  fetchMemberDuesHistory: vi.fn().mockResolvedValue({
+    member_id: 2,
+    records: [],
+    total: 0,
+  }),
 }));
 
 vi.mock("../lib/event-tasks-api", () => ({
@@ -225,6 +235,14 @@ describe("MemberProfilePage today's snapshot", () => {
     ).toBeInTheDocument();
     expect(
       within(activity).getByText("No recent activity yet."),
+    ).toBeInTheDocument();
+
+    const finance = screen.getByLabelText("Financial Status");
+    expect(
+      within(finance).getByRole("heading", { name: "Financial Status" }),
+    ).toBeInTheDocument();
+    expect(
+      within(finance).getByText("No dues on record yet."),
     ).toBeInTheDocument();
   });
 });

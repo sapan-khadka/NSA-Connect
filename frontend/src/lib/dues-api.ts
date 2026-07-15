@@ -58,6 +58,22 @@ export type MyDuesStatusResponse = {
   paid_at?: string | null;
 };
 
+export type MemberDuesHistoryItem = {
+  id: number;
+  member_id: number;
+  semester: string;
+  amount_owed: string;
+  amount_paid: string;
+  status: DuesStatus;
+  paid_at: string | null;
+};
+
+export type MemberDuesHistoryResponse = {
+  member_id: number;
+  records: MemberDuesHistoryItem[];
+  total: number;
+};
+
 export type FetchDuesDashboardParams = {
   semester: string;
   status?: DuesStatus;
@@ -158,5 +174,23 @@ export async function fetchMyDuesStatus(
   const response = await api.get<MyDuesStatusResponse>("/v1/finance/dues/mine", {
     params: { semester },
   });
+  return response.data;
+}
+
+export async function fetchMyDuesHistory(): Promise<MemberDuesHistoryResponse> {
+  const response = await api.get<MemberDuesHistoryResponse>(
+    "/v1/finance/dues/mine/history",
+  );
+  return response.data;
+}
+
+/** Treasury / privileged — all semester rows for another member. */
+export async function fetchMemberDuesHistory(
+  memberId: number,
+): Promise<MemberDuesHistoryResponse> {
+  const response = await api.get<MemberDuesHistoryResponse>(
+    "/v1/finance/dues/history",
+    { params: { member_id: memberId } },
+  );
   return response.data;
 }

@@ -38,6 +38,10 @@ type MemberWorkspaceLayoutProps = {
    * Rendered directly under Upcoming Schedule.
    */
   recentActivity?: ReactNode;
+  /**
+   * Rendered directly under Recent Activity (replaces Payments placeholder).
+   */
+  financialStatus?: ReactNode;
 };
 
 export function MemberWorkspaceLayout({
@@ -46,6 +50,7 @@ export function MemberWorkspaceLayout({
   responsibilities,
   schedule,
   recentActivity,
+  financialStatus,
 }: MemberWorkspaceLayoutProps) {
   return (
     <div className="member-workspace">
@@ -85,12 +90,14 @@ export function MemberWorkspaceLayout({
                 density="tall"
               />
             )}
-            <MemberWorkspacePlaceholderCard
-              title="Payments"
-              description="Dues status and payment history."
-              icon={Wallet}
-              density="default"
-            />
+            {financialStatus ?? (
+              <MemberWorkspacePlaceholderCard
+                title="Payments"
+                description="Dues status and payment history."
+                icon={Wallet}
+                density="default"
+              />
+            )}
             <MemberWorkspacePlaceholderCard
               title="Upcoming Events"
               description="Events this member is involved in."

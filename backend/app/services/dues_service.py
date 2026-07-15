@@ -17,10 +17,13 @@ from app.schemas.dues import (
     DuesDashboardResponse,
     DuesDashboardSummary,
     GenerateDuesResponse,
+    MemberDuesHistoryItemResponse,
+    MemberDuesHistoryResponse,
     MemberDuesResponse,
     MyDuesStatusResponse,
     SemesterDuesSettingsResponse,
 )
+from app.services.member_service import MemberNotFoundError, get_member_by_id
 
 
 class DuesNotFoundError(Exception):
@@ -447,4 +450,40 @@ def get_my_dues_status(
         status=MemberDues.compute_status(record.amount_owed, record.amount_paid),
         has_record=True,
         paid_at=record.paid_at,
+    )
+
+
+def get_member_dues_history(
+    db: Session,
+    *,
+    member_id: int,
+) -> MemberDuesHistoryResponse:
+    """All semester dues rows for one member (oldest semester first)."""
+    try:
+        get_member_by_id(db, member_id)
+    except MemberNotFoundError:
+        raise
+
+    rows = db.scalars(
+        select(MemberDues)
+        .where(MemberDues.member_id == member_id)
+        .order_by(MemberDues.semester.asc(), MemberDues.id.asc()),
+    ).all()
+
+    records = [
+        MemberDuesHistoryItemResponse(
+            id=row.id,
+            member_id=row.member_id,
+            semester=row.semester,
+            amount_owed=Decimal(row.amount_owed),
+            amount_paid=Decimal(row.amount_paid),
+            status=MemberDues.compute_status(row.amount_owed, row.amount_paid),
+            paid_at=row.paid_at,
+        )
+        for row in rows
+    ]
+    return MemberDuesHistoryResponse(
+        member_id=member_id,
+        records=records,
+        total=len(records),
     )

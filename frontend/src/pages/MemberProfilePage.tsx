@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { MemberWorkspaceCurrentResponsibilities } from "../components/member-workspace/MemberWorkspaceCurrentResponsibilities";
+import { MemberWorkspaceFinancialStatus } from "../components/member-workspace/MemberWorkspaceFinancialStatus";
 import { MemberWorkspaceHeader } from "../components/member-workspace/MemberWorkspaceHeader";
 import { MemberWorkspaceLayout } from "../components/member-workspace/MemberWorkspaceLayout";
 import { MemberWorkspaceRecentActivity } from "../components/member-workspace/MemberWorkspaceRecentActivity";
@@ -15,7 +16,14 @@ import { MemberWorkspaceUpcomingSchedule } from "../components/member-workspace/
 import { Skeleton } from "../design-system/components/Skeleton";
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage, type MemberResponse } from "../lib/auth-api";
-import { fetchDuesDashboard, type MemberDuesRecord } from "../lib/dues-api";
+import {
+  fetchDuesDashboard,
+  fetchMemberDuesHistory,
+  fetchMyDuesHistory,
+  type MemberDuesHistoryItem,
+  type MemberDuesRecord,
+} from "../lib/dues-api";
+import { buildFinancialStatusSummary } from "../lib/member-workspace-financial";
 import {
   fetchMyEventTasks,
   fetchTaskOverview,
@@ -125,6 +133,8 @@ export function MemberProfilePage() {
   const [memberTasks, setMemberTasks] = useState<EventTaskResponse[]>([]);
   const [scheduleItems, setScheduleItems] = useState<ScheduleCommitment[]>([]);
   const [activityItems, setActivityItems] = useState<MemberActivityItem[]>([]);
+  const [duesHistory, setDuesHistory] = useState<MemberDuesHistoryItem[]>([]);
+  const [duesHistoryUnavailable, setDuesHistoryUnavailable] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -162,6 +172,15 @@ export function MemberProfilePage() {
     [activityItems],
   );
 
+  const financialSummary = useMemo(
+    () =>
+      buildFinancialStatusSummary({
+        records: duesHistory,
+        currentSemester: getCurrentSemesterSlug(),
+      }),
+    [duesHistory],
+  );
+
   const viewAllPath = getResponsibilitiesViewAllPath({
     canViewOversight: canFetchTaskOverview,
   });
@@ -192,10 +211,18 @@ export function MemberProfilePage() {
         setMemberTasks([]);
         setScheduleItems([]);
         setActivityItems([]);
+        setDuesHistory([]);
+        setDuesHistoryUnavailable(false);
 
         const isSelf = currentMember?.id === member.id;
         const semester = getCurrentSemesterSlug();
         const memberRole = isMemberRole(member.role) ? member.role : "general";
+
+        const duesHistoryPromise = isSelf
+          ? fetchMyDuesHistory().catch(() => null)
+          : canFetchDues
+            ? fetchMemberDuesHistory(member.id).catch(() => null)
+            : Promise.resolve(null);
 
         const [
           duesResult,
@@ -203,6 +230,7 @@ export function MemberProfilePage() {
           myTasksResult,
           scheduleResult,
           activityResult,
+          duesHistoryResult,
         ] = await Promise.all([
           canFetchDues
             ? fetchDuesDashboard({ semester }).catch(() => null)
@@ -223,6 +251,7 @@ export function MemberProfilePage() {
             items: [],
             total: 0,
           })),
+          duesHistoryPromise,
         ]);
 
         if (cancelled) {
@@ -253,6 +282,13 @@ export function MemberProfilePage() {
         setMemberTasks(tasks);
         setScheduleItems(scheduleResult);
         setActivityItems(activityResult.items.map(mapMemberActivityApiItem));
+        if (duesHistoryResult) {
+          setDuesHistory(duesHistoryResult.records);
+          setDuesHistoryUnavailable(false);
+        } else {
+          setDuesHistory([]);
+          setDuesHistoryUnavailable(!isSelf && !canFetchDues);
+        }
         setChips(snapshotFromMember(member, openTaskCount, duesRecord));
       } catch (fetchError) {
         if (!cancelled) {
@@ -261,6 +297,8 @@ export function MemberProfilePage() {
           setMemberTasks([]);
           setScheduleItems([]);
           setActivityItems([]);
+          setDuesHistory([]);
+          setDuesHistoryUnavailable(false);
           setError(getApiErrorMessage(fetchError));
         }
       } finally {
@@ -317,6 +355,12 @@ export function MemberProfilePage() {
         <MemberWorkspaceRecentActivity
           items={activityPreview.preview}
           hasMore={activityPreview.hasMore}
+        />
+      }
+      financialStatus={
+        <MemberWorkspaceFinancialStatus
+          summary={financialSummary}
+          unavailable={duesHistoryUnavailable}
         />
       }
     />

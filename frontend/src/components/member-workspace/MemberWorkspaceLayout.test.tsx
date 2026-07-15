@@ -69,7 +69,7 @@ describe("MemberWorkspaceLayout", () => {
     }
   });
 
-  it("replaces Tasks and Activity Timeline when real sections are provided", () => {
+  it("replaces Tasks, Activity Timeline, and Payments when real sections are provided", () => {
     render(
       <MemoryRouter>
         <MemberWorkspaceLayout
@@ -89,6 +89,11 @@ describe("MemberWorkspaceLayout", () => {
               <h2>Recent Activity</h2>
             </section>
           }
+          financialStatus={
+            <section aria-label="Financial Status">
+              <h2>Financial Status</h2>
+            </section>
+          }
         />
       </MemoryRouter>,
     );
@@ -106,10 +111,16 @@ describe("MemberWorkspaceLayout", () => {
       within(workspace).getByRole("region", { name: "Recent Activity" }),
     ).toBeInTheDocument();
     expect(
+      within(workspace).getByRole("region", { name: "Financial Status" }),
+    ).toBeInTheDocument();
+    expect(
       within(workspace).queryByRole("region", { name: "Tasks" }),
     ).not.toBeInTheDocument();
     expect(
       within(workspace).queryByRole("region", { name: "Activity Timeline" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(workspace).queryByRole("region", { name: "Payments" }),
     ).not.toBeInTheDocument();
   });
 });

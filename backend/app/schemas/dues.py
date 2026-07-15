@@ -118,3 +118,19 @@ class MyDuesStatusResponse(BaseModel):
     has_record: bool
     # Simple addition so members can see when their own payment was recorded.
     paid_at: datetime | None = None
+
+
+class MemberDuesHistoryItemResponse(BaseModel):
+    id: int
+    member_id: int
+    semester: str
+    amount_owed: Decimal
+    amount_paid: Decimal
+    status: DuesStatus
+    paid_at: datetime | None
+
+
+class MemberDuesHistoryResponse(BaseModel):
+    member_id: int
+    records: list[MemberDuesHistoryItemResponse]
+    total: int
