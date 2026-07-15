@@ -69,7 +69,7 @@ describe("MemberWorkspaceLayout", () => {
     }
   });
 
-  it("replaces the Tasks placeholder when responsibilities are provided", () => {
+  it("replaces Tasks and Activity Timeline when real sections are provided", () => {
     render(
       <MemoryRouter>
         <MemberWorkspaceLayout
@@ -82,6 +82,11 @@ describe("MemberWorkspaceLayout", () => {
           schedule={
             <section aria-label="Upcoming Schedule">
               <h2>Upcoming Schedule</h2>
+            </section>
+          }
+          recentActivity={
+            <section aria-label="Recent Activity">
+              <h2>Recent Activity</h2>
             </section>
           }
         />
@@ -98,7 +103,13 @@ describe("MemberWorkspaceLayout", () => {
       within(workspace).getByRole("region", { name: "Upcoming Schedule" }),
     ).toBeInTheDocument();
     expect(
+      within(workspace).getByRole("region", { name: "Recent Activity" }),
+    ).toBeInTheDocument();
+    expect(
       within(workspace).queryByRole("region", { name: "Tasks" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(workspace).queryByRole("region", { name: "Activity Timeline" }),
     ).not.toBeInTheDocument();
   });
 });

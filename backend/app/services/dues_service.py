@@ -437,6 +437,7 @@ def get_my_dues_status(
             amount_paid=None,
             status=None,
             has_record=False,
+            paid_at=None,
         )
 
     return MyDuesStatusResponse(
@@ -445,4 +446,5 @@ def get_my_dues_status(
         amount_paid=Decimal(record.amount_paid),
         status=MemberDues.compute_status(record.amount_owed, record.amount_paid),
         has_record=True,
+        paid_at=record.paid_at,
     )

@@ -96,19 +96,19 @@ describe("computeMemberHealth", () => {
       activityItems: [
         {
           id: "a1",
-          kind: "joined",
-          title: "Joined",
+          kind: "task_completed",
+          title: "Completed a task",
           occurredAt: "2026-06-01T12:00:00.000Z",
         },
         {
           id: "a2",
-          kind: "paid_dues",
+          kind: "dues_paid",
           title: "Paid dues",
           occurredAt: "2026-06-02T12:00:00.000Z",
         },
         {
           id: "a3",
-          kind: "attended_event",
+          kind: "event_checkin",
           title: "Attended",
           occurredAt: "2026-06-03T12:00:00.000Z",
         },

@@ -116,3 +116,5 @@ class MyDuesStatusResponse(BaseModel):
     amount_paid: Decimal | None
     status: DuesStatus | None
     has_record: bool
+    # Simple addition so members can see when their own payment was recorded.
+    paid_at: datetime | None = None

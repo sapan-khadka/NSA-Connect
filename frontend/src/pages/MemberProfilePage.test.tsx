@@ -9,6 +9,7 @@ import { MemberProfilePage } from "./MemberProfilePage";
 
 vi.mock("../lib/members-api", () => ({
   fetchMemberById: vi.fn(),
+  fetchMemberActivity: vi.fn().mockResolvedValue({ items: [], total: 0 }),
 }));
 
 vi.mock("../lib/dues-api", () => ({
@@ -216,6 +217,14 @@ describe("MemberProfilePage today's snapshot", () => {
     ).toBeInTheDocument();
     expect(
       within(schedule).getByText("Nothing on the schedule yet."),
+    ).toBeInTheDocument();
+
+    const activity = screen.getByLabelText("Recent Activity");
+    expect(
+      within(activity).getByRole("heading", { name: "Recent Activity" }),
+    ).toBeInTheDocument();
+    expect(
+      within(activity).getByText("No recent activity yet."),
     ).toBeInTheDocument();
   });
 });

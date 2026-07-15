@@ -55,6 +55,7 @@ export type MyDuesStatusResponse = {
   amount_paid: string | null;
   status: DuesStatus | null;
   has_record: boolean;
+  paid_at?: string | null;
 };
 
 export type FetchDuesDashboardParams = {

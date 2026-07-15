@@ -9,6 +9,7 @@ import { useParams } from "react-router-dom";
 import { MemberWorkspaceCurrentResponsibilities } from "../components/member-workspace/MemberWorkspaceCurrentResponsibilities";
 import { MemberWorkspaceHeader } from "../components/member-workspace/MemberWorkspaceHeader";
 import { MemberWorkspaceLayout } from "../components/member-workspace/MemberWorkspaceLayout";
+import { MemberWorkspaceRecentActivity } from "../components/member-workspace/MemberWorkspaceRecentActivity";
 import { MemberWorkspaceTodaysSnapshot } from "../components/member-workspace/MemberWorkspaceTodaysSnapshot";
 import { MemberWorkspaceUpcomingSchedule } from "../components/member-workspace/MemberWorkspaceUpcomingSchedule";
 import { Skeleton } from "../design-system/components/Skeleton";
@@ -20,7 +21,12 @@ import {
   fetchTaskOverview,
   type EventTaskResponse,
 } from "../lib/event-tasks-api";
-import { fetchMemberById } from "../lib/members-api";
+import {
+  mapMemberActivityApiItem,
+  takeMemberActivityPreview,
+  type MemberActivityItem,
+} from "../lib/member-activity-timeline";
+import { fetchMemberActivity, fetchMemberById } from "../lib/members-api";
 import {
   activeTaskCountFromMyTasks,
   activeTaskCountFromOverviewMember,
@@ -118,6 +124,7 @@ export function MemberProfilePage() {
   const [chips, setChips] = useState<MemberWorkspaceSnapshotChip[]>([]);
   const [memberTasks, setMemberTasks] = useState<EventTaskResponse[]>([]);
   const [scheduleItems, setScheduleItems] = useState<ScheduleCommitment[]>([]);
+  const [activityItems, setActivityItems] = useState<MemberActivityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -150,6 +157,11 @@ export function MemberProfilePage() {
     [scheduleItems],
   );
 
+  const activityPreview = useMemo(
+    () => takeMemberActivityPreview(activityItems),
+    [activityItems],
+  );
+
   const viewAllPath = getResponsibilitiesViewAllPath({
     canViewOversight: canFetchTaskOverview,
   });
@@ -179,29 +191,39 @@ export function MemberProfilePage() {
         setChips(snapshotFromMember(member, null));
         setMemberTasks([]);
         setScheduleItems([]);
+        setActivityItems([]);
 
         const isSelf = currentMember?.id === member.id;
         const semester = getCurrentSemesterSlug();
         const memberRole = isMemberRole(member.role) ? member.role : "general";
 
-        const [duesResult, overviewResult, myTasksResult, scheduleResult] =
-          await Promise.all([
-            canFetchDues
-              ? fetchDuesDashboard({ semester }).catch(() => null)
-              : Promise.resolve(null),
-            canFetchTaskOverview
-              ? fetchTaskOverview().catch(() => null)
-              : Promise.resolve(null),
-            isSelf && !canFetchTaskOverview
-              ? fetchMyEventTasks().catch(() => null)
-              : Promise.resolve(null),
-            fetchMemberWorkspaceSchedule({
-              memberId: member.id,
-              memberRole,
-              isSelf,
-              viewerIsBoard,
-            }).catch(() => [] as ScheduleCommitment[]),
-          ]);
+        const [
+          duesResult,
+          overviewResult,
+          myTasksResult,
+          scheduleResult,
+          activityResult,
+        ] = await Promise.all([
+          canFetchDues
+            ? fetchDuesDashboard({ semester }).catch(() => null)
+            : Promise.resolve(null),
+          canFetchTaskOverview
+            ? fetchTaskOverview().catch(() => null)
+            : Promise.resolve(null),
+          isSelf && !canFetchTaskOverview
+            ? fetchMyEventTasks().catch(() => null)
+            : Promise.resolve(null),
+          fetchMemberWorkspaceSchedule({
+            memberId: member.id,
+            memberRole,
+            isSelf,
+            viewerIsBoard,
+          }).catch(() => [] as ScheduleCommitment[]),
+          fetchMemberActivity(member.id, { limit: 50 }).catch(() => ({
+            items: [],
+            total: 0,
+          })),
+        ]);
 
         if (cancelled) {
           return;
@@ -230,6 +252,7 @@ export function MemberProfilePage() {
 
         setMemberTasks(tasks);
         setScheduleItems(scheduleResult);
+        setActivityItems(activityResult.items.map(mapMemberActivityApiItem));
         setChips(snapshotFromMember(member, openTaskCount, duesRecord));
       } catch (fetchError) {
         if (!cancelled) {
@@ -237,6 +260,7 @@ export function MemberProfilePage() {
           setChips([]);
           setMemberTasks([]);
           setScheduleItems([]);
+          setActivityItems([]);
           setError(getApiErrorMessage(fetchError));
         }
       } finally {
@@ -287,6 +311,12 @@ export function MemberProfilePage() {
         <MemberWorkspaceUpcomingSchedule
           items={schedulePreview.preview}
           hasMore={schedulePreview.hasMore}
+        />
+      }
+      recentActivity={
+        <MemberWorkspaceRecentActivity
+          items={activityPreview.preview}
+          hasMore={activityPreview.hasMore}
         />
       }
     />

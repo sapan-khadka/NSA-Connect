@@ -1,7 +1,8 @@
 import api from "./api";
 import type { MemberResponse, TokenResponse } from "./auth-api";
-import type { MemberPosition } from "./roles";
+import type { MemberActivityListResponse } from "./member-activity-timeline";
 import type { MemberTalent, ProfileFieldVisibility } from "./member-talents";
+import type { MemberPosition } from "./roles";
 
 export type PendingMembersResponse = {
   members: MemberResponse[];
@@ -66,6 +67,17 @@ export async function fetchMembers(
 
 export async function fetchMemberById(memberId: number): Promise<MemberResponse> {
   const response = await api.get<MemberResponse>(`/v1/members/${memberId}`);
+  return response.data;
+}
+
+export async function fetchMemberActivity(
+  memberId: number,
+  params?: { limit?: number },
+): Promise<MemberActivityListResponse> {
+  const response = await api.get<MemberActivityListResponse>(
+    `/v1/members/${memberId}/activity`,
+    { params },
+  );
   return response.data;
 }
 

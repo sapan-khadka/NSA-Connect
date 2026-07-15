@@ -34,6 +34,10 @@ type MemberWorkspaceLayoutProps = {
    * Rendered directly under Current Responsibilities / Tasks.
    */
   schedule?: ReactNode;
+  /**
+   * Rendered directly under Upcoming Schedule.
+   */
+  recentActivity?: ReactNode;
 };
 
 export function MemberWorkspaceLayout({
@@ -41,6 +45,7 @@ export function MemberWorkspaceLayout({
   overview,
   responsibilities,
   schedule,
+  recentActivity,
 }: MemberWorkspaceLayoutProps) {
   return (
     <div className="member-workspace">
@@ -72,6 +77,14 @@ export function MemberWorkspaceLayout({
               />
             )}
             {schedule}
+            {recentActivity ?? (
+              <MemberWorkspacePlaceholderCard
+                title="Activity Timeline"
+                description="Latest member activity."
+                icon={Activity}
+                density="tall"
+              />
+            )}
             <MemberWorkspacePlaceholderCard
               title="Payments"
               description="Dues status and payment history."
@@ -93,12 +106,6 @@ export function MemberWorkspaceLayout({
               description="Engagement and standing signals."
               icon={HeartPulse}
               density="default"
-            />
-            <MemberWorkspacePlaceholderCard
-              title="Activity Timeline"
-              description="Latest member activity."
-              icon={Activity}
-              density="tall"
             />
             <MemberWorkspacePlaceholderCard
               title="Notes"

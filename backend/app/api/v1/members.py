@@ -22,6 +22,8 @@ from app.schemas.member import (
     MemberTalentOptionsResponse,
     PaginatedMemberListResponse,
 )
+from app.schemas.member_activity import MemberActivityListResponse
+from app.services.member_activity_service import get_member_activity
 from app.services.member_service import (
     InvalidCurrentPasswordError,
     InvalidMemberRoleError,
@@ -320,6 +322,42 @@ def update_member_position_endpoint(
         ) from None
 
     return MemberResponse.from_member(member, viewer=current_member)
+
+
+@router.get("/{member_id}/activity", response_model=MemberActivityListResponse)
+def get_member_activity_endpoint(
+    member_id: int,
+    limit: int = Query(50, ge=1, le=100),
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    """
+    Reverse-chronological activity for a member from real timestamped sources
+    (completed tasks, dues payments, event check-ins). Item visibility follows
+    the same access rules as each underlying data source.
+    """
+    try:
+        subject = get_member_by_id(db, member_id)
+    except MemberNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Member not found",
+        ) from None
+
+    if subject.status != MemberStatus.APPROVED and not current_member.has_role_at_least(
+        MemberRole.BOARD,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Member not found",
+        )
+
+    return get_member_activity(
+        db,
+        member_id=member_id,
+        viewer=current_member,
+        limit=limit,
+    )
 
 
 @router.get("/{member_id}", response_model=MemberResponse)

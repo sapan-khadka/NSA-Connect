@@ -1,7 +1,13 @@
 /**
- * Member profile activity timeline helpers.
- * Groups events by day for a readable feed. No backend activity API yet —
- * callers pass normalized items, use placeholders for demos, or empty for empty state.
+ * Member profile Recent Activity helpers.
+ *
+ * Feed types returned by GET /v1/members/{id}/activity (real timestamps only):
+ *   task_completed | dues_paid | event_checkin
+ *
+ * Deferred — no audit trail exists yet (do not invent in the UI):
+ *   - RSVP status changes
+ *   - role / status / position changes
+ *   - joined / committee assignment history
  */
 
 import type { LucideIcon } from "lucide-react";
@@ -9,8 +15,6 @@ import {
   Banknote,
   CalendarCheck2,
   CheckCircle2,
-  UserPlus,
-  UsersRound,
 } from "lucide-react";
 
 import {
@@ -19,11 +23,9 @@ import {
 } from "./event-activity-timeline";
 
 export type MemberActivityKind =
-  | "joined"
-  | "paid_dues"
-  | "attended_event"
-  | "completed_task"
-  | "assigned_committee";
+  | "task_completed"
+  | "dues_paid"
+  | "event_checkin";
 
 export type MemberActivityItem = {
   id: string;
@@ -31,6 +33,10 @@ export type MemberActivityItem = {
   title: string;
   detail?: string;
   occurredAt: string;
+  taskId?: number | null;
+  eventId?: number | null;
+  duesRecordId?: number | null;
+  href?: string | null;
 };
 
 export type MemberActivityDayGroup = {
@@ -39,30 +45,43 @@ export type MemberActivityDayGroup = {
   items: MemberActivityItem[];
 };
 
-export const MEMBER_ACTIVITY_ICONS: Record<MemberActivityKind, LucideIcon> = {
-  joined: UserPlus,
-  paid_dues: Banknote,
-  attended_event: CalendarCheck2,
-  completed_task: CheckCircle2,
-  assigned_committee: UsersRound,
+export type MemberActivityApiType = MemberActivityKind;
+
+export type MemberActivityApiItem = {
+  id: string;
+  type: MemberActivityApiType;
+  description: string;
+  timestamp: string;
+  task_id: number | null;
+  event_id: number | null;
+  dues_record_id: number | null;
 };
 
-/** Canonical event titles — match product copy. */
+export type MemberActivityListResponse = {
+  items: MemberActivityApiItem[];
+  total: number;
+};
+
+export const MEMBER_ACTIVITY_ICONS: Record<MemberActivityKind, LucideIcon> = {
+  task_completed: CheckCircle2,
+  dues_paid: Banknote,
+  event_checkin: CalendarCheck2,
+};
+
+/** Short label for icons / empty-state chips. */
 export const MEMBER_ACTIVITY_TITLES: Record<MemberActivityKind, string> = {
-  joined: "Joined",
-  paid_dues: "Paid dues",
-  attended_event: "Attended event",
-  completed_task: "Completed task",
-  assigned_committee: "Assigned committee",
+  task_completed: "Task completed",
+  dues_paid: "Dues paid",
+  event_checkin: "Event check-in",
 };
 
 export const MEMBER_ACTIVITY_KINDS: MemberActivityKind[] = [
-  "joined",
-  "paid_dues",
-  "attended_event",
-  "completed_task",
-  "assigned_committee",
+  "task_completed",
+  "dues_paid",
+  "event_checkin",
 ];
+
+export const MEMBER_ACTIVITY_PREVIEW_LIMIT = 6;
 
 export function createMemberActivityItem(
   partial: Omit<MemberActivityItem, "title"> & { title?: string },
@@ -70,6 +89,49 @@ export function createMemberActivityItem(
   return {
     ...partial,
     title: partial.title ?? MEMBER_ACTIVITY_TITLES[partial.kind],
+  };
+}
+
+function activityHref(item: MemberActivityApiItem): string | null {
+  if (item.event_id != null) {
+    return `/events/${item.event_id}`;
+  }
+  return null;
+}
+
+export function mapMemberActivityApiItem(
+  item: MemberActivityApiItem,
+): MemberActivityItem {
+  return {
+    id: item.id,
+    kind: item.type,
+    title: item.description,
+    occurredAt: item.timestamp,
+    taskId: item.task_id,
+    eventId: item.event_id,
+    duesRecordId: item.dues_record_id,
+    href: activityHref(item),
+  };
+}
+
+export function sortMemberActivityItems(
+  items: MemberActivityItem[],
+): MemberActivityItem[] {
+  return [...items].sort(
+    (a, b) =>
+      new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime(),
+  );
+}
+
+export function takeMemberActivityPreview(
+  items: MemberActivityItem[],
+  limit = MEMBER_ACTIVITY_PREVIEW_LIMIT,
+): { preview: MemberActivityItem[]; hasMore: boolean; total: number } {
+  const sorted = sortMemberActivityItems(items);
+  return {
+    preview: sorted.slice(0, limit),
+    hasMore: sorted.length > limit,
+    total: sorted.length,
   };
 }
 
@@ -83,63 +145,6 @@ function dayKey(iso: string): string {
   const month = String(local.getMonth() + 1).padStart(2, "0");
   const day = String(local.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
-}
-
-function atLocalDaysAgo(now: Date, daysAgo: number, hour: number): string {
-  const date = new Date(now);
-  date.setDate(date.getDate() - daysAgo);
-  date.setHours(hour, daysAgo === 0 ? 20 : 0, 0, 0);
-  return date.toISOString();
-}
-
-/**
- * Demo timeline covering every supported event type, grouped across days.
- * Used when real activity data is not available yet.
- */
-export function buildPlaceholderMemberActivity(
-  now = new Date(),
-): MemberActivityItem[] {
-  return [
-    createMemberActivityItem({
-      id: "ph-task",
-      kind: "completed_task",
-      detail: "Finalize spring mixer checklist",
-      occurredAt: atLocalDaysAgo(now, 0, 14),
-    }),
-    createMemberActivityItem({
-      id: "ph-event",
-      kind: "attended_event",
-      detail: "Cultural Night · Student Center",
-      occurredAt: atLocalDaysAgo(now, 0, 10),
-    }),
-    createMemberActivityItem({
-      id: "ph-dues",
-      kind: "paid_dues",
-      detail: "Fall semester membership",
-      occurredAt: atLocalDaysAgo(now, 1, 16),
-    }),
-    createMemberActivityItem({
-      id: "ph-committee",
-      kind: "assigned_committee",
-      detail: "Events committee",
-      occurredAt: atLocalDaysAgo(now, 3, 11),
-    }),
-    createMemberActivityItem({
-      id: "ph-joined",
-      kind: "joined",
-      detail: "Welcome to CampusOS",
-      occurredAt: atLocalDaysAgo(now, 18, 12),
-    }),
-  ];
-}
-
-export function sortMemberActivityItems(
-  items: MemberActivityItem[],
-): MemberActivityItem[] {
-  return [...items].sort(
-    (a, b) =>
-      new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime(),
-  );
 }
 
 export function groupMemberActivityByDay(
