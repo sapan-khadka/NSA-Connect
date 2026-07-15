@@ -17,6 +17,7 @@ class MemberDocumentResponse(BaseModel):
     document_type: MemberDocumentType
     uploaded_at: datetime
     can_delete: bool = True
+    can_replace: bool = True
 
 
 class MemberDocumentListResponse(BaseModel):

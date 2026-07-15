@@ -7,9 +7,14 @@ from app.models.base import Base
 
 
 class MemberDocumentType(str, enum.Enum):
+    """Member file categories. Values are stable API/storage keys."""
+
     RESUME = "resume"
-    WAIVER = "waiver"
+    WAIVER = "waiver"  # Waiver / Consent Forms
+    # Personal proof-of-payment/records — not Finance reimbursement receipts.
+    PERSONAL_RECORDS = "personal_records"
     CERTIFICATE = "certificate"
+    PROFILE_MEDIA = "profile_media"
     OTHER = "other"
 
 

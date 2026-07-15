@@ -47,6 +47,24 @@ export function canViewMemberDirectory(role: MemberRole): boolean {
   return isRoleAtLeast(role, "board");
 }
 
+/**
+ * Member documents: self may manage own files; board+ may manage any member's.
+ *
+ * Advisor access is intentionally deferred — there is no Advisor role in the
+ * current model (general | board | treasurer | president). Define Advisor
+ * document permissions only if/when that role is introduced; do not guess.
+ */
+export function canAccessMemberDocuments(
+  role: MemberRole,
+  viewerId: number,
+  subjectMemberId: number,
+): boolean {
+  if (viewerId === subjectMemberId) {
+    return true;
+  }
+  return isRoleAtLeast(role, "board");
+}
+
 /** All approved members can browse the networking directory. */
 export function canBrowseMemberDirectory(_role: MemberRole): boolean {
   return true;

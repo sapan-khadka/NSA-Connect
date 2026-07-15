@@ -40,6 +40,18 @@ def general_headers(client, general_member):
     return auth_header(client, email="general@semo.edu")
 
 
+@pytest.fixture
+def other_member(client, db_session):
+    register_member(client, email="other@semo.edu", student_id="22222222")
+    set_member_approved(db_session, email="other@semo.edu")
+    return db_session.scalar(select(Member).where(Member.email == "other@semo.edu"))
+
+
+@pytest.fixture
+def other_headers(client, other_member):
+    return auth_header(client, email="other@semo.edu")
+
+
 def test_board_can_list_upload_and_delete_member_documents(
     client,
     db_session,
@@ -69,6 +81,7 @@ def test_board_can_list_upload_and_delete_member_documents(
     assert body["file_url"].startswith("https://res.cloudinary.com/")
     assert body["uploaded_by_name"]
     assert body["can_delete"] is True
+    assert body["can_replace"] is True
 
     upload_kwargs = block_external_integrations[
         "cloudinary_upload_receipt"
@@ -96,25 +109,106 @@ def test_board_can_list_upload_and_delete_member_documents(
     )
 
 
-def test_general_member_cannot_access_own_or_others_documents(
+def test_member_can_manage_own_documents_but_not_others(
     client,
+    db_session,
     general_member,
     general_headers,
+    other_member,
+    other_headers,
+    block_external_integrations,
 ):
-    for path in (
-        f"/api/v1/members/{general_member.id}/documents",
-        f"/api/v1/members/{general_member.id}/documents",
-    ):
-        response = client.get(path, headers=general_headers)
-        assert response.status_code == 403
-
-    denied_upload = client.post(
+    own_upload = client.post(
         f"/api/v1/members/{general_member.id}/documents",
         headers=general_headers,
-        data={"document_type": "other"},
-        files={"file": ("note.jpg", MINIMAL_JPEG, "image/jpeg")},
+        data={"document_type": "personal_records"},
+        files={"file": ("dues.pdf", b"%PDF-1.4 dues", "application/pdf")},
     )
-    assert denied_upload.status_code == 403
+    assert own_upload.status_code == 201
+    own_id = own_upload.json()["id"]
+    assert own_upload.json()["document_type"] == "personal_records"
+
+    own_list = client.get(
+        f"/api/v1/members/{general_member.id}/documents",
+        headers=general_headers,
+    )
+    assert own_list.status_code == 200
+    assert own_list.json()["total"] == 1
+    assert own_list.json()["documents"][0]["id"] == own_id
+
+    # Cannot list/upload/delete another member's documents (API-level).
+    assert (
+        client.get(
+            f"/api/v1/members/{other_member.id}/documents",
+            headers=general_headers,
+        ).status_code
+        == 403
+    )
+    assert (
+        client.post(
+            f"/api/v1/members/{other_member.id}/documents",
+            headers=general_headers,
+            data={"document_type": "other"},
+            files={"file": ("note.jpg", MINIMAL_JPEG, "image/jpeg")},
+        ).status_code
+        == 403
+    )
+
+    other_doc = MemberDocument(
+        member_id=other_member.id,
+        uploaded_by_id=other_member.id,
+        file_url="https://res.cloudinary.com/test/other.pdf",
+        file_name="other.pdf",
+        document_type=MemberDocumentType.OTHER,
+        public_id="nsa-connect/member-documents/other",
+        resource_type="raw",
+    )
+    db_session.add(other_doc)
+    db_session.commit()
+    db_session.refresh(other_doc)
+
+    # Wrong member path → 403 (not a leak of that document's existence via success).
+    assert (
+        client.delete(
+            f"/api/v1/members/{other_member.id}/documents/{other_doc.id}",
+            headers=general_headers,
+        ).status_code
+        == 403
+    )
+    # Own path with someone else's document id → 404 (ownership filter).
+    assert (
+        client.delete(
+            f"/api/v1/members/{general_member.id}/documents/{other_doc.id}",
+            headers=general_headers,
+        ).status_code
+        == 404
+    )
+    assert (
+        client.put(
+            f"/api/v1/members/{other_member.id}/documents/{other_doc.id}",
+            headers=general_headers,
+            data={"document_type": "other"},
+            files={"file": ("hijack.pdf", b"%PDF-1.4 x", "application/pdf")},
+        ).status_code
+        == 403
+    )
+
+    replaced = client.put(
+        f"/api/v1/members/{general_member.id}/documents/{own_id}",
+        headers=general_headers,
+        data={"document_type": "profile_media", "file_name": "headshot.jpg"},
+        files={"file": ("headshot.jpg", MINIMAL_JPEG, "image/jpeg")},
+    )
+    assert replaced.status_code == 200
+    assert replaced.json()["id"] == own_id
+    assert replaced.json()["document_type"] == "profile_media"
+    assert replaced.json()["file_name"] == "headshot.jpg"
+
+    deleted = client.delete(
+        f"/api/v1/members/{general_member.id}/documents/{own_id}",
+        headers=general_headers,
+    )
+    assert deleted.status_code == 204
 
 
 def test_president_can_upload_with_custom_file_name(

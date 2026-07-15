@@ -2648,6 +2648,17 @@
     color: var(--color-label, #9ca3af);
   }
 
+  .member-workspace-docs-caption {
+    margin: 0.35rem 0 0;
+    font-size: 0.75rem;
+    line-height: 1.35;
+    color: var(--color-label, #6b7280);
+  }
+
+  .member-workspace-docs-filter {
+    margin: 0 0 0.85rem;
+  }
+
   .member-workspace-docs-empty-desc {
     margin: 0;
     font-size: 0.8125rem;

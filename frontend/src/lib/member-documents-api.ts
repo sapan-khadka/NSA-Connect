@@ -3,7 +3,9 @@ import api from "./api";
 export const MEMBER_DOCUMENT_TYPES = [
   "resume",
   "waiver",
+  "personal_records",
   "certificate",
+  "profile_media",
   "other",
 ] as const;
 
@@ -19,6 +21,7 @@ export type MemberDocument = {
   document_type: MemberDocumentType;
   uploaded_at: string;
   can_delete: boolean;
+  can_replace: boolean;
 };
 
 export type MemberDocumentListResponse = {
@@ -29,14 +32,32 @@ export type MemberDocumentListResponse = {
 
 export const MEMBER_DOCUMENT_TYPE_LABELS: Record<MemberDocumentType, string> = {
   resume: "Resume",
-  waiver: "Waiver",
-  certificate: "Certificate",
+  waiver: "Waiver / Consent Forms",
+  personal_records: "Personal Records",
+  certificate: "Certificates",
+  profile_media: "Profile & Media",
   other: "Other",
 };
+
+/** Shown under upload when Personal Records is selected — Finance owns reimbursements. */
+export const PERSONAL_RECORDS_UPLOAD_CAPTION =
+  "For reimbursements, use Finance → Submit expense instead.";
 
 /** Matches finance receipt / member-document upload validation (PDF + images). */
 export const MEMBER_DOCUMENT_ACCEPT =
   "application/pdf,image/jpeg,image/png,image/webp,.pdf,.jpg,.jpeg,.png,.webp";
+
+export type MemberDocumentCategoryFilter = MemberDocumentType | "all";
+
+export function filterDocumentsByCategory(
+  documents: MemberDocument[],
+  category: MemberDocumentCategoryFilter,
+): MemberDocument[] {
+  if (category === "all") {
+    return documents;
+  }
+  return documents.filter((doc) => doc.document_type === category);
+}
 
 export async function fetchMemberDocuments(
   memberId: number,
@@ -65,6 +86,41 @@ export async function uploadMemberDocument(
 
   const response = await api.post<MemberDocument>(
     `/v1/members/${memberId}/documents`,
+    formData,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+      onUploadProgress: (event) => {
+        if (!options?.onProgress || !event.total) {
+          return;
+        }
+        options.onProgress(Math.round((event.loaded / event.total) * 100));
+      },
+    },
+  );
+  return response.data;
+}
+
+export async function replaceMemberDocument(
+  memberId: number,
+  documentId: number,
+  file: File,
+  options?: {
+    documentType?: MemberDocumentType;
+    fileName?: string;
+    onProgress?: (percent: number) => void;
+  },
+): Promise<MemberDocument> {
+  const formData = new FormData();
+  formData.append("file", file);
+  if (options?.documentType) {
+    formData.append("document_type", options.documentType);
+  }
+  if (options?.fileName?.trim()) {
+    formData.append("file_name", options.fileName.trim());
+  }
+
+  const response = await api.put<MemberDocument>(
+    `/v1/members/${memberId}/documents/${documentId}`,
     formData,
     {
       headers: { "Content-Type": "multipart/form-data" },

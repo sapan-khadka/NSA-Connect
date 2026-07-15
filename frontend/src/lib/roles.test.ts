@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   canAccessFinance,
+  canAccessMemberDocuments,
   canManageTreasury,
   canPresidentPromoteMember,
   canViewMemberDirectory,
@@ -16,6 +17,13 @@ describe("role access helpers", () => {
     expect(canAccessFinance("general")).toBe(false);
     expect(canViewMemberDirectory("general")).toBe(false);
     expect(getDashboardPath("general")).toBe("/");
+  });
+
+  it("allows member documents for self or board+, not other members", () => {
+    expect(canAccessMemberDocuments("general", 2, 2)).toBe(true);
+    expect(canAccessMemberDocuments("general", 2, 9)).toBe(false);
+    expect(canAccessMemberDocuments("board", 1, 9)).toBe(true);
+    expect(canAccessMemberDocuments("president", 1, 9)).toBe(true);
   });
 
   it("grants board-level nav and routes to board, treasurer, and president", () => {

@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
@@ -24,13 +26,31 @@ class MemberDocumentNotFoundError(Exception):
     pass
 
 
+class MemberDocumentPermissionError(Exception):
+    pass
+
+
+def can_manage_member_documents(viewer: Member, member_id: int) -> bool:
+    """
+    Self: own documents only.
+    Board+ (treasurer/president included): any member's documents.
+
+    Advisor access is intentionally deferred: there is no Advisor role in the
+    current model (general | board | treasurer | president). Define Advisor
+    document permissions only if/when that role is introduced — do not guess.
+    """
+    if viewer.id == member_id:
+        return True
+    return viewer.has_role_at_least(MemberRole.BOARD)
+
+
 def _display_name(member: Member | None) -> str:
     if member is None:
         return "Unknown"
     return member.full_name or member.email
 
 
-def _to_response(document: MemberDocument, *, can_delete: bool) -> MemberDocumentResponse:
+def _to_response(document: MemberDocument, *, can_manage: bool) -> MemberDocumentResponse:
     return MemberDocumentResponse(
         id=document.id,
         member_id=document.member_id,
@@ -40,7 +60,8 @@ def _to_response(document: MemberDocument, *, can_delete: bool) -> MemberDocumen
         file_name=document.file_name,
         document_type=document.document_type,
         uploaded_at=document.uploaded_at,
-        can_delete=can_delete,
+        can_delete=can_manage,
+        can_replace=can_manage,
     )
 
 
@@ -58,12 +79,42 @@ def ensure_member_accessible(db: Session, member_id: int, viewer: Member) -> Mem
     return subject
 
 
+def require_document_access(viewer: Member, member_id: int) -> None:
+    if not can_manage_member_documents(viewer, member_id):
+        raise MemberDocumentPermissionError
+
+
+def _delete_cloudinary_asset(
+    *,
+    public_id: str,
+    resource_type: str | None,
+) -> None:
+    if not (
+        settings.CLOUDINARY_CLOUD_NAME
+        and settings.CLOUDINARY_API_KEY
+        and settings.CLOUDINARY_API_SECRET
+    ):
+        return
+    try:
+        delete_cloudinary_asset(
+            cloud_name=settings.CLOUDINARY_CLOUD_NAME,
+            api_key=settings.CLOUDINARY_API_KEY,
+            api_secret=settings.CLOUDINARY_API_SECRET,
+            public_id=public_id,
+            resource_type=resource_type or "image",
+        )
+    except CloudinaryUploadError:
+        pass
+
+
 def list_member_documents(
     db: Session,
     *,
     member_id: int,
     viewer: Member,
 ) -> MemberDocumentListResponse:
+    """List documents for one member_id only — never leaks other members' files."""
+    require_document_access(viewer, member_id)
     ensure_member_accessible(db, member_id, viewer)
 
     rows = (
@@ -77,7 +128,8 @@ def list_member_documents(
         .all()
     )
 
-    documents = [_to_response(row, can_delete=True) for row in rows]
+    can_manage = True
+    documents = [_to_response(row, can_manage=can_manage) for row in rows]
     return MemberDocumentListResponse(
         member_id=member_id,
         documents=documents,
@@ -95,6 +147,7 @@ def create_member_document(
     file_name: str,
     document_type: MemberDocumentType,
 ) -> MemberDocumentResponse:
+    require_document_access(uploaded_by, member_id)
     ensure_member_accessible(db, member_id, uploaded_by)
 
     upload_result: CloudinaryUploadResult = upload_member_document(
@@ -115,7 +168,64 @@ def create_member_document(
     db.commit()
     db.refresh(document)
     document.uploaded_by = uploaded_by
-    return _to_response(document, can_delete=True)
+    return _to_response(document, can_manage=True)
+
+
+def replace_member_document(
+    db: Session,
+    *,
+    member_id: int,
+    document_id: int,
+    viewer: Member,
+    file_bytes: bytes,
+    content_type: str | None,
+    file_name: str | None,
+    document_type: MemberDocumentType | None,
+) -> MemberDocumentResponse:
+    require_document_access(viewer, member_id)
+    ensure_member_accessible(db, member_id, viewer)
+
+    document = db.scalar(
+        select(MemberDocument)
+        .options(joinedload(MemberDocument.uploaded_by))
+        .where(
+            MemberDocument.id == document_id,
+            MemberDocument.member_id == member_id,
+        ),
+    )
+    if document is None:
+        raise MemberDocumentNotFoundError
+
+    upload_result: CloudinaryUploadResult = upload_member_document(
+        file_bytes=file_bytes,
+        content_type=content_type,
+    )
+
+    old_public_id = document.public_id
+    old_resource_type = document.resource_type
+
+    document.file_url = upload_result.receipt_url
+    document.public_id = upload_result.public_id
+    document.resource_type = upload_result.resource_type or "image"
+    document.uploaded_by_id = viewer.id
+    document.uploaded_at = datetime.now(UTC)
+    if file_name is not None and file_name.strip():
+        document.file_name = file_name.strip()
+    if document_type is not None:
+        document.document_type = document_type
+
+    db.commit()
+    db.refresh(document)
+    document.uploaded_by = viewer
+
+    # Best-effort cleanup of the previous Cloudinary asset (ignore failures).
+    if old_public_id and old_public_id != document.public_id:
+        _delete_cloudinary_asset(
+            public_id=old_public_id,
+            resource_type=old_resource_type,
+        )
+
+    return _to_response(document, can_manage=True)
 
 
 def delete_member_document(
@@ -125,6 +235,7 @@ def delete_member_document(
     document_id: int,
     viewer: Member,
 ) -> None:
+    require_document_access(viewer, member_id)
     ensure_member_accessible(db, member_id, viewer)
 
     document = db.scalar(
@@ -136,30 +247,21 @@ def delete_member_document(
     if document is None:
         raise MemberDocumentNotFoundError
 
-    if (
-        settings.CLOUDINARY_CLOUD_NAME
-        and settings.CLOUDINARY_API_KEY
-        and settings.CLOUDINARY_API_SECRET
-    ):
-        try:
-            delete_cloudinary_asset(
-                cloud_name=settings.CLOUDINARY_CLOUD_NAME,
-                api_key=settings.CLOUDINARY_API_KEY,
-                api_secret=settings.CLOUDINARY_API_SECRET,
-                public_id=document.public_id,
-                resource_type=document.resource_type or "image",
-            )
-        except CloudinaryUploadError:
-            pass
-
+    _delete_cloudinary_asset(
+        public_id=document.public_id,
+        resource_type=document.resource_type,
+    )
     db.delete(document)
     db.commit()
 
 
 __all__ = [
     "MemberDocumentNotFoundError",
+    "MemberDocumentPermissionError",
     "ReceiptUploadUnavailableError",
+    "can_manage_member_documents",
     "create_member_document",
     "delete_member_document",
     "list_member_documents",
+    "replace_member_document",
 ]

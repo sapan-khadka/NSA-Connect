@@ -42,9 +42,11 @@ from app.schemas.member_document import (
 from app.services.member_activity_service import get_member_activity
 from app.services.member_document_service import (
     MemberDocumentNotFoundError,
+    MemberDocumentPermissionError,
     create_member_document,
     delete_member_document,
     list_member_documents,
+    replace_member_document,
 )
 from app.services.member_service import (
     InvalidCurrentPasswordError,
@@ -392,14 +394,14 @@ def get_member_activity_endpoint(
 )
 def list_member_documents_endpoint(
     member_id: int,
-    current_member: Member = Depends(require_board),
+    current_member: Member = Depends(get_current_member),
     db: Session = Depends(get_db),
 ):
     """
-    List documents on file for a member.
+    List documents for one member.
 
-    Officer-only (board+), same sensitivity tier as private notes — members do
-    not see their own documents by default.
+    Access: self (own member_id only) or board+ (any member). GET always scopes
+    to the path member_id — never returns other members' files.
     """
     try:
         return list_member_documents(
@@ -407,6 +409,11 @@ def list_member_documents_endpoint(
             member_id=member_id,
             viewer=current_member,
         )
+    except MemberDocumentPermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not allowed to view these documents",
+        ) from None
     except MemberNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -424,7 +431,7 @@ async def upload_member_document_endpoint(
     file: UploadFile = File(...),
     document_type: MemberDocumentType = Form(...),
     file_name: str | None = Form(default=None),
-    current_member: Member = Depends(require_board),
+    current_member: Member = Depends(get_current_member),
     db: Session = Depends(get_db),
 ):
     """Upload a member document (PDF/JPEG/PNG/WebP) via existing Cloudinary storage."""
@@ -441,10 +448,77 @@ async def upload_member_document_endpoint(
             file_name=display_name,
             document_type=document_type,
         )
+    except MemberDocumentPermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not allowed to upload documents for this member",
+        ) from None
     except MemberNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Member not found",
+        ) from None
+    except ReceiptValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    except ReceiptUploadUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Document upload is not configured",
+        ) from exc
+    except CloudinaryUploadError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to upload document",
+        ) from exc
+
+
+@router.put(
+    "/{member_id}/documents/{document_id}",
+    response_model=MemberDocumentResponse,
+)
+async def replace_member_document_endpoint(
+    member_id: int,
+    document_id: int,
+    file: UploadFile = File(...),
+    document_type: MemberDocumentType | None = Form(default=None),
+    file_name: str | None = Form(default=None),
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    """Replace an existing document file (same id), keeping ownership on member_id."""
+    file_bytes = await file.read()
+    display_name = file_name
+    if display_name is None and file.filename:
+        display_name = file.filename
+
+    try:
+        return replace_member_document(
+            db,
+            member_id=member_id,
+            document_id=document_id,
+            viewer=current_member,
+            file_bytes=file_bytes,
+            content_type=file.content_type,
+            file_name=display_name,
+            document_type=document_type,
+        )
+    except MemberDocumentPermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not allowed to replace documents for this member",
+        ) from None
+    except MemberNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Member not found",
+        ) from None
+    except MemberDocumentNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
         ) from None
     except ReceiptValidationError as exc:
         raise HTTPException(
@@ -470,7 +544,7 @@ async def upload_member_document_endpoint(
 def delete_member_document_endpoint(
     member_id: int,
     document_id: int,
-    current_member: Member = Depends(require_board),
+    current_member: Member = Depends(get_current_member),
     db: Session = Depends(get_db),
 ):
     try:
@@ -480,6 +554,11 @@ def delete_member_document_endpoint(
             document_id=document_id,
             viewer=current_member,
         )
+    except MemberDocumentPermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not allowed to delete documents for this member",
+        ) from None
     except MemberNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

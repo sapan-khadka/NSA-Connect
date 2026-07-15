@@ -13,6 +13,7 @@ vi.mock("../../lib/member-documents-api", async () => {
     ...actual,
     fetchMemberDocuments: vi.fn(),
     uploadMemberDocument: vi.fn(),
+    replaceMemberDocument: vi.fn(),
     deleteMemberDocument: vi.fn(),
   };
 });
@@ -23,7 +24,7 @@ describe("MemberWorkspaceDocuments", () => {
     vi.clearAllMocks();
   });
 
-  it("shows officer-only unavailable state when viewer cannot manage", () => {
+  it("shows unavailable state when viewer cannot manage", () => {
     render(<MemberWorkspaceDocuments memberId={2} canManage={false} />);
 
     const section = screen.getByLabelText("Documents");
@@ -36,10 +37,11 @@ describe("MemberWorkspaceDocuments", () => {
     expect(memberDocumentsApi.fetchMemberDocuments).not.toHaveBeenCalled();
   });
 
-  it("renders empty state and document rows for board viewers", async () => {
+  it("renders document rows and category filter for authorized viewers", async () => {
+    const user = userEvent.setup();
     vi.mocked(memberDocumentsApi.fetchMemberDocuments).mockResolvedValue({
       member_id: 2,
-      total: 1,
+      total: 2,
       documents: [
         {
           id: 9,
@@ -51,6 +53,19 @@ describe("MemberWorkspaceDocuments", () => {
           document_type: "resume",
           uploaded_at: "2026-07-01T12:00:00Z",
           can_delete: true,
+          can_replace: true,
+        },
+        {
+          id: 10,
+          member_id: 2,
+          uploaded_by_id: 1,
+          uploaded_by_name: "Board Member",
+          file_url: "https://example.com/waiver.pdf",
+          file_name: "Waiver.pdf",
+          document_type: "waiver",
+          uploaded_at: "2026-07-02T12:00:00Z",
+          can_delete: true,
+          can_replace: true,
         },
       ],
     });
@@ -61,13 +76,14 @@ describe("MemberWorkspaceDocuments", () => {
     await waitFor(() => {
       expect(within(section).getByText("Resume.pdf")).toBeInTheDocument();
     });
+    expect(within(section).getByText("Waiver.pdf")).toBeInTheDocument();
     expect(
-      within(section).getByText("Resume", { selector: ".member-workspace-docs-badge" }),
-    ).toBeInTheDocument();
-    expect(within(section).getByText(/Board Member/)).toBeInTheDocument();
-    expect(
-      within(section).getByRole("link", { name: /View/i }),
+      within(section).getAllByRole("link", { name: /View/i })[0],
     ).toHaveAttribute("href", "https://example.com/resume.pdf");
+
+    await user.selectOptions(screen.getByLabelText("Filter"), "resume");
+    expect(within(section).getByText("Resume.pdf")).toBeInTheDocument();
+    expect(within(section).queryByText("Waiver.pdf")).not.toBeInTheDocument();
   });
 
   it("shows no-documents empty state when list is empty", async () => {
@@ -82,6 +98,36 @@ describe("MemberWorkspaceDocuments", () => {
     expect(
       await screen.findByText("No documents on file."),
     ).toBeInTheDocument();
+  });
+
+  it("shows finance reimbursement caption for Personal Records", async () => {
+    const user = userEvent.setup();
+    vi.mocked(memberDocumentsApi.fetchMemberDocuments).mockResolvedValue({
+      member_id: 2,
+      total: 0,
+      documents: [],
+    });
+
+    render(<MemberWorkspaceDocuments memberId={2} canManage />);
+    await screen.findByText("No documents on file.");
+
+    expect(
+      screen.queryByText(/For reimbursements, use Finance/),
+    ).not.toBeInTheDocument();
+
+    await user.selectOptions(
+      screen.getByLabelText("Category"),
+      "personal_records",
+    );
+    expect(
+      screen.getByText(memberDocumentsApi.PERSONAL_RECORDS_UPLOAD_CAPTION),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "Personal Records" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("option", { name: "Receipts" }),
+    ).not.toBeInTheDocument();
   });
 
   it("uploads a selected file with the chosen document type", async () => {
@@ -101,12 +147,13 @@ describe("MemberWorkspaceDocuments", () => {
       document_type: "waiver",
       uploaded_at: "2026-07-02T12:00:00Z",
       can_delete: true,
+      can_replace: true,
     });
 
     render(<MemberWorkspaceDocuments memberId={2} canManage />);
     await screen.findByText("No documents on file.");
 
-    await user.selectOptions(screen.getByLabelText("Type"), "waiver");
+    await user.selectOptions(screen.getByLabelText("Category"), "waiver");
     const file = new File(["%PDF-1.4"], "waiver.pdf", {
       type: "application/pdf",
     });

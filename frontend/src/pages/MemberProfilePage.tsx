@@ -56,6 +56,7 @@ import {
 } from "../lib/member-workspace-snapshot";
 import {
   canManageEventTasks,
+  canAccessMemberDocuments,
   canManageTreasury,
   canViewMemberDirectory,
   canViewTaskOversight,
@@ -367,7 +368,14 @@ export function MemberProfilePage() {
       documents={
         <MemberWorkspaceDocuments
           memberId={profile.id}
-          canManage={viewerIsBoard}
+          canManage={Boolean(
+            currentMember &&
+              canAccessMemberDocuments(
+                currentMember.role,
+                currentMember.id,
+                profile.id,
+              ),
+          )}
         />
       }
     />

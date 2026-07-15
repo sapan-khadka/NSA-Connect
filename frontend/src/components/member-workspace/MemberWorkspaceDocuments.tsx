@@ -1,22 +1,25 @@
 /**
- * Documents — officer-only files on file for a member (resume, waiver, etc.).
- * Uploads reuse the same Cloudinary / multipart pattern as finance receipts
- * and event photos (FormData + file field).
+ * Documents — per-owner (self) or board+ access for member files.
+ * Uploads reuse Cloudinary / multipart (same as finance receipts & event photos).
  */
 
-import { useEffect, useId, useRef, useState, type ChangeEvent } from "react";
-import { ExternalLink, FileText, Trash2, Upload } from "lucide-react";
+import { useEffect, useId, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { ExternalLink, FileText, RefreshCw, Trash2, Upload } from "lucide-react";
 
 import { getApiErrorMessage } from "../../lib/auth-api";
 import { formatEventDateTime } from "../../lib/format-datetime";
 import {
   deleteMemberDocument,
   fetchMemberDocuments,
+  filterDocumentsByCategory,
   MEMBER_DOCUMENT_ACCEPT,
   MEMBER_DOCUMENT_TYPE_LABELS,
   MEMBER_DOCUMENT_TYPES,
+  PERSONAL_RECORDS_UPLOAD_CAPTION,
+  replaceMemberDocument,
   uploadMemberDocument,
   type MemberDocument,
+  type MemberDocumentCategoryFilter,
   type MemberDocumentType,
 } from "../../lib/member-documents-api";
 import { AppIcon } from "../ui/AppIcon";
@@ -24,7 +27,7 @@ import { Button } from "../ui/Button";
 
 type MemberWorkspaceDocumentsProps = {
   memberId: number;
-  /** Board+ can view/upload/delete. Others see an unavailable state. */
+  /** Self or board+ may manage; others see unavailable. */
   canManage: boolean;
 };
 
@@ -33,7 +36,8 @@ function DocumentsUnavailable() {
     <div className="member-workspace-resp-empty">
       <p className="member-workspace-resp-empty-title">Documents unavailable</p>
       <p className="member-workspace-docs-empty-desc">
-        Member documents are limited to board officers.
+        You can manage documents on your own profile. Officers can view any
+        member’s files.
       </p>
     </div>
   );
@@ -44,7 +48,8 @@ function DocumentsEmpty() {
     <div className="member-workspace-resp-empty">
       <p className="member-workspace-resp-empty-title">No documents on file.</p>
       <p className="member-workspace-docs-empty-desc">
-        Use Upload above to attach a resume, waiver, certificate, or other file.
+        Use Upload above to attach a resume, waiver, personal record,
+        certificate, or other file.
       </p>
     </div>
   );
@@ -56,11 +61,15 @@ export function MemberWorkspaceDocuments({
 }: MemberWorkspaceDocumentsProps) {
   const fileInputId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const replaceInputRef = useRef<HTMLInputElement>(null);
   const [documents, setDocuments] = useState<MemberDocument[]>([]);
   const [isLoading, setIsLoading] = useState(canManage);
   const [error, setError] = useState<string | null>(null);
   const [documentType, setDocumentType] = useState<MemberDocumentType>("resume");
+  const [categoryFilter, setCategoryFilter] =
+    useState<MemberDocumentCategoryFilter>("all");
   const [isUploading, setIsUploading] = useState(false);
+  const [replacingId, setReplacingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -98,8 +107,21 @@ export function MemberWorkspaceDocuments({
     };
   }, [memberId, canManage]);
 
+  const visibleDocuments = useMemo(
+    () => filterDocumentsByCategory(documents, categoryFilter),
+    [documents, categoryFilter],
+  );
+
   const openFilePicker = () => {
     fileInputRef.current?.click();
+  };
+
+  const openReplacePicker = (documentId: number) => {
+    setReplacingId(documentId);
+    // Defer click so state is set before the change handler runs.
+    window.setTimeout(() => {
+      replaceInputRef.current?.click();
+    }, 0);
   };
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -118,6 +140,33 @@ export function MemberWorkspaceDocuments({
       setError(getApiErrorMessage(caught));
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleReplaceChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    const documentId = replacingId;
+    event.target.value = "";
+    if (!file || !canManage || documentId === null) {
+      setReplacingId(null);
+      return;
+    }
+
+    setIsUploading(true);
+    setError(null);
+    try {
+      const updated = await replaceMemberDocument(memberId, documentId, file, {
+        documentType,
+        fileName: file.name,
+      });
+      setDocuments((current) =>
+        current.map((entry) => (entry.id === documentId ? updated : entry)),
+      );
+    } catch (caught) {
+      setError(getApiErrorMessage(caught));
+    } finally {
+      setIsUploading(false);
+      setReplacingId(null);
     }
   };
 
@@ -179,7 +228,7 @@ export function MemberWorkspaceDocuments({
                 className="member-workspace-docs-type-label"
                 htmlFor={`${fileInputId}-type`}
               >
-                Type
+                Category
               </label>
               <div className="member-workspace-docs-upload-row">
                 <select
@@ -205,7 +254,7 @@ export function MemberWorkspaceDocuments({
                   onClick={openFilePicker}
                 >
                   <AppIcon icon={Upload} size="sm" className="mr-1.5" />
-                  {isUploading ? "Uploading…" : "Upload"}
+                  {isUploading && replacingId === null ? "Uploading…" : "Upload"}
                 </Button>
                 <input
                   ref={fileInputRef}
@@ -218,11 +267,54 @@ export function MemberWorkspaceDocuments({
                     void handleFileChange(event);
                   }}
                 />
+                <input
+                  ref={replaceInputRef}
+                  type="file"
+                  className="sr-only"
+                  accept={MEMBER_DOCUMENT_ACCEPT}
+                  disabled={isUploading}
+                  onChange={(event) => {
+                    void handleReplaceChange(event);
+                  }}
+                />
               </div>
               <p className="member-workspace-docs-hint">
                 PDF, JPEG, PNG, or WebP up to 10 MB.
               </p>
+              {documentType === "personal_records" ? (
+                <p className="member-workspace-docs-caption">
+                  {PERSONAL_RECORDS_UPLOAD_CAPTION}
+                </p>
+              ) : null}
             </div>
+
+            {documents.length > 0 ? (
+              <div className="member-workspace-docs-filter">
+                <label
+                  className="member-workspace-docs-type-label"
+                  htmlFor={`${fileInputId}-filter`}
+                >
+                  Filter
+                </label>
+                <select
+                  id={`${fileInputId}-filter`}
+                  className="member-workspace-docs-type"
+                  value={categoryFilter}
+                  onChange={(event) =>
+                    setCategoryFilter(
+                      event.target.value as MemberDocumentCategoryFilter,
+                    )
+                  }
+                >
+                  <option value="all">All categories</option>
+                  {MEMBER_DOCUMENT_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {MEMBER_DOCUMENT_TYPE_LABELS[type]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
 
             {error ? (
               <p className="ds-field-error mt-2" role="alert">
@@ -232,9 +324,15 @@ export function MemberWorkspaceDocuments({
 
             {documents.length === 0 ? (
               <DocumentsEmpty />
+            ) : visibleDocuments.length === 0 ? (
+              <div className="member-workspace-resp-empty">
+                <p className="member-workspace-resp-empty-title">
+                  No documents in this category.
+                </p>
+              </div>
             ) : (
               <ul className="member-workspace-docs-list">
-                {documents.map((document) => (
+                {visibleDocuments.map((document) => (
                   <li key={document.id} className="member-workspace-docs-item">
                     <div className="member-workspace-docs-item-main">
                       <p className="member-workspace-docs-name">
@@ -264,11 +362,23 @@ export function MemberWorkspaceDocuments({
                           className="ml-1"
                         />
                       </a>
+                      {document.can_replace ? (
+                        <button
+                          type="button"
+                          className="member-workspace-docs-delete"
+                          disabled={isUploading || deletingId !== null}
+                          onClick={() => openReplacePicker(document.id)}
+                          aria-label={`Replace ${document.file_name}`}
+                          title="Replace file"
+                        >
+                          <AppIcon icon={RefreshCw} size="sm" />
+                        </button>
+                      ) : null}
                       {document.can_delete ? (
                         <button
                           type="button"
                           className="member-workspace-docs-delete"
-                          disabled={deletingId === document.id}
+                          disabled={deletingId === document.id || isUploading}
                           onClick={() => {
                             void handleDelete(document);
                           }}
