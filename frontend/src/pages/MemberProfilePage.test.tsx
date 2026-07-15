@@ -12,6 +12,20 @@ vi.mock("../lib/members-api", () => ({
   fetchMemberActivity: vi.fn().mockResolvedValue({ items: [], total: 0 }),
 }));
 
+vi.mock("../lib/member-documents-api", async () => {
+  const actual = await vi.importActual("../lib/member-documents-api");
+  return {
+    ...actual,
+    fetchMemberDocuments: vi.fn().mockResolvedValue({
+      member_id: 2,
+      documents: [],
+      total: 0,
+    }),
+    uploadMemberDocument: vi.fn(),
+    deleteMemberDocument: vi.fn(),
+  };
+});
+
 vi.mock("../lib/dues-api", () => ({
   fetchDuesDashboard: vi.fn(),
   fetchMyDuesHistory: vi.fn().mockResolvedValue({
@@ -243,6 +257,14 @@ describe("MemberProfilePage today's snapshot", () => {
     ).toBeInTheDocument();
     expect(
       within(finance).getByText("No dues on record yet."),
+    ).toBeInTheDocument();
+
+    const documents = screen.getByLabelText("Documents");
+    expect(
+      within(documents).getByRole("heading", { name: "Documents" }),
+    ).toBeInTheDocument();
+    expect(
+      await within(documents).findByText("No documents on file."),
     ).toBeInTheDocument();
   });
 });

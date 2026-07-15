@@ -119,6 +119,10 @@ class Settings(BaseSettings):
         default="nsa-connect/event-photos",
         description="Cloudinary folder for event photo archive uploads",
     )
+    CLOUDINARY_MEMBER_DOCUMENTS_FOLDER: str = Field(
+        default="nsa-connect/member-documents",
+        description="Cloudinary folder for member document uploads",
+    )
     DEV_UPLOAD_BASE_URL: str = Field(
         default="http://127.0.0.1:8000",
         description=(

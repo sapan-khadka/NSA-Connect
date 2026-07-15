@@ -127,6 +127,7 @@ def delete_cloudinary_asset(
     api_key: str,
     api_secret: str,
     public_id: str,
+    resource_type: str = "image",
 ) -> None:
     cloudinary.config(
         cloud_name=cloud_name,
@@ -136,6 +137,6 @@ def delete_cloudinary_asset(
     )
 
     try:
-        cloudinary.uploader.destroy(public_id, resource_type="image")
+        cloudinary.uploader.destroy(public_id, resource_type=resource_type)
     except Exception as exc:
-        raise CloudinaryUploadError("Failed to delete image from Cloudinary") from exc
+        raise CloudinaryUploadError("Failed to delete asset from Cloudinary") from exc

@@ -2609,6 +2609,157 @@
     color: var(--color-label, #9ca3af);
   }
 
+  .member-workspace-docs-upload {
+    margin-bottom: 0.85rem;
+  }
+
+  .member-workspace-docs-type-label {
+    display: block;
+    margin: 0 0 0.35rem;
+    font-size: 0.625rem;
+    font-weight: 650;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-label, #9ca3af);
+  }
+
+  .member-workspace-docs-upload-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .member-workspace-docs-type {
+    min-height: 2.25rem;
+    min-width: 8.5rem;
+    flex: 1 1 8rem;
+    border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+    border-radius: 0.55rem;
+    background: var(--color-surface-card, #fff);
+    padding: 0.35rem 0.6rem;
+    font-size: 0.8125rem;
+    color: var(--color-foreground);
+  }
+
+  .member-workspace-docs-hint {
+    margin: 0.4rem 0 0;
+    font-size: 0.75rem;
+    color: var(--color-label, #9ca3af);
+  }
+
+  .member-workspace-docs-empty-desc {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--color-label, #9ca3af);
+  }
+
+  .member-workspace-docs-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .member-workspace-docs-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    padding: 0.75rem 0.85rem;
+    border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+    border-radius: 0.65rem;
+    background: color-mix(in srgb, var(--color-surface-muted) 35%, white);
+  }
+
+  @media (min-width: 640px) {
+    .member-workspace-docs-item {
+      flex-direction: row;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+  }
+
+  .member-workspace-docs-item-main {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .member-workspace-docs-name {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--color-foreground);
+    word-break: break-word;
+  }
+
+  .member-workspace-docs-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.65rem;
+    margin-top: 0.35rem;
+    font-size: 0.75rem;
+    color: var(--color-label, #9ca3af);
+  }
+
+  .member-workspace-docs-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+    padding: 0.1rem 0.45rem;
+    font-size: 0.6875rem;
+    font-weight: 650;
+    color: var(--color-foreground);
+    background: color-mix(in srgb, var(--color-surface-muted) 70%, white);
+  }
+
+  .member-workspace-docs-actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .member-workspace-docs-link {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-primary, #0f766e);
+    text-decoration: none;
+  }
+
+  .member-workspace-docs-link:hover {
+    text-decoration: underline;
+  }
+
+  .member-workspace-docs-delete {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2rem;
+    min-width: 2rem;
+    border: 1px solid transparent;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--color-label, #9ca3af);
+    cursor: pointer;
+  }
+
+  .member-workspace-docs-delete:hover:not(:disabled) {
+    color: var(--color-overdue, #b45309);
+    background: color-mix(in srgb, var(--color-overdue, #b45309) 8%, white);
+  }
+
+  .member-workspace-docs-delete:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
   /* Member Profile — balanced two-column SaaS layout */
   .member-profile-page {
     --member-profile-gap: 1rem;

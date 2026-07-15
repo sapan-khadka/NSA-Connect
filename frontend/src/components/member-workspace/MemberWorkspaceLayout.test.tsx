@@ -94,6 +94,11 @@ describe("MemberWorkspaceLayout", () => {
               <h2>Financial Status</h2>
             </section>
           }
+          documents={
+            <section aria-label="Documents">
+              <h2>Documents</h2>
+            </section>
+          }
         />
       </MemoryRouter>,
     );
@@ -114,6 +119,9 @@ describe("MemberWorkspaceLayout", () => {
       within(workspace).getByRole("region", { name: "Financial Status" }),
     ).toBeInTheDocument();
     expect(
+      within(workspace).getByRole("region", { name: "Documents" }),
+    ).toBeInTheDocument();
+    expect(
       within(workspace).queryByRole("region", { name: "Tasks" }),
     ).not.toBeInTheDocument();
     expect(
@@ -122,5 +130,12 @@ describe("MemberWorkspaceLayout", () => {
     expect(
       within(workspace).queryByRole("region", { name: "Payments" }),
     ).not.toBeInTheDocument();
+
+    const aside = within(workspace).getByLabelText("Sidebar");
+    const notes = within(aside).getByRole("region", { name: "Notes" });
+    const docs = within(aside).getByRole("region", { name: "Documents" });
+    expect(
+      notes.compareDocumentPosition(docs) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 });

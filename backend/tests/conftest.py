@@ -10,6 +10,7 @@ import app.models.discussion_message_reaction  # noqa: F401 — register table f
 import app.models.discussion_read_state  # noqa: F401 — register table for create_all
 import app.models.discussion_room_pin  # noqa: F401 — register table for create_all
 import app.models.discussion_room_read  # noqa: F401 — register table for create_all
+import app.models.member_document  # noqa: F401 — register table for create_all
 import app.models.password_reset_token  # noqa: F401 — register table for create_all
 from app.core.config import settings
 from app.core.database import engine, get_db
@@ -58,6 +59,7 @@ def reset_settings_cache(monkeypatch, request):
         "app.services.event_photo_upload_service",
         "app.services.event_photo_service",
         "app.services.local_event_photo_storage",
+        "app.services.member_document_service",
         "app.services.email_service",
         "app.services.constitution_ingest_service",
         "app.services.constitution_search_service",

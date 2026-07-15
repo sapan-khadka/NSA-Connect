@@ -42,6 +42,10 @@ type MemberWorkspaceLayoutProps = {
    * Rendered directly under Recent Activity (replaces Payments placeholder).
    */
   financialStatus?: ReactNode;
+  /**
+   * Rendered in the aside directly under Private Notes (replaces Documents placeholder).
+   */
+  documents?: ReactNode;
 };
 
 export function MemberWorkspaceLayout({
@@ -51,6 +55,7 @@ export function MemberWorkspaceLayout({
   schedule,
   recentActivity,
   financialStatus,
+  documents,
 }: MemberWorkspaceLayoutProps) {
   return (
     <div className="member-workspace">
@@ -120,12 +125,14 @@ export function MemberWorkspaceLayout({
               icon={StickyNote}
               density="compact"
             />
-            <MemberWorkspacePlaceholderCard
-              title="Documents"
-              description="Files linked to this member."
-              icon={FileText}
-              density="compact"
-            />
+            {documents ?? (
+              <MemberWorkspacePlaceholderCard
+                title="Documents"
+                description="Files linked to this member."
+                icon={FileText}
+                density="compact"
+              />
+            )}
             <MemberWorkspacePlaceholderCard
               title="AI Insights"
               description="Suggested actions and patterns."

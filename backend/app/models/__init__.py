@@ -29,6 +29,7 @@ from app.models.finance_change_request import (
 from app.models.finance_entry import FinanceCategory, FinanceEntry, FinanceEntryType
 from app.models.meeting import MeetingAttendance, MeetingRecord
 from app.models.member import Member, MemberPosition, MemberRole, MemberStatus
+from app.models.member_document import MemberDocument, MemberDocumentType
 from app.models.member_dues import (
     DuesPaymentMethod,
     DuesStatus,
@@ -83,6 +84,8 @@ __all__ = [
     "NotificationSentLog",
     "NotificationType",
     "Member",
+    "MemberDocument",
+    "MemberDocumentType",
     "MemberPosition",
     "MemberRole",
     "MemberStatus",

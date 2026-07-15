@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { MemberWorkspaceCurrentResponsibilities } from "../components/member-workspace/MemberWorkspaceCurrentResponsibilities";
+import { MemberWorkspaceDocuments } from "../components/member-workspace/MemberWorkspaceDocuments";
 import { MemberWorkspaceFinancialStatus } from "../components/member-workspace/MemberWorkspaceFinancialStatus";
 import { MemberWorkspaceHeader } from "../components/member-workspace/MemberWorkspaceHeader";
 import { MemberWorkspaceLayout } from "../components/member-workspace/MemberWorkspaceLayout";
@@ -361,6 +362,12 @@ export function MemberProfilePage() {
         <MemberWorkspaceFinancialStatus
           summary={financialSummary}
           unavailable={duesHistoryUnavailable}
+        />
+      }
+      documents={
+        <MemberWorkspaceDocuments
+          memberId={profile.id}
+          canManage={viewerIsBoard}
         />
       }
     />
