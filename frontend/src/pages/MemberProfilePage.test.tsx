@@ -20,6 +20,20 @@ vi.mock("../lib/event-tasks-api", () => ({
   fetchMyEventTasks: vi.fn(),
 }));
 
+vi.mock("../lib/events-api", () => ({
+  fetchUpcomingEvents: vi.fn().mockResolvedValue({ events: [], total: 0 }),
+  fetchEventAttendees: vi.fn(),
+  fetchEventVolunteerSignups: vi.fn(),
+}));
+
+vi.mock("../lib/volunteer-api", () => ({
+  fetchMyVolunteerSignups: vi.fn().mockResolvedValue({ signups: [], total: 0 }),
+}));
+
+vi.mock("../lib/meetings-api", () => ({
+  fetchMeetings: vi.fn().mockResolvedValue({ meetings: [], total: 0 }),
+}));
+
 const secretaryMember: MemberResponse = {
   id: 2,
   full_name: "Secretary User",
@@ -195,5 +209,13 @@ describe("MemberProfilePage today's snapshot", () => {
     expect(
       within(responsibilities).getByRole("link", { name: "Open Book venue" }),
     ).toHaveAttribute("href", "/events/5/manage");
+
+    const schedule = screen.getByLabelText("Upcoming Schedule");
+    expect(
+      within(schedule).getByRole("heading", { name: "Upcoming Schedule" }),
+    ).toBeInTheDocument();
+    expect(
+      within(schedule).getByText("Nothing on the schedule yet."),
+    ).toBeInTheDocument();
   });
 });

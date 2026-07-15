@@ -30,12 +30,17 @@ type MemberWorkspaceLayoutProps = {
    * When omitted, the Tasks placeholder card is shown.
    */
   responsibilities?: ReactNode;
+  /**
+   * Rendered directly under Current Responsibilities / Tasks.
+   */
+  schedule?: ReactNode;
 };
 
 export function MemberWorkspaceLayout({
   header,
   overview,
   responsibilities,
+  schedule,
 }: MemberWorkspaceLayoutProps) {
   return (
     <div className="member-workspace">
@@ -66,6 +71,7 @@ export function MemberWorkspaceLayout({
                 density="default"
               />
             )}
+            {schedule}
             <MemberWorkspacePlaceholderCard
               title="Payments"
               description="Dues status and payment history."

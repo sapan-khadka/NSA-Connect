@@ -79,6 +79,11 @@ describe("MemberWorkspaceLayout", () => {
               <h2>Current Responsibilities</h2>
             </section>
           }
+          schedule={
+            <section aria-label="Upcoming Schedule">
+              <h2>Upcoming Schedule</h2>
+            </section>
+          }
         />
       </MemoryRouter>,
     );
@@ -88,6 +93,9 @@ describe("MemberWorkspaceLayout", () => {
       within(workspace).getByRole("region", {
         name: "Current Responsibilities",
       }),
+    ).toBeInTheDocument();
+    expect(
+      within(workspace).getByRole("region", { name: "Upcoming Schedule" }),
     ).toBeInTheDocument();
     expect(
       within(workspace).queryByRole("region", { name: "Tasks" }),
