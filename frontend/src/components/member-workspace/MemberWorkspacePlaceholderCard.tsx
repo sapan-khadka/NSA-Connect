@@ -1,6 +1,6 @@
 /**
- * Placeholder card for Member Workspace sections.
- * Layout scaffolding only — no widget behavior.
+ * Placeholder card for Member Workspace sections that are not built yet.
+ * Static "Coming soon" — not a loading skeleton.
  */
 
 import type { LucideIcon } from "lucide-react";
@@ -20,7 +20,7 @@ type MemberWorkspacePlaceholderCardProps = {
 
 export function MemberWorkspacePlaceholderCard({
   title,
-  description = "Widget coming soon",
+  description = "Coming soon",
   icon,
   density = "default",
   className = "",
@@ -31,6 +31,7 @@ export function MemberWorkspacePlaceholderCard({
       className={[
         "member-workspace-card",
         `member-workspace-card--${density}`,
+        "member-workspace-card--coming-soon",
         spanClassName,
         className,
       ]
@@ -54,20 +55,8 @@ export function MemberWorkspacePlaceholderCard({
         </div>
       </div>
 
-      <div className="member-workspace-card-body" aria-hidden="true">
-        <div className="member-workspace-placeholder-stack">
-          <span className="member-workspace-placeholder-line is-wide" />
-          <span className="member-workspace-placeholder-line is-mid" />
-          {density !== "compact" ? (
-            <span className="member-workspace-placeholder-line is-narrow" />
-          ) : null}
-          {density === "tall" ? (
-            <>
-              <span className="member-workspace-placeholder-block" />
-              <span className="member-workspace-placeholder-line is-mid" />
-            </>
-          ) : null}
-        </div>
+      <div className="member-workspace-card-body">
+        <p className="member-workspace-coming-soon">Coming soon</p>
       </div>
     </section>
   );

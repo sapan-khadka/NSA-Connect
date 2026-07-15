@@ -59,7 +59,6 @@ describe("MemberWorkspaceLayout", () => {
       "Payments",
       "Upcoming Events",
       "Activity Timeline",
-      "Notes",
       "Documents",
       "AI Insights",
     ]) {
@@ -67,6 +66,40 @@ describe("MemberWorkspaceLayout", () => {
         within(workspace).getByRole("region", { name: title }),
       ).toBeInTheDocument();
     }
+    expect(
+      within(workspace).queryByRole("region", { name: "Notes" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(workspace).queryByRole("region", { name: "Private Notes" }),
+    ).not.toBeInTheDocument();
+    expect(within(workspace).getAllByText("Coming soon").length).toBeGreaterThan(
+      0,
+    );
+  });
+
+  it("renders Private Notes only when the privateNotes slot is provided", () => {
+    render(
+      <MemoryRouter>
+        <MemberWorkspaceLayout
+          header={<MemberWorkspaceHeader member={member} />}
+          privateNotes={
+            <section aria-label="Private Notes">
+              <h2>Private Notes</h2>
+            </section>
+          }
+          documents={
+            <section aria-label="Documents">
+              <h2>Documents</h2>
+            </section>
+          }
+        />
+      </MemoryRouter>,
+    );
+
+    const aside = screen.getByLabelText("Sidebar");
+    expect(
+      within(aside).getByRole("region", { name: "Private Notes" }),
+    ).toBeInTheDocument();
   });
 
   it("replaces Tasks, Activity Timeline, and Payments when real sections are provided", () => {
@@ -140,14 +173,13 @@ describe("MemberWorkspaceLayout", () => {
     ).not.toBeInTheDocument();
 
     const aside = within(workspace).getByLabelText("Sidebar");
-    const notes = within(aside).getByRole("region", { name: "Notes" });
     const docs = within(aside).getByRole("region", { name: "Documents" });
     const aiInsights = within(aside).getByRole("region", {
       name: "AI Insights",
     });
     expect(
-      notes.compareDocumentPosition(docs) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+      within(aside).queryByRole("region", { name: "Notes" }),
+    ).not.toBeInTheDocument();
     expect(
       docs.compareDocumentPosition(aiInsights) &
         Node.DOCUMENT_POSITION_FOLLOWING,

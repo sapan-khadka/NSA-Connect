@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import type { MemberResponse } from "./auth-api";
-import type { MemberDuesRecord } from "./dues-api";
 import { buildMemberWorkspaceSnapshot } from "./member-workspace-snapshot";
 import {
   activeTaskCountFromMyTasks,
@@ -37,29 +36,16 @@ describe("buildMemberWorkspaceSnapshot", () => {
     expect(chips.find((c) => c.id === "graduation_year")?.value).toBe("2028");
   });
 
-  it("uses dues status and open task counts when provided", () => {
-    const dues: MemberDuesRecord = {
-      id: 1,
-      member_id: 2,
-      member_name: "Alex",
-      member_email: "a@semo.edu",
-      semester: "2026-summer",
-      amount_owed: "20.00",
-      amount_paid: "5.00",
-      status: "partial",
-      paid_at: null,
-      payment_method: null,
-      note: null,
-      finance_entry_id: null,
-    };
-
+  it("uses Financial Status dues label and open task counts when provided", () => {
     const chips = buildMemberWorkspaceSnapshot({
       member,
       openTaskCount: 3,
-      duesRecord: dues,
+      duesStatusLabel: "Outstanding",
     });
 
-    expect(chips.find((c) => c.id === "dues_status")?.value).toBe("Partial");
+    expect(chips.find((c) => c.id === "dues_status")?.value).toBe(
+      "Outstanding",
+    );
     expect(chips.find((c) => c.id === "open_tasks")?.value).toBe("3");
   });
 });

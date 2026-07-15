@@ -40,6 +40,12 @@ from app.schemas.member_document import (
     MemberDocumentResponse,
 )
 from app.schemas.member_insights import MemberMeetingAttendanceStreakResponse
+from app.schemas.member_note import (
+    MemberNoteCreateRequest,
+    MemberNoteListResponse,
+    MemberNoteResponse,
+    MemberNoteUpdateRequest,
+)
 from app.services.member_activity_service import get_member_activity
 from app.services.member_document_service import (
     MemberDocumentNotFoundError,
@@ -48,6 +54,14 @@ from app.services.member_document_service import (
     delete_member_document,
     list_member_documents,
     replace_member_document,
+)
+from app.services.member_note_service import (
+    MemberNoteNotFoundError,
+    MemberNotePermissionError,
+    create_member_note,
+    delete_member_note,
+    list_member_notes,
+    update_member_note,
 )
 from app.services.member_meeting_streak_service import (
     MemberMeetingStreakPermissionError,
@@ -606,6 +620,136 @@ def delete_member_document_endpoint(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document not found",
+        ) from None
+
+
+@router.get(
+    "/{member_id}/notes",
+    response_model=MemberNoteListResponse,
+)
+def list_member_notes_endpoint(
+    member_id: int,
+    current_member: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    """Private officer notes. Board+ only — never exposed to the subject member."""
+    try:
+        return list_member_notes(
+            db,
+            member_id=member_id,
+            viewer=current_member,
+        )
+    except MemberNotePermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not allowed to view private notes",
+        ) from None
+    except MemberNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Member not found",
+        ) from None
+
+
+@router.post(
+    "/{member_id}/notes",
+    response_model=MemberNoteResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_member_note_endpoint(
+    member_id: int,
+    body: MemberNoteCreateRequest,
+    current_member: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    try:
+        return create_member_note(
+            db,
+            member_id=member_id,
+            author=current_member,
+            content=body.content,
+            pinned=body.pinned,
+        )
+    except MemberNotePermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not allowed to create private notes",
+        ) from None
+    except MemberNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Member not found",
+        ) from None
+
+
+@router.patch(
+    "/{member_id}/notes/{note_id}",
+    response_model=MemberNoteResponse,
+)
+def update_member_note_endpoint(
+    member_id: int,
+    note_id: int,
+    body: MemberNoteUpdateRequest,
+    current_member: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    try:
+        return update_member_note(
+            db,
+            member_id=member_id,
+            note_id=note_id,
+            viewer=current_member,
+            content=body.content,
+            pinned=body.pinned,
+        )
+    except MemberNotePermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not allowed to update private notes",
+        ) from None
+    except MemberNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Member not found",
+        ) from None
+    except MemberNoteNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Note not found",
+        ) from None
+
+
+@router.delete(
+    "/{member_id}/notes/{note_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_member_note_endpoint(
+    member_id: int,
+    note_id: int,
+    current_member: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    try:
+        delete_member_note(
+            db,
+            member_id=member_id,
+            note_id=note_id,
+            viewer=current_member,
+        )
+    except MemberNotePermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not allowed to delete private notes",
+        ) from None
+    except MemberNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Member not found",
+        ) from None
+    except MemberNoteNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Note not found",
         ) from None
 
 

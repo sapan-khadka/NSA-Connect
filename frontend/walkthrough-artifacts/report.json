@@ -1,0 +1,571 @@
+{
+  "generatedAt": "2026-07-15T04:04:24.181Z",
+  "base": "http://127.0.0.1:5173",
+  "results": [
+    {
+      "name": "01-officer-rich",
+      "email": "mukesh@semo.edu",
+      "memberId": 21,
+      "ok": false,
+      "notes": [
+        "Leaked undefined/null/NaN text in workspace"
+      ],
+      "sections": {
+        "found": [
+          "Overview",
+          "Attendance",
+          "Current Responsibilities",
+          "Open Book venue",
+          "Upcoming Schedule",
+          "Open WT Cultural Night",
+          "Recent Activity",
+          "Member activity timeline",
+          "Financial Status",
+          "Upcoming Events",
+          "Sidebar",
+          "Health",
+          "Notes",
+          "Documents",
+          "Replace Rich Resume.pdf",
+          "Delete Rich Resume.pdf",
+          "AI Insights"
+        ],
+        "regions": [
+          {
+            "label": "Overview",
+            "tag": "section",
+            "text": "Overview\n\nProfile summary, talents, and contact.",
+            "height": 221.875,
+            "top": 496.265625
+          },
+          {
+            "label": "Attendance",
+            "tag": "section",
+            "text": "Attendance\n\nRecent event attendance and trends.",
+            "height": 165.875,
+            "top": 739.734375
+          },
+          {
+            "label": "Current Responsibilities",
+            "tag": "section",
+            "text": "Current Responsibilities\n\nWhat this member is responsible for right now.\n\nView All →\n\nBook venue\n\nWT Cultural Night\n\nTo do\nDUE\nJun 30, 2026\nASSIGNED BY\n—",
+            "height": 214.109375,
+            "top": 927.203125
+          },
+          {
+            "label": "Open Book venue",
+            "tag": "a",
+            "text": "Book venue\n\nWT Cultural Night\n\nTo do\nDUE\nJun 30, 2026\nASSIGNED BY\n—",
+            "height": 119.453125,
+            "top": 1003.265625
+          },
+          {
+            "label": "Upcoming Schedule",
+            "tag": "section",
+            "text": "Upcoming Schedule\n\nWhat this member is committed to next.\n\nEVENT\n\nWT Cultural Night\n\nGoing\n\nJul 28 • 11:02 PM",
+            "height": 166.03125,
+            "top": 1162.90625
+          },
+          {
+            "label": "Open WT Cultural Night",
+            "tag": "a",
+            "text": "EVENT\n\nWT Cultural Night\n\nGoing\n\nJul 28 • 11:02 PM",
+            "height": 71.375,
+            "top": 1238.96875
+          },
+          {
+            "label": "Recent Activity",
+            "tag": "section",
+            "text": "Recent Activity\n\nWhat this member has actually done recently.\n\nSUNDAY\nCompleted 'Confirm DJ' for WT Cultural Night\n11:02 PM\nCompleted 'Print flyers' for WT Cultural Night\n11:02 PM\nCompleted 'Order snacks' for WT Cultural Night\n11:02 PM\nTUE, JUL 7\nAttended WT Past Social\n11:02 PM\nMON, MAR 16\nPaid membership dues (2025-fall)\n11:02 PM",
+            "height": 490.3125,
+            "top": 1350.53125
+          },
+          {
+            "label": "Member activity timeline",
+            "tag": "div",
+            "text": "SUNDAY\nCompleted 'Confirm DJ' for WT Cultural Night\n11:02 PM\nCompleted 'Print flyers' for WT Cultural Night\n11:02 PM\nCompleted 'Order snacks' for WT Cultural Night\n11:02 PM\nTUE, JUL 7\nAttended WT Past Social\n11:02 PM\nMON, MAR 16\nPaid membership dues (2025-fall)\n11:02 PM",
+            "height": 395.65625,
+            "top": 1426.59375
+          },
+          {
+            "label": "Financial Status",
+            "tag": "section",
+            "text": "Financial Status\n\nDues standing and lifetime contributions.\n\nView all →\nCURRENT DUES\nOutstanding: $25.00\n\n2026-summer\n\nLIFETIME CONTRIBUTIONS\n$20.00\n\nAll paid dues",
+            "height": 191.625,
+            "top": 1862.4375
+          },
+          {
+            "label": "Upcoming Events",
+            "tag": "section",
+            "text": "Upcoming Events\n\nEvents this member is involved in.",
+            "height": 114.65625,
+            "top": 2075.65625
+          },
+          {
+            "label": "Sidebar",
+            "tag": "aside",
+            "text": "Health\n\nEngagement and standing signals.\n\nNotes\n\nPrivate officer notes.\n\nDocuments\n\nFiles on file for this member.\n\nCATEGORY\nResume\nWaiver / Consent Forms\nPersonal Records\nCertificates\nProfile & Media\nOther\nUpload\n\nPDF, JPEG, PNG, or WebP up to 10 MB.\n\nFILTER\nAll categories\nResume\nWaiver / Consent Forms\nPersonal Records\nCertificates\nProfile & Media\nOther\n\nRich Resume.pdf\n\nResume\nJul 14, 2026, 11:0",
+            "height": 977.59375,
+            "top": 496.265625
+          },
+          {
+            "label": "Health",
+            "tag": "section",
+            "text": "Health\n\nEngagement and standing signals.",
+            "height": 165.875,
+            "top": 496.265625
+          },
+          {
+            "label": "Notes",
+            "tag": "section",
+            "text": "Notes\n\nPrivate officer notes.",
+            "height": 114.65625,
+            "top": 683.734375
+          },
+          {
+            "label": "Documents",
+            "tag": "section",
+            "text": "Documents\n\nFiles on file for this member.\n\nCATEGORY\nResume\nWaiver / Consent Forms\nPersonal Records\nCertificates\nProfile & Media\nOther\nUpload\n\nPDF, JPEG, PNG, or WebP up to 10 MB.\n\nFILTER\nAll categories\nResume\nWaiver / Consent Forms\nPersonal Records\nCertificates\nProfile & Media\nOther\n\nRich Resume.pdf\n\nResume\nJul 14, 2026, 11:02 PM\nby Mukesh\nView",
+            "height": 362.90625,
+            "top": 819.984375
+          },
+          {
+            "label": "Replace Rich Resume.pdf",
+            "tag": "button",
+            "text": "",
+            "height": 32,
+            "top": 1082.625
+          },
+          {
+            "label": "Delete Rich Resume.pdf",
+            "tag": "button",
+            "text": "",
+            "height": 32,
+            "top": 1082.625
+          },
+          {
+            "label": "AI Insights",
+            "tag": "section",
+            "text": "AI Insights\n\nPatterns from attendance, dues, and tasks.\n\nHasn't attended the last 3 meetings.\n\nOutstanding dues ($25.00).\n\nHas an overdue responsibility: 'Book venue'.",
+            "height": 269.375,
+            "top": 1204.484375
+          }
+        ],
+        "bodyTextHasUndefined": true,
+        "scrollHeight": 2254,
+        "viewportHeight": 1100
+      },
+      "console": [],
+      "pageErrors": [],
+      "gapResponsibilitiesToSchedule": 22,
+      "gapScheduleToActivity": 22,
+      "gapActivityToFinance": 22,
+      "gapDocsToInsights": 22,
+      "screenshot": "/Users/sapan/Desktop/NSA-Connect/frontend/walkthrough-artifacts/01-officer-rich.png"
+    },
+    {
+      "name": "02-officer-empty",
+      "email": "mukesh@semo.edu",
+      "memberId": 22,
+      "ok": false,
+      "notes": [
+        "Leaked undefined/null/NaN text in workspace",
+        "Current Responsibilities missing /No open responsibilities|Nothing assigned/ — got: Current Responsibilities\n\nWhat this member is responsible for right now.\n\nView All →\n\nNo current responsibilities.\n\nAssign a task"
+      ],
+      "sections": {
+        "found": [
+          "Overview",
+          "Attendance",
+          "Current Responsibilities",
+          "Upcoming Schedule",
+          "Recent Activity",
+          "Tracked activity",
+          "Financial Status",
+          "Upcoming Events",
+          "Sidebar",
+          "Health",
+          "Notes",
+          "Documents",
+          "AI Insights"
+        ],
+        "regions": [
+          {
+            "label": "Overview",
+            "tag": "section",
+            "text": "Overview\n\nProfile summary, talents, and contact.",
+            "height": 221.875,
+            "top": 496.265625
+          },
+          {
+            "label": "Attendance",
+            "tag": "section",
+            "text": "Attendance\n\nRecent event attendance and trends.",
+            "height": 165.875,
+            "top": 739.734375
+          },
+          {
+            "label": "Current Responsibilities",
+            "tag": "section",
+            "text": "Current Responsibilities\n\nWhat this member is responsible for right now.\n\nView All →\n\nNo current responsibilities.\n\nAssign a task",
+            "height": 242.59375,
+            "top": 927.203125
+          },
+          {
+            "label": "Upcoming Schedule",
+            "tag": "section",
+            "text": "Upcoming Schedule\n\nWhat this member is committed to next.\n\nNothing on the schedule yet.",
+            "height": 214.296875,
+            "top": 1191.390625
+          },
+          {
+            "label": "Recent Activity",
+            "tag": "section",
+            "text": "Recent Activity\n\nWhat this member has actually done recently.\n\nNo recent activity yet.\n\nCompleted tasks, dues payments, and event check-ins will show up here as they happen.\n\nTask completed\nDues paid\nEvent check-in",
+            "height": 235.828125,
+            "top": 1427.28125
+          },
+          {
+            "label": "Tracked activity",
+            "tag": "ul",
+            "text": "Task completed\nDues paid\nEvent check-in",
+            "height": 28.09375,
+            "top": 1597.828125
+          },
+          {
+            "label": "Financial Status",
+            "tag": "section",
+            "text": "Financial Status\n\nDues standing and lifetime contributions.\n\nView all →\n\nNo dues on record yet.\n\nThis member has no dues history across semesters.",
+            "height": 175.140625,
+            "top": 1684.703125
+          },
+          {
+            "label": "Upcoming Events",
+            "tag": "section",
+            "text": "Upcoming Events\n\nEvents this member is involved in.",
+            "height": 114.65625,
+            "top": 1881.4375
+          },
+          {
+            "label": "Sidebar",
+            "tag": "aside",
+            "text": "Health\n\nEngagement and standing signals.\n\nNotes\n\nPrivate officer notes.\n\nDocuments\n\nFiles on file for this member.\n\nCATEGORY\nResume\nWaiver / Consent Forms\nPersonal Records\nCertificates\nProfile & Media\nOther\nUpload\n\nPDF, JPEG, PNG, or WebP up to 10 MB.\n\nNo documents on file.\n\nUse Upload above to attach a resume, waiver, personal record, certificate, or other file.\n\nAI Insights\n\nPatterns from attend",
+            "height": 815.28125,
+            "top": 496.265625
+          },
+          {
+            "label": "Health",
+            "tag": "section",
+            "text": "Health\n\nEngagement and standing signals.",
+            "height": 165.875,
+            "top": 496.265625
+          },
+          {
+            "label": "Notes",
+            "tag": "section",
+            "text": "Notes\n\nPrivate officer notes.",
+            "height": 114.65625,
+            "top": 683.734375
+          },
+          {
+            "label": "Documents",
+            "tag": "section",
+            "text": "Documents\n\nFiles on file for this member.\n\nCATEGORY\nResume\nWaiver / Consent Forms\nPersonal Records\nCertificates\nProfile & Media\nOther\nUpload\n\nPDF, JPEG, PNG, or WebP up to 10 MB.\n\nNo documents on file.\n\nUse Upload above to attach a resume, waiver, personal record, certificate, or other file.",
+            "height": 294.828125,
+            "top": 819.984375
+          },
+          {
+            "label": "AI Insights",
+            "tag": "section",
+            "text": "AI Insights\n\nPatterns from attendance, dues, and tasks.\n\nNo notable patterns right now.\n\nNothing matched the current insight rules for this member.",
+            "height": 175.140625,
+            "top": 1136.40625
+          }
+        ],
+        "bodyTextHasUndefined": true,
+        "scrollHeight": 2060,
+        "viewportHeight": 1100
+      },
+      "console": [],
+      "pageErrors": [],
+      "gapResponsibilitiesToSchedule": 22,
+      "gapScheduleToActivity": 22,
+      "gapActivityToFinance": 22,
+      "gapDocsToInsights": 22,
+      "screenshot": "/Users/sapan/Desktop/NSA-Connect/frontend/walkthrough-artifacts/02-officer-empty.png"
+    },
+    {
+      "name": "03-general-self",
+      "email": "walkthrough-general@semo.edu",
+      "memberId": 23,
+      "ok": false,
+      "notes": [
+        "Leaked undefined/null/NaN text in workspace"
+      ],
+      "sections": {
+        "found": [
+          "Overview",
+          "Attendance",
+          "Current Responsibilities",
+          "Upcoming Schedule",
+          "Recent Activity",
+          "Member activity timeline",
+          "Financial Status",
+          "Upcoming Events",
+          "Sidebar",
+          "Health",
+          "Notes",
+          "Documents",
+          "Replace My Waiver.pdf",
+          "Delete My Waiver.pdf",
+          "AI Insights"
+        ],
+        "regions": [
+          {
+            "label": "Overview",
+            "tag": "section",
+            "text": "Overview\n\nProfile summary, talents, and contact.",
+            "height": 221.875,
+            "top": 496.265625
+          },
+          {
+            "label": "Attendance",
+            "tag": "section",
+            "text": "Attendance\n\nRecent event attendance and trends.",
+            "height": 165.875,
+            "top": 739.734375
+          },
+          {
+            "label": "Current Responsibilities",
+            "tag": "section",
+            "text": "Current Responsibilities\n\nWhat this member is responsible for right now.\n\nView All →\n\nNo current responsibilities.",
+            "height": 214.296875,
+            "top": 927.203125
+          },
+          {
+            "label": "Upcoming Schedule",
+            "tag": "section",
+            "text": "Upcoming Schedule\n\nWhat this member is committed to next.\n\nNothing on the schedule yet.",
+            "height": 214.296875,
+            "top": 1163.09375
+          },
+          {
+            "label": "Recent Activity",
+            "tag": "section",
+            "text": "Recent Activity\n\nWhat this member has actually done recently.\n\nSAT, JUL 4\nPaid membership dues (2026-summer)\n11:02 PM",
+            "height": 171.75,
+            "top": 1398.984375
+          },
+          {
+            "label": "Member activity timeline",
+            "tag": "div",
+            "text": "SAT, JUL 4\nPaid membership dues (2026-summer)\n11:02 PM",
+            "height": 77.09375,
+            "top": 1475.046875
+          },
+          {
+            "label": "Financial Status",
+            "tag": "section",
+            "text": "Financial Status\n\nDues standing and lifetime contributions.\n\nView all →\nCURRENT DUES\nPaid\n\n2026-summer\n\nLIFETIME CONTRIBUTIONS\n$25.00\n\nAll paid dues",
+            "height": 191.625,
+            "top": 1592.328125
+          },
+          {
+            "label": "Upcoming Events",
+            "tag": "section",
+            "text": "Upcoming Events\n\nEvents this member is involved in.",
+            "height": 114.65625,
+            "top": 1805.546875
+          },
+          {
+            "label": "Sidebar",
+            "tag": "aside",
+            "text": "Health\n\nEngagement and standing signals.\n\nNotes\n\nPrivate officer notes.\n\nDocuments\n\nFiles on file for this member.\n\nCATEGORY\nResume\nWaiver / Consent Forms\nPersonal Records\nCertificates\nProfile & Media\nOther\nUpload\n\nPDF, JPEG, PNG, or WebP up to 10 MB.\n\nFILTER\nAll categories\nResume\nWaiver / Consent Forms\nPersonal Records\nCertificates\nProfile & Media\nOther\n\nMy Waiver.pdf\n\nWaiver / Consent Forms\nJul ",
+            "height": 906.953125,
+            "top": 496.265625
+          },
+          {
+            "label": "Health",
+            "tag": "section",
+            "text": "Health\n\nEngagement and standing signals.",
+            "height": 165.875,
+            "top": 496.265625
+          },
+          {
+            "label": "Notes",
+            "tag": "section",
+            "text": "Notes\n\nPrivate officer notes.",
+            "height": 114.65625,
+            "top": 683.734375
+          },
+          {
+            "label": "Documents",
+            "tag": "section",
+            "text": "Documents\n\nFiles on file for this member.\n\nCATEGORY\nResume\nWaiver / Consent Forms\nPersonal Records\nCertificates\nProfile & Media\nOther\nUpload\n\nPDF, JPEG, PNG, or WebP up to 10 MB.\n\nFILTER\nAll categories\nResume\nWaiver / Consent Forms\nPersonal Records\nCertificates\nProfile & Media\nOther\n\nMy Waiver.pdf\n\nWaiver / Consent Forms\nJul 14, 2026, 11:02 PM\nby Walkthrough General Self\nView",
+            "height": 386.5,
+            "top": 819.984375
+          },
+          {
+            "label": "Replace My Waiver.pdf",
+            "tag": "button",
+            "text": "",
+            "height": 32,
+            "top": 1082.625
+          },
+          {
+            "label": "Delete My Waiver.pdf",
+            "tag": "button",
+            "text": "",
+            "height": 32,
+            "top": 1082.625
+          },
+          {
+            "label": "AI Insights",
+            "tag": "section",
+            "text": "AI Insights\n\nPatterns from attendance, dues, and tasks.\n\nNo notable patterns right now.\n\nNothing matched the current insight rules for this member.",
+            "height": 175.140625,
+            "top": 1228.078125
+          }
+        ],
+        "bodyTextHasUndefined": true,
+        "scrollHeight": 1984,
+        "viewportHeight": 1100
+      },
+      "console": [],
+      "pageErrors": [],
+      "gapResponsibilitiesToSchedule": 22,
+      "gapScheduleToActivity": 22,
+      "gapActivityToFinance": 22,
+      "gapDocsToInsights": 22,
+      "screenshot": "/Users/sapan/Desktop/NSA-Connect/frontend/walkthrough-artifacts/03-general-self.png"
+    },
+    {
+      "name": "04-general-other",
+      "email": "walkthrough-general@semo.edu",
+      "memberId": 21,
+      "ok": false,
+      "notes": [
+        "Leaked undefined/null/NaN text in workspace"
+      ],
+      "sections": {
+        "found": [
+          "Overview",
+          "Attendance",
+          "Current Responsibilities",
+          "Upcoming Schedule",
+          "Recent Activity",
+          "Tracked activity",
+          "Financial Status",
+          "Upcoming Events",
+          "Sidebar",
+          "Health",
+          "Notes",
+          "Documents",
+          "AI Insights"
+        ],
+        "regions": [
+          {
+            "label": "Overview",
+            "tag": "section",
+            "text": "Overview\n\nProfile summary, talents, and contact.",
+            "height": 221.875,
+            "top": 496.265625
+          },
+          {
+            "label": "Attendance",
+            "tag": "section",
+            "text": "Attendance\n\nRecent event attendance and trends.",
+            "height": 165.875,
+            "top": 739.734375
+          },
+          {
+            "label": "Current Responsibilities",
+            "tag": "section",
+            "text": "Current Responsibilities\n\nWhat this member is responsible for right now.\n\nView All →\n\nNo current responsibilities.",
+            "height": 214.296875,
+            "top": 927.203125
+          },
+          {
+            "label": "Upcoming Schedule",
+            "tag": "section",
+            "text": "Upcoming Schedule\n\nWhat this member is committed to next.\n\nNothing on the schedule yet.",
+            "height": 214.296875,
+            "top": 1163.09375
+          },
+          {
+            "label": "Recent Activity",
+            "tag": "section",
+            "text": "Recent Activity\n\nWhat this member has actually done recently.\n\nNo recent activity yet.\n\nCompleted tasks, dues payments, and event check-ins will show up here as they happen.\n\nTask completed\nDues paid\nEvent check-in",
+            "height": 235.828125,
+            "top": 1398.984375
+          },
+          {
+            "label": "Tracked activity",
+            "tag": "ul",
+            "text": "Task completed\nDues paid\nEvent check-in",
+            "height": 28.09375,
+            "top": 1569.53125
+          },
+          {
+            "label": "Financial Status",
+            "tag": "section",
+            "text": "Financial Status\n\nDues standing and lifetime contributions.\n\nView all →\n\nFinancial details unavailable\n\nDues history for other members is limited to treasury access.",
+            "height": 175.140625,
+            "top": 1656.40625
+          },
+          {
+            "label": "Upcoming Events",
+            "tag": "section",
+            "text": "Upcoming Events\n\nEvents this member is involved in.",
+            "height": 114.65625,
+            "top": 1853.140625
+          },
+          {
+            "label": "Sidebar",
+            "tag": "aside",
+            "text": "Health\n\nEngagement and standing signals.\n\nNotes\n\nPrivate officer notes.\n\nDocuments\n\nFiles on file for this member.\n\nDocuments unavailable\n\nYou can manage documents on your own profile. Officers can view any member’s files.\n\nAI Insights\n\nPatterns from attendance, dues, and tasks.\n\nNo notable patterns right now.\n\nNothing matched the current insight rules for this member.",
+            "height": 708.703125,
+            "top": 496.265625
+          },
+          {
+            "label": "Health",
+            "tag": "section",
+            "text": "Health\n\nEngagement and standing signals.",
+            "height": 165.875,
+            "top": 496.265625
+          },
+          {
+            "label": "Notes",
+            "tag": "section",
+            "text": "Notes\n\nPrivate officer notes.",
+            "height": 114.65625,
+            "top": 683.734375
+          },
+          {
+            "label": "Documents",
+            "tag": "section",
+            "text": "Documents\n\nFiles on file for this member.\n\nDocuments unavailable\n\nYou can manage documents on your own profile. Officers can view any member’s files.",
+            "height": 188.25,
+            "top": 819.984375
+          },
+          {
+            "label": "AI Insights",
+            "tag": "section",
+            "text": "AI Insights\n\nPatterns from attendance, dues, and tasks.\n\nNo notable patterns right now.\n\nNothing matched the current insight rules for this member.",
+            "height": 175.140625,
+            "top": 1029.828125
+          }
+        ],
+        "bodyTextHasUndefined": true,
+        "scrollHeight": 2032,
+        "viewportHeight": 1100
+      },
+      "console": [],
+      "pageErrors": [],
+      "gapResponsibilitiesToSchedule": 22,
+      "gapScheduleToActivity": 22,
+      "gapActivityToFinance": 22,
+      "gapDocsToInsights": 22,
+      "screenshot": "/Users/sapan/Desktop/NSA-Connect/frontend/walkthrough-artifacts/04-general-other.png"
+    }
+  ]
+}

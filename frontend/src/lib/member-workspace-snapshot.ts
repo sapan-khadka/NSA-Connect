@@ -3,7 +3,6 @@
  */
 
 import type { MemberResponse } from "./auth-api";
-import type { DuesStatus, MemberDuesRecord } from "./dues-api";
 import { formatPositionLabel, formatRoleLabel, isMemberRole } from "./roles";
 
 export type MemberWorkspaceSnapshotChipId =
@@ -40,21 +39,6 @@ function statusDisplayLabel(status: string): string {
   );
 }
 
-function duesStatusDisplayLabel(
-  record: MemberDuesRecord | undefined,
-): string | null {
-  if (!record) {
-    return null;
-  }
-  const labels: Record<DuesStatus, string> = {
-    paid: "Paid",
-    unpaid: "Unpaid",
-    partial: "Partial",
-    exempt: "Exempt",
-  };
-  return labels[record.status] ?? null;
-}
-
 function boardRoleDisplayLabel(member: MemberResponse): string {
   const roleLabel = isMemberRole(member.role)
     ? formatRoleLabel(member.role)
@@ -76,11 +60,15 @@ function boardRoleDisplayLabel(member: MemberResponse): string {
 export function buildMemberWorkspaceSnapshot(input: {
   member: MemberResponse;
   openTaskCount: number | null;
-  duesRecord?: MemberDuesRecord | undefined;
+  /**
+   * Same label source as Financial Status (`currentStatusLabel`).
+   * Omit / null when dues history is unavailable to the viewer → "—".
+   */
+  duesStatusLabel?: string | null;
   /** Reserved for a future next-event RSVP API — omit → "—". */
   nextEventRsvpLabel?: string | null;
 }): MemberWorkspaceSnapshotChip[] {
-  const duesLabel = duesStatusDisplayLabel(input.duesRecord);
+  const duesLabel = input.duesStatusLabel?.trim() || null;
   const rsvpLabel = input.nextEventRsvpLabel?.trim() || null;
   const roleLabel = boardRoleDisplayLabel(input.member);
   const graduation =

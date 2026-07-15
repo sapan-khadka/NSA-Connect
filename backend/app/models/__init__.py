@@ -30,6 +30,7 @@ from app.models.finance_entry import FinanceCategory, FinanceEntry, FinanceEntry
 from app.models.meeting import MeetingAttendance, MeetingRecord
 from app.models.member import Member, MemberPosition, MemberRole, MemberStatus
 from app.models.member_document import MemberDocument, MemberDocumentType
+from app.models.member_note import MemberNote
 from app.models.member_dues import (
     DuesPaymentMethod,
     DuesStatus,

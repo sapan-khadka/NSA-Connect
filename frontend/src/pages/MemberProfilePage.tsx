@@ -12,6 +12,7 @@ import { MemberWorkspaceFinancialStatus } from "../components/member-workspace/M
 import { MemberWorkspaceHeader } from "../components/member-workspace/MemberWorkspaceHeader";
 import { MemberWorkspaceInsights } from "../components/member-workspace/MemberWorkspaceInsights";
 import { MemberWorkspaceLayout } from "../components/member-workspace/MemberWorkspaceLayout";
+import { MemberWorkspacePrivateNotes } from "../components/member-workspace/MemberWorkspacePrivateNotes";
 import { MemberWorkspaceRecentActivity } from "../components/member-workspace/MemberWorkspaceRecentActivity";
 import { MemberWorkspaceTodaysSnapshot } from "../components/member-workspace/MemberWorkspaceTodaysSnapshot";
 import { MemberWorkspaceUpcomingSchedule } from "../components/member-workspace/MemberWorkspaceUpcomingSchedule";
@@ -19,11 +20,9 @@ import { Skeleton } from "../design-system/components/Skeleton";
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage, type MemberResponse } from "../lib/auth-api";
 import {
-  fetchDuesDashboard,
   fetchMemberDuesHistory,
   fetchMyDuesHistory,
   type MemberDuesHistoryItem,
-  type MemberDuesRecord,
 } from "../lib/dues-api";
 import { buildFinancialStatusSummary } from "../lib/member-workspace-financial";
 import {
@@ -56,10 +55,7 @@ import {
   type ScheduleCommitment,
 } from "../lib/member-workspace-schedule";
 import { buildMemberWorkspaceInsights } from "../lib/member-workspace-insights";
-import {
-  buildMemberWorkspaceSnapshot,
-  type MemberWorkspaceSnapshotChip,
-} from "../lib/member-workspace-snapshot";
+import { buildMemberWorkspaceSnapshot } from "../lib/member-workspace-snapshot";
 import {
   canManageEventTasks,
   canAccessMemberDocuments,
@@ -121,23 +117,11 @@ function MemberWorkspaceSkeleton() {
   );
 }
 
-function snapshotFromMember(
-  member: MemberResponse,
-  openTaskCount: number | null,
-  duesRecord?: MemberDuesRecord,
-): MemberWorkspaceSnapshotChip[] {
-  return buildMemberWorkspaceSnapshot({
-    member,
-    openTaskCount,
-    duesRecord,
-  });
-}
-
 export function MemberProfilePage() {
   const { memberId } = useParams();
   const { member: currentMember } = useAuth();
   const [profile, setProfile] = useState<MemberResponse | null>(null);
-  const [chips, setChips] = useState<MemberWorkspaceSnapshotChip[]>([]);
+  const [openTaskCount, setOpenTaskCount] = useState<number | null>(null);
   const [memberTasks, setMemberTasks] = useState<EventTaskResponse[]>([]);
   const [scheduleItems, setScheduleItems] = useState<ScheduleCommitment[]>([]);
   const [activityItems, setActivityItems] = useState<MemberActivityItem[]>([]);
@@ -192,6 +176,19 @@ export function MemberProfilePage() {
     [duesHistory],
   );
 
+  const chips = useMemo(() => {
+    if (!profile) {
+      return [];
+    }
+    return buildMemberWorkspaceSnapshot({
+      member: profile,
+      openTaskCount,
+      duesStatusLabel: duesHistoryUnavailable
+        ? null
+        : financialSummary.currentStatusLabel,
+    });
+  }, [profile, openTaskCount, duesHistoryUnavailable, financialSummary]);
+
   const workspaceInsights = useMemo(
     () =>
       buildMemberWorkspaceInsights({
@@ -233,7 +230,7 @@ export function MemberProfilePage() {
           return;
         }
         setProfile(member);
-        setChips(snapshotFromMember(member, null));
+        setOpenTaskCount(null);
         setMemberTasks([]);
         setScheduleItems([]);
         setActivityItems([]);
@@ -242,7 +239,6 @@ export function MemberProfilePage() {
         setConsecutiveMissedMeetings(null);
 
         const isSelf = currentMember?.id === member.id;
-        const semester = getCurrentSemesterSlug();
         const memberRole = isMemberRole(member.role) ? member.role : "general";
         const canFetchMeetingStreak = isSelf || viewerIsBoard;
 
@@ -253,7 +249,6 @@ export function MemberProfilePage() {
             : Promise.resolve(null);
 
         const [
-          duesResult,
           overviewResult,
           myTasksResult,
           scheduleResult,
@@ -261,9 +256,6 @@ export function MemberProfilePage() {
           duesHistoryResult,
           meetingStreakResult,
         ] = await Promise.all([
-          canFetchDues
-            ? fetchDuesDashboard({ semester }).catch(() => null)
-            : Promise.resolve(null),
           canFetchTaskOverview
             ? fetchTaskOverview().catch(() => null)
             : Promise.resolve(null),
@@ -290,28 +282,25 @@ export function MemberProfilePage() {
           return;
         }
 
-        let openTaskCount: number | null = null;
+        let nextOpenTaskCount: number | null = null;
         let tasks: EventTaskResponse[] = [];
 
         if (overviewResult) {
           const row = overviewResult.members.find(
             (entry) => entry.member_id === member.id,
           );
-          openTaskCount = activeTaskCountFromOverviewMember(row);
-          if (openTaskCount === null && row === undefined) {
-            openTaskCount = 0;
+          nextOpenTaskCount = activeTaskCountFromOverviewMember(row);
+          if (nextOpenTaskCount === null && row === undefined) {
+            nextOpenTaskCount = 0;
           }
           tasks = row?.tasks ?? [];
         } else if (myTasksResult) {
-          openTaskCount = activeTaskCountFromMyTasks(myTasksResult.tasks);
+          nextOpenTaskCount = activeTaskCountFromMyTasks(myTasksResult.tasks);
           tasks = myTasksResult.tasks;
         }
 
-        const duesRecord = duesResult?.records.find(
-          (record) => record.member_id === member.id,
-        );
-
         setMemberTasks(tasks);
+        setOpenTaskCount(nextOpenTaskCount);
         setScheduleItems(scheduleResult);
         setActivityItems(activityResult.items.map(mapMemberActivityApiItem));
         if (duesHistoryResult) {
@@ -324,11 +313,10 @@ export function MemberProfilePage() {
         setConsecutiveMissedMeetings(
           meetingStreakResult?.consecutive_missed_meetings ?? null,
         );
-        setChips(snapshotFromMember(member, openTaskCount, duesRecord));
       } catch (fetchError) {
         if (!cancelled) {
           setProfile(null);
-          setChips([]);
+          setOpenTaskCount(null);
           setMemberTasks([]);
           setScheduleItems([]);
           setActivityItems([]);
@@ -398,6 +386,11 @@ export function MemberProfilePage() {
           summary={financialSummary}
           unavailable={duesHistoryUnavailable}
         />
+      }
+      privateNotes={
+        viewerIsBoard ? (
+          <MemberWorkspacePrivateNotes memberId={profile.id} />
+        ) : undefined
       }
       documents={
         <MemberWorkspaceDocuments

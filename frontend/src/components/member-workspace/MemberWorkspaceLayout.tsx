@@ -11,7 +11,6 @@ import {
   HeartPulse,
   LayoutDashboard,
   Sparkles,
-  StickyNote,
   Wallet,
 } from "lucide-react";
 
@@ -43,6 +42,11 @@ type MemberWorkspaceLayoutProps = {
    */
   financialStatus?: ReactNode;
   /**
+   * Officer-only Private Notes. When omitted (general members), nothing is
+   * rendered — no placeholder, empty state, or locked card.
+   */
+  privateNotes?: ReactNode;
+  /**
    * Rendered in the aside directly under Private Notes (replaces Documents placeholder).
    */
   documents?: ReactNode;
@@ -59,6 +63,7 @@ export function MemberWorkspaceLayout({
   schedule,
   recentActivity,
   financialStatus,
+  privateNotes,
   documents,
   insights,
 }: MemberWorkspaceLayoutProps) {
@@ -124,12 +129,7 @@ export function MemberWorkspaceLayout({
               icon={HeartPulse}
               density="default"
             />
-            <MemberWorkspacePlaceholderCard
-              title="Notes"
-              description="Private officer notes."
-              icon={StickyNote}
-              density="compact"
-            />
+            {privateNotes}
             {documents ?? (
               <MemberWorkspacePlaceholderCard
                 title="Documents"

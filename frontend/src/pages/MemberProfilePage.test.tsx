@@ -30,6 +30,17 @@ vi.mock("../lib/member-documents-api", async () => {
   };
 });
 
+vi.mock("../lib/member-notes-api", () => ({
+  fetchMemberNotes: vi.fn().mockResolvedValue({
+    member_id: 2,
+    notes: [],
+    total: 0,
+  }),
+  createMemberNote: vi.fn(),
+  updateMemberNote: vi.fn(),
+  deleteMemberNote: vi.fn(),
+}));
+
 vi.mock("../lib/dues-api", () => ({
   fetchDuesDashboard: vi.fn(),
   fetchMyDuesHistory: vi.fn().mockResolvedValue({
@@ -110,8 +121,9 @@ describe("MemberProfilePage today's snapshot", () => {
 
   it("renders Today's Snapshot chips from real member, tasks, and dues", async () => {
     const { fetchMemberById } = await import("../lib/members-api");
-    const { fetchDuesDashboard } = await import("../lib/dues-api");
+    const { fetchMemberDuesHistory } = await import("../lib/dues-api");
     const { fetchTaskOverview } = await import("../lib/event-tasks-api");
+    const { fetchMemberNotes } = await import("../lib/member-notes-api");
 
     vi.mocked(fetchMemberById).mockResolvedValue(secretaryMember);
     vi.mocked(fetchTaskOverview).mockResolvedValue({
@@ -175,35 +187,20 @@ describe("MemberProfilePage today's snapshot", () => {
       total_tasks: 4,
       completed_tasks: 1,
     });
-    vi.mocked(fetchDuesDashboard).mockResolvedValue({
-      summary: {
-        semester: "2026-summer",
-        default_amount: "20.00",
-        total_expected: "20",
-        total_collected: "0",
-        total_outstanding: "20",
-        paid_count: 0,
-        unpaid_count: 1,
-        partial_count: 0,
-        exempt_count: 0,
-        member_count: 1,
-      },
+    vi.mocked(fetchMemberDuesHistory).mockResolvedValue({
+      member_id: 2,
       records: [
         {
           id: 1,
           member_id: 2,
-          member_name: "Secretary User",
-          member_email: "secretary@semo.edu",
           semester: "2026-summer",
           amount_owed: "20.00",
           amount_paid: "0.00",
           status: "unpaid",
           paid_at: null,
-          payment_method: null,
-          note: null,
-          finance_entry_id: null,
         },
       ],
+      total: 1,
     });
 
     renderMemberProfile();
@@ -214,7 +211,7 @@ describe("MemberProfilePage today's snapshot", () => {
     expect(within(snapshot).getByText("Active Status")).toBeInTheDocument();
     expect(within(snapshot).getByText("Active")).toBeInTheDocument();
     expect(within(snapshot).getByText("Dues Status")).toBeInTheDocument();
-    expect(within(snapshot).getByText("Unpaid")).toBeInTheDocument();
+    expect(within(snapshot).getByText("Outstanding")).toBeInTheDocument();
     expect(within(snapshot).getByText("Next Event RSVP")).toBeInTheDocument();
     expect(within(snapshot).getByText("Open Tasks")).toBeInTheDocument();
     expect(within(snapshot).getByText("3")).toBeInTheDocument();
@@ -259,8 +256,15 @@ describe("MemberProfilePage today's snapshot", () => {
     expect(
       within(finance).getByRole("heading", { name: "Financial Status" }),
     ).toBeInTheDocument();
+    expect(within(finance).getByText(/Outstanding/)).toBeInTheDocument();
+
+    const notes = screen.getByLabelText("Private Notes");
     expect(
-      within(finance).getByText("No dues on record yet."),
+      within(notes).getByRole("heading", { name: "Private Notes" }),
+    ).toBeInTheDocument();
+    expect(fetchMemberNotes).toHaveBeenCalledWith(2);
+    expect(
+      await within(notes).findByText("No private notes yet."),
     ).toBeInTheDocument();
 
     const documents = screen.getByLabelText("Documents");
@@ -276,7 +280,76 @@ describe("MemberProfilePage today's snapshot", () => {
       within(insights).getByRole("heading", { name: "AI Insights" }),
     ).toBeInTheDocument();
     expect(
-      within(insights).getByText("No notable patterns right now."),
+      within(insights).getByText("Outstanding dues ($20.00)."),
     ).toBeInTheDocument();
+  });
+
+  it("hides Private Notes entirely for general members", async () => {
+    const { fetchMemberById } = await import("../lib/members-api");
+    const { fetchMyDuesHistory } = await import("../lib/dues-api");
+    const { fetchMyEventTasks } = await import("../lib/event-tasks-api");
+    const { fetchMemberNotes } = await import("../lib/member-notes-api");
+
+    vi.mocked(fetchMemberById).mockResolvedValue({
+      ...secretaryMember,
+      id: 10,
+      role: "general",
+      position: "member",
+      full_name: "General Self",
+      email: "general@semo.edu",
+    });
+    vi.mocked(fetchMyEventTasks).mockResolvedValue({
+      tasks: [],
+      total: 0,
+    });
+    vi.mocked(fetchMyDuesHistory).mockResolvedValue({
+      member_id: 10,
+      records: [
+        {
+          id: 1,
+          member_id: 10,
+          semester: "2026-summer",
+          amount_owed: "20.00",
+          amount_paid: "20.00",
+          status: "paid",
+          paid_at: "2026-06-01T12:00:00+00:00",
+        },
+      ],
+      total: 1,
+    });
+
+    render(
+      <MockAuthProvider
+        value={{
+          member: {
+            id: 10,
+            full_name: "General Self",
+            email: "general@semo.edu",
+            student_id: "11111111",
+            major: "Biology",
+            graduation_year: 2028,
+            role: "general",
+            status: "approved",
+            position: "member",
+          },
+          isAuthenticated: true,
+        }}
+      >
+        <MemoryRouter initialEntries={["/members/10"]}>
+          <Routes>
+            <Route path="/members/:memberId" element={<MemberProfilePage />} />
+          </Routes>
+        </MemoryRouter>
+      </MockAuthProvider>,
+    );
+
+    expect(await screen.findByText("General Self")).toBeInTheDocument();
+    const snapshot = screen.getByLabelText("Today's Snapshot");
+    expect(within(snapshot).getByText("Paid")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Private Notes")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Private Notes" }),
+    ).not.toBeInTheDocument();
+    expect(fetchMemberNotes).not.toHaveBeenCalled();
   });
 });
