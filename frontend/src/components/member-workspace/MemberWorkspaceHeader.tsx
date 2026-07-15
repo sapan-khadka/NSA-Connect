@@ -12,11 +12,16 @@ import {
   Pencil,
   Phone,
 } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
 
 import { Avatar } from "../../design-system/components/Avatar";
+import { useAuth } from "../../context/useAuth";
 import type { MemberResponse } from "../../lib/auth-api";
+import { memberMailtoHref } from "../../lib/member-mailto";
+import { canViewMemberDirectory } from "../../lib/roles";
+import { EditMemberDrawer } from "../EditMemberDrawer";
 import { RoleBadge } from "../RoleBadge";
 import { AppIcon } from "../ui/AppIcon";
 import { Button } from "../ui/Button";
@@ -31,6 +36,8 @@ type MemberWorkspaceHeaderProps = {
   joinedAtLabel?: string | null;
   backTo?: string;
   backLabel?: string;
+  /** Keep parent workspace profile in sync after Edit Member saves. */
+  onMemberUpdated?: (member: MemberResponse) => void;
 };
 
 function displayValue(value: string | null | undefined): string {
@@ -105,11 +112,18 @@ export function MemberWorkspaceHeader({
   joinedAtLabel = null,
   backTo = "/members",
   backLabel = "Back to Members",
+  onMemberUpdated,
 }: MemberWorkspaceHeaderProps) {
+  const { member: currentMember } = useAuth();
+  const [editOpen, setEditOpen] = useState(false);
   const committeeLabel = committee?.trim() || null;
   const graduationLabel = member.graduation_year
     ? String(member.graduation_year)
     : MISSING;
+  const mailtoHref = memberMailtoHref(member.email);
+  const canEdit = Boolean(
+    currentMember && canViewMemberDirectory(currentMember.role),
+  );
 
   return (
     <div className="member-workspace-header-inner">
@@ -124,28 +138,40 @@ export function MemberWorkspaceHeader({
           role="group"
           aria-label="Member actions"
         >
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled
-            title="Coming Soon"
-            aria-label="Edit Member (Coming Soon)"
-          >
-            <AppIcon icon={Pencil} size="xs" className="text-current" />
-            <span className="member-workspace-action-label">Edit Member</span>
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled
-            title="Coming Soon"
-            aria-label="Message (Coming Soon)"
-          >
-            <AppIcon icon={Mail} size="xs" className="text-current" />
-            <span className="member-workspace-action-label">Message</span>
-          </Button>
+          {canEdit ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-label="Edit Member"
+              onClick={() => setEditOpen(true)}
+            >
+              <AppIcon icon={Pencil} size="xs" className="text-current" />
+              <span className="member-workspace-action-label">Edit Member</span>
+            </Button>
+          ) : null}
+          {mailtoHref ? (
+            <a
+              href={mailtoHref}
+              className="member-workspace-mailto inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-gray-200 bg-surface-card px-3 py-1.5 text-sm font-medium text-foreground transition duration-200 ease-out hover:border-primary/40 hover:bg-badge-teal-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-2"
+              aria-label={`Message ${member.full_name}`}
+            >
+              <AppIcon icon={Mail} size="xs" className="text-current" />
+              <span className="member-workspace-action-label">Message</span>
+            </a>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled
+              title="No email on file"
+              aria-label="Message (No email on file)"
+            >
+              <AppIcon icon={Mail} size="xs" className="text-current" />
+              <span className="member-workspace-action-label">Message</span>
+            </Button>
+          )}
           <Button
             type="button"
             variant="ghost"
@@ -204,6 +230,17 @@ export function MemberWorkspaceHeader({
           </dl>
         </div>
       </div>
+
+      {canEdit ? (
+        <EditMemberDrawer
+          member={member}
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          onMemberUpdated={(updated) => {
+            onMemberUpdated?.(updated);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

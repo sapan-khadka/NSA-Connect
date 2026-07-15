@@ -272,6 +272,11 @@ export function MembersPage() {
             duesByMemberId={duesByMemberId}
             isFilterEmpty={members.length > 0 && displayedMembers.length === 0}
             onInvite={() => setInviteOpen(true)}
+            onMemberUpdated={(updated) => {
+              setMembers((prev) =>
+                prev.map((row) => (row.id === updated.id ? updated : row)),
+              );
+            }}
           />
         </section>
       </div>

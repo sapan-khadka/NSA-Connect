@@ -78,15 +78,32 @@ describe("MemberQuickViewDrawer", () => {
       within(dialog).getByRole("button", { name: "View Full Profile" }),
     ).toBeInTheDocument();
     expect(
-      within(dialog).getByRole("button", {
-        name: "Edit Member (Coming Soon.)",
-      }),
-    ).toBeDisabled();
+      within(dialog).queryByRole("button", { name: "Edit Member" }),
+    ).not.toBeInTheDocument();
     expect(
-      within(dialog).getByRole("button", {
-        name: "Send Message (Coming Soon.)",
+      within(dialog).getByRole("link", {
+        name: "Send Message to Alex Member",
       }),
-    ).toBeDisabled();
+    ).toHaveAttribute("href", "mailto:alex@semo.edu");
+  });
+
+  it("shows Edit Member when onEditMember is provided", async () => {
+    const user = userEvent.setup();
+    const onEditMember = vi.fn();
+
+    render(
+      <MemoryRouter>
+        <MemberQuickViewDrawer
+          member={member}
+          open
+          onClose={() => undefined}
+          onEditMember={onEditMember}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Edit Member" }));
+    expect(onEditMember).toHaveBeenCalledWith(member);
   });
 
   it("renders provided activity items when available", () => {

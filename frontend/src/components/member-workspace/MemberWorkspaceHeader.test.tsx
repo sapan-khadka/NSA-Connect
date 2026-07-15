@@ -3,6 +3,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { MemberResponse } from "../../lib/auth-api";
+import { MockAuthProvider } from "../../test/test-utils";
 import { MemberWorkspaceHeader } from "./MemberWorkspaceHeader";
 
 const member: MemberResponse = {
@@ -18,6 +19,18 @@ const member: MemberResponse = {
   phone: null,
 };
 
+const boardViewer: MemberResponse = {
+  id: 1,
+  full_name: "Board Viewer",
+  email: "board@semo.edu",
+  student_id: "11111111",
+  major: "CS",
+  graduation_year: 2027,
+  role: "board",
+  status: "approved",
+  position: "member",
+};
+
 describe("MemberWorkspaceHeader", () => {
   afterEach(() => {
     cleanup();
@@ -25,9 +38,11 @@ describe("MemberWorkspaceHeader", () => {
 
   it("renders premium overview with real metadata and honest empties", () => {
     render(
-      <MemoryRouter>
-        <MemberWorkspaceHeader member={member} />
-      </MemoryRouter>,
+      <MockAuthProvider value={{ member: boardViewer, isAuthenticated: true }}>
+        <MemoryRouter>
+          <MemberWorkspaceHeader member={member} />
+        </MemoryRouter>
+      </MockAuthProvider>,
     );
 
     expect(
@@ -49,28 +64,54 @@ describe("MemberWorkspaceHeader", () => {
     expect(within(details).getAllByText("—").length).toBeGreaterThanOrEqual(2);
 
     expect(
-      screen.getByRole("button", { name: "Edit Member (Coming Soon)" }),
-    ).toBeDisabled();
+      screen.getByRole("button", { name: "Edit Member" }),
+    ).toBeEnabled();
     expect(
-      screen.getByRole("button", { name: "Message (Coming Soon)" }),
-    ).toBeDisabled();
+      screen.getByRole("link", { name: "Message Alex Member" }),
+    ).toHaveAttribute("href", "mailto:alex@semo.edu");
     expect(
       screen.getByRole("button", { name: "More actions (Coming Soon)" }),
     ).toBeDisabled();
   });
 
+  it("hides Edit Member for general viewers", () => {
+    render(
+      <MockAuthProvider
+        value={{
+          member: { ...boardViewer, id: 9, role: "general" },
+          isAuthenticated: true,
+        }}
+      >
+        <MemoryRouter>
+          <MemberWorkspaceHeader member={member} />
+        </MemoryRouter>
+      </MockAuthProvider>,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Edit Member" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Message Alex Member" }),
+    ).toHaveAttribute("href", "mailto:alex@semo.edu");
+  });
+
   it("shows committee badge only when provided", () => {
     const { rerender } = render(
-      <MemoryRouter>
-        <MemberWorkspaceHeader member={member} />
-      </MemoryRouter>,
+      <MockAuthProvider value={{ member: boardViewer, isAuthenticated: true }}>
+        <MemoryRouter>
+          <MemberWorkspaceHeader member={member} />
+        </MemoryRouter>
+      </MockAuthProvider>,
     );
     expect(screen.queryByText("Events")).not.toBeInTheDocument();
 
     rerender(
-      <MemoryRouter>
-        <MemberWorkspaceHeader member={member} committee="Events" />
-      </MemoryRouter>,
+      <MockAuthProvider value={{ member: boardViewer, isAuthenticated: true }}>
+        <MemoryRouter>
+          <MemberWorkspaceHeader member={member} committee="Events" />
+        </MemoryRouter>
+      </MockAuthProvider>,
     );
     expect(screen.getByText("Events")).toBeInTheDocument();
   });

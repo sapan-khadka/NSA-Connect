@@ -20,22 +20,27 @@ import { Link } from "react-router-dom";
 import { Avatar } from "../design-system/components/Avatar";
 import { EmptyState } from "../design-system/components/data-display/EmptyState";
 import { Skeleton } from "../design-system/components/Skeleton";
+import { useAuth } from "../context/useAuth";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/auth-api";
 import type { DuesStatus, MemberDuesRecord } from "../lib/dues-api";
 import { formatCurrency } from "../lib/format-currency";
+import { memberMailtoHref } from "../lib/member-mailto";
 import {
   formatOutstandingDuesCell,
   type MemberDuesLookup,
 } from "../lib/members-directory";
 import { fetchMembers } from "../lib/members-api";
 import {
+  buildPositionHolders,
+  canViewMemberDirectory,
   formatPositionLabel,
   getRoleBadgeClassName,
   isMemberRole,
   type MemberRole,
 } from "../lib/roles";
+import { EditMemberDrawer } from "./EditMemberDrawer";
 import { MembersBulkActionBar } from "./MembersBulkActionBar";
 import { MemberQuickViewDrawer } from "./MemberQuickViewDrawer";
 import { AppIcon } from "./ui/AppIcon";
@@ -55,6 +60,8 @@ type MembersTableProps = {
   /** True when filters exclude every member but the org is not empty. */
   isFilterEmpty?: boolean;
   onInvite?: () => void;
+  /** Keep parent directory state in sync after Edit Member saves. */
+  onMemberUpdated?: (member: MemberResponse) => void;
 };
 
 type DuesTone = "paid" | "partial" | "overdue" | "missing";
@@ -157,10 +164,16 @@ function MembersDuesCell({ view }: { view: DuesCellView }) {
 function MembersRowActions({
   member,
   alwaysVisible = false,
+  canEdit,
+  onEdit,
 }: {
   member: MemberResponse;
   alwaysVisible?: boolean;
+  canEdit: boolean;
+  onEdit: (member: MemberResponse) => void;
 }) {
+  const mailtoHref = memberMailtoHref(member.email);
+
   return (
     <div
       className={
@@ -179,24 +192,41 @@ function MembersRowActions({
       >
         <AppIcon icon={Eye} size="sm" className="text-current" />
       </Link>
-      <button
-        type="button"
-        className="members-table-icon-action"
-        disabled
-        title="Coming soon"
-        aria-label={`Edit ${member.full_name} (coming soon)`}
-      >
-        <AppIcon icon={Pencil} size="sm" className="text-current" />
-      </button>
-      <button
-        type="button"
-        className="members-table-icon-action"
-        disabled
-        title="Coming soon"
-        aria-label={`Email ${member.full_name} (coming soon)`}
-      >
-        <AppIcon icon={Mail} size="sm" className="text-current" />
-      </button>
+      {canEdit ? (
+        <button
+          type="button"
+          className="members-table-icon-action"
+          title="Edit Member"
+          aria-label={`Edit ${member.full_name}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onEdit(member);
+          }}
+        >
+          <AppIcon icon={Pencil} size="sm" className="text-current" />
+        </button>
+      ) : null}
+      {mailtoHref ? (
+        <a
+          href={mailtoHref}
+          className="members-table-icon-action"
+          title="Send Message"
+          aria-label={`Send Message to ${member.full_name}`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <AppIcon icon={Mail} size="sm" className="text-current" />
+        </a>
+      ) : (
+        <button
+          type="button"
+          className="members-table-icon-action"
+          disabled
+          title="No email on file"
+          aria-label={`Send Message to ${member.full_name} (No email on file)`}
+        >
+          <AppIcon icon={Mail} size="sm" className="text-current" />
+        </button>
+      )}
       <button
         type="button"
         className="members-table-icon-action"
@@ -424,7 +454,9 @@ export function MembersTable({
   duesByMemberId,
   isFilterEmpty = false,
   onInvite,
+  onMemberUpdated,
 }: MembersTableProps) {
+  const { member: currentMember } = useAuth();
   const selectAllId = useId();
   const isMobile = !useMediaQuery("(min-width: 768px)");
   const [internalMembers, setInternalMembers] = useState<MemberResponse[]>([]);
@@ -439,9 +471,13 @@ export function MembersTable({
   const [quickViewMember, setQuickViewMember] = useState<MemberResponse | null>(
     null,
   );
+  const [editMember, setEditMember] = useState<MemberResponse | null>(null);
   const [sortKey, setSortKey] = useState<SortKey | null>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
+  const canEditMembers = Boolean(
+    currentMember && canViewMemberDirectory(currentMember.role),
+  );
   const isControlled = controlledMembers !== undefined;
   const members = isControlled ? controlledMembers : internalMembers;
   const isLoading = isControlled
@@ -598,6 +634,34 @@ export function MembersTable({
     setQuickViewMember(null);
   }
 
+  function openEditMember(member: MemberResponse) {
+    setEditMember(member);
+  }
+
+  function closeEditMember() {
+    setEditMember(null);
+  }
+
+  function handleMemberUpdated(updated: MemberResponse) {
+    if (!isControlled) {
+      setInternalMembers((prev) =>
+        prev.map((row) => (row.id === updated.id ? updated : row)),
+      );
+    }
+    setQuickViewMember((current) =>
+      current?.id === updated.id ? updated : current,
+    );
+    setEditMember((current) =>
+      current?.id === updated.id ? updated : current,
+    );
+    onMemberUpdated?.(updated);
+  }
+
+  const positionHolders = useMemo(
+    () => buildPositionHolders(members),
+    [members],
+  );
+
   function handleRowKeyDown(
     event: KeyboardEvent<HTMLElement>,
     member: MemberResponse,
@@ -728,7 +792,12 @@ export function MembersTable({
                     </dl>
 
                     <div className="members-table-card-actions">
-                      <MembersRowActions member={member} alwaysVisible />
+                      <MembersRowActions
+                        member={member}
+                        alwaysVisible
+                        canEdit={canEditMembers}
+                        onEdit={openEditMember}
+                      />
                     </div>
                   </article>
                 </li>
@@ -868,7 +937,11 @@ export function MembersTable({
                         </span>
                       </td>
                       <td className="members-table-actions-col">
-                        <MembersRowActions member={member} />
+                        <MembersRowActions
+                          member={member}
+                          canEdit={canEditMembers}
+                          onEdit={openEditMember}
+                        />
                       </td>
                     </tr>
                   );
@@ -888,6 +961,15 @@ export function MembersTable({
             ? (duesByMemberId?.get(quickViewMember.id) ?? null)
             : null
         }
+        onEditMember={canEditMembers ? openEditMember : undefined}
+      />
+
+      <EditMemberDrawer
+        member={editMember}
+        open={editMember !== null}
+        onClose={closeEditMember}
+        onMemberUpdated={handleMemberUpdated}
+        positionHolders={positionHolders}
       />
     </>
   );

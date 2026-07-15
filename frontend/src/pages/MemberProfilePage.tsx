@@ -360,7 +360,12 @@ export function MemberProfilePage() {
 
   return (
     <MemberWorkspaceLayout
-      header={<MemberWorkspaceHeader member={profile} />}
+      header={
+        <MemberWorkspaceHeader
+          member={profile}
+          onMemberUpdated={setProfile}
+        />
+      }
       overview={<MemberWorkspaceTodaysSnapshot chips={chips} />}
       responsibilities={
         <MemberWorkspaceCurrentResponsibilities

@@ -22,6 +22,7 @@ import { Drawer } from "../design-system/components/feedback/Drawer";
 import type { MemberResponse } from "../lib/auth-api";
 import type { DuesStatus, MemberDuesRecord } from "../lib/dues-api";
 import { formatCurrency } from "../lib/format-currency";
+import { memberMailtoHref } from "../lib/member-mailto";
 import { formatOutstandingDuesCell } from "../lib/members-directory";
 import {
   formatPositionLabel,
@@ -52,6 +53,8 @@ type MemberQuickViewDrawerProps = {
    * Omitted / empty → elegant empty state (no invented timeline).
    */
   activityItems?: MemberQuickViewActivityItem[];
+  /** When set (board+), shows an enabled Edit Member action. */
+  onEditMember?: (member: MemberResponse) => void;
 };
 
 type QuickStat = {
@@ -181,6 +184,7 @@ export function MemberQuickViewDrawer({
   onClose,
   duesRecord = null,
   activityItems = [],
+  onEditMember,
 }: MemberQuickViewDrawerProps) {
   const navigate = useNavigate();
 
@@ -191,6 +195,7 @@ export function MemberQuickViewDrawer({
   const profilePath = `/members/${member.id}`;
   const dues = formatOutstandingDues(duesRecord);
   const hasActivity = activityItems.length > 0;
+  const mailtoHref = memberMailtoHref(member.email);
 
   const stats: QuickStat[] = [
     {
@@ -282,28 +287,40 @@ export function MemberQuickViewDrawer({
             <AppIcon icon={UserRound} size="xs" className="text-current" />
             View Full Profile
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled
-            title="Coming Soon."
-            aria-label="Edit Member (Coming Soon.)"
-          >
-            <AppIcon icon={Pencil} size="xs" className="text-current" />
-            Edit Member
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled
-            title="Coming Soon."
-            aria-label="Send Message (Coming Soon.)"
-          >
-            <AppIcon icon={Mail} size="xs" className="text-current" />
-            Send Message
-          </Button>
+          {onEditMember ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-label="Edit Member"
+              onClick={() => onEditMember(member)}
+            >
+              <AppIcon icon={Pencil} size="xs" className="text-current" />
+              Edit Member
+            </Button>
+          ) : null}
+          {mailtoHref ? (
+            <a
+              href={mailtoHref}
+              className="members-quick-view-mailto inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-gray-200 bg-surface-card px-3 py-1.5 text-sm font-medium text-foreground transition duration-200 ease-out hover:border-primary/40 hover:bg-badge-teal-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-2"
+              aria-label={`Send Message to ${member.full_name}`}
+            >
+              <AppIcon icon={Mail} size="xs" className="text-current" />
+              Send Message
+            </a>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled
+              title="No email on file"
+              aria-label="Send Message (No email on file)"
+            >
+              <AppIcon icon={Mail} size="xs" className="text-current" />
+              Send Message
+            </Button>
+          )}
         </div>
       }
     >

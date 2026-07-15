@@ -5064,6 +5064,40 @@
     margin-right: auto;
   }
 
+  .members-quick-view-mailto,
+  .member-workspace-mailto {
+    text-decoration: none;
+  }
+
+  .members-edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .members-edit-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .members-edit-talents {
+    margin-top: 0.15rem;
+  }
+
+  .members-edit-role-row {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .members-edit-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
   /* Mobile — bottom sheet */
   @media (max-width: 767px) {
     .members-quick-view-drawer {
