@@ -10,6 +10,10 @@ import { MemberProfilePage } from "./MemberProfilePage";
 vi.mock("../lib/members-api", () => ({
   fetchMemberById: vi.fn(),
   fetchMemberActivity: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+  fetchMemberMeetingAttendanceStreak: vi.fn().mockResolvedValue({
+    member_id: 2,
+    consecutive_missed_meetings: 0,
+  }),
 }));
 
 vi.mock("../lib/member-documents-api", async () => {
@@ -265,6 +269,14 @@ describe("MemberProfilePage today's snapshot", () => {
     ).toBeInTheDocument();
     expect(
       await within(documents).findByText("No documents on file."),
+    ).toBeInTheDocument();
+
+    const insights = screen.getByLabelText("AI Insights");
+    expect(
+      within(insights).getByRole("heading", { name: "AI Insights" }),
+    ).toBeInTheDocument();
+    expect(
+      within(insights).getByText("No notable patterns right now."),
     ).toBeInTheDocument();
   });
 });

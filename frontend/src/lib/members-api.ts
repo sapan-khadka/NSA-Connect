@@ -81,6 +81,21 @@ export async function fetchMemberActivity(
   return response.data;
 }
 
+export type MemberMeetingAttendanceStreakResponse = {
+  member_id: number;
+  consecutive_missed_meetings: number;
+};
+
+/** Trailing consecutive ABSENT meeting roll-call marks for insights. */
+export async function fetchMemberMeetingAttendanceStreak(
+  memberId: number,
+): Promise<MemberMeetingAttendanceStreakResponse> {
+  const response = await api.get<MemberMeetingAttendanceStreakResponse>(
+    `/v1/members/${memberId}/meeting-attendance-streak`,
+  );
+  return response.data;
+}
+
 export async function fetchPendingMembers(): Promise<PendingMembersResponse> {
   const response = await api.get<PendingMembersResponse>("/v1/members/pending");
   return response.data;

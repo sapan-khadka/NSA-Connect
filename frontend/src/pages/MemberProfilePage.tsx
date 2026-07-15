@@ -10,6 +10,7 @@ import { MemberWorkspaceCurrentResponsibilities } from "../components/member-wor
 import { MemberWorkspaceDocuments } from "../components/member-workspace/MemberWorkspaceDocuments";
 import { MemberWorkspaceFinancialStatus } from "../components/member-workspace/MemberWorkspaceFinancialStatus";
 import { MemberWorkspaceHeader } from "../components/member-workspace/MemberWorkspaceHeader";
+import { MemberWorkspaceInsights } from "../components/member-workspace/MemberWorkspaceInsights";
 import { MemberWorkspaceLayout } from "../components/member-workspace/MemberWorkspaceLayout";
 import { MemberWorkspaceRecentActivity } from "../components/member-workspace/MemberWorkspaceRecentActivity";
 import { MemberWorkspaceTodaysSnapshot } from "../components/member-workspace/MemberWorkspaceTodaysSnapshot";
@@ -35,7 +36,11 @@ import {
   takeMemberActivityPreview,
   type MemberActivityItem,
 } from "../lib/member-activity-timeline";
-import { fetchMemberActivity, fetchMemberById } from "../lib/members-api";
+import {
+  fetchMemberActivity,
+  fetchMemberById,
+  fetchMemberMeetingAttendanceStreak,
+} from "../lib/members-api";
 import {
   activeTaskCountFromMyTasks,
   activeTaskCountFromOverviewMember,
@@ -50,6 +55,7 @@ import {
   takeSchedulePreview,
   type ScheduleCommitment,
 } from "../lib/member-workspace-schedule";
+import { buildMemberWorkspaceInsights } from "../lib/member-workspace-insights";
 import {
   buildMemberWorkspaceSnapshot,
   type MemberWorkspaceSnapshotChip,
@@ -137,6 +143,9 @@ export function MemberProfilePage() {
   const [activityItems, setActivityItems] = useState<MemberActivityItem[]>([]);
   const [duesHistory, setDuesHistory] = useState<MemberDuesHistoryItem[]>([]);
   const [duesHistoryUnavailable, setDuesHistoryUnavailable] = useState(false);
+  const [consecutiveMissedMeetings, setConsecutiveMissedMeetings] = useState<
+    number | null
+  >(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -183,6 +192,21 @@ export function MemberProfilePage() {
     [duesHistory],
   );
 
+  const workspaceInsights = useMemo(
+    () =>
+      buildMemberWorkspaceInsights({
+        consecutiveMissedMeetings,
+        financialSummary: duesHistoryUnavailable ? null : financialSummary,
+        tasks: memberTasks,
+      }),
+    [
+      consecutiveMissedMeetings,
+      duesHistoryUnavailable,
+      financialSummary,
+      memberTasks,
+    ],
+  );
+
   const viewAllPath = getResponsibilitiesViewAllPath({
     canViewOversight: canFetchTaskOverview,
   });
@@ -215,10 +239,12 @@ export function MemberProfilePage() {
         setActivityItems([]);
         setDuesHistory([]);
         setDuesHistoryUnavailable(false);
+        setConsecutiveMissedMeetings(null);
 
         const isSelf = currentMember?.id === member.id;
         const semester = getCurrentSemesterSlug();
         const memberRole = isMemberRole(member.role) ? member.role : "general";
+        const canFetchMeetingStreak = isSelf || viewerIsBoard;
 
         const duesHistoryPromise = isSelf
           ? fetchMyDuesHistory().catch(() => null)
@@ -233,6 +259,7 @@ export function MemberProfilePage() {
           scheduleResult,
           activityResult,
           duesHistoryResult,
+          meetingStreakResult,
         ] = await Promise.all([
           canFetchDues
             ? fetchDuesDashboard({ semester }).catch(() => null)
@@ -254,6 +281,9 @@ export function MemberProfilePage() {
             total: 0,
           })),
           duesHistoryPromise,
+          canFetchMeetingStreak
+            ? fetchMemberMeetingAttendanceStreak(member.id).catch(() => null)
+            : Promise.resolve(null),
         ]);
 
         if (cancelled) {
@@ -291,6 +321,9 @@ export function MemberProfilePage() {
           setDuesHistory([]);
           setDuesHistoryUnavailable(!isSelf && !canFetchDues);
         }
+        setConsecutiveMissedMeetings(
+          meetingStreakResult?.consecutive_missed_meetings ?? null,
+        );
         setChips(snapshotFromMember(member, openTaskCount, duesRecord));
       } catch (fetchError) {
         if (!cancelled) {
@@ -301,6 +334,7 @@ export function MemberProfilePage() {
           setActivityItems([]);
           setDuesHistory([]);
           setDuesHistoryUnavailable(false);
+          setConsecutiveMissedMeetings(null);
           setError(getApiErrorMessage(fetchError));
         }
       } finally {
@@ -378,6 +412,7 @@ export function MemberProfilePage() {
           )}
         />
       }
+      insights={<MemberWorkspaceInsights insights={workspaceInsights} />}
     />
   );
 }

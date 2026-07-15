@@ -46,6 +46,10 @@ type MemberWorkspaceLayoutProps = {
    * Rendered in the aside directly under Private Notes (replaces Documents placeholder).
    */
   documents?: ReactNode;
+  /**
+   * Final aside section (replaces AI Insights placeholder).
+   */
+  insights?: ReactNode;
 };
 
 export function MemberWorkspaceLayout({
@@ -56,6 +60,7 @@ export function MemberWorkspaceLayout({
   recentActivity,
   financialStatus,
   documents,
+  insights,
 }: MemberWorkspaceLayoutProps) {
   return (
     <div className="member-workspace">
@@ -133,12 +138,14 @@ export function MemberWorkspaceLayout({
                 density="compact"
               />
             )}
-            <MemberWorkspacePlaceholderCard
-              title="AI Insights"
-              description="Suggested actions and patterns."
-              icon={Sparkles}
-              density="default"
-            />
+            {insights ?? (
+              <MemberWorkspacePlaceholderCard
+                title="AI Insights"
+                description="Suggested actions and patterns."
+                icon={Sparkles}
+                density="default"
+              />
+            )}
           </aside>
         </div>
       </div>

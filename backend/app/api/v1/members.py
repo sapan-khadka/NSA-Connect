@@ -39,6 +39,7 @@ from app.schemas.member_document import (
     MemberDocumentListResponse,
     MemberDocumentResponse,
 )
+from app.schemas.member_insights import MemberMeetingAttendanceStreakResponse
 from app.services.member_activity_service import get_member_activity
 from app.services.member_document_service import (
     MemberDocumentNotFoundError,
@@ -47,6 +48,10 @@ from app.services.member_document_service import (
     delete_member_document,
     list_member_documents,
     replace_member_document,
+)
+from app.services.member_meeting_streak_service import (
+    MemberMeetingStreakPermissionError,
+    get_member_consecutive_missed_meetings,
 )
 from app.services.member_service import (
     InvalidCurrentPasswordError,
@@ -386,6 +391,39 @@ def get_member_activity_endpoint(
         viewer=current_member,
         limit=limit,
     )
+
+
+@router.get(
+    "/{member_id}/meeting-attendance-streak",
+    response_model=MemberMeetingAttendanceStreakResponse,
+)
+def get_member_meeting_attendance_streak_endpoint(
+    member_id: int,
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    """
+    Trailing consecutive ABSENT marks on past meeting roll calls.
+
+    Used by deterministic Member Workspace insights (not generative AI).
+    Access: self or board+.
+    """
+    try:
+        return get_member_consecutive_missed_meetings(
+            db,
+            member_id=member_id,
+            viewer=current_member,
+        )
+    except MemberMeetingStreakPermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not allowed to view this meeting attendance streak",
+        ) from None
+    except MemberNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Member not found",
+        ) from None
 
 
 @router.get(

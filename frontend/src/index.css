@@ -2771,6 +2771,66 @@
     cursor: not-allowed;
   }
 
+  .member-workspace-insights-empty-desc {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--color-label, #9ca3af);
+  }
+
+  .member-workspace-insights-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .member-workspace-insights-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+    border-radius: 0.65rem;
+    background: color-mix(in srgb, var(--color-surface-muted) 35%, white);
+  }
+
+  .member-workspace-insights-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 0.45rem;
+    color: var(--color-label, #6b7280);
+    background: color-mix(in srgb, var(--color-surface-muted) 70%, white);
+  }
+
+  .member-workspace-insights-item--attention .member-workspace-insights-icon {
+    color: #b45309;
+    background: color-mix(in srgb, #b45309 10%, white);
+  }
+
+  .member-workspace-insights-item--risk .member-workspace-insights-icon {
+    color: #b91c1c;
+    background: color-mix(in srgb, #b91c1c 10%, white);
+  }
+
+  .member-workspace-insights-item--positive .member-workspace-insights-icon {
+    color: #0f766e;
+    background: color-mix(in srgb, #0f766e 10%, white);
+  }
+
+  .member-workspace-insights-message {
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    font-weight: 500;
+    color: var(--color-foreground);
+  }
+
   /* Member Profile — balanced two-column SaaS layout */
   .member-profile-page {
     --member-profile-gap: 1rem;
