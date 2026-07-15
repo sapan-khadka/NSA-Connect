@@ -2,9 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import type { EventTaskResponse, TaskOverviewMember } from "./event-tasks-api";
 import {
+  buildOversightMemberSnapshot,
+  classifyOversightHealthStatus,
+  classifyOversightWorkload,
   countOverdueTasks,
   filterOverviewMembersByAssigneeCategory,
+  isDueWithinNext48Hours,
   sortActiveMembers,
+  sortOversightSnapshots,
   splitTaskOverviewMembers,
 } from "./task-oversight";
 
@@ -35,7 +40,8 @@ function task(
 }
 
 function member(
-  overrides: Partial<TaskOverviewMember> & Pick<TaskOverviewMember, "member_id" | "full_name">,
+  overrides: Partial<TaskOverviewMember> &
+    Pick<TaskOverviewMember, "member_id" | "full_name">,
 ): TaskOverviewMember {
   return {
     role: "board",
@@ -71,48 +77,19 @@ describe("task-oversight", () => {
         full_name: "Alex",
         total: 2,
         tasks: [
-          {
+          task({
             id: 1,
-            event_id: 1,
-            event_name: "Dashain",
-            task_kind: "simple",
             title: "Late task",
-            group_name: null,
-            description: "",
-            assignee_id: 1,
-            assignee_name: "Alex",
-            status: "todo",
-            due_date: null,
             is_overdue: true,
             is_complete: false,
-            checklist_items: [],
-            completion_note: null,
-            completion_photo_url: null,
-            completed_at: null,
-            created_by_id: 1,
-            created_at: "2026-03-18T12:00:00Z",
-          },
-          {
+          }),
+          task({
             id: 2,
-            event_id: 1,
-            event_name: "Dashain",
-            task_kind: "simple",
             title: "Done task",
-            group_name: null,
-            description: "",
-            assignee_id: 1,
-            assignee_name: "Alex",
             status: "done",
-            due_date: null,
             is_overdue: true,
             is_complete: true,
-            checklist_items: [],
-            completion_note: null,
-            completion_photo_url: null,
-            completed_at: "2026-03-19T12:00:00Z",
-            created_by_id: 1,
-            created_at: "2026-03-18T12:00:00Z",
-          },
+          }),
         ],
       }),
     ];
@@ -135,27 +112,12 @@ describe("task-oversight", () => {
         total: 2,
         completion_percent: 50,
         tasks: [
-          {
+          task({
             id: 1,
-            event_id: 1,
-            event_name: "Dashain",
-            task_kind: "simple",
             title: "Late",
-            group_name: null,
-            description: "",
-            assignee_id: 2,
-            assignee_name: "Overdue",
-            status: "todo",
-            due_date: null,
             is_overdue: true,
             is_complete: false,
-            checklist_items: [],
-            completion_note: null,
-            completion_photo_url: null,
-            completed_at: null,
-            created_by_id: 1,
-            created_at: "2026-03-18T12:00:00Z",
-          },
+          }),
         ],
       }),
       member({
@@ -249,5 +211,211 @@ describe("task-oversight", () => {
     expect(filterOverviewMembersByAssigneeCategory(members, "all")).toEqual(
       members,
     );
+  });
+});
+
+describe("task-oversight health & workload thresholds", () => {
+  const now = new Date("2026-07-15T12:00:00.000Z");
+
+  it("classifies COMPLETED only when all tasks are done and total ≥ 1", () => {
+    expect(
+      classifyOversightHealthStatus(
+        member({
+          member_id: 1,
+          full_name: "Done",
+          total: 2,
+          completed: 2,
+          tasks: [
+            task({ id: 1, title: "A", status: "done", is_complete: true }),
+            task({ id: 2, title: "B", status: "done", is_complete: true }),
+          ],
+        }),
+        now,
+      ),
+    ).toBe("completed");
+
+    expect(
+      classifyOversightHealthStatus(
+        member({ member_id: 2, full_name: "Empty", total: 0, tasks: [] }),
+        now,
+      ),
+    ).toBe("no_data");
+  });
+
+  it("classifies OVERDUE when any open task is overdue", () => {
+    expect(
+      classifyOversightHealthStatus(
+        member({
+          member_id: 1,
+          full_name: "Late",
+          total: 2,
+          completed: 1,
+          tasks: [
+            task({ id: 1, title: "Done", status: "done", is_complete: true }),
+            task({
+              id: 2,
+              title: "Late",
+              is_overdue: true,
+              is_complete: false,
+            }),
+          ],
+        }),
+        now,
+      ),
+    ).toBe("overdue");
+  });
+
+  it("classifies AT RISK for due-within-48h without overdue", () => {
+    expect(
+      isDueWithinNext48Hours(
+        task({
+          id: 1,
+          title: "Soon",
+          due_date: "2026-07-16T10:00:00.000Z",
+        }),
+        now,
+      ),
+    ).toBe(true);
+
+    expect(
+      classifyOversightHealthStatus(
+        member({
+          member_id: 1,
+          full_name: "Soon",
+          total: 2,
+          completed: 1,
+          completion_percent: 50,
+          tasks: [
+            task({ id: 1, title: "Done", status: "done", is_complete: true }),
+            task({
+              id: 2,
+              title: "Due soon",
+              due_date: "2026-07-16T10:00:00.000Z",
+            }),
+          ],
+        }),
+        now,
+      ),
+    ).toBe("at_risk");
+  });
+
+  it("classifies AT RISK for completion below 50% with open work and no overdue", () => {
+    expect(
+      classifyOversightHealthStatus(
+        member({
+          member_id: 1,
+          full_name: "Behind",
+          total: 4,
+          completed: 1,
+          tasks: [
+            task({ id: 1, title: "Done", status: "done", is_complete: true }),
+            task({ id: 2, title: "Open A" }),
+            task({ id: 3, title: "Open B" }),
+            task({ id: 4, title: "Open C" }),
+          ],
+        }),
+        now,
+      ),
+    ).toBe("at_risk");
+  });
+
+  it("classifies ON TRACK with no overdue, no due-soon, and completion ≥ 50%", () => {
+    expect(
+      classifyOversightHealthStatus(
+        member({
+          member_id: 1,
+          full_name: "Steady",
+          total: 2,
+          completed: 1,
+          tasks: [
+            task({ id: 1, title: "Done", status: "done", is_complete: true }),
+            task({
+              id: 2,
+              title: "Later",
+              due_date: "2026-08-01T12:00:00.000Z",
+            }),
+          ],
+        }),
+        now,
+      ),
+    ).toBe("on_track");
+  });
+
+  it("applies exact workload bands and overloaded override", () => {
+    expect(classifyOversightWorkload(0, 0)).toBe("low");
+    expect(classifyOversightWorkload(2, 0)).toBe("low");
+    expect(classifyOversightWorkload(3, 0)).toBe("medium");
+    expect(classifyOversightWorkload(5, 0)).toBe("medium");
+    expect(classifyOversightWorkload(6, 0)).toBe("high");
+    expect(classifyOversightWorkload(9, 0)).toBe("high");
+    expect(classifyOversightWorkload(10, 0)).toBe("overloaded");
+    expect(classifyOversightWorkload(2, 3)).toBe("overloaded");
+  });
+
+  it("sorts snapshots Overdue → At Risk → On Track → Completed by default", () => {
+    const snapshots = [
+      buildOversightMemberSnapshot(
+        member({
+          member_id: 1,
+          full_name: "Complete",
+          total: 1,
+          tasks: [
+            task({ id: 1, title: "Done", status: "done", is_complete: true }),
+          ],
+        }),
+        now,
+      ),
+      buildOversightMemberSnapshot(
+        member({
+          member_id: 2,
+          full_name: "Late",
+          total: 1,
+          tasks: [
+            task({
+              id: 2,
+              title: "Late",
+              is_overdue: true,
+              is_complete: false,
+            }),
+          ],
+        }),
+        now,
+      ),
+      buildOversightMemberSnapshot(
+        member({
+          member_id: 3,
+          full_name: "Steady",
+          total: 2,
+          tasks: [
+            task({ id: 3, title: "Done", status: "done", is_complete: true }),
+            task({
+              id: 4,
+              title: "Later",
+              due_date: "2026-08-01T12:00:00.000Z",
+            }),
+          ],
+        }),
+        now,
+      ),
+      buildOversightMemberSnapshot(
+        member({
+          member_id: 4,
+          full_name: "Risk",
+          total: 3,
+          tasks: [
+            task({ id: 5, title: "Open A" }),
+            task({ id: 6, title: "Open B" }),
+            task({ id: 7, title: "Open C" }),
+          ],
+        }),
+        now,
+      ),
+    ];
+
+    expect(
+      sortOversightSnapshots(snapshots, "status").map(
+        (row) => row.member.full_name,
+      ),
+    ).toEqual(["Late", "Risk", "Steady", "Complete"]);
   });
 });

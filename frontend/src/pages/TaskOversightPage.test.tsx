@@ -9,6 +9,50 @@ vi.mock("../lib/event-tasks-api", () => ({
   fetchTaskOverview: vi.fn(),
 }));
 
+vi.mock("../lib/members-api", () => ({
+  fetchMembers: vi.fn().mockResolvedValue({
+    members: [
+      {
+        id: 5,
+        full_name: "Board Member",
+        email: "board@semo.edu",
+        student_id: "1",
+        major: "CS",
+        graduation_year: 2028,
+        role: "board",
+        status: "approved",
+        position: "event_manager",
+      },
+      {
+        id: 6,
+        full_name: "Idle Member",
+        email: "idle@semo.edu",
+        student_id: "2",
+        major: "CS",
+        graduation_year: 2028,
+        role: "board",
+        status: "approved",
+        position: "member",
+      },
+      {
+        id: 2,
+        full_name: "Needs Help",
+        email: "needs@semo.edu",
+        student_id: "3",
+        major: "CS",
+        graduation_year: 2028,
+        role: "board",
+        status: "approved",
+        position: "member",
+      },
+    ],
+    total: 3,
+    page: 1,
+    page_size: 100,
+    total_pages: 1,
+  }),
+}));
+
 import { fetchTaskOverview } from "../lib/event-tasks-api";
 import { TaskOversightPage } from "./TaskOversightPage";
 
@@ -19,7 +63,10 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-function renderPage(role: "president" | "board", position: "member" | "vice_president") {
+function renderPage(
+  role: "president" | "board",
+  position: "member" | "vice_president",
+) {
   return render(
     <MockAuthProvider
       value={{
@@ -42,6 +89,7 @@ function taskFixture(
     is_overdue: boolean;
     is_complete: boolean;
     completion_note: string | null;
+    due_date: string | null;
     assignee_has_volunteer_signup: boolean;
   }> = {},
 ) {
@@ -56,7 +104,7 @@ function taskFixture(
     assignee_id: 5,
     assignee_name: "Board Member",
     status: overrides.status ?? "done",
-    due_date: null,
+    due_date: overrides.due_date ?? null,
     is_overdue: overrides.is_overdue ?? false,
     is_complete: overrides.is_complete ?? overrides.status === "done",
     checklist_items: [],
@@ -65,7 +113,8 @@ function taskFixture(
     completed_at: "2026-03-19T12:00:00Z",
     created_by_id: 1,
     created_at: "2026-03-18T12:00:00Z",
-    assignee_has_volunteer_signup: overrides.assignee_has_volunteer_signup ?? false,
+    assignee_has_volunteer_signup:
+      overrides.assignee_has_volunteer_signup ?? false,
   };
 }
 
@@ -79,7 +128,7 @@ describe("TaskOversightPage", () => {
     expect(mockedOverview).not.toHaveBeenCalled();
   });
 
-  it("renders summary stats and active assignment cards", async () => {
+  it("renders team health and people-first member cards", async () => {
     mockedOverview.mockResolvedValue({
       total_tasks: 2,
       completed_tasks: 1,
@@ -94,7 +143,17 @@ describe("TaskOversightPage", () => {
           in_progress: 0,
           todo: 1,
           completion_percent: 50,
-          tasks: [taskFixture()],
+          tasks: [
+            taskFixture({ id: 1, title: "Book venue", status: "done" }),
+            taskFixture({
+              id: 2,
+              title: "Later task",
+              status: "todo",
+              is_complete: false,
+              completion_note: null,
+              due_date: "2026-08-01T12:00:00.000Z",
+            }),
+          ],
         },
         {
           member_id: 6,
@@ -113,42 +172,97 @@ describe("TaskOversightPage", () => {
 
     renderPage("president", "member");
 
-    expect(await screen.findByText("Total tasks")).toBeInTheDocument();
-    expect(screen.getByText("2", { selector: ".ds-stat-value" })).toBeInTheDocument();
-    expect(screen.getByText("Overdue")).toBeInTheDocument();
-    expect(screen.getByText("50%", { selector: ".ds-stat-value" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Today's Team Health" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Overall completion")).toBeInTheDocument();
+    expect(screen.getByText("50%")).toBeInTheDocument();
 
-    expect(screen.getByRole("heading", { name: "Active assignments" })).toBeInTheDocument();
-    expect(screen.getByText("Board Member")).toBeInTheDocument();
-    expect(screen.getByText("Book venue")).toBeInTheDocument();
-    expect(screen.getByText("Note: Reserved hall")).toBeInTheDocument();
-    expect(screen.getByText("1/2 done (50%)")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Needs Attention" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Everyone Else" }),
+    ).toBeInTheDocument();
 
-    const unassignedSection = screen
-      .getByRole("heading", { name: "No tasks assigned" })
+    const everyoneElse = screen
+      .getByRole("heading", { name: "Everyone Else" })
       .closest("section");
-    expect(unassignedSection).not.toBeNull();
-    expect(within(unassignedSection!).getByText("Idle Member")).toBeInTheDocument();
-    expect(screen.queryByText("No tasks assigned.")).not.toBeInTheDocument();
-    expect(screen.queryByText("0/0 done")).not.toBeInTheDocument();
+    expect(everyoneElse).not.toBeNull();
+    expect(
+      within(everyoneElse!).getByText("Board Member"),
+    ).toBeInTheDocument();
+    expect(within(everyoneElse!).getByText("Idle Member")).toBeInTheDocument();
+    expect(within(everyoneElse!).getByText("On Track")).toBeInTheDocument();
+    expect(within(everyoneElse!).getByText("No tasks")).toBeInTheDocument();
+
+    expect(screen.queryByText("Book venue")).not.toBeInTheDocument();
+
+    const boardCard = screen.getByLabelText("Board Member, On Track");
+    await userEvent.click(
+      within(boardCard).getByRole("button", {
+        name: "Expand tasks for Board Member",
+      }),
+    );
+    expect(within(boardCard).getByText("Book venue")).toBeInTheDocument();
+    expect(within(boardCard).getByText("Later task")).toBeInTheDocument();
+    expect(
+      within(boardCard).getByLabelText("Tasks").querySelectorAll("li"),
+    ).toHaveLength(2);
+
+    expect(
+      within(boardCard).getByRole("link", {
+        name: "Open Workspace for Board Member",
+      }),
+    ).toHaveAttribute("href", "/members/5");
+    expect(
+      within(boardCard).getByRole("link", { name: "Message Board Member" }),
+    ).toHaveAttribute("href", "mailto:board@semo.edu");
+    expect(
+      within(boardCard).getByRole("link", {
+        name: "Assign Task for Board Member",
+      }),
+    ).toHaveAttribute("href", "/events/calendar");
   });
 
-  it("sorts active members with incomplete first by default", async () => {
+  it("sorts Needs Attention with Overdue before At Risk by default", async () => {
     mockedOverview.mockResolvedValue({
       total_tasks: 3,
-      completed_tasks: 1,
+      completed_tasks: 0,
       members: [
         {
           member_id: 1,
-          full_name: "Almost Done",
+          full_name: "At Risk Member",
           role: "board",
           position: "member",
-          total: 2,
-          completed: 1,
+          total: 3,
+          completed: 0,
           in_progress: 0,
-          todo: 1,
-          completion_percent: 50,
-          tasks: [taskFixture({ id: 1, title: "Finish setup" })],
+          todo: 3,
+          completion_percent: 0,
+          tasks: [
+            taskFixture({
+              id: 1,
+              title: "Open A",
+              status: "todo",
+              is_complete: false,
+              completion_note: null,
+            }),
+            taskFixture({
+              id: 2,
+              title: "Open B",
+              status: "todo",
+              is_complete: false,
+              completion_note: null,
+            }),
+            taskFixture({
+              id: 3,
+              title: "Open C",
+              status: "todo",
+              is_complete: false,
+              completion_note: null,
+            }),
+          ],
         },
         {
           member_id: 2,
@@ -162,7 +276,53 @@ describe("TaskOversightPage", () => {
           completion_percent: 0,
           tasks: [
             taskFixture({
-              id: 2,
+              id: 4,
+              title: "Overdue task",
+              status: "todo",
+              is_overdue: true,
+              is_complete: false,
+              completion_note: null,
+            }),
+          ],
+        },
+      ],
+    });
+
+    renderPage("vice_president", "vice_president");
+
+    expect(await screen.findByText("Needs Help")).toBeInTheDocument();
+
+    const attention = screen
+      .getByRole("heading", { name: "Needs Attention" })
+      .closest("section");
+    expect(attention).not.toBeNull();
+
+    const names = within(attention!)
+      .getAllByRole("heading", { level: 3 })
+      .map((heading) => heading.textContent);
+
+    expect(names).toEqual(["Needs Help", "At Risk Member"]);
+  });
+
+  it("filters member lists when a team-health status tile is clicked", async () => {
+    const user = userEvent.setup();
+    mockedOverview.mockResolvedValue({
+      total_tasks: 2,
+      completed_tasks: 0,
+      members: [
+        {
+          member_id: 2,
+          full_name: "Needs Help",
+          role: "board",
+          position: "member",
+          total: 1,
+          completed: 0,
+          in_progress: 0,
+          todo: 1,
+          completion_percent: 0,
+          tasks: [
+            taskFixture({
+              id: 1,
               title: "Overdue task",
               status: "todo",
               is_overdue: true,
@@ -172,85 +332,32 @@ describe("TaskOversightPage", () => {
           ],
         },
         {
-          member_id: 3,
-          full_name: "Idle Member",
+          member_id: 5,
+          full_name: "Board Member",
           role: "board",
-          position: "member",
-          total: 0,
-          completed: 0,
+          position: "event_manager",
+          total: 1,
+          completed: 1,
           in_progress: 0,
           todo: 0,
-          completion_percent: 0,
-          tasks: [],
-        },
-      ],
-    });
-
-    renderPage("vice_president", "vice_president");
-
-    expect(await screen.findByText("Needs Help")).toBeInTheDocument();
-
-    const activeSection = screen
-      .getByRole("heading", { name: "Active assignments" })
-      .closest("section");
-    expect(activeSection).not.toBeNull();
-
-    const activeNames = within(activeSection!)
-      .getAllByRole("heading", { level: 3 })
-      .map((heading) => heading.textContent);
-
-    expect(activeNames).toEqual(["Needs Help", "Almost Done"]);
-    expect(screen.getByText("1", { selector: ".ds-stat-overdue-chip" })).toBeInTheDocument();
-  });
-
-  it("supports alphabetical sorting for active assignments", async () => {
-    mockedOverview.mockResolvedValue({
-      total_tasks: 2,
-      completed_tasks: 0,
-      members: [
-        {
-          member_id: 1,
-          full_name: "Zoe",
-          role: "board",
-          position: "member",
-          total: 1,
-          completed: 0,
-          in_progress: 0,
-          todo: 1,
-          completion_percent: 0,
-          tasks: [taskFixture({ id: 1, title: "Z task", completion_note: null })],
-        },
-        {
-          member_id: 2,
-          full_name: "Amy",
-          role: "board",
-          position: "member",
-          total: 1,
-          completed: 0,
-          in_progress: 0,
-          todo: 1,
-          completion_percent: 0,
-          tasks: [taskFixture({ id: 2, title: "A task", completion_note: null })],
+          completion_percent: 100,
+          tasks: [taskFixture({ id: 2, title: "Done", status: "done" })],
         },
       ],
     });
 
     renderPage("president", "member");
 
-    const sortSelect = await screen.findByRole("combobox", { name: "Sort by" });
-    await userEvent.selectOptions(sortSelect, "alphabetical");
+    expect(await screen.findByText("Needs Help")).toBeInTheDocument();
+    expect(screen.getByText("Board Member")).toBeInTheDocument();
 
-    const activeSection = screen
-      .getByRole("heading", { name: "Active assignments" })
-      .closest("section");
-    const activeNames = within(activeSection!)
-      .getAllByRole("heading", { level: 3 })
-      .map((heading) => heading.textContent);
+    await user.click(screen.getByRole("button", { name: "Filter Overdue" }));
 
-    expect(activeNames).toEqual(["Amy", "Zoe"]);
+    expect(screen.getByText("Needs Help")).toBeInTheDocument();
+    expect(screen.queryByText("Board Member")).not.toBeInTheDocument();
   });
 
-  it("filters active assignments by assignee category", async () => {
+  it("filters by assignee category", async () => {
     const user = userEvent.setup();
     mockedOverview.mockResolvedValue({
       total_tasks: 3,
@@ -286,6 +393,7 @@ describe("TaskOversightPage", () => {
               is_complete: false,
               completion_note: null,
               assignee_has_volunteer_signup: true,
+              due_date: "2026-08-01T12:00:00.000Z",
             }),
             taskFixture({
               id: 3,
@@ -309,8 +417,5 @@ describe("TaskOversightPage", () => {
 
     expect(screen.queryByText("Board Member")).not.toBeInTheDocument();
     expect(screen.getByText("apsana")).toBeInTheDocument();
-    expect(screen.getByText("Help with tihar")).toBeInTheDocument();
-    expect(screen.queryByText("Other task")).not.toBeInTheDocument();
-    expect(screen.getByText("0/1 done (0%)")).toBeInTheDocument();
   });
 });

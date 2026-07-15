@@ -5729,4 +5729,424 @@
       border-bottom: 1px solid #ddd;
     }
   }
+
+  /* Task Oversight — people-first dashboard */
+  .task-oversight {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    max-width: 72rem;
+  }
+
+  .task-oversight-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .task-oversight-title {
+    margin: 0;
+    font-size: 1.65rem;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    color: var(--color-foreground);
+  }
+
+  .task-oversight-subtitle,
+  .task-oversight-section-desc {
+    margin: 0.3rem 0 0;
+    font-size: 0.875rem;
+    color: var(--color-label, #6b7280);
+  }
+
+  .task-oversight-section-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--color-foreground);
+  }
+
+  .task-oversight-health-heading,
+  .task-oversight-section-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .task-oversight-health-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  @media (min-width: 768px) {
+    .task-oversight-health-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  .task-oversight-health-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 0.75rem;
+    background: var(--color-surface-card, #fff);
+    text-align: left;
+    cursor: pointer;
+    transition:
+      border-color 120ms ease,
+      box-shadow 120ms ease;
+  }
+
+  .task-oversight-health-tile--complete {
+    cursor: default;
+  }
+
+  .task-oversight-health-tile:hover:not(.task-oversight-health-tile--complete),
+  .task-oversight-health-tile.is-active {
+    border-color: color-mix(in srgb, var(--color-primary) 35%, #e5e7eb);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+
+  .task-oversight-health-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-label, #6b7280);
+  }
+
+  .task-oversight-health-value {
+    font-size: 1.65rem;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    color: var(--color-foreground);
+  }
+
+  .task-oversight-health-tile--overdue .task-oversight-health-value {
+    color: var(--color-overdue, #b91c1c);
+  }
+
+  .task-oversight-health-tile--at_risk .task-oversight-health-value {
+    color: #b45309;
+  }
+
+  .task-oversight-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.55rem;
+  }
+
+  .task-oversight-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8125rem;
+    color: var(--color-label, #6b7280);
+  }
+
+  .task-oversight-input,
+  .task-oversight-select {
+    min-height: 2.25rem;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 0.55rem;
+    background: #fff;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.8125rem;
+    color: var(--color-foreground);
+  }
+
+  .task-oversight-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .task-oversight-card {
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 0.85rem;
+    background: var(--color-surface-card, #fff);
+    padding: 0.75rem 0.85rem;
+  }
+
+  .task-oversight-card-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.65rem;
+  }
+
+  .task-oversight-card-toggle {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    min-width: 0;
+    flex: 1;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .task-oversight-card-identity {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .task-oversight-card-title-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .task-oversight-card-name {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 550;
+    color: var(--color-foreground);
+  }
+
+  .task-oversight-card-role {
+    margin: 0.2rem 0 0;
+    font-size: 0.75rem;
+    color: var(--color-label, #6b7280);
+  }
+
+  .task-oversight-status-badge,
+  .task-oversight-workload-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0.1rem 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  .task-oversight-status-badge--overdue {
+    background: color-mix(in srgb, var(--color-overdue, #b91c1c) 12%, white);
+    color: var(--color-overdue, #b91c1c);
+  }
+
+  .task-oversight-status-badge--at_risk {
+    background: #fff7ed;
+    color: #b45309;
+  }
+
+  .task-oversight-status-badge--on_track {
+    background: color-mix(in srgb, var(--color-primary) 12%, white);
+    color: var(--color-primary);
+  }
+
+  .task-oversight-status-badge--completed {
+    background: #ecfdf5;
+    color: #047857;
+  }
+
+  .task-oversight-status-badge--no_data {
+    background: var(--color-surface-muted, #f3f4f6);
+    color: var(--color-label, #6b7280);
+  }
+
+  .task-oversight-workload-badge {
+    background: var(--color-surface-muted, #f3f4f6);
+    color: var(--color-label, #6b7280);
+  }
+
+  .task-oversight-workload-badge--overloaded {
+    background: color-mix(in srgb, var(--color-overdue, #b91c1c) 12%, white);
+    color: var(--color-overdue, #b91c1c);
+  }
+
+  .task-oversight-chevron {
+    margin-top: 0.35rem;
+    color: var(--color-label, #6b7280);
+    transition: transform 150ms ease;
+  }
+
+  .task-oversight-chevron.is-open {
+    transform: rotate(180deg);
+  }
+
+  .task-oversight-card-actions {
+    display: none;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .task-oversight-card:hover .task-oversight-card-actions,
+  .task-oversight-card:focus-within .task-oversight-card-actions {
+    display: flex;
+  }
+
+  @media (max-width: 767px) {
+    .task-oversight-card-actions {
+      display: flex;
+      width: 100%;
+    }
+  }
+
+  .task-oversight-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 999px;
+    padding: 0.25rem 0.55rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--color-label, #6b7280);
+    text-decoration: none;
+    background: #fff;
+  }
+
+  .task-oversight-action:hover {
+    color: var(--color-foreground);
+    border-color: color-mix(in srgb, var(--color-primary) 30%, #e5e7eb);
+  }
+
+  .task-oversight-action.is-disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .task-oversight-card-summary {
+    margin-top: 0.7rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .task-oversight-progress {
+    display: flex;
+    width: 100%;
+    height: 0.4rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--color-surface-muted, #f3f4f6);
+    gap: 1px;
+  }
+
+  .task-oversight-progress.is-empty {
+    background: var(--color-surface-muted, #f3f4f6);
+  }
+
+  .task-oversight-progress-seg {
+    min-width: 0.35rem;
+    height: 100%;
+  }
+
+  .task-oversight-progress-seg.is-done {
+    background: #10b981;
+  }
+
+  .task-oversight-progress-seg.is-active {
+    background: color-mix(in srgb, var(--color-primary) 70%, #93c5fd);
+  }
+
+  .task-oversight-progress-seg.is-overdue {
+    background: var(--color-overdue, #b91c1c);
+  }
+
+  .task-oversight-card-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.35rem 0.75rem;
+    font-size: 0.75rem;
+    color: var(--color-label, #6b7280);
+  }
+
+  .task-oversight-meta-label {
+    margin-right: 0.35rem;
+    font-weight: 600;
+    color: var(--color-foreground);
+  }
+
+  .task-oversight-next-due,
+  .task-oversight-completion {
+    margin: 0;
+  }
+
+  .task-oversight-task-list {
+    list-style: none;
+    margin: 0.75rem 0 0;
+    padding: 0.65rem 0 0;
+    border-top: 1px solid var(--color-border, #e5e7eb);
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .task-oversight-task-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.35rem 0.75rem;
+    padding: 0.55rem 0.65rem;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 0.6rem;
+    background: color-mix(in srgb, var(--color-surface-muted) 55%, white);
+  }
+
+  .task-oversight-task-title {
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 550;
+    color: var(--color-foreground);
+  }
+
+  .task-oversight-task-meta,
+  .task-oversight-task-note,
+  .task-oversight-task-empty {
+    margin: 0.2rem 0 0;
+    font-size: 0.72rem;
+    color: var(--color-label, #6b7280);
+  }
+
+  .task-oversight-task-note {
+    grid-column: 1 / -1;
+  }
+
+  .task-oversight-task-status {
+    align-self: start;
+    border-radius: 999px;
+    padding: 0.1rem 0.45rem;
+    font-size: 0.675rem;
+    font-weight: 600;
+    background: var(--color-surface-muted, #f3f4f6);
+    color: var(--color-foreground);
+  }
+
+  .task-oversight-task-status--done {
+    background: #ecfdf5;
+    color: #047857;
+  }
+
+  .task-oversight-task-photo-link {
+    grid-column: 1 / -1;
+  }
+
+  .task-oversight-task-photo {
+    height: 3.5rem;
+    width: 3.5rem;
+    border-radius: 0.4rem;
+    object-fit: cover;
+  }
+
+  .task-oversight-empty {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--color-label, #6b7280);
+  }
 }
