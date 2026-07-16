@@ -4,7 +4,7 @@
  */
 
 import {
-  CalendarDays,
+  Calendar,
   Clock,
   MapPin,
   Users,
@@ -292,9 +292,12 @@ export function EventOverviewCard({
     selectedDate != null &&
     dayEvents.length === 0;
 
+  const coverUrl = previewEvent?.event_photo_url?.trim() || null;
+  const hasCoverImage = Boolean(coverUrl);
+
   const metaItems = [
     heroDate
-      ? { key: "date", icon: CalendarDays, value: heroDate }
+      ? { key: "date", icon: Calendar, value: heroDate }
       : null,
     heroTime ? { key: "time", icon: Clock, value: heroTime } : null,
     heroLocation
@@ -305,7 +308,7 @@ export function EventOverviewCard({
       : null,
   ].filter(Boolean) as Array<{
     key: string;
-    icon: typeof CalendarDays;
+    icon: typeof Calendar;
     value: string;
   }>;
 
@@ -402,26 +405,46 @@ export function EventOverviewCard({
 
       {previewEvent ? (
         <div key={previewEvent.id} className="details-panel-content">
-          <DetailsHero
-            className="details-panel-hero--compact"
-            title={previewEvent.name}
-            imageUrl={previewEvent.event_photo_url}
-            fallbackStyle={{
-              background: `linear-gradient(145deg, ${heroColor} 0%, color-mix(in srgb, ${heroColor} 45%, #111) 100%)`,
-            }}
-            badges={
-              <>
-                <Badge variant="primary" size="sm">
+          {hasCoverImage ? (
+            <DetailsHero
+              variant="banner"
+              imageUrl={coverUrl}
+              badges={
+                <span className="details-panel-hero-badge">
                   {EVENT_TYPE_LABELS[eventType]}
-                </Badge>
-                {countdown ? (
+                </span>
+              }
+              badgeEnd={
+                countdown ? (
                   <span className="details-panel-hero-badge">{countdown}</span>
-                ) : null}
-              </>
-            }
-          />
+                ) : null
+              }
+            />
+          ) : (
+            <DetailsHero
+              className="details-panel-hero--compact"
+              title={previewEvent.name}
+              fallbackStyle={{
+                background: `linear-gradient(145deg, ${heroColor} 0%, color-mix(in srgb, ${heroColor} 45%, #111) 100%)`,
+              }}
+              badges={
+                <>
+                  <Badge variant="primary" size="sm">
+                    {EVENT_TYPE_LABELS[eventType]}
+                  </Badge>
+                  {countdown ? (
+                    <span className="details-panel-hero-badge">{countdown}</span>
+                  ) : null}
+                </>
+              }
+            />
+          )}
 
           <div className="details-panel-body details-panel-body--dense">
+            {hasCoverImage ? (
+              <h3 className="details-panel-event-title">{previewEvent.name}</h3>
+            ) : null}
+
             <DetailsMetadata
               aria-label="Event details"
               className="details-panel-meta--dense"

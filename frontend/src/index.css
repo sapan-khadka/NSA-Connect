@@ -5554,6 +5554,11 @@
     .details-panel-hero--compact .details-panel-hero-copy {
       min-height: 3.25rem;
     }
+
+    .details-panel-hero--banner {
+      height: 11.25rem;
+      min-height: 11.25rem;
+    }
   }
 
   .events-preview-aside {
@@ -5743,9 +5748,50 @@
     inset: 0;
     background: linear-gradient(
       180deg,
-      rgba(15, 23, 42, 0.08) 0%,
-      rgba(15, 23, 42, 0.68) 100%
+      rgba(15, 23, 42, 0.12) 0%,
+      rgba(15, 23, 42, 0.08) 40%,
+      rgba(15, 23, 42, 0.72) 100%
     );
+  }
+
+  .details-panel-hero--banner {
+    height: 11.25rem;
+    min-height: 11.25rem;
+    margin: 0 0.7rem;
+    @apply rounded-card;
+  }
+
+  .details-panel-hero--banner .details-panel-hero-shade {
+    background: linear-gradient(
+      180deg,
+      rgba(15, 23, 42, 0.2) 0%,
+      rgba(15, 23, 42, 0.05) 45%,
+      rgba(15, 23, 42, 0.78) 100%
+    );
+  }
+
+  .details-panel-hero-banner-chrome {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.55rem 0.6rem;
+    pointer-events: none;
+  }
+
+  .details-panel-hero-badge-slot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+
+  .details-panel-hero-badge-slot--end {
+    justify-content: flex-end;
   }
 
   .details-panel-hero-copy {
@@ -5777,7 +5823,7 @@
   }
 
   .details-panel-hero-badge {
-    @apply inline-flex items-center rounded-full bg-black/30 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm;
+    @apply inline-flex items-center rounded-full bg-black/35 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-sm;
   }
 
   .details-panel-hero-title {
@@ -5787,6 +5833,11 @@
 
   .details-panel-hero--compact .details-panel-hero-title {
     @apply text-sm;
+  }
+
+  .details-panel-event-title {
+    @apply text-[0.9375rem] font-semibold leading-snug tracking-tight text-foreground;
+    margin: 0;
   }
 
   .details-panel-meta {

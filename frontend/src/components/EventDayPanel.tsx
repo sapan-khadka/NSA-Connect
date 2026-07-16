@@ -1,3 +1,8 @@
+/**
+ * Calendar sidebar event inspector shell.
+ * Detail content (cover hero, RSVP, actions) lives in EventOverviewCard.
+ */
+
 import { EventOverviewCard } from "./EventOverviewCard";
 import {
   UPCOMING_GROUP_LABELS,
