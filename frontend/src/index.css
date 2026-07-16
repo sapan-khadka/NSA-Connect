@@ -5355,6 +5355,14 @@
     gap: 0.5rem;
   }
 
+  .events-calendar-stats-strip {
+    flex-shrink: 0;
+  }
+
+  .events-calendar-stats-strip > * {
+    min-width: 0;
+  }
+
   .events-calendar-toolbar {
     display: flex;
     flex-wrap: wrap;
@@ -5451,11 +5459,15 @@
   }
 
   @media (min-width: 1280px) {
-    /* Calendar + sidebar + upcoming strip in one viewport (no KPI row). */
+    /* Calendar + sidebar + upcoming strip in one viewport. */
     .events-calendar-page {
       height: calc(100vh - 8.5rem);
       max-height: calc(100vh - 8.5rem);
       overflow: hidden;
+      gap: 0.4rem;
+    }
+
+    .events-calendar-stats-strip {
       gap: 0.4rem;
     }
 
