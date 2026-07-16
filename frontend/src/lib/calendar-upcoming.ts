@@ -71,6 +71,16 @@ export function classifyUpcomingEvent(
   return "later";
 }
 
+/**
+ * Same selector as Home “Next: …” / Upcoming Events KPI —
+ * first upcoming non-meeting event from `fetchUpcomingEvents` results.
+ */
+export function findNextNonMeetingEvent(
+  events: EventResponse[],
+): EventResponse | null {
+  return events.find((event) => event.event_type !== "meeting") ?? null;
+}
+
 export function groupUpcomingEvents(
   events: EventResponse[],
   now: Date = new Date(),

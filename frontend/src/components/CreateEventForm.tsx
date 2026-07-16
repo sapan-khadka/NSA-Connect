@@ -30,11 +30,16 @@ import { DraftPrepChecklist } from "./DraftPrepChecklist";
 
 type CreateEventFormProps = {
   onCreated: (event: EventResponse) => void;
+  /** When true, form is always open without expand/collapse chrome (modal use). */
+  embedded?: boolean;
 };
 
 const inputClassName = `${inputFieldClassName} mt-1`;
 
-export function CreateEventForm({ onCreated }: CreateEventFormProps) {
+export function CreateEventForm({
+  onCreated,
+  embedded = false,
+}: CreateEventFormProps) {
   const [values, setValues] = useState<CreateEventFormValues>(
     initialCreateEventValues,
   );
@@ -44,7 +49,7 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
   const [isGeneratingChecklist, setIsGeneratingChecklist] = useState(false);
   const [checklistError, setChecklistError] = useState<string | null>(null);
   const [draftChecklist, setDraftChecklist] = useState<ChecklistCategory[]>([]);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(embedded);
   const [eventPhotoFile, setEventPhotoFile] = useState<File | null>(null);
 
   function updateField<K extends keyof CreateEventFormValues>(
@@ -153,40 +158,51 @@ export function CreateEventForm({ onCreated }: CreateEventFormProps) {
 
   const canGenerateChecklist = values.name.trim().length > 0;
   const draftTaskCount = countChecklistTasks(draftChecklist);
+  const showForm = embedded || isExpanded;
 
   return (
     <Card
       padding="sm"
-      className="shadow-card"
+      className={embedded ? "border-0 shadow-none" : "shadow-card"}
       data-testid="create-event-card"
       aria-labelledby="create-event-heading"
     >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2
-            id="create-event-heading"
-            className="text-base font-medium text-foreground"
+      {embedded ? (
+        <h2 id="create-event-heading" className="sr-only">
+          Create event
+        </h2>
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2
+              id="create-event-heading"
+              className="text-base font-medium text-foreground"
+            >
+              Create event
+            </h2>
+            <p className="mt-1 text-sm text-label">
+              Schedule a new NSA event for the calendar.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsExpanded((current) => !current)}
+            className="rounded-md border border-gray-200 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:border-accent hover:bg-accent/5"
           >
-            Create event
-          </h2>
-          <p className="mt-1 text-sm text-label">
-            Schedule a new NSA event for the calendar.
-          </p>
+            {isExpanded ? "Hide form" : "New event"}
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => setIsExpanded((current) => !current)}
-          className="rounded-md border border-gray-200 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:border-accent hover:bg-accent/5"
-        >
-          {isExpanded ? "Hide form" : "New event"}
-        </button>
-      </div>
+      )}
 
-      {isExpanded ? (
+      {showForm ? (
         <form
           onSubmit={handleSubmit}
           noValidate
-          className="mt-5 space-y-5 border-t border-gray-100 pt-5"
+          className={
+            embedded
+              ? "space-y-5"
+              : "mt-5 space-y-5 border-t border-gray-100 pt-5"
+          }
         >
           {serverError ? (
             <p

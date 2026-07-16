@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { createMockEventResponse } from "../test/test-utils";
-import { groupUpcomingEvents } from "./calendar-upcoming";
+import {
+  findNextNonMeetingEvent,
+  groupUpcomingEvents,
+} from "./calendar-upcoming";
 
 describe("calendar-upcoming", () => {
   it("groups upcoming events by urgency", () => {
@@ -35,5 +38,25 @@ describe("calendar-upcoming", () => {
     expect(groups.next_3_months.map((event) => event.name)).toEqual([
       "Next quarter",
     ]);
+  });
+
+  it("finds the soonest non-meeting event for Home/Events default", () => {
+    const events = [
+      createMockEventResponse({
+        id: 1,
+        name: "Board sync",
+        event_type: "meeting",
+        starts_at: "2030-06-11T18:00:00+00:00",
+      }),
+      createMockEventResponse({
+        id: 2,
+        name: "Dashain",
+        event_type: "cultural",
+        starts_at: "2030-06-15T18:00:00+00:00",
+      }),
+    ];
+
+    expect(findNextNonMeetingEvent(events)?.name).toBe("Dashain");
+    expect(findNextNonMeetingEvent([])).toBeNull();
   });
 });

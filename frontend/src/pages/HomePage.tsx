@@ -36,16 +36,13 @@ import {
   summarizeMyTasks,
 } from "../lib/home-tasks";
 import { fetchMembers, fetchPendingMembers } from "../lib/members-api";
+import { findNextNonMeetingEvent } from "../lib/calendar-upcoming";
 import {
   canAccessFinance,
   canBrowseMemberDirectory,
   canManageTreasury,
   canViewMemberDirectory,
 } from "../lib/roles";
-
-function findNextNonMeetingEvent(events: EventResponse[]): EventResponse | null {
-  return events.find((event) => event.event_type !== "meeting") ?? null;
-}
 
 function PublicHomeView() {
   return (

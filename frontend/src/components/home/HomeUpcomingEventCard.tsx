@@ -342,10 +342,10 @@ export function HomeUpNextSection({
           ) : null}
         </div>
 
-        <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-gray-100/90 pt-5">
+        <div className="mt-auto flex flex-col gap-3 border-t border-gray-100/90 pt-5">
           <Link
             to={eventPath}
-            className="inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition duration-150 ease-out hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2"
+            className="inline-flex w-fit items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition duration-150 ease-out hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2"
           >
             View Event
           </Link>

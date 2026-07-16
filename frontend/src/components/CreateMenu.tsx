@@ -64,7 +64,7 @@ export function CreateMenu({ onLogTransaction, className = "" }: CreateMenuProps
   const items: CreateItem[] = [];
 
   if (isRoleAtLeast(member.role, "board")) {
-    items.push({ id: "event", label: "Event", to: "/events/calendar" });
+    items.push({ id: "event", label: "Event", to: "/events/calendar?create=1" });
     items.push({ id: "announcement", label: "Announcement", to: "/announcements" });
   }
 

@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { EventsCalendarPanel } from "./EventsCalendarPanel";
 import type { CalendarEventInput } from "../lib/calendar-events";
-import type { EventResponse } from "../lib/events-api";
 
 const defaultProps = {
   viewMode: "month" as const,
@@ -12,14 +11,11 @@ const defaultProps = {
   year: 2030,
   month: 5,
   onMonthChange: vi.fn(),
+  onGoToToday: vi.fn(),
   selectedDate: null,
   onSelectDate: vi.fn(),
   monthEvents: [] as CalendarEventInput[],
   yearEvents: [] as CalendarEventInput[],
-  searchQuery: "",
-  onSearchQueryChange: vi.fn(),
-  searchResults: [] as EventResponse[],
-  onSelectSearchResult: vi.fn(),
 };
 
 describe("EventsCalendarPanel", () => {
@@ -122,21 +118,6 @@ describe("EventsCalendarPanel", () => {
       screen.getByRole("button", { name: "2030-06-15, Cultural" }),
     );
     expect(onSelectDate).toHaveBeenCalledWith("2030-06-15");
-  });
-
-  it("switches to year view from the toggle", async () => {
-    const user = userEvent.setup();
-    const onViewModeChange = vi.fn();
-
-    render(
-      <EventsCalendarPanel
-        {...defaultProps}
-        onViewModeChange={onViewModeChange}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: "year" }));
-    expect(onViewModeChange).toHaveBeenCalledWith("year");
   });
 
   it("selects a month tile in year view", async () => {

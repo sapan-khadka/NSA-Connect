@@ -47,10 +47,10 @@ export function EventsHubLayout() {
   const tabs = member ? buildEventsTabs(member) : [{ label: "Calendar", to: "/events/calendar" }];
 
   return (
-    <div className="space-y-6">
+    <div className="events-hub-shell">
       <nav
         aria-label="Events sections"
-        className="sticky top-0 z-10 border-b border-gray-200 bg-surface/95 px-4 pb-1 backdrop-blur-sm sm:-mx-1 sm:border-surface-card sm:px-1"
+        className="sticky top-0 z-10 border-b border-gray-200 bg-surface/95 px-4 pb-0.5 backdrop-blur-sm sm:-mx-1 sm:border-surface-card sm:px-1"
       >
         <div className="flex gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {tabs.map((tab) => (
@@ -60,7 +60,7 @@ export function EventsHubLayout() {
               end={tab.end}
               className={({ isActive }) =>
                 [
-                  "shrink-0 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors",
+                  "shrink-0 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors",
                   isActive
                     ? "border-accent text-accent"
                     : "border-transparent text-label hover:text-accent",

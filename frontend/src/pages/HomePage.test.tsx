@@ -161,7 +161,9 @@ describe("HomePage", () => {
       "/events/5",
     );
     expect(screen.queryByRole("link", { name: /^Manage$/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Set your RSVP|Change RSVP/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Going$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Maybe$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Not going$/i })).toBeInTheDocument();
     expect(screen.queryByText(/^DATE$/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Upcoming Event")).not.toBeInTheDocument();
     expect(screen.getByText("Student Center")).toBeInTheDocument();
@@ -233,7 +235,9 @@ describe("HomePage", () => {
     await screen.findByLabelText("Upcoming Event");
     expect(screen.queryByRole("link", { name: /^Manage$/i })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View Event" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Set your RSVP|Change RSVP/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Going$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Maybe$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Not going$/i })).toBeInTheDocument();
   });
 
   it("renders CampusOS AI suggestions", async () => {

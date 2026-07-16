@@ -27,16 +27,16 @@ type DayCellSurfaceOptions = {
 };
 
 const DAY_CELL_BASE =
-  "relative flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-[10px] border border-transparent bg-white px-0.5 py-1 text-sm transition-all duration-150 ease-out sm:min-h-[3.25rem] sm:py-1.5";
+  "relative flex min-h-8 flex-col items-center justify-center gap-0 rounded-[8px] border border-transparent bg-white px-0.5 py-0.5 text-sm transition-all duration-200 ease-out sm:min-h-[2.35rem] sm:py-0.5 hover:-translate-y-px hover:bg-[#F5F9F7] hover:shadow-[0_2px_6px_rgba(2,124,104,0.08)]";
 
 const DAY_CELL_TILE_SHADOW =
-  "shadow-[0_1px_2px_rgba(0,0,0,0.04),0_3px_8px_rgba(0,0,0,0.04)] hover:-translate-y-px hover:shadow-[0_2px_4px_rgba(0,0,0,0.06),0_8px_18px_rgba(0,0,0,0.08)]";
+  "shadow-[0_1px_2px_rgba(0,0,0,0.04),0_3px_8px_rgba(0,0,0,0.04)]";
 
 const DAY_CELL_TODAY =
   "bg-gradient-to-b from-[#E7F4F0] to-[#DCF0E8] shadow-[0_0_0_3px_#E7F4F0,0_3px_10px_rgba(2,124,104,0.18)] hover:-translate-y-px hover:shadow-[0_0_0_3px_#E7F4F0,0_6px_16px_rgba(2,124,104,0.22)]";
 
 const DAY_CELL_SELECTED =
-  "z-10 shadow-[0_0_0_2px_#023D54,0_3px_10px_rgba(2,61,84,0.15)] hover:-translate-y-px hover:shadow-[0_0_0_2px_#023D54,0_8px_18px_rgba(2,61,84,0.2)]";
+  "z-10 border-[#7BB8A8] bg-[#EAF6F1] shadow-[0_1px_2px_rgba(2,124,104,0.08),0_4px_12px_rgba(2,124,104,0.12)] hover:-translate-y-px hover:border-[#5FA894] hover:bg-[#E3F3EC] hover:shadow-[0_2px_4px_rgba(2,124,104,0.1),0_8px_16px_rgba(2,124,104,0.16)]";
 
 export function getDayCellSurfaceClass({
   isCurrentMonth,
@@ -66,12 +66,12 @@ export function getDayCellSurfaceClass({
 
 export function getTodayDateNumberClass(isToday: boolean, isSelected: boolean): string {
   if (isToday) {
-    return "text-sm font-semibold text-[#027C68]";
+    return "text-sm font-semibold text-[#027C68] transition-colors duration-200";
   }
   if (isSelected) {
-    return "text-sm font-semibold text-foreground";
+    return "text-sm font-bold text-[#0F5C4C] transition-colors duration-200";
   }
-  return "text-sm";
+  return "text-sm font-medium transition-colors duration-200";
 }
 
 type YearMonthTileOptions = {

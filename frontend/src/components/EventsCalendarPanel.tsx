@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { AppIcon } from "./ui/AppIcon";
 
@@ -28,7 +28,6 @@ import {
   getTodayDateNumberClass,
   type MonthEnterDirection,
 } from "./calendar-grid-utils";
-import type { EventResponse } from "../lib/events-api";
 
 export type CalendarViewMode = "month" | "year";
 
@@ -38,14 +37,11 @@ type EventsCalendarPanelProps = {
   year: number;
   month: number;
   onMonthChange: (year: number, month: number) => void;
+  onGoToToday: () => void;
   selectedDate: string | null;
   onSelectDate: (isoDate: string) => void;
   monthEvents: CalendarEventInput[];
   yearEvents: CalendarEventInput[];
-  searchQuery: string;
-  onSearchQueryChange: (query: string) => void;
-  searchResults: EventResponse[];
-  onSelectSearchResult: (event: EventResponse) => void;
 };
 
 function CalendarViewToggle({
@@ -70,7 +66,7 @@ function CalendarViewToggle({
             aria-pressed={active}
             onClick={() => onViewModeChange(mode)}
             className={[
-              "min-h-11 rounded-full px-3.5 py-2 text-sm font-medium capitalize transition-colors",
+              "min-h-8 rounded-full px-2.5 py-1 text-[13px] font-medium capitalize transition-colors",
               active
                 ? "bg-primary text-white"
                 : "text-label hover:text-foreground",
@@ -90,14 +86,11 @@ export function EventsCalendarPanel({
   year,
   month,
   onMonthChange,
+  onGoToToday,
   selectedDate,
   onSelectDate,
   monthEvents,
   yearEvents,
-  searchQuery,
-  onSearchQueryChange,
-  searchResults,
-  onSelectSearchResult,
 }: EventsCalendarPanelProps) {
   const [monthEnterDirection, setMonthEnterDirection] =
     useState<MonthEnterDirection>(null);
@@ -111,7 +104,6 @@ export function EventsCalendarPanel({
     () => groupEventTypesByMonth(yearEvents, year),
     [yearEvents, year],
   );
-  const todayIso = toLocalIsoDate(new Date());
   const today = new Date();
   const monthAnimationClass = getMonthEnterAnimationClass(monthEnterDirection);
   const nepaliRange = formatNepaliMonthRange(year, month);
@@ -136,14 +128,6 @@ export function EventsCalendarPanel({
     onMonthChange(next.year, next.month);
   }
 
-  function goToToday() {
-    const now = new Date();
-    setMonthEnterDirection(null);
-    onMonthChange(now.getFullYear(), now.getMonth());
-    onSelectDate(todayIso);
-    onViewModeChange("month");
-  }
-
   function handleSelectMonth(nextMonth: number) {
     onMonthChange(year, nextMonth);
     onViewModeChange("month");
@@ -152,120 +136,84 @@ export function EventsCalendarPanel({
   return (
     <section
       aria-label={viewMode === "month" ? `${getMonthLabel(month)} ${year}` : `${year}`}
-      className="events-calendar-card overflow-hidden p-4 sm:p-6"
+      className="events-calendar-card overflow-hidden p-3 sm:p-3.5"
     >
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          {viewMode === "month" ? (
-            <>
-              <h2
-                data-testid="calendar-month-label"
-                className="text-2xl font-light tracking-[-0.02em] text-foreground sm:text-[32px]"
-              >
-                {getMonthLabel(month)}{" "}
-                <span className="text-label">{year}</span>
-              </h2>
-              <p className="mt-0.5 text-[13px] text-label">{nepaliRange}</p>
-            </>
-          ) : (
-            <h2 className="text-[32px] font-light tracking-[-0.02em] text-foreground">
-              <span className="text-label">{year}</span>
-            </h2>
-          )}
-        </div>
+      <div className="events-calendar-panel-controls">
+        <button
+          type="button"
+          onClick={onGoToToday}
+          className="min-h-8 shrink-0 rounded-md px-2.5 py-1 text-[13px] font-medium text-primary transition-colors duration-200 hover:bg-primary/5"
+        >
+          Today
+        </button>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <CalendarViewToggle
-            viewMode={viewMode}
-            onViewModeChange={onViewModeChange}
-          />
-        </div>
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[12rem] flex-1">
-          <AppIcon
-            icon={Search}
-            size="sm"
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-label"
-          />
-          <input
-            type="search"
-            value={searchQuery}
-            onChange={(event) => onSearchQueryChange(event.target.value)}
-            placeholder="Search events…"
-            aria-label="Search events"
-            className="w-full rounded-[10px] border border-[#F0F0EE] bg-white py-3 pl-[34px] pr-3 text-base text-foreground outline-none transition-colors placeholder:text-label focus:border-primary/30 focus:ring-2 focus:ring-primary/10 sm:py-2 sm:text-sm"
-          />
-          {searchQuery.trim() && searchResults.length > 0 ? (
-            <ul
-              role="listbox"
-              aria-label="Search results"
-              className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-[10px] border border-[#F0F0EE] bg-white py-1 shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
-            >
-              {searchResults.map((event) => (
-                <li key={event.id}>
-                  <button
-                    type="button"
-                    role="option"
-                    className="flex min-h-11 w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm hover:bg-[#F5F5F7]"
-                    onClick={() => onSelectSearchResult(event)}
-                  >
-                    <span className="text-foreground">{event.name}</span>
-                    <span className="shrink-0 text-xs text-label">
-                      {EVENT_TYPE_LABELS[event.event_type]}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-
-        <div className="flex items-center gap-1.5">
+        <div className="events-calendar-panel-nav">
           <button
             type="button"
             aria-label={viewMode === "year" ? "Previous year" : "Previous month"}
             onClick={goToPrevious}
-            className="ds-icon-btn h-11 w-11 rounded-lg text-foreground transition-colors hover:bg-[#F5F5F7]"
+            className="ds-icon-btn h-8 w-8 rounded-md text-foreground transition-colors duration-200 hover:bg-[#F5F5F7]"
           >
             <AppIcon icon={ChevronLeft} size="sm" className="text-foreground" />
           </button>
-          <button
-            type="button"
-            onClick={goToToday}
-            className="min-h-11 rounded-lg px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/5"
-          >
-            Today
-          </button>
-          {viewMode === "month" ? (
-            <CalendarMonthYearPicker
-              year={year}
-              month={month}
-              onChange={onMonthChange}
-            />
-          ) : null}
+
+          <div className="events-calendar-panel-nav-center min-w-0">
+            {viewMode === "month" ? (
+              <>
+                <h2
+                  data-testid="calendar-month-label"
+                  className="truncate text-[15px] font-semibold tracking-[-0.02em] text-foreground"
+                >
+                  {getMonthLabel(month)}{" "}
+                  <span className="font-medium text-label">{year}</span>
+                </h2>
+                {nepaliRange ? (
+                  <p className="events-calendar-nepali-range">{nepaliRange}</p>
+                ) : null}
+                <div className="events-calendar-panel-picker">
+                  <CalendarMonthYearPicker
+                    year={year}
+                    month={month}
+                    onChange={onMonthChange}
+                  />
+                </div>
+              </>
+            ) : (
+              <h2 className="text-[15px] font-semibold tracking-[-0.02em] text-foreground">
+                <span className="font-medium text-label">{year}</span>
+              </h2>
+            )}
+          </div>
+
           <button
             type="button"
             aria-label={viewMode === "year" ? "Next year" : "Next month"}
             onClick={goToNext}
-            className="ds-icon-btn h-11 w-11 rounded-lg text-foreground transition-colors hover:bg-[#F5F5F7]"
+            className="ds-icon-btn h-8 w-8 rounded-md text-foreground transition-colors duration-200 hover:bg-[#F5F5F7]"
           >
             <AppIcon icon={ChevronRight} size="sm" className="text-foreground" />
           </button>
         </div>
+
+        <CalendarViewToggle
+          viewMode={viewMode}
+          onViewModeChange={onViewModeChange}
+        />
       </div>
 
       {viewMode === "month" ? (
         <div
           key={`${year}-${month}`}
-          className={["mt-5 grid grid-cols-7 gap-1 sm:gap-2", monthAnimationClass].join(" ")}
+          className={[
+            "events-calendar-grid mt-3 grid grid-cols-7 gap-1 sm:gap-1.5",
+            monthAnimationClass,
+          ].join(" ")}
           data-testid="calendar-month-grid"
         >
           {WEEKDAY_LABELS.map((label) => (
             <div
               key={label}
-              className="px-0.5 py-1 text-center text-[10px] font-semibold uppercase tracking-wide text-label sm:text-[11px]"
+              className="px-0.5 py-0.5 text-center text-[10px] font-semibold uppercase tracking-wide text-label sm:text-[11px]"
             >
               {label}
             </div>
@@ -304,7 +252,7 @@ export function EventsCalendarPanel({
                   {cell.day}
                 </span>
                 {bsLabel ? (
-                  <span className="hidden text-[10px] leading-none text-label min-[400px]:inline">
+                  <span className="events-calendar-bs-date hidden text-[10px] leading-none text-label min-[400px]:inline">
                     {bsLabel}
                   </span>
                 ) : null}
@@ -317,7 +265,7 @@ export function EventsCalendarPanel({
           })}
         </div>
       ) : (
-        <div className="mt-5">
+        <div className="mt-3">
           <YearCalendarGrid
             year={year}
             eventTypesByMonth={eventTypesByMonth}
@@ -329,7 +277,7 @@ export function EventsCalendarPanel({
       )}
 
       {viewMode === "month" ? (
-        <CalendarLegendList className="mt-5 flex flex-wrap gap-x-4 gap-y-2 border-t border-[#F0F0EE] pt-4 text-[11px] text-label" />
+        <CalendarLegendList className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 border-t border-[#F0F0EE] pt-3 text-[11px] text-label" />
       ) : null}
     </section>
   );

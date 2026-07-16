@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { EventAttendanceSummaryPanel } from "./EventAttendanceSummaryPanel";
 import { EventCheckInPanel } from "./EventCheckInPanel";
@@ -80,6 +80,8 @@ type EventManageDashboardProps = {
   onConvertVolunteerToTask: (signup: EventVolunteerSignupMember) => void;
   openTasksModalToken?: number;
   openCheckInModalToken?: number;
+  /** One-shot open from calendar overview shortcuts (location state). */
+  initialOpenModal?: ManageModal;
   /** Clears hero/external “open modal” tokens so Close cannot reopen them after refresh. */
   onDismissOpenTokens?: () => void;
 };
@@ -129,9 +131,11 @@ export function EventManageDashboard({
   onConvertVolunteerToTask,
   openTasksModalToken = 0,
   openCheckInModalToken = 0,
+  initialOpenModal = null,
   onDismissOpenTokens,
 }: EventManageDashboardProps) {
-  const [modal, setModal] = useState<ManageModal>(null);
+  const [modal, setModal] = useState<ManageModal>(initialOpenModal);
+  const consumedInitialModalRef = useRef(false);
   const [volunteers, setVolunteers] = useState<EventVolunteerSignupMember[]>(
     [],
   );
@@ -164,6 +168,14 @@ export function EventManageDashboard({
       setModal("checkin");
     }
   }, [openCheckInModalToken]);
+
+  useEffect(() => {
+    if (!initialOpenModal || consumedInitialModalRef.current) {
+      return;
+    }
+    consumedInitialModalRef.current = true;
+    setModal(initialOpenModal);
+  }, [initialOpenModal]);
 
   useEffect(() => {
     if (!canViewBoard) {

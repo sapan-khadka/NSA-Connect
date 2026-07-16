@@ -184,7 +184,7 @@ describe("EventRsvpButton", () => {
     expect(confirmation).toHaveClass("rsvp-confirmation-message");
   });
 
-  it("uses a clipped pill with equal flex segments and switches selection", async () => {
+  it("uses a compact wrapping segmented control and switches selection", async () => {
     const user = userEvent.setup();
     const onStatusChange = vi.fn();
 
@@ -199,18 +199,14 @@ describe("EventRsvpButton", () => {
     );
 
     const group = screen.getByRole("group", { name: "RSVP options" });
-    expect(group.className).toMatch(/overflow-hidden/);
-    expect(group.className).toMatch(/rounded-full/);
-    expect(group.className).toMatch(/h-11/);
+    expect(group.className).toMatch(/rsvp-segmented/);
 
     const going = screen.getByRole("button", { name: "Going" });
     const maybe = screen.getByRole("button", { name: "Maybe" });
     const notGoing = screen.getByRole("button", { name: "Not going" });
 
     for (const button of [going, maybe, notGoing]) {
-      expect(button.className).toMatch(/\bflex-1\b/);
-      expect(button.className).toMatch(/whitespace-nowrap/);
-      expect(button.className).not.toMatch(/rounded-full/);
+      expect(button.className).toMatch(/rsvp-segmented-btn/);
     }
 
     // Icon only on the selected segment
@@ -219,15 +215,15 @@ describe("EventRsvpButton", () => {
     expect(notGoing.querySelector("svg")).toBeNull();
 
     expect(going).toHaveAttribute("aria-pressed", "true");
-    expect(going.className).toMatch(/bg-primary/);
+    expect(going.className).toMatch(/rsvp-segmented-btn--selected/);
 
     await user.click(maybe);
 
     expect(onStatusChange).toHaveBeenCalledWith("maybe");
     expect(maybe).toHaveAttribute("aria-pressed", "true");
     expect(going).toHaveAttribute("aria-pressed", "false");
-    expect(maybe.className).toMatch(/bg-primary/);
-    expect(going.className).not.toMatch(/bg-primary/);
+    expect(maybe.className).toMatch(/rsvp-segmented-btn--selected/);
+    expect(going.className).toMatch(/rsvp-segmented-btn--idle/);
     expect(maybe.querySelector("svg")).not.toBeNull();
     expect(going.querySelector("svg")).toBeNull();
     expect(
@@ -240,7 +236,7 @@ describe("EventRsvpButton", () => {
     expect(maybe.querySelector("svg")).toBeNull();
   });
 
-  it("opens a compact RSVP menu and updates status", async () => {
+  it("shows RSVP segmented options for the menu variant", async () => {
     const user = userEvent.setup();
     const onStatusChange = vi.fn();
 
@@ -255,14 +251,23 @@ describe("EventRsvpButton", () => {
       />,
     );
 
-    expect(screen.queryByText("Your RSVP")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /Set your RSVP/i }));
-    await user.click(screen.getByRole("menuitemradio", { name: "Going" }));
+    expect(screen.queryByText("Your RSVP")).toBeInTheDocument();
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+
+    const going = screen.getByRole("button", { name: "Going" });
+    const maybe = screen.getByRole("button", { name: "Maybe" });
+    const notGoing = screen.getByRole("button", { name: "Not going" });
+
+    expect(going).toHaveAttribute("aria-pressed", "false");
+    expect(maybe).toHaveAttribute("aria-pressed", "false");
+    expect(notGoing).toHaveAttribute("aria-pressed", "false");
+
+    await user.click(going);
 
     expect(onStatusChange).toHaveBeenCalledWith("going");
-    expect(
-      screen.getByRole("button", { name: /Change RSVP, currently Going/i }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("You're Going")).toBeInTheDocument();
+    expect(going).toHaveAttribute("aria-pressed", "true");
+    expect(going.className).toMatch(/rsvp-segmented-btn--selected/);
+    expect(maybe.className).toMatch(/rsvp-segmented-btn--idle/);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 });

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 
 import { PageHeader } from "../components/PageHeader";
 import { EventPhotoGrid } from "../components/photo-archive/EventPhotoGrid";
@@ -10,15 +10,33 @@ import { ArrowLink } from "../components/ui/ArrowLink";
 import { EmptyState } from "../components/ui/EmptyState";
 import { getApiErrorMessage } from "../lib/auth-api";
 import { photoArchivePath } from "../lib/event-links";
+import type { CalendarReturnState } from "../lib/event-manage-navigation";
 import {
   deleteEventPhoto,
   fetchEventPhotos,
   type EventPhoto,
 } from "../lib/photo-archive-api";
 
+function calendarReturnHref(
+  state: CalendarReturnState | null | undefined,
+): string | null {
+  if (
+    !state?.fromCalendar ||
+    !state.calendarDate ||
+    !Number.isFinite(state.calendarEventId)
+  ) {
+    return null;
+  }
+  return `/events/calendar?date=${encodeURIComponent(state.calendarDate)}&event=${state.calendarEventId}`;
+}
+
 export function EventPhotoAlbumPage() {
   const { eventId: eventIdParam } = useParams();
+  const location = useLocation();
   const eventId = Number(eventIdParam);
+  const calendarBackHref = calendarReturnHref(
+    location.state as CalendarReturnState | null,
+  );
   const [eventName, setEventName] = useState("");
   const [photos, setPhotos] = useState<EventPhoto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -82,9 +100,21 @@ export function EventPhotoAlbumPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link to={photoArchivePath()} className="text-sm text-accent hover:text-accent-hover">
-          ← Photo archive
-        </Link>
+        {calendarBackHref ? (
+          <Link
+            to={calendarBackHref}
+            className="text-sm text-accent hover:text-accent-hover"
+          >
+            ← Back to {eventName.trim() || "calendar"}
+          </Link>
+        ) : (
+          <Link
+            to={photoArchivePath()}
+            className="text-sm text-accent hover:text-accent-hover"
+          >
+            ← Photo archive
+          </Link>
+        )}
       </div>
 
       <PageHeader

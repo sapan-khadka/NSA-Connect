@@ -16,14 +16,14 @@ describe("calendar-grid-utils", () => {
     expect(dots[4]?.key).toBe("festival");
   });
 
-  it("styles selected day with navy ring shadow", () => {
+  it("styles selected day with green tint and soft elevation", () => {
     const className = getDayCellSurfaceClass({
       isCurrentMonth: true,
       isSelected: true,
       isToday: false,
     });
-    expect(className).toContain("0_0_0_2px_#023D54");
-    expect(className).toContain("bg-white");
+    expect(className).toContain("bg-[#EAF6F1]");
+    expect(className).toContain("border-[#7BB8A8]");
   });
 
   it("styles today with teal gradient and glow", () => {
@@ -43,7 +43,7 @@ describe("calendar-grid-utils", () => {
       isToday: true,
     });
     expect(className).toContain("from-[#E7F4F0]");
-    expect(className).toContain("0_0_0_2px_#023D54");
+    expect(className).toContain("bg-[#EAF6F1]");
   });
 
   it("gives default day cells a raised tile shadow", () => {

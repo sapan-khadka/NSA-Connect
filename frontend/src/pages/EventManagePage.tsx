@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 
 import { EventManageDashboard } from "../components/EventManageDashboard";
 import { EventManageHero } from "../components/EventManageHero";
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage } from "../lib/auth-api";
 import { calendarDeepLink } from "../lib/event-links";
+import type { ManageLocationState } from "../lib/event-manage-navigation";
 import {
   fetchEventAttendanceSummary,
   type EventAttendanceSummary,
@@ -31,8 +32,11 @@ import {
 
 export function EventManagePage() {
   const { eventId } = useParams();
+  const location = useLocation();
   const numericEventId = Number(eventId);
   const { member } = useAuth();
+  const initialOpenModal =
+    (location.state as ManageLocationState | null)?.openManageModal ?? null;
 
   const [event, setEvent] = useState<EventDetailResponse | null>(null);
   const [budget, setBudget] = useState<FinanceEventBudgetSummary | null>(null);
@@ -266,6 +270,7 @@ export function EventManagePage() {
         onConvertVolunteerToTask={handleConvertVolunteerToTask}
         openTasksModalToken={openTasksModalToken}
         openCheckInModalToken={openCheckInModalToken}
+        initialOpenModal={initialOpenModal}
         onDismissOpenTokens={() => {
           setOpenTasksModalToken(0);
           setOpenCheckInModalToken(0);

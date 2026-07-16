@@ -1,13 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { CreateEventForm } from "../components/CreateEventForm";
-import { EventDayPanel } from "../components/EventDayPanel";
+import {
+  EventDayPanel,
+  UpcomingEventsList,
+} from "../components/EventDayPanel";
 import {
   EventsCalendarPanel,
   type CalendarViewMode,
 } from "../components/EventsCalendarPanel";
+import { UpcomingEventsStrip } from "../components/UpcomingEventsStrip";
+import { Modal } from "../components/ui/Modal";
 import { useAuth } from "../context/useAuth";
+import { Drawer } from "../design-system/components/feedback/Drawer";
 import { toLocalIsoDate, parseIsoDate } from "../lib/calendar";
 import { formatMonthQuery } from "../lib/calendar-events";
 import { applyRsvpStatus } from "../lib/event-rsvp";
@@ -26,16 +32,18 @@ const UPCOMING_FETCH_LIMIT = 100;
 
 export function EventsPage() {
   const { member } = useAuth();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const today = new Date();
-  const todayIso = toLocalIsoDate(today);
   const [viewMode, setViewMode] = useState<CalendarViewMode>("month");
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
-  const [selectedDate, setSelectedDate] = useState<string | null>(todayIso);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
-  const [panelMode, setPanelMode] = useState<"upcoming" | "detail">("upcoming");
-  const [searchQuery, setSearchQuery] = useState("");
+  /** null = nothing selected (sidebar empty state). */
+  const [selectionSource, setSelectionSource] = useState<
+    "calendar" | "search" | "deeplink" | "create" | "strip" | null
+  >(null);
   const [events, setEvents] = useState<EventResponse[]>([]);
   const [yearEvents, setYearEvents] = useState<EventResponse[]>([]);
   const [searchPool, setSearchPool] = useState<EventResponse[]>([]);
@@ -45,17 +53,19 @@ export function EventsPage() {
     null,
   );
   const [loading, setLoading] = useState(true);
-  const [yearLoading, setYearLoading] = useState(false);
+  const [, setYearLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [rsvpLoading, setRsvpLoading] = useState(false);
-
-  const canCreateEvents = member ? isRoleAtLeast(member.role, "board") : false;
+  const [upcomingDrawerOpen, setUpcomingDrawerOpen] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
 
   useEffect(() => {
     const dateParam = searchParams.get("date");
     const eventParam = searchParams.get("event");
+    const createParam = searchParams.get("create");
 
     if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
       const parsed = parseIsoDate(dateParam);
@@ -63,16 +73,47 @@ export function EventsPage() {
       setViewMonth(parsed.getMonth());
       setSelectedDate(dateParam);
       setViewMode("month");
+      setSelectionSource("deeplink");
+      setMobileSheetOpen(true);
     }
 
     if (eventParam) {
       const eventId = Number(eventParam);
       if (Number.isFinite(eventId)) {
         setSelectedEventId(eventId);
-        setPanelMode("detail");
+        setSelectionSource("deeplink");
+        setMobileSheetOpen(true);
       }
     }
-  }, [searchParams]);
+
+    if (createParam === "1" && member && isRoleAtLeast(member.role, "board")) {
+      setCreateModalOpen(true);
+      navigate("/events/calendar", { replace: true });
+    }
+  }, [searchParams, member, navigate]);
+
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (!q?.trim()) {
+      return;
+    }
+    // Global header search lands here with ?q= — select first name match.
+    const query = q.trim().toLowerCase();
+    const pool = [...searchPool, ...upcomingEvents, ...events];
+    const match = pool.find((event) =>
+      event.name.toLowerCase().includes(query),
+    );
+    if (match) {
+      const eventDate = new Date(match.starts_at);
+      setViewYear(eventDate.getFullYear());
+      setViewMonth(eventDate.getMonth());
+      setViewMode("month");
+      setSelectedDate(toLocalIsoDate(eventDate));
+      setSelectedEventId(match.id);
+      setSelectionSource("search");
+      setMobileSheetOpen(true);
+    }
+  }, [searchParams, searchPool, upcomingEvents, events]);
 
   useEffect(() => {
     let cancelled = false;
@@ -192,46 +233,45 @@ export function EventsPage() {
     };
   }, [viewYear]);
 
-  const searchResults = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) {
-      return [];
-    }
-
-    const seen = new Set<number>();
-    const combined = [...searchPool, ...upcomingEvents, ...events, ...yearEvents];
-    const matches: EventResponse[] = [];
-
-    for (const event of combined) {
-      if (seen.has(event.id)) {
-        continue;
-      }
-      seen.add(event.id);
-      if (event.name.toLowerCase().includes(query)) {
-        matches.push(event);
-      }
-    }
-
-    return matches.slice(0, 8);
-  }, [searchQuery, searchPool, upcomingEvents, events, yearEvents]);
-
   const selectedDayEvents = useMemo(() => {
     if (!selectedDate) {
       return [];
     }
 
-    return events.filter(
+    const fromMonth = events.filter(
       (event) => toLocalIsoDate(new Date(event.starts_at)) === selectedDate,
     );
-  }, [events, selectedDate]);
+    if (fromMonth.length > 0) {
+      return fromMonth;
+    }
+
+    if (selectedEventId != null) {
+      const fromUpcoming = upcomingEvents.find(
+        (event) => event.id === selectedEventId,
+      );
+      if (
+        fromUpcoming &&
+        toLocalIsoDate(new Date(fromUpcoming.starts_at)) === selectedDate
+      ) {
+        return [fromUpcoming];
+      }
+      const fromPool = searchPool.find((event) => event.id === selectedEventId);
+      if (
+        fromPool &&
+        toLocalIsoDate(new Date(fromPool.starts_at)) === selectedDate
+      ) {
+        return [fromPool];
+      }
+    }
+
+    return [];
+  }, [events, selectedDate, selectedEventId, upcomingEvents, searchPool]);
 
   useEffect(() => {
-    if (loading || !selectedDate) {
+    if (loading || !selectedDate || selectionSource == null) {
       return;
     }
 
-    // Keep deep-linked / in-flight selections while month data catches up.
-    // Empty-day clicks clear selection in handleSelectDate instead.
     if (selectedDayEvents.length === 0) {
       return;
     }
@@ -242,35 +282,37 @@ export function EventsPage() {
     if (!stillVisible) {
       setSelectedEventId(selectedDayEvents[0].id);
     }
-  }, [loading, selectedDate, selectedDayEvents, selectedEventId]);
+  }, [
+    loading,
+    selectedDate,
+    selectedDayEvents,
+    selectedEventId,
+    selectionSource,
+  ]);
 
   useEffect(() => {
     if (selectedEventId === null) {
       setEventDetail(null);
       setDetailError(null);
+      setDetailLoading(false);
       return;
     }
 
     let cancelled = false;
 
-    async function loadEventDetail() {
+    async function loadDetail() {
       setDetailLoading(true);
       setDetailError(null);
 
-      const eventId = selectedEventId;
-      if (eventId === null) {
-        return;
-      }
-
       try {
-        const detail = await fetchEvent(eventId);
+        const detail = await fetchEvent(selectedEventId!);
         if (!cancelled) {
           setEventDetail(detail);
         }
       } catch {
         if (!cancelled) {
-          setDetailError("Could not load event details.");
           setEventDetail(null);
+          setDetailError("Could not load event details.");
         }
       } finally {
         if (!cancelled) {
@@ -279,7 +321,7 @@ export function EventsPage() {
       }
     }
 
-    void loadEventDetail();
+    void loadDetail();
 
     return () => {
       cancelled = true;
@@ -287,24 +329,31 @@ export function EventsPage() {
   }, [selectedEventId]);
 
   const applyRsvpToState = useCallback(
-    (status: {
-      event_id: number;
-      current_member_rsvp_status: RsvpStatus | null;
-    }) => {
+    (status: { event_id: number; current_member_rsvp_status: RsvpStatus | null }) => {
       setEventDetail((current) =>
-        current ? applyRsvpStatus(current, status) : current,
+        current && current.id === status.event_id
+          ? applyRsvpStatus(current, status.current_member_rsvp_status)
+          : current,
       );
       setEvents((current) =>
-        current.map((event) => applyRsvpStatus(event, status)),
+        current.map((event) =>
+          event.id === status.event_id
+            ? {
+                ...event,
+                current_member_rsvp_status: status.current_member_rsvp_status,
+              }
+            : event,
+        ),
       );
       setUpcomingEvents((current) =>
-        current.map((event) => applyRsvpStatus(event, status)),
-      );
-      setYearEvents((current) =>
-        current.map((event) => applyRsvpStatus(event, status)),
-      );
-      setSearchPool((current) =>
-        current.map((event) => applyRsvpStatus(event, status)),
+        current.map((event) =>
+          event.id === status.event_id
+            ? {
+                ...event,
+                current_member_rsvp_status: status.current_member_rsvp_status,
+              }
+            : event,
+        ),
       );
     },
     [],
@@ -355,16 +404,16 @@ export function EventsPage() {
 
   function handleSelectDate(isoDate: string) {
     setSelectedDate(isoDate);
+    setSelectionSource("calendar");
+    setMobileSheetOpen(true);
     const dayEvents = events.filter(
       (event) => toLocalIsoDate(new Date(event.starts_at)) === isoDate,
     );
     if (dayEvents.length === 0) {
       setSelectedEventId(null);
-      setPanelMode("upcoming");
       return;
     }
     setSelectedEventId(dayEvents[0].id);
-    setPanelMode("detail");
   }
 
   const navigateToEvent = useCallback((event: EventResponse) => {
@@ -374,12 +423,25 @@ export function EventsPage() {
     setViewMode("month");
     setSelectedDate(toLocalIsoDate(eventDate));
     setSelectedEventId(event.id);
-    setPanelMode("detail");
-    setSearchQuery("");
+    setSelectionSource("strip");
+    setUpcomingDrawerOpen(false);
+    setMobileSheetOpen(true);
   }, []);
 
-  function handleBackToUpcoming() {
-    setPanelMode("upcoming");
+  function handleGoToToday() {
+    const now = new Date();
+    const iso = toLocalIsoDate(now);
+    setViewYear(now.getFullYear());
+    setViewMonth(now.getMonth());
+    setViewMode("month");
+    handleSelectDate(iso);
+  }
+
+  function handleClearSelection() {
+    setSelectedDate(null);
+    setSelectedEventId(null);
+    setSelectionSource(null);
+    setMobileSheetOpen(false);
   }
 
   const handleEventCreated = useCallback(async (event: EventResponse) => {
@@ -387,13 +449,15 @@ export function EventsPage() {
     const year = eventDate.getFullYear();
     const month = eventDate.getMonth();
 
+    setCreateModalOpen(false);
     setViewYear(year);
     setViewMonth(month);
     setViewMode("month");
     setSelectedDate(toLocalIsoDate(eventDate));
     setSelectedEventId(event.id);
-    setPanelMode("detail");
+    setSelectionSource("create");
     setError(null);
+    setMobileSheetOpen(true);
 
     try {
       const [monthResponse, allResponse] = await Promise.all([
@@ -424,80 +488,114 @@ export function EventsPage() {
     }
   }, []);
 
-  const calendarLoading = loading || (viewMode === "year" && yearLoading);
+  const hasSelection = selectedEventId != null || selectedDate != null;
+
+  const panelProps = {
+    selectedDate,
+    dayEvents: selectedDayEvents,
+    selectedEventId,
+    onSelectEvent: (eventId: number) => {
+      setSelectedEventId(eventId);
+      setSelectionSource("calendar");
+    },
+    eventDetail,
+    detailLoading,
+    detailError,
+    rsvpLoading,
+    onRsvpStatusChange: (status: RsvpStatus) => {
+      void handleRsvpStatusChange(status);
+    },
+    onBackToUpcoming: handleClearSelection,
+    showingDefaultUpcoming: false,
+  };
 
   return (
-    <div className="lg:-mx-1 lg:rounded-2xl lg:bg-[#F3F3F1] lg:px-2 lg:py-4">
-      <div className="ds-mobile-edge-section lg:mb-5 lg:rounded-xl lg:border lg:border-gray-200 lg:bg-white lg:px-4 lg:py-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-medium text-foreground">Have an event idea?</p>
-            <p className="text-xs text-label">
-              Share suggestions for the board to review when planning.
-            </p>
-          </div>
-          <Link
-            to="/events/suggestions"
-            className="rounded-full border border-gray-200 px-4 py-2 text-sm text-foreground hover:border-accent"
-          >
-            Suggest an event
-          </Link>
-        </div>
-      </div>
+    <div className="events-calendar-page">
+      {error ? <p className="ds-field-error">{error}</p> : null}
 
-      {canCreateEvents ? (
-        <div className="ds-mobile-edge-section lg:mb-5">
-          <CreateEventForm onCreated={(event) => void handleEventCreated(event)} />
-        </div>
-      ) : null}
-
-      {calendarLoading ? (
-        <p className="ds-mobile-edge-section text-sm text-label lg:px-0">Loading events…</p>
-      ) : null}
-      {error ? (
-        <p className="ds-mobile-edge-section ds-field-error lg:px-0">{error}</p>
-      ) : null}
-
-      <div className="ds-mobile-edge-stack flex flex-col xl:grid xl:grid-cols-[minmax(0,1.75fr)_minmax(16rem,20rem)] xl:gap-6">
-        <div className="ds-mobile-edge-section order-2 min-w-0 xl:order-1">
+      <div className="events-calendar-columns">
+        <div className="events-calendar-column-main min-w-0">
           <EventsCalendarPanel
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          year={viewYear}
-          month={viewMonth}
-          onMonthChange={handleMonthChange}
-          selectedDate={selectedDate}
-          onSelectDate={handleSelectDate}
-          monthEvents={events}
-          yearEvents={yearEvents}
-          searchQuery={searchQuery}
-          onSearchQueryChange={setSearchQuery}
-          searchResults={searchResults}
-          onSelectSearchResult={navigateToEvent}
-        />
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            year={viewYear}
+            month={viewMonth}
+            onMonthChange={handleMonthChange}
+            onGoToToday={handleGoToToday}
+            selectedDate={selectedDate}
+            onSelectDate={handleSelectDate}
+            monthEvents={events}
+            yearEvents={yearEvents}
+          />
         </div>
 
-        <div className="ds-mobile-edge-section order-1 min-w-0 xl:order-2">
-        <EventDayPanel
-          panelMode={panelMode}
-          onBackToUpcoming={handleBackToUpcoming}
-          selectedDate={selectedDate}
-          dayEvents={selectedDayEvents}
-          selectedEventId={selectedEventId}
-          onSelectEvent={setSelectedEventId}
-          eventDetail={eventDetail}
-          detailLoading={detailLoading}
-          detailError={detailError}
-          rsvpLoading={rsvpLoading}
-          onRsvpStatusChange={(status) => {
-            void handleRsvpStatusChange(status);
-          }}
-          upcomingEvents={upcomingEvents}
-          upcomingLoading={upcomingLoading}
-          onSelectUpcomingEvent={navigateToEvent}
-        />
+        <div className="events-calendar-column-side min-w-0">
+          <div className="events-calendar-side-scroll hidden md:flex md:flex-col">
+            <EventDayPanel {...panelProps} presentation="aside" />
+          </div>
+
+          <div className="md:hidden">
+            {hasSelection && mobileSheetOpen ? (
+              <div className="events-preview-sheet-root">
+                <button
+                  type="button"
+                  aria-label="Dismiss event preview"
+                  className="events-preview-sheet-backdrop"
+                  onClick={() => setMobileSheetOpen(false)}
+                />
+                <div className="events-preview-sheet-panel">
+                  <div className="events-preview-sheet-handle" aria-hidden="true" />
+                  <EventDayPanel {...panelProps} presentation="sheet" />
+                </div>
+              </div>
+            ) : hasSelection ? (
+              <button
+                type="button"
+                className="events-preview-sheet-peek"
+                onClick={() => setMobileSheetOpen(true)}
+              >
+                {eventDetail?.name ??
+                  selectedDayEvents[0]?.name ??
+                  "Event details"}
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
+
+      <UpcomingEventsStrip
+        events={upcomingEvents}
+        loading={upcomingLoading}
+        onSelectEvent={navigateToEvent}
+        onViewAll={() => setUpcomingDrawerOpen(true)}
+      />
+
+      <Drawer
+        open={upcomingDrawerOpen}
+        onClose={() => setUpcomingDrawerOpen(false)}
+        title="Upcoming events"
+        description="All upcoming events on the calendar."
+        side="right"
+        size="md"
+      >
+        <UpcomingEventsList
+          events={upcomingEvents}
+          loading={upcomingLoading}
+          onSelectEvent={navigateToEvent}
+        />
+      </Drawer>
+
+      <Modal
+        open={createModalOpen}
+        title="New event"
+        onClose={() => setCreateModalOpen(false)}
+        size="lg"
+      >
+        <CreateEventForm
+          embedded
+          onCreated={(event) => void handleEventCreated(event)}
+        />
+      </Modal>
     </div>
   );
 }
