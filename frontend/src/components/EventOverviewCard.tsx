@@ -48,7 +48,7 @@ import {
   DetailsSkeleton,
   detailsActionClass,
 } from "./details-panel";
-import { EventRsvpButton } from "./EventRsvpButton";
+import { EventRsvpSegmented } from "./EventRsvpSegmented";
 import { Badge } from "./ui/Badge";
 
 const AVATAR_STACK_MAX = 4;
@@ -508,13 +508,11 @@ export function EventOverviewCard({
                 aria-label="Your RSVP"
                 className="details-panel-section--compact"
               >
-                <EventRsvpButton
+                <EventRsvpSegmented
                   currentStatus={eventDetail.current_member_rsvp_status}
                   canRsvp={isEventUpcoming(eventDetail.starts_at)}
                   loading={rsvpLoading}
                   onStatusChange={onRsvpStatusChange}
-                  embedded
-                  variant="segmented"
                 />
               </DetailsSection>
             ) : null}

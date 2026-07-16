@@ -202,7 +202,7 @@ describe("EventDayPanel", () => {
 
     const going = screen.getByRole("button", { name: /^Going$/i });
     const maybe = screen.getByRole("button", { name: /^Maybe$/i });
-    const notGoing = screen.getByRole("button", { name: /^Not going$/i });
+    const notGoing = screen.getByRole("button", { name: /^Can't Go$/i });
 
     expect(going).toHaveAttribute("aria-pressed", "true");
     expect(maybe).toHaveAttribute("aria-pressed", "false");

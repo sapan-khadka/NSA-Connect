@@ -6223,26 +6223,31 @@
     @apply shrink-0 text-label;
   }
 
-  /* Horizontal RSVP segmented control — wraps when narrow */
+  /* Horizontal RSVP segmented control — single equal-width row */
   .rsvp-segmented {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem;
+    flex-wrap: nowrap;
+    gap: 0.35rem;
     width: 100%;
+  }
+
+  .rsvp-segmented--equal > .rsvp-segmented-btn {
+    flex: 1 1 0;
+    min-width: 0;
   }
 
   .rsvp-segmented-btn {
     display: inline-flex;
     min-width: 0;
-    flex: 1 1 4.5rem;
-    height: 1.875rem;
+    flex: 1 1 0;
+    height: 2.25rem;
     align-items: center;
     justify-content: center;
     gap: 0.25rem;
-    border-radius: 0.4rem;
+    border-radius: 0.5rem;
     border: 1px solid transparent;
-    padding: 0 0.45rem;
-    font-size: 0.75rem;
+    padding: 0 0.5rem;
+    font-size: 0.8125rem;
     font-weight: 600;
     line-height: 1;
     white-space: nowrap;

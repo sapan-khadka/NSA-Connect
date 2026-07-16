@@ -190,7 +190,7 @@ describe("EventOverviewCard", () => {
     await user.click(screen.getByRole("button", { name: /^Maybe$/i }));
     expect(onRsvpStatusChange).toHaveBeenCalledWith("maybe");
 
-    await user.click(screen.getByRole("button", { name: /^Not going$/i }));
+    await user.click(screen.getByRole("button", { name: /^Can't Go$/i }));
     expect(onRsvpStatusChange).toHaveBeenCalledWith("not_going");
   });
 });
