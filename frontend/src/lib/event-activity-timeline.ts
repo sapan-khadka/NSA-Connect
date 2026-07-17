@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 import type { EventDetailResponse } from "./events-api";
-import { startOfLocalDay } from "./calendar";
+import { startOfLocalDay, toLocalIsoDate } from "./calendar";
 
 export type EventActivityKind =
   | "budget"
@@ -44,12 +44,7 @@ export const EVENT_ACTIVITY_ICONS: Record<EventActivityKind, LucideIcon> = {
 };
 
 function dayKey(iso: string): string {
-  const date = new Date(iso);
-  const local = startOfLocalDay(date);
-  const year = local.getFullYear();
-  const month = String(local.getMonth() + 1).padStart(2, "0");
-  const day = String(local.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return toLocalIsoDate(new Date(iso));
 }
 
 export function formatActivityDayLabel(iso: string, now = new Date()): string {

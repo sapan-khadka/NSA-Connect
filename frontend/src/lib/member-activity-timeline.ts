@@ -21,7 +21,7 @@ import {
   formatActivityDayLabel,
   formatActivityTimeLabel,
 } from "./event-activity-timeline";
-import { startOfLocalDay } from "./calendar";
+import { toLocalIsoDate } from "./calendar";
 
 export type MemberActivityKind =
   | "task_completed"
@@ -137,11 +137,7 @@ export function takeMemberActivityPreview(
 }
 
 function dayKey(iso: string): string {
-  const local = startOfLocalDay(new Date(iso));
-  const year = local.getFullYear();
-  const month = String(local.getMonth() + 1).padStart(2, "0");
-  const day = String(local.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return toLocalIsoDate(new Date(iso));
 }
 
 export function groupMemberActivityByDay(

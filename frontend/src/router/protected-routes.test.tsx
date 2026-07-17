@@ -101,7 +101,9 @@ describe("protected route redirects", () => {
       expect(router.state.location.pathname).toBe("/");
     });
     expect(
-      await screen.findByRole("heading", { name: /Welcome back, Test User/ }),
+      await screen.findByRole("heading", {
+        name: /Good (Morning|Afternoon|Evening), Test/,
+      }),
     ).toBeInTheDocument();
   });
 
@@ -118,7 +120,9 @@ describe("protected route redirects", () => {
       expect(router.state.location.pathname).toBe("/");
     });
     expect(
-      await screen.findByRole("heading", { name: /Welcome back, Test User/ }),
+      await screen.findByRole("heading", {
+        name: /Good (Morning|Afternoon|Evening), Test/,
+      }),
     ).toBeInTheDocument();
   });
 
