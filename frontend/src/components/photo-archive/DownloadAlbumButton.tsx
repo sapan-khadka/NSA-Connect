@@ -2,7 +2,7 @@ import axios from "axios";
 import { Download } from "lucide-react";
 import { useState } from "react";
 
-import { getApiErrorMessage } from "../../lib/auth-api";
+import { getApiErrorMessage } from "../../lib/api-error";
 import {
   ALBUM_DOWNLOAD_TIMEOUT_MS,
   downloadEventPhotoAlbum,

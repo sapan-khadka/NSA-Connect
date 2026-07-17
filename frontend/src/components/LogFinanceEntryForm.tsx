@@ -20,7 +20,7 @@ import {
   type LogFinanceEntryFormErrors,
   type LogFinanceEntryFormValues,
 } from "../lib/finance-form";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import { isPresetFinanceCategory } from "../lib/finance-categories";
 
 type EventOption = {

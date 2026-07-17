@@ -5,7 +5,8 @@ import { useAuth } from "../context/useAuth";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Input } from "../components/ui/Input";
-import { getApiErrorMessage, isPendingApprovalError, loginMember } from "../lib/auth-api";
+import { isPendingApprovalError, loginMember } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import { getDashboardPath } from "../lib/roles";
 import {
   SEMO_EMAIL_DOMAIN,

@@ -4,7 +4,7 @@ import { useAuth } from "../context/useAuth";
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 import { Input } from "./ui/Input";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import { changeMyPassword } from "../lib/members-api";
 import { getPasswordHint, validatePasswordStrength } from "../lib/password-validation";
 import {

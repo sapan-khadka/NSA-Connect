@@ -4,7 +4,8 @@ import { Link } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Input, inputFieldClassName } from "../components/ui/Input";
-import { getApiErrorMessage, registerMember } from "../lib/auth-api";
+import { registerMember } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import {
   SEMO_EMAIL_DOMAIN,
   getGraduationYearOptions,

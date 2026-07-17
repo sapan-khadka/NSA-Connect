@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { Upload } from "lucide-react";
 
-import { getApiErrorMessage } from "../../lib/auth-api";
+import { getApiErrorMessage } from "../../lib/api-error";
 import {
   PHOTO_UPLOAD_MAX_BATCH,
   preparePhotosForUpload,

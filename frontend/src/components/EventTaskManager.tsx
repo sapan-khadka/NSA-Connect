@@ -9,7 +9,7 @@ import {
 import { Trash2 } from "lucide-react";
 
 import type { MemberResponse } from "../lib/auth-api";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import { AppIcon } from "./ui/AppIcon";
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";

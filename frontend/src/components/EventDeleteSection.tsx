@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import { deleteEvent } from "../lib/events-api";
 import { Card } from "./ui/Card";
 

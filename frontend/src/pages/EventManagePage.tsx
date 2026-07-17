@@ -4,7 +4,7 @@ import { Link, useLocation, useParams } from "react-router-dom";
 import { EventManageDashboard } from "../components/EventManageDashboard";
 import { EventManageHero } from "../components/EventManageHero";
 import { useAuth } from "../context/useAuth";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import { calendarDeepLink } from "../lib/event-links";
 import type { ManageLocationState } from "../lib/event-manage-navigation";
 import {

@@ -3,7 +3,6 @@ import { isAxiosError } from "axios";
 import type { MemberPosition, MemberRole } from "./roles";
 import type { MemberTalent, ProfileFieldVisibility } from "./member-talents";
 
-import { getApiErrorMessage as resolveApiErrorMessage, GENERIC_CLIENT_ERROR } from "./api-error";
 import api from "./api";
 import { normalizeSemoEmail, normalizeStudentId } from "./validation";
 
@@ -104,15 +103,6 @@ export async function registerMember(data: RegisterRequest): Promise<MemberRespo
   });
 
   return response.data;
-}
-
-export { GENERIC_CLIENT_ERROR };
-
-export function getApiErrorMessage(error: unknown): string {
-  if (isPendingApprovalError(error)) {
-    return "";
-  }
-  return resolveApiErrorMessage(error);
 }
 
 const PENDING_APPROVAL_DETAIL = "Member account is not approved";

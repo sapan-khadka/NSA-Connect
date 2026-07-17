@@ -3,7 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { AppIcon } from "../components/ui/AppIcon";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import { eventDetailPath } from "../lib/event-links";
 import { fetchUpcomingEvents, type EventResponse } from "../lib/events-api";
 import { EVENT_TYPE_BADGE_CLASS, EVENT_TYPE_LABELS } from "../lib/event-types";

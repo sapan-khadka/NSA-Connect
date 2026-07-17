@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useDismissibleMenu } from "../design-system";
 import type { MemberResponse } from "../lib/auth-api";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import { useAuth } from "../context/useAuth";
 import {
   memberMatchesMajors,

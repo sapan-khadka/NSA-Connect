@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import { useAuth } from "../context/useAuth";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import { sendTestEmail } from "../lib/notifications-api";
 import { validateEmailAddress } from "../lib/validation";
 import { Card } from "./ui/Card";

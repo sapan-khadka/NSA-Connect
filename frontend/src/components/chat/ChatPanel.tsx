@@ -5,7 +5,7 @@ import {
   streamChatMessage,
   type ChatHistoryMessage,
 } from "../../lib/chat-stream";
-import { getApiErrorMessage } from "../../lib/auth-api";
+import { getApiErrorMessage } from "../../lib/api-error";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { ChatMessageBubble, type ChatMessage } from "./ChatMessageBubble";

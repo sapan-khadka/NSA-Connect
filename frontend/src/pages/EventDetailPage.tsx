@@ -13,7 +13,7 @@ import { EventTaskManager } from "../components/EventTaskManager";
 import { ArrowLink } from "../components/ui/ArrowLink";
 import { HomeCard } from "../components/ui/HomeCard";
 import { useAuth } from "../context/useAuth";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import { calendarDeepLink } from "../lib/event-links";
 import { EVENT_TYPE_BADGE_CLASS, EVENT_TYPE_LABELS } from "../lib/event-types";
 import { applyRsvpStatus, isEventUpcoming } from "../lib/event-rsvp";

@@ -1,6 +1,6 @@
 import { isAxiosError } from "axios";
 
-import { getApiErrorMessage } from "./auth-api";
+import { getApiErrorMessage } from "./api-error";
 
 export const MEMBERSHIP_ADMIN_ERROR_MESSAGE =
   "Couldn't update role or position — please try again.";

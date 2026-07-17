@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 
 import { MeetingStatusChips } from "../components/MeetingStatusChips";
 import { PageHeader } from "../components/PageHeader";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import { fetchMeetings, type MeetingSummary } from "../lib/meetings-api";
 import { formatEventDateTime } from "../lib/format-datetime";
 import { Card } from "../components/ui/Card";

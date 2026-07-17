@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import { patchEvent, type EventDetailResponse } from "../lib/events-api";
 import { Card } from "./ui/Card";
 

@@ -7,7 +7,8 @@ import { useEffect, useId, useState, type FormEvent } from "react";
 
 import { Drawer } from "../design-system/components/feedback/Drawer";
 import { useAuth } from "../context/useAuth";
-import { getApiErrorMessage, type MemberResponse } from "../lib/auth-api";
+import { type MemberResponse } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import {
   updateMemberPosition,
   updateMemberProfile,

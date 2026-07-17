@@ -18,7 +18,8 @@ import { MemberWorkspaceTodaysSnapshot } from "../components/member-workspace/Me
 import { MemberWorkspaceUpcomingSchedule } from "../components/member-workspace/MemberWorkspaceUpcomingSchedule";
 import { Skeleton } from "../design-system/components/Skeleton";
 import { useAuth } from "../context/useAuth";
-import { getApiErrorMessage, type MemberResponse } from "../lib/auth-api";
+import { type MemberResponse } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import {
   fetchMemberDuesHistory,
   fetchMyDuesHistory,

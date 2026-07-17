@@ -5,7 +5,7 @@ import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 import { inputFieldClassName } from "./ui/Input";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import type { MeetingMinutes } from "../lib/meetings-api";
 import type { SummarizeMinutesResponse } from "../lib/ai-api";
 

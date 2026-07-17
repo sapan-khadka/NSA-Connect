@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import {
   fetchMyFinanceChangeRequests,
   type FinanceChangeRequestResponse,

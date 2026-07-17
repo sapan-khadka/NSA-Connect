@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 import { inputFieldClassName } from "./ui/Input";

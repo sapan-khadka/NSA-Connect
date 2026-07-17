@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 
 import { MeetingRecordSection } from "../components/MeetingRecordSection";
 import { MeetingStatusChips } from "../components/MeetingStatusChips";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import {
   fetchMeetingDetail,
   meetingRecordStatus,

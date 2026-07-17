@@ -8,7 +8,7 @@ import { PhotoLightbox } from "../components/photo-archive/PhotoLightbox";
 import { PhotoUploadPanel } from "../components/photo-archive/PhotoUploadPanel";
 import { ArrowLink } from "../components/ui/ArrowLink";
 import { EmptyState } from "../components/ui/EmptyState";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import { photoArchivePath } from "../lib/event-links";
 import type { CalendarReturnState } from "../lib/event-manage-navigation";
 import {

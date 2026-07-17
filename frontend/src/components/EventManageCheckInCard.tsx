@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import QRCode from "react-qr-code";
 
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import {
   fetchEventCheckInQr,
   regenerateEventCheckInQr,

@@ -11,7 +11,7 @@ import {
   type MemberProfileFormValues,
 } from "../components/MemberProfileForm";
 import { useAuth } from "../context/useAuth";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import { fetchMyProfile, updateMyProfile } from "../lib/members-api";
 import { isRoleAtLeast } from "../lib/roles";
 import { MemberDuesStatus } from "../components/MemberDuesStatus";

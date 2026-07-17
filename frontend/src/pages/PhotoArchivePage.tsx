@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { PhotoAlbumGrid } from "../components/photo-archive/PhotoAlbumGrid";
 import { EmptyState } from "../components/ui/EmptyState";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import { fetchPhotoAlbums, type PhotoAlbumSummary } from "../lib/photo-archive-api";
 
 export function PhotoArchivePage() {

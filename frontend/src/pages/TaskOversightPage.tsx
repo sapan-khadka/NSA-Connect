@@ -11,7 +11,7 @@ import { Avatar } from "../design-system/components/Avatar";
 import { AppIcon } from "../components/ui/AppIcon";
 import { Card } from "../components/ui/Card";
 import { useAuth } from "../context/useAuth";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import {
   fetchTaskOverview,
   type EventTaskResponse,

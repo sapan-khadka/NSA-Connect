@@ -5,9 +5,9 @@ import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Input } from "../components/ui/Input";
 import {
-  getApiErrorMessage,
   requestPasswordReset,
 } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import {
   SEMO_EMAIL_DOMAIN,
   validateSemoEmail,

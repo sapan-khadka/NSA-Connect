@@ -5,7 +5,7 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { Pin, StickyNote, Trash2 } from "lucide-react";
 
-import { getApiErrorMessage } from "../../lib/auth-api";
+import { getApiErrorMessage } from "../../lib/api-error";
 import { formatEventDateTime } from "../../lib/format-datetime";
 import {
   createMemberNote,

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { MeetingAttendancePanel } from "./MeetingAttendancePanel";
 import { MeetingMinutesEditor } from "./MeetingMinutesEditor";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import {
   fetchMeetingDetail,
   saveMeetingAttendance,

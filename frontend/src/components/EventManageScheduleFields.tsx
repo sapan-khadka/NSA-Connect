@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Button } from "./ui/Button";
 import { HomeCard } from "./ui/HomeCard";
 import { inputFieldClassName } from "./ui/Input";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import {
   combineDateAndTime,
   getMinEventDate,

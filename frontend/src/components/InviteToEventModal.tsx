@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import { Modal } from "./ui/Modal";
 import { Button } from "./ui/Button";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import { fetchUpcomingEvents, type EventResponse } from "../lib/events-api";
 import { inviteEventParticipants } from "../lib/events-api";
 

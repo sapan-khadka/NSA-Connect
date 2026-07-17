@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import {
   approveFinanceChangeRequest,
   fetchPendingFinanceChangeRequests,

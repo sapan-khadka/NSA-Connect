@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import type { EventVolunteerSignup } from "../lib/events-api";
 import {
   volunteerForEvent,

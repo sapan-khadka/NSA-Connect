@@ -15,7 +15,7 @@ import {
 } from "../components/home/HomeWorkspacePanels";
 import { useAuth } from "../context/useAuth";
 import type { MemberResponse } from "../lib/auth-api";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import { fetchMyEventTasks, updateEventTask } from "../lib/event-tasks-api";
 import type { EventTaskResponse } from "../lib/event-tasks-api";
 import { applyRsvpStatus } from "../lib/event-rsvp";

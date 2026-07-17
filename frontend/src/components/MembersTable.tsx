@@ -23,7 +23,7 @@ import { Skeleton } from "../design-system/components/Skeleton";
 import { useAuth } from "../context/useAuth";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import type { MemberResponse } from "../lib/auth-api";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import type { DuesStatus, MemberDuesRecord } from "../lib/dues-api";
 import { formatCurrency } from "../lib/format-currency";
 import { memberMailtoHref } from "../lib/member-mailto";

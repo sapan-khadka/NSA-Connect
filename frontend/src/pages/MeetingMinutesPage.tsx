@@ -5,7 +5,7 @@ import { MeetingMinutesSummary } from "../components/MeetingMinutesSummary";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Input, TextArea } from "../components/ui/Input";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import {
   summarizeMeetingMinutes,
   type SummarizeMinutesResponse,

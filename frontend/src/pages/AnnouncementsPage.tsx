@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 
 import { useAuth } from "../context/useAuth";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import {
   ANNOUNCEMENT_CATEGORY_LABELS,
   createAnnouncement,

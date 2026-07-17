@@ -19,7 +19,7 @@ import { MembersFiltersToolbar } from "../components/MembersFiltersToolbar";
 import { MembersTable } from "../components/MembersTable";
 import { useAuth } from "../context/useAuth";
 import type { MemberResponse } from "../lib/auth-api";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import { fetchDuesDashboard } from "../lib/dues-api";
 import {
   buildDuesLookup,

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import type { EventFeedback } from "../lib/events-api";
 import { submitEventFeedback } from "../lib/events-api";
 import { formatEventDateTime } from "../lib/format-datetime";

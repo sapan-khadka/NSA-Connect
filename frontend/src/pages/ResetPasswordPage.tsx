@@ -6,8 +6,8 @@ import { Card } from "../components/ui/Card";
 import { Input } from "../components/ui/Input";
 import {
   confirmPasswordReset,
-  getApiErrorMessage,
 } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import {
   getPasswordHint,
   validateRegisterPassword,

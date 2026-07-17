@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 
 import { ChecklistTaskCard } from "../components/ChecklistTaskCard";
-import { getApiErrorMessage } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import {
   fetchMyEventTasks,
   updateEventTask,

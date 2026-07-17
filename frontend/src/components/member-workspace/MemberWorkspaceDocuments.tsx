@@ -6,7 +6,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { ExternalLink, FileText, RefreshCw, Trash2, Upload } from "lucide-react";
 
-import { getApiErrorMessage } from "../../lib/auth-api";
+import { getApiErrorMessage } from "../../lib/api-error";
 import { formatEventDateTime } from "../../lib/format-datetime";
 import {
   deleteMemberDocument,
