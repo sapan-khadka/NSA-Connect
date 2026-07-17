@@ -163,6 +163,17 @@ def list_assignable_board_members(db: Session) -> list[Member]:
     )
 
 
+def list_assignable_approved_members(db: Session) -> list[Member]:
+    """All approved members — used for simple EventTask assignee pickers."""
+    return list(
+        db.scalars(
+            select(Member)
+            .where(Member.status == MemberStatus.APPROVED)
+            .order_by(Member.full_name.asc()),
+        ).all(),
+    )
+
+
 def approve_member(db: Session, member_id: int) -> Member:
     member = get_member_by_id(db, member_id)
     if member.status != MemberStatus.PENDING:

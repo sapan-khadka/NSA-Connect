@@ -1,4 +1,5 @@
 import math
+from typing import Literal
 
 from fastapi import (
     APIRouter,
@@ -76,6 +77,7 @@ from app.services.member_service import (
     approve_member,
     change_member_password,
     get_member_by_id,
+    list_assignable_approved_members,
     list_assignable_board_members,
     list_members_by_status,
     list_members_paginated,
@@ -219,10 +221,15 @@ def change_my_password(
 
 @router.get("/assignees", response_model=MemberListResponse)
 def list_assignable_members(
+    scope: Literal["board", "all_approved"] = Query(default="board"),
     current_member: Member = Depends(require_board),
     db: Session = Depends(get_db),
 ):
-    members = list_assignable_board_members(db)
+    members = (
+        list_assignable_approved_members(db)
+        if scope == "all_approved"
+        else list_assignable_board_members(db)
+    )
     return MemberListResponse(
         members=[
             MemberResponse.from_member(member, viewer=current_member)

@@ -57,3 +57,23 @@ def test_assignable_members_excludes_general_members(
     emails = [member["email"] for member in response.json()["members"]]
     assert "general@semo.edu" not in emails
     assert "board@semo.edu" in emails
+
+
+def test_assignable_members_all_approved_includes_general(
+    client,
+    db_session,
+    board_member_headers,
+):
+    register_member(client, email="general@semo.edu", student_id="33333333")
+    set_member_approved(db_session, email="general@semo.edu")
+
+    response = client.get(
+        "/api/v1/members/assignees",
+        params={"scope": "all_approved"},
+        headers=board_member_headers,
+    )
+
+    assert response.status_code == 200
+    emails = [member["email"] for member in response.json()["members"]]
+    assert "general@semo.edu" in emails
+    assert "board@semo.edu" in emails

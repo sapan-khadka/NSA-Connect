@@ -1,6 +1,6 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MemberResponse } from "../lib/auth-api";
 import type { EventTaskResponse } from "../lib/event-tasks-api";
@@ -20,6 +20,10 @@ vi.mock("../lib/event-tasks-api", async () => {
   };
 });
 
+vi.mock("../lib/members-api", () => ({
+  fetchAssignableMembers: vi.fn().mockResolvedValue({ members: [], total: 0 }),
+}));
+
 import {
   createEventTask,
   deleteEventTask,
@@ -27,6 +31,7 @@ import {
   fetchMyEventTasks,
   updateEventTask,
 } from "../lib/event-tasks-api";
+import { fetchAssignableMembers } from "../lib/members-api";
 import { EventTaskManager } from "./EventTaskManager";
 
 const mockedFetch = vi.mocked(fetchEventTasks);
@@ -34,6 +39,7 @@ const mockedFetchMine = vi.mocked(fetchMyEventTasks);
 const mockedCreate = vi.mocked(createEventTask);
 const mockedUpdate = vi.mocked(updateEventTask);
 const mockedDelete = vi.mocked(deleteEventTask);
+const mockedFetchAssignees = vi.mocked(fetchAssignableMembers);
 
 const boardMember: MemberResponse = {
   id: 1,
@@ -118,6 +124,13 @@ afterEach(() => {
 });
 
 describe("EventTaskManager", () => {
+  beforeEach(() => {
+    mockedFetchAssignees.mockResolvedValue({
+      members: assignableMembers,
+      total: assignableMembers.length,
+    });
+  });
+
   it("renders existing tasks with assignee and status", async () => {
     mockedFetch.mockResolvedValue({ tasks: [makeTask()], total: 1 });
 
@@ -188,6 +201,9 @@ describe("EventTaskManager", () => {
     renderManager({ canManageSimple: true });
 
     await waitFor(() => expect(mockedFetch).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(mockedFetchAssignees).toHaveBeenCalledWith("all_approved"),
+    );
 
     await user.click(screen.getByRole("button", { name: "+ Add task" }));
     await user.type(screen.getByLabelText("Title"), "Print flyers");

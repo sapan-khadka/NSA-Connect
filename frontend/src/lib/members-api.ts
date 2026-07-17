@@ -101,8 +101,14 @@ export async function fetchPendingMembers(): Promise<PendingMembersResponse> {
   return response.data;
 }
 
-export async function fetchAssignableMembers(): Promise<PendingMembersResponse> {
-  const response = await api.get<PendingMembersResponse>("/v1/members/assignees");
+export type AssignableMembersScope = "board" | "all_approved";
+
+export async function fetchAssignableMembers(
+  scope: AssignableMembersScope = "board",
+): Promise<PendingMembersResponse> {
+  const response = await api.get<PendingMembersResponse>("/v1/members/assignees", {
+    params: { scope },
+  });
   return response.data;
 }
 

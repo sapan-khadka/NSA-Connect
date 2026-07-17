@@ -25,6 +25,7 @@ import {
 } from "../lib/event-tasks-api";
 import type { PrepTaskResponse } from "../lib/events-api";
 import type { EventTaskDraft } from "../lib/event-task-draft";
+import { fetchAssignableMembers } from "../lib/members-api";
 import { TASK_STATUS_LABELS } from "../lib/member-workspace-responsibilities";
 import { prepTaskToEventTask, eventTaskToPrepTask } from "../lib/task-adapters";
 import { isRoleAtLeast } from "../lib/roles";
@@ -283,11 +284,38 @@ export function EventTaskManager({
   const [dueDate, setDueDate] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [draftAssigneeName, setDraftAssigneeName] = useState<string | null>(null);
+  const [simpleAssignableMembers, setSimpleAssignableMembers] = useState<
+    MemberResponse[]
+  >([]);
 
   const canFetchAll = member ? isRoleAtLeast(member.role, "board") : false;
 
+  useEffect(() => {
+    if (!canFetchAll || !canCreateTasks) {
+      setSimpleAssignableMembers([]);
+      return;
+    }
+
+    let cancelled = false;
+    void fetchAssignableMembers("all_approved")
+      .then((response) => {
+        if (!cancelled) {
+          setSimpleAssignableMembers(response.members);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSimpleAssignableMembers([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canFetchAll, canCreateTasks]);
+
   const assigneeOptions = (() => {
-    const options = [...assignableMembers];
+    const options = [...simpleAssignableMembers];
     if (
       assigneeId &&
       !options.some((candidate) => String(candidate.id) === assigneeId)
