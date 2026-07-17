@@ -1,10 +1,6 @@
+import { toLocalIsoDate } from "./calendar";
 import { combineDateAndTime } from "./event-form";
 import type { ChecklistCategory } from "./ai-api";
-
-function toLocalDateInputValue(date: Date): string {
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
 
 /** Stagger category due dates between ~14 days and ~4 days before the event. */
 export function buildCategoryDueDate(
@@ -29,7 +25,7 @@ export function buildCategoryDueDate(
     due.setHours(12, 0, 0, 0);
   }
 
-  return combineDateAndTime(toLocalDateInputValue(due), "12:00");
+  return combineDateAndTime(toLocalIsoDate(due), "12:00");
 }
 
 export function buildPrepTaskCreates(

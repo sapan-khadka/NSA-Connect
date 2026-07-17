@@ -145,7 +145,7 @@ function TypingIndicator({ users }: { users: DiscussionPresenceUser[] }) {
   );
 }
 
-function dayKey(iso: string): string {
+function discussionDayKey(iso: string): string {
   const date = new Date(iso);
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }
@@ -187,7 +187,7 @@ export function buildDiscussionTimeline(
 
   for (let index = 0; index < messages.length; index += 1) {
     const message = messages[index];
-    const day = dayKey(message.created_at);
+    const day = discussionDayKey(message.created_at);
     const createdMs = new Date(message.created_at).getTime();
 
     if (day !== lastDay) {
@@ -209,7 +209,7 @@ export function buildDiscussionTimeline(
     const next = messages[index + 1];
     let isLastInGroup = true;
     if (next) {
-      const nextDay = dayKey(next.created_at);
+      const nextDay = discussionDayKey(next.created_at);
       const nextMs = new Date(next.created_at).getTime();
       isLastInGroup = !(
         nextDay === day &&
