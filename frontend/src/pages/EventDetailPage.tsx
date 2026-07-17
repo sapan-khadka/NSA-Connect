@@ -31,10 +31,8 @@ import {
 } from "../lib/event-checkin-api";
 import { fetchAssignableMembers } from "../lib/members-api";
 import type { MemberResponse } from "../lib/auth-api";
-import {
-  formatCurrency,
-  formatEventDateTime,
-} from "../lib/format-datetime";
+import { formatCurrency } from "../lib/format-currency";
+import { formatEventDateTime } from "../lib/format-datetime";
 import {
   canManageEventTasks,
   isRoleAtLeast,

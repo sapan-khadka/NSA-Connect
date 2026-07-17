@@ -47,10 +47,3 @@ export function formatIsoDateLabel(isoDate: string): string {
     year: "numeric",
   }).format(new Date(year, month - 1, day));
 }
-
-export function formatCurrency(amount: string): string {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "USD",
-  }).format(Number(amount));
-}
