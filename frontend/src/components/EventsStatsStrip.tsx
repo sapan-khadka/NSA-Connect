@@ -70,18 +70,18 @@ function StatTile({
   return (
     <HomeCard
       padding="sm"
-      className="flex min-w-0 flex-1 basis-[calc(50%-0.375rem)] flex-col items-start gap-2 sm:basis-[calc(33.333%-0.5rem)] lg:basis-0"
+      className="flex min-w-0 flex-1 basis-[calc(50%-0.375rem)] flex-col items-start gap-1.5 sm:basis-[calc(33.333%-0.5rem)] lg:basis-0 !p-2.5"
       aria-label={`${label}: ${value}`}
     >
       <span
-        className={`inline-flex h-9 w-9 items-center justify-center rounded-full ${colors.circle}`}
+        className={`inline-flex h-7 w-7 items-center justify-center rounded-full ${colors.circle}`}
       >
         <AppIcon icon={icon} size="sm" className={colors.icon} />
       </span>
-      <p className="break-words text-base font-bold leading-snug tracking-tight text-foreground tabular-nums sm:text-lg">
+      <p className="break-words text-sm font-bold leading-snug tracking-tight text-foreground tabular-nums sm:text-base">
         {value}
       </p>
-      <p className="text-xs font-medium text-label">{label}</p>
+      <p className="text-[11px] font-medium text-label">{label}</p>
     </HomeCard>
   );
 }
@@ -101,7 +101,7 @@ export function EventsStatsStrip({
   return (
     <section
       aria-label="Events overview stats"
-      className={["flex flex-wrap gap-3", className].filter(Boolean).join(" ")}
+      className={["flex flex-wrap gap-2", className].filter(Boolean).join(" ")}
     >
       <StatTile
         icon={Calendar}

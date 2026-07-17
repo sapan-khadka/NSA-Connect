@@ -1,10 +1,11 @@
 /**
- * Presentational Event Health card — Preparation / Budget / Volunteers progress.
+ * Presentational Event Health module — Preparation / Budget / Volunteers progress.
  * Counts and percents are computed by the parent; this component only renders.
+ * Uses nested Card chrome so it sits inside the sidebar shell without stacking shadows.
  */
 
 import { formatCurrency } from "../lib/format-currency";
-import { HomeCard } from "./ui/HomeCard";
+import { Card } from "./ui/Card";
 
 export type EventHealthCardProps = {
   preparationPct: number;
@@ -12,6 +13,8 @@ export type EventHealthCardProps = {
   budgetCap: number;
   volunteersFilled: number;
   volunteersNeeded: number;
+  /** Hide the card title when nested under a disclosure summary. */
+  showHeading?: boolean;
   className?: string;
 };
 
@@ -43,13 +46,13 @@ function HealthRow({
   return (
     <div className="space-y-1.5">
       <div className="flex items-baseline justify-between gap-3">
-        <p className="text-sm font-medium text-foreground">{label}</p>
-        <p className="shrink-0 text-xs font-medium tabular-nums text-label">
+        <p className="text-[13px] font-medium text-foreground">{label}</p>
+        <p className="shrink-0 text-[12px] font-medium tabular-nums text-label">
           {value}
         </p>
       </div>
       <div
-        className="h-1.5 overflow-hidden rounded-full bg-gray-100"
+        className="h-1 overflow-hidden rounded-full bg-gray-100"
         role="progressbar"
         aria-label={label}
         aria-valuenow={Math.round(width)}
@@ -71,6 +74,7 @@ export function EventHealthCard({
   budgetCap,
   volunteersFilled,
   volunteersNeeded,
+  showHeading = true,
   className = "",
 }: EventHealthCardProps) {
   const preparationValue = `${Math.round(clampPercent(preparationPct))}%`;
@@ -78,14 +82,19 @@ export function EventHealthCard({
   const volunteersValue = `${volunteersFilled} / ${volunteersNeeded}`;
 
   return (
-    <HomeCard
-      padding="sm"
-      className={["space-y-4", className].filter(Boolean).join(" ")}
+    <Card
+      nested
+      padding="none"
+      className={["space-y-3 p-3", className].filter(Boolean).join(" ")}
       aria-label="Event Health"
     >
-      <h3 className="text-sm font-semibold text-foreground">Event Health</h3>
+      {showHeading ? (
+        <h3 className="text-[12px] font-semibold tracking-tight text-foreground">
+          Event Health
+        </h3>
+      ) : null}
 
-      <div className="space-y-3.5">
+      <div className="space-y-3">
         <HealthRow
           label="Preparation"
           value={preparationValue}
@@ -102,6 +111,6 @@ export function EventHealthCard({
           percent={ratioPercent(volunteersFilled, volunteersNeeded)}
         />
       </div>
-    </HomeCard>
+    </Card>
   );
 }

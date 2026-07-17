@@ -7,22 +7,22 @@ import {
   Calendar,
   Clock,
   MapPin,
-  Users,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { Avatar } from "../design-system/components/Avatar";
 import { useAuth } from "../context/useAuth";
-import {
-  EVENT_TYPE_COLOR,
-  EVENT_TYPE_LABELS,
-  type EventType,
-} from "../lib/event-types";
+import type { EventType } from "../lib/event-types";
 import { eventDetailPath } from "../lib/event-links";
 import { isEventUpcoming } from "../lib/event-rsvp";
 import {
+  filledNeededRoles,
+  NEEDED_VOLUNTEER_ROLES,
+} from "../lib/event-volunteer-summary";
+import {
   fetchEventAttendees,
+  fetchEventVolunteerSignups,
   type EventDetailResponse,
   type EventResponse,
   type EventRsvpAttendee,
@@ -33,23 +33,25 @@ import {
   fetchEventBudgetForEvent,
   type FinanceEventBudgetSummary,
 } from "../lib/finance-api";
-import { formatCurrency } from "../lib/format-currency";
-import type { ManageLocationState } from "../lib/event-manage-navigation";
 import { isRoleAtLeast } from "../lib/roles";
 import {
   DetailsActions,
   DetailsEmptyState,
   DetailsHeader,
-  DetailsHero,
   DetailsMetadata,
   DetailsPanel,
-  DetailsProgress,
   DetailsSection,
   DetailsSkeleton,
   detailsActionClass,
 } from "./details-panel";
+import { EventAttendeeStack } from "./EventAttendeeStack";
+import { EventBanner } from "./EventBanner";
+import { EventHealthCard } from "./EventHealthCard";
+import {
+  EventNeedsAttentionCard,
+  type NeedsAttentionItem,
+} from "./EventNeedsAttentionCard";
 import { EventRsvpSegmented } from "./EventRsvpSegmented";
-import { Badge } from "./ui/Badge";
 
 const AVATAR_STACK_MAX = 4;
 
@@ -70,12 +72,6 @@ export function formatEventCountdown(
     return "1 day left";
   }
   return `${days} days left`;
-}
-
-function manageLinkState(
-  modal: NonNullable<ManageLocationState["openManageModal"]>,
-): ManageLocationState {
-  return { openManageModal: modal };
 }
 
 function formatClockRange(startsAt: string, endsAt: string | null): string {
@@ -129,8 +125,6 @@ type EventOverviewCardProps = {
   detailError: string | null;
   rsvpLoading: boolean;
   onRsvpStatusChange: (status: RsvpStatus) => void;
-  /** Clear calendar selection / return to empty sidebar. */
-  onBackToUpcoming: () => void;
   /** True when showing the default soonest-upcoming event (not a calendar day pick). */
   showingDefaultUpcoming?: boolean;
 };
@@ -145,7 +139,6 @@ export function EventOverviewCard({
   detailError,
   rsvpLoading,
   onRsvpStatusChange,
-  onBackToUpcoming,
   showingDefaultUpcoming = false,
 }: EventOverviewCardProps) {
   const { member } = useAuth();
@@ -163,8 +156,13 @@ export function EventOverviewCard({
   const [taskStats, setTaskStats] = useState<{
     done: number;
     total: number;
+    overdue: number;
   } | null>(null);
   const [budget, setBudget] = useState<FinanceEventBudgetSummary | null>(null);
+  const [volunteersFilled, setVolunteersFilled] = useState(0);
+  const [volunteersNeeded, setVolunteersNeeded] = useState(
+    NEEDED_VOLUNTEER_ROLES.length,
+  );
 
   useEffect(() => {
     setAttendeesExpanded(false);
@@ -176,6 +174,8 @@ export function EventOverviewCard({
       setGoingCount(null);
       setTaskStats(null);
       setBudget(null);
+      setVolunteersFilled(0);
+      setVolunteersNeeded(NEEDED_VOLUNTEER_ROLES.length);
       return;
     }
 
@@ -208,7 +208,13 @@ export function EventOverviewCard({
           const done = response.tasks.filter(
             (task) => task.status === "done",
           ).length;
-          setTaskStats({ done, total: response.tasks.length });
+          const overdue = response.tasks.filter(
+            (task) =>
+              task.is_overdue &&
+              !task.is_complete &&
+              task.status !== "done",
+          ).length;
+          setTaskStats({ done, total: response.tasks.length, overdue });
         })
         .catch(() => {
           if (!cancelled) {
@@ -227,9 +233,26 @@ export function EventOverviewCard({
             setBudget(null);
           }
         });
+
+      void fetchEventVolunteerSignups(eventId)
+        .then((response) => {
+          if (cancelled) {
+            return;
+          }
+          setVolunteersFilled(filledNeededRoles(response.signups).size);
+          setVolunteersNeeded(NEEDED_VOLUNTEER_ROLES.length);
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setVolunteersFilled(0);
+            setVolunteersNeeded(NEEDED_VOLUNTEER_ROLES.length);
+          }
+        });
     } else {
       setTaskStats(null);
       setBudget(null);
+      setVolunteersFilled(0);
+      setVolunteersNeeded(NEEDED_VOLUNTEER_ROLES.length);
     }
 
     return () => {
@@ -241,31 +264,70 @@ export function EventOverviewCard({
     ? formatEventCountdown(previewEvent.starts_at)
     : null;
   const eventType = (previewEvent?.event_type ?? "social") as EventType;
-  const heroColor = EVENT_TYPE_COLOR[eventType];
+  const coverUrl = previewEvent?.event_photo_url?.trim() || null;
 
-  const visibleAttendees = useMemo(
-    () => attendees.slice(0, AVATAR_STACK_MAX),
-    [attendees],
-  );
-  const overflowCount = Math.max(
-    0,
-    (goingCount ?? attendees.length) - visibleAttendees.length,
-  );
-
-  const taskPercent =
+  const preparationPct =
     taskStats && taskStats.total > 0
       ? Math.round((taskStats.done / taskStats.total) * 100)
       : 0;
 
   const plannedBudget = budget ? Number(budget.planned_budget) || 0 : 0;
   const spentBudget = budget ? Number(budget.actual_expense) || 0 : 0;
-  const remainingBudget = budget ? Number(budget.budget_remaining) || 0 : 0;
-  const budgetPercent =
-    plannedBudget > 0
-      ? Math.min(100, Math.round((spentBudget / plannedBudget) * 100))
-      : 0;
 
-  const showProgress = canManage && (taskStats != null || budget != null);
+  const attentionItems = useMemo((): NeedsAttentionItem[] => {
+    if (!canManage) {
+      return [];
+    }
+    const items: NeedsAttentionItem[] = [];
+    if (taskStats && taskStats.overdue > 0) {
+      items.push({
+        id: "overdue-tasks",
+        label:
+          taskStats.overdue === 1
+            ? "1 task overdue"
+            : `${taskStats.overdue} tasks overdue`,
+        severity: "urgent",
+      });
+    }
+    if (plannedBudget > 0 && spentBudget > plannedBudget) {
+      items.push({
+        id: "budget-over",
+        label: "Budget overspent",
+        severity: "urgent",
+      });
+    }
+    const volunteerShortfall = Math.max(
+      0,
+      volunteersNeeded - volunteersFilled,
+    );
+    if (volunteerShortfall > 0) {
+      items.push({
+        id: "volunteers-short",
+        label:
+          volunteerShortfall === 1
+            ? "Need 1 more volunteer"
+            : `Need ${volunteerShortfall} more volunteers`,
+        severity: "pending",
+      });
+    }
+    return items;
+  }, [
+    canManage,
+    taskStats,
+    plannedBudget,
+    spentBudget,
+    volunteersFilled,
+    volunteersNeeded,
+  ]);
+
+  const stackAttendees = useMemo(
+    () =>
+      attendees.map((attendee) => ({
+        id: attendee.member_id,
+        name: attendee.full_name,
+      })),
+    [attendees],
+  );
 
   const navDateValue =
     selectedDate ?? (previewEvent ? previewEvent.starts_at : null);
@@ -292,9 +354,6 @@ export function EventOverviewCard({
     selectedDate != null &&
     dayEvents.length === 0;
 
-  const coverUrl = previewEvent?.event_photo_url?.trim() || null;
-  const hasCoverImage = Boolean(coverUrl);
-
   const metaItems = [
     heroDate
       ? { key: "date", icon: Calendar, value: heroDate }
@@ -303,14 +362,13 @@ export function EventOverviewCard({
     heroLocation
       ? { key: "location", icon: MapPin, value: heroLocation }
       : null,
-    goingCount != null
-      ? { key: "attending", icon: Users, value: `${goingCount} attending` }
-      : null,
   ].filter(Boolean) as Array<{
     key: string;
     icon: typeof Calendar;
     value: string;
   }>;
+
+  const attendeeTotal = goingCount ?? 0;
 
   return (
     <DetailsPanel
@@ -332,19 +390,33 @@ export function EventOverviewCard({
       detailError ||
       dayEvents.length > 1 ? (
         <DetailsHeader
-          backLabel={
-            previewEvent || showEmptyDay || dayEvents.length > 1
-              ? "Calendar"
-              : undefined
-          }
-          backAriaLabel="Clear selection"
-          onBack={
-            previewEvent || showEmptyDay || dayEvents.length > 1
-              ? onBackToUpcoming
-              : undefined
-          }
           label={
-            showingDefaultUpcoming && !previewEvent ? "Event details" : undefined
+            dayEvents.length > 1 ? (
+              <ul className="details-panel-chips details-panel-chips--in-header">
+                {dayEvents.map((event) => {
+                  const isActive = event.id === selectedEventId;
+                  return (
+                    <li key={event.id}>
+                      <button
+                        type="button"
+                        aria-pressed={isActive}
+                        onClick={() => onSelectEvent(event.id)}
+                        className={[
+                          "details-panel-chip",
+                          isActive ? "is-active" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                      >
+                        {event.name}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : showingDefaultUpcoming && !previewEvent ? (
+              "Event details"
+            ) : undefined
           }
           trailing={
             navDateLabel && previewEvent ? (
@@ -372,31 +444,6 @@ export function EventOverviewCard({
         />
       ) : null}
 
-      {dayEvents.length > 1 ? (
-        <ul className="details-panel-chips">
-          {dayEvents.map((event) => {
-            const isActive = event.id === selectedEventId;
-            return (
-              <li key={event.id}>
-                <button
-                  type="button"
-                  aria-pressed={isActive}
-                  onClick={() => onSelectEvent(event.id)}
-                  className={[
-                    "details-panel-chip",
-                    isActive ? "is-active" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                >
-                  {event.name}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
-
       {detailLoading ? <DetailsSkeleton /> : null}
 
       {detailError ? (
@@ -405,164 +452,115 @@ export function EventOverviewCard({
 
       {previewEvent ? (
         <div key={previewEvent.id} className="details-panel-content">
-          {hasCoverImage ? (
-            <DetailsHero
-              variant="banner"
-              imageUrl={coverUrl}
-              badges={
-                <span className="details-panel-hero-badge">
-                  {EVENT_TYPE_LABELS[eventType]}
-                </span>
-              }
-              badgeEnd={
-                countdown ? (
-                  <span className="details-panel-hero-badge">{countdown}</span>
-                ) : null
-              }
-            />
-          ) : (
-            <DetailsHero
-              className="details-panel-hero--compact"
-              title={previewEvent.name}
-              fallbackStyle={{
-                background: `linear-gradient(145deg, ${heroColor} 0%, color-mix(in srgb, ${heroColor} 45%, #111) 100%)`,
-              }}
-              badges={
-                <>
-                  <Badge variant="primary" size="sm">
-                    {EVENT_TYPE_LABELS[eventType]}
-                  </Badge>
-                  {countdown ? (
-                    <span className="details-panel-hero-badge">{countdown}</span>
-                  ) : null}
-                </>
-              }
-            />
-          )}
+          <EventBanner
+            eventType={eventType}
+            imageUrl={coverUrl}
+            countdown={countdown}
+          />
 
           <div className="details-panel-body details-panel-body--dense">
-            {hasCoverImage ? (
-              <h3 className="details-panel-event-title">{previewEvent.name}</h3>
-            ) : null}
+            <h3 className="details-panel-event-title">{previewEvent.name}</h3>
 
             <DetailsMetadata
-              aria-label="Event details"
+              aria-label="Date, time, and location"
               className="details-panel-meta--dense"
               items={metaItems}
             />
 
-            {showProgress ? (
-              <DetailsSection
-                label="Project Status"
-                aria-label="Project Status"
-                className="details-panel-section--status details-panel-section--status-dense"
-              >
-                {taskStats ? (
-                  <DetailsProgress
-                    to={`/events/${previewEvent.id}/manage`}
-                    state={manageLinkState("tasks")}
-                    label="Preparation"
-                    valueLabel={
-                      taskStats.total === 0
-                        ? "No tasks"
-                        : `${taskStats.done}/${taskStats.total} · ${taskPercent}%`
-                    }
-                    percent={taskStats.total > 0 ? taskPercent : 0}
-                    aria-label="Preparation progress"
-                  />
-                ) : null}
+            <DetailsSection
+              label="RSVP"
+              aria-label="Your RSVP"
+              className="details-panel-section--compact"
+            >
+              <EventRsvpSegmented
+                currentStatus={
+                  eventDetail?.current_member_rsvp_status ?? null
+                }
+                canRsvp={isEventUpcoming(
+                  eventDetail?.starts_at ?? previewEvent.starts_at,
+                )}
+                loading={rsvpLoading || !eventDetail}
+                onStatusChange={onRsvpStatusChange}
+              />
+            </DetailsSection>
 
-                {budget ? (
-                  <DetailsProgress
-                    to={`/events/${previewEvent.id}/manage`}
-                    state={manageLinkState("transactions")}
-                    label="Budget"
-                    valueLabel={`${formatCurrency(spentBudget)} / ${formatCurrency(plannedBudget)} · ${formatCurrency(remainingBudget)} left`}
-                    percent={budgetPercent}
-                    aria-label="Budget spent"
+            <div className="space-y-2" data-testid="event-attendees-row">
+              {attendeeTotal > 0 ? (
+                <>
+                  <EventAttendeeStack
+                    attendees={stackAttendees}
+                    totalCount={attendeeTotal}
+                    maxVisible={AVATAR_STACK_MAX}
+                    onViewAttendees={() =>
+                      setAttendeesExpanded((value) => !value)
+                    }
+                    viewLabel={
+                      attendeesExpanded ? "Hide attendees" : "View attendees"
+                    }
                   />
-                ) : null}
-              </DetailsSection>
+                  {attendeesExpanded ? (
+                    <ul className="details-panel-people-list">
+                      {attendees.map((attendee) => (
+                        <li key={attendee.member_id}>
+                          <Avatar name={attendee.full_name} size="sm" />
+                          <span>{attendee.full_name}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </>
+              ) : (
+                <p className="text-[12px] font-medium text-label">
+                  0 attending
+                </p>
+              )}
+            </div>
+
+            {canManage ? (
+              <details className="event-health-disclosure">
+                <summary className="event-health-disclosure-summary">
+                  Event health
+                </summary>
+                <div className="event-health-disclosure-body">
+                  <EventHealthCard
+                    preparationPct={preparationPct}
+                    budgetSpent={spentBudget}
+                    budgetCap={plannedBudget}
+                    volunteersFilled={volunteersFilled}
+                    volunteersNeeded={volunteersNeeded}
+                    showHeading={false}
+                    className="border-0 bg-transparent p-0"
+                  />
+                  <EventNeedsAttentionCard
+                    items={attentionItems}
+                    className="border-0 bg-transparent p-0"
+                  />
+                </div>
+              </details>
             ) : null}
 
-            <DetailsActions className="details-panel-actions--dense">
+            <DetailsActions className="details-panel-actions--stack details-panel-actions--dense">
               <Link
                 to={eventDetailPath(previewEvent.id)}
-                className={detailsActionClass("primary", "details-panel-btn--dominant")}
+                className={detailsActionClass(
+                  "primary",
+                  "details-panel-btn--dominant w-full",
+                )}
               >
-                View Event
+                Open Workspace
               </Link>
               {canManage && manageEventId != null ? (
                 <Link
                   to={`/events/${manageEventId}/manage`}
-                  className={detailsActionClass("secondary", "details-panel-btn--quiet")}
+                  className={detailsActionClass(
+                    "secondary",
+                    "details-panel-btn--quiet w-full",
+                  )}
                 >
-                  Manage
+                  Manage Event
                 </Link>
               ) : null}
             </DetailsActions>
-
-            {eventDetail ? (
-              <DetailsSection
-                label="RSVP"
-                aria-label="Your RSVP"
-                className="details-panel-section--compact"
-              >
-                <EventRsvpSegmented
-                  currentStatus={eventDetail.current_member_rsvp_status}
-                  canRsvp={isEventUpcoming(eventDetail.starts_at)}
-                  loading={rsvpLoading}
-                  onStatusChange={onRsvpStatusChange}
-                />
-              </DetailsSection>
-            ) : null}
-
-            {goingCount != null && goingCount > 0 ? (
-              <div
-                className="details-panel-attendees-inline"
-                aria-label={`${goingCount} attending`}
-              >
-                <div className="details-panel-avatar-stack" aria-hidden="true">
-                  {visibleAttendees.map((attendee, index) => (
-                    <span
-                      key={attendee.member_id}
-                      className="details-panel-avatar-wrap"
-                      style={{ zIndex: AVATAR_STACK_MAX - index }}
-                    >
-                      <Avatar name={attendee.full_name} size="sm" />
-                    </span>
-                  ))}
-                  {overflowCount > 0 ? (
-                    <span className="details-panel-avatar-overflow">
-                      +{overflowCount}
-                    </span>
-                  ) : null}
-                </div>
-                <button
-                  type="button"
-                  className="details-panel-text-action"
-                  aria-expanded={attendeesExpanded}
-                  aria-label={
-                    attendeesExpanded
-                      ? "Hide full attendee list"
-                      : "Show full attendee list"
-                  }
-                  onClick={() => setAttendeesExpanded((value) => !value)}
-                >
-                  {attendeesExpanded ? "Hide" : "View attendees →"}
-                </button>
-                {attendeesExpanded ? (
-                  <ul className="details-panel-people-list">
-                    {attendees.map((attendee) => (
-                      <li key={attendee.member_id}>
-                        <Avatar name={attendee.full_name} size="sm" />
-                        <span>{attendee.full_name}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </div>
-            ) : null}
           </div>
         </div>
       ) : null}

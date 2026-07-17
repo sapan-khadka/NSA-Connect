@@ -37,7 +37,7 @@ export function DetailsHeader({
           <span aria-hidden="true">←</span> {backLabel}
         </button>
       ) : label ? (
-        <p className="details-panel-header-label">{label}</p>
+        <div className="details-panel-header-label">{label}</div>
       ) : (
         <span />
       )}

@@ -1,6 +1,6 @@
 /**
  * Calendar sidebar event inspector shell.
- * Detail content (cover hero, RSVP, actions) lives in EventOverviewCard.
+ * Detail content (cover hero, health, attendees, RSVP, actions) lives in EventOverviewCard.
  */
 
 import { EventOverviewCard } from "./EventOverviewCard";
@@ -24,7 +24,6 @@ type EventDayPanelProps = {
   detailError: string | null;
   rsvpLoading: boolean;
   onRsvpStatusChange: (status: RsvpStatus) => void;
-  onBackToUpcoming: () => void;
   showingDefaultUpcoming?: boolean;
   /** Mobile bottom-sheet presentation */
   presentation?: "aside" | "sheet";
@@ -125,7 +124,6 @@ export function EventDayPanel({
   detailError,
   rsvpLoading,
   onRsvpStatusChange,
-  onBackToUpcoming,
   showingDefaultUpcoming = false,
   presentation = "aside",
 }: EventDayPanelProps) {
@@ -148,7 +146,6 @@ export function EventDayPanel({
         detailError={detailError}
         rsvpLoading={rsvpLoading}
         onRsvpStatusChange={onRsvpStatusChange}
-        onBackToUpcoming={onBackToUpcoming}
         showingDefaultUpcoming={showingDefaultUpcoming}
       />
     </aside>

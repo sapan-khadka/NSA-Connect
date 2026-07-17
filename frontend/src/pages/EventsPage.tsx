@@ -562,13 +562,6 @@ export function EventsPage() {
     handleSelectDate(iso);
   }
 
-  function handleClearSelection() {
-    setSelectedDate(null);
-    setSelectedEventId(null);
-    setSelectionSource(null);
-    setMobileSheetOpen(false);
-  }
-
   const handleEventCreated = useCallback(async (event: EventResponse) => {
     const eventDate = new Date(event.starts_at);
     const year = eventDate.getFullYear();
@@ -630,7 +623,6 @@ export function EventsPage() {
     onRsvpStatusChange: (status: RsvpStatus) => {
       void handleRsvpStatusChange(status);
     },
-    onBackToUpcoming: handleClearSelection,
     showingDefaultUpcoming: false,
   };
 
@@ -638,17 +630,17 @@ export function EventsPage() {
     <div className="events-calendar-page">
       {error ? <p className="ds-field-error">{error}</p> : null}
 
-      <EventsStatsStrip
-        className="events-calendar-stats-strip"
-        today={today}
-        upcomingEventsCount={upcomingEventsCount}
-        tasksDueTodayCount={tasksDueTodayCount}
-        financeApprovalCount={financeApprovalCount}
-        meetingsTodayCount={meetingsTodayCount}
-      />
-
       <div className="events-calendar-columns">
         <div className="events-calendar-column-main min-w-0">
+          <EventsStatsStrip
+            className="events-calendar-stats-strip"
+            today={today}
+            upcomingEventsCount={upcomingEventsCount}
+            tasksDueTodayCount={tasksDueTodayCount}
+            financeApprovalCount={financeApprovalCount}
+            meetingsTodayCount={meetingsTodayCount}
+          />
+
           <EventsCalendarPanel
             viewMode={viewMode}
             onViewModeChange={setViewMode}
@@ -660,6 +652,13 @@ export function EventsPage() {
             onSelectDate={handleSelectDate}
             monthEvents={events}
             yearEvents={yearEvents}
+          />
+
+          <UpcomingEventsStrip
+            events={upcomingEvents}
+            loading={upcomingLoading}
+            onSelectEvent={navigateToEvent}
+            onViewAll={() => setUpcomingDrawerOpen(true)}
           />
         </div>
 
@@ -696,13 +695,6 @@ export function EventsPage() {
           </div>
         </div>
       </div>
-
-      <UpcomingEventsStrip
-        events={upcomingEvents}
-        loading={upcomingLoading}
-        onSelectEvent={navigateToEvent}
-        onViewAll={() => setUpcomingDrawerOpen(true)}
-      />
 
       <Drawer
         open={upcomingDrawerOpen}

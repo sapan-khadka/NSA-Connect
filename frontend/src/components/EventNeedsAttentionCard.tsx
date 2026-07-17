@@ -1,9 +1,10 @@
 /**
  * Presentational “Needs Attention” list for an event inspector.
  * Items are derived by the parent; this component only renders (or returns null).
+ * Nested Card chrome keeps it aligned with the sidebar shell.
  */
 
-import { HomeCard } from "./ui/HomeCard";
+import { Card } from "./ui/Card";
 
 export type NeedsAttentionSeverity = "urgent" | "pending" | "info";
 
@@ -34,12 +35,15 @@ export function EventNeedsAttentionCard({
   }
 
   return (
-    <HomeCard
-      padding="sm"
-      className={["space-y-3", className].filter(Boolean).join(" ")}
+    <Card
+      nested
+      padding="none"
+      className={["space-y-3 p-3", className].filter(Boolean).join(" ")}
       aria-label="Needs Attention"
     >
-      <h3 className="text-sm font-semibold text-foreground">Needs Attention</h3>
+      <h3 className="text-[12px] font-semibold tracking-tight text-foreground">
+        Needs Attention
+      </h3>
 
       <ul className="space-y-2.5">
         {items.map((item) => (
@@ -51,12 +55,12 @@ export function EventNeedsAttentionCard({
                 SEVERITY_DOT_CLASS[item.severity],
               ].join(" ")}
             />
-            <span className="min-w-0 text-sm leading-snug text-foreground">
+            <span className="min-w-0 text-[13px] leading-snug text-foreground">
               {item.label}
             </span>
           </li>
         ))}
       </ul>
-    </HomeCard>
+    </Card>
   );
 }

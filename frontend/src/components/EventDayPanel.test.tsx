@@ -25,6 +25,9 @@ vi.mock("../lib/events-api", async () => {
       not_going_count: 0,
       attendees: [],
     }),
+    fetchEventVolunteerSignups: vi.fn().mockResolvedValue({
+      signups: [],
+    }),
   };
 });
 
@@ -56,7 +59,6 @@ const eventDetail: EventDetailResponse = createMockEventDetailResponse({
 const panelProps = {
   rsvpLoading: false,
   onRsvpStatusChange: vi.fn(),
-  onBackToUpcoming: vi.fn(),
 };
 
 function renderPanel(
@@ -121,10 +123,7 @@ describe("EventDayPanel", () => {
     ).toBeInTheDocument();
   });
 
-  it("returns to calendar when back is clicked", async () => {
-    const user = userEvent.setup();
-    const onBackToUpcoming = vi.fn();
-
+  it("does not render a back-to-calendar control", () => {
     renderPanel(
       <EventDayPanel
         selectedDate="2030-06-15"
@@ -135,13 +134,13 @@ describe("EventDayPanel", () => {
         detailLoading={false}
         detailError={null}
         {...panelProps}
-        onBackToUpcoming={onBackToUpcoming}
       />,
       "board",
     );
 
-    await user.click(screen.getByRole("button", { name: /Clear selection/i }));
-    expect(onBackToUpcoming).toHaveBeenCalledTimes(1);
+    expect(
+      screen.queryByRole("button", { name: /Clear selection|Calendar/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows empty-day state when calendar day has no events", () => {
@@ -176,7 +175,9 @@ describe("EventDayPanel", () => {
       "general",
     );
 
-    expect(screen.queryByRole("link", { name: /^Manage$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Manage Event/i })).not.toBeInTheDocument();
+    expect(screen.queryByText("Event health")).not.toBeInTheDocument();
+    expect(screen.queryByText("Needs Attention")).not.toBeInTheDocument();
   });
 
   it("shows selected RSVP state and updates from quick actions", async () => {
@@ -214,6 +215,60 @@ describe("EventDayPanel", () => {
     await waitFor(() => {
       expect(maybe).toHaveAttribute("aria-pressed", "true");
     });
+  });
+
+  it("keeps fixed content order including a zero-attendee row", async () => {
+    renderPanel(
+      <EventDayPanel
+        selectedDate="2030-06-15"
+        dayEvents={[
+          createMockEventResponse({
+            ...dayEvent,
+            location: "Campus Lawn",
+          }),
+        ]}
+        selectedEventId={1}
+        onSelectEvent={vi.fn()}
+        eventDetail={createMockEventDetailResponse({
+          ...eventDetail,
+          location: "Campus Lawn",
+        })}
+        detailLoading={false}
+        detailError={null}
+        {...panelProps}
+      />,
+      "board",
+    );
+
+    const banner = await screen.findByText("Cultural");
+    const title = screen.getByRole("heading", { name: "Dashain Celebration" });
+    const meta = screen.getByLabelText("Date, time, and location");
+    const rsvp = screen.getByLabelText("Your RSVP");
+    const attendees = await screen.findByText("0 attending");
+    const health = await screen.findByText("Event health");
+
+    expect(screen.getByTestId("event-attendees-row")).toContainElement(
+      attendees,
+    );
+    expect(
+      screen.queryByRole("button", { name: /View attendees/i }),
+    ).not.toBeInTheDocument();
+
+    const order = [
+      banner.closest(".event-banner") ?? banner,
+      title,
+      meta,
+      rsvp,
+      attendees.closest("[data-testid='event-attendees-row']") ?? attendees,
+      health.closest("details") ?? health,
+    ];
+
+    for (let index = 1; index < order.length; index += 1) {
+      expect(
+        order[index - 1]!.compareDocumentPosition(order[index]!) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    }
   });
 
   it("switches events when multiple occur on the same day", async () => {

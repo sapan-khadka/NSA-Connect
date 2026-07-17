@@ -5459,21 +5459,18 @@
   }
 
   @media (min-width: 1280px) {
-    /* Calendar + sidebar + upcoming strip in one viewport. */
+    /* Calendar column (stats + grid + upcoming) | full-height event details. */
     .events-calendar-page {
       height: calc(100vh - 8.5rem);
       max-height: calc(100vh - 8.5rem);
       overflow: hidden;
-      gap: 0.4rem;
-    }
-
-    .events-calendar-stats-strip {
-      gap: 0.4rem;
+      gap: 0;
     }
 
     .events-calendar-columns {
       flex: 1 1 auto;
       min-height: 0;
+      height: 100%;
       display: grid;
       grid-template-columns: minmax(0, 80fr) minmax(15.5rem, 20fr);
       gap: 0.6rem;
@@ -5483,36 +5480,45 @@
     .events-calendar-column-main {
       min-height: 0;
       height: 100%;
-      overflow-x: hidden;
-      overflow-y: auto;
-      overscroll-behavior: contain;
-    }
-
-    .events-calendar-column-side {
       display: flex;
       flex-direction: column;
-      min-height: 0;
-      height: 100%;
+      gap: 0.4rem;
       overflow: hidden;
-      position: sticky;
-      top: 0;
-      align-self: stretch;
     }
 
-    .events-calendar-side-scroll {
-      flex: 1 1 auto;
-      min-height: 0;
-      height: 100%;
-      max-height: 100%;
-      overflow: hidden;
+    .events-calendar-stats-strip {
+      flex-shrink: 0;
+      gap: 0.35rem;
+    }
+
+    .events-calendar-stats-strip .ds-card {
+      padding: 0.45rem 0.55rem;
+      gap: 0.35rem;
+    }
+
+    .events-calendar-stats-strip .ds-card > span {
+      height: 1.65rem;
+      width: 1.65rem;
+    }
+
+    .events-calendar-stats-strip .ds-card > p:first-of-type {
+      font-size: 0.8125rem;
+      line-height: 1.2;
+    }
+
+    .events-calendar-stats-strip .ds-card > p:last-of-type {
+      font-size: 0.625rem;
+      line-height: 1.2;
     }
 
     .events-calendar-column-main .events-calendar-card {
-      height: 100%;
+      flex: 1 1 auto;
       min-height: 0;
+      height: auto;
       display: flex;
       flex-direction: column;
       padding: 0.55rem 0.7rem !important;
+      overflow: hidden;
     }
 
     .events-calendar-column-main .events-calendar-grid {
@@ -5520,6 +5526,7 @@
       align-content: stretch;
       margin-top: 0.3rem;
       gap: 0.18rem;
+      min-height: 0;
     }
 
     .events-calendar-column-main .events-calendar-grid [data-testid="calendar-day-cell"] {
@@ -5531,33 +5538,64 @@
       display: none;
     }
 
+    .events-calendar-column-main .events-upcoming-strip {
+      flex-shrink: 0;
+    }
+
+    .events-calendar-column-side {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      height: 100%;
+      overflow: hidden;
+      align-self: stretch;
+    }
+
+    .events-calendar-side-scroll {
+      flex: 1 1 auto;
+      min-height: 0;
+      height: 100%;
+      max-height: 100%;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
     .events-preview-aside {
       flex: 1 1 auto;
       min-height: 0;
       height: 100%;
       max-height: 100%;
-      overflow-x: hidden;
-      overflow-y: hidden;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
       overscroll-behavior: contain;
     }
 
-    .events-upcoming-strip {
-      flex-shrink: 0;
+    .events-preview-aside > .events-sidebar-card,
+    .events-preview-aside > .details-panel {
+      flex: 1 1 auto;
+      min-height: 0;
+      height: 100%;
+      max-height: 100%;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
     }
 
     .details-panel-hero,
     .details-panel-hero-copy {
-      min-height: 3.5rem;
+      min-height: 2.75rem;
     }
 
     .details-panel-hero--compact,
     .details-panel-hero--compact .details-panel-hero-copy {
-      min-height: 3.25rem;
+      min-height: 2.5rem;
     }
 
     .details-panel-hero--banner {
-      height: 11.25rem;
-      min-height: 11.25rem;
+      height: 7.5rem;
+      min-height: 7.5rem;
     }
   }
 
@@ -5611,8 +5649,10 @@
   }
 
   .events-sidebar-card {
-    @apply rounded-2xl bg-white;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 20px rgba(15, 23, 42, 0.04);
+    @apply rounded-card border border-gray-200 bg-surface-card;
+    overflow-x: hidden;
+    overflow-y: auto;
+    box-shadow: var(--shadow-card);
   }
 
   /* —— Universal Details Panel —— */
@@ -5624,8 +5664,8 @@
   }
 
   .details-panel--elevated {
-    @apply rounded-2xl bg-white;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 20px rgba(15, 23, 42, 0.04);
+    @apply rounded-card border border-gray-200 bg-surface-card;
+    box-shadow: var(--shadow-card);
   }
 
   .details-panel--sticky {
@@ -5697,6 +5737,12 @@
     list-style: none;
   }
 
+  .details-panel-chips--in-header {
+    min-width: 0;
+    flex: 1 1 auto;
+    padding: 0;
+  }
+
   .details-panel-chip {
     @apply rounded-md bg-gray-50 px-2.5 py-1 text-[11px] font-medium text-label transition-colors;
     border: 0;
@@ -5755,10 +5801,15 @@
   }
 
   .details-panel-hero--banner {
-    height: 11.25rem;
-    min-height: 11.25rem;
-    margin: 0 0.7rem;
+    height: 7.5rem;
+    min-height: 7.5rem;
+    margin: 0.75rem 0.75rem 0;
     @apply rounded-card;
+  }
+
+  .event-banner-fill {
+    position: absolute;
+    inset: 0;
   }
 
   .details-panel-hero--banner .details-panel-hero-shade {
@@ -5878,13 +5929,13 @@
   .details-panel-body {
     display: flex;
     flex-direction: column;
-    gap: 0.55rem;
-    padding: 0.55rem 0.75rem 0.65rem;
+    gap: 0.75rem;
+    padding: 0.75rem;
   }
 
   .details-panel-body--dense {
-    gap: 0.45rem;
-    padding: 0.5rem 0.7rem 0.55rem;
+    gap: 0.75rem;
+    padding: 0.75rem;
   }
 
   .details-panel-section {
@@ -5900,13 +5951,11 @@
   }
 
   .details-panel-section--status {
-    padding: 0.5rem 0.55rem;
-    border-radius: 0.5rem;
-    background: #f7f9f8;
+    @apply rounded-card border border-gray-200 bg-surface-muted p-3;
   }
 
   .details-panel-section--status-dense {
-    padding: 0.4rem 0.5rem;
+    @apply p-3;
   }
 
   .details-panel-section--status .details-panel-section-label {
@@ -6107,14 +6156,24 @@
 
   .details-panel-actions {
     display: flex;
-    gap: 0.35rem;
-    margin-top: 0;
-    padding-top: 0.5rem;
-    border-top: 1px solid #f0f2f5;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #eef1f5;
   }
 
   .details-panel-actions--dense {
-    padding-top: 0.4rem;
+    padding-top: 0.75rem;
+  }
+
+  .details-panel-actions--stack {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .details-panel-actions--stack .details-panel-btn {
+    width: 100%;
+    flex: none;
   }
 
   .details-panel-btn {
@@ -6189,6 +6248,41 @@
     .details-panel-skeleton-hero {
       animation: none;
     }
+  }
+
+  .event-health-disclosure {
+    @apply overflow-hidden rounded-card border border-gray-200 bg-surface-muted;
+  }
+
+  .event-health-disclosure-summary {
+    @apply cursor-pointer select-none list-none px-3 py-2.5 text-[12px] font-semibold tracking-tight text-foreground;
+  }
+
+  .event-health-disclosure-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .event-health-disclosure-summary::before {
+    content: "";
+    display: inline-block;
+    width: 0.35rem;
+    height: 0.35rem;
+    margin-right: 0.45rem;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(-45deg);
+    vertical-align: 0.15em;
+    opacity: 0.55;
+    transition: transform 150ms ease;
+  }
+
+  .event-health-disclosure[open] > .event-health-disclosure-summary::before {
+    transform: rotate(45deg);
+    vertical-align: 0.25em;
+  }
+
+  .event-health-disclosure-body {
+    @apply space-y-3 border-t border-gray-200 px-3 pb-3 pt-3;
   }
 
   /* Compat aliases — event overview still uses shell height with sidebar card */
@@ -6292,6 +6386,16 @@
     box-shadow:
       0 1px 3px rgba(0, 0, 0, 0.05),
       0 8px 18px rgba(0, 0, 0, 0.05);
+  }
+
+  .events-calendar-column-main .events-upcoming-strip {
+    padding-top: 0.45rem;
+    padding-bottom: 0.45rem;
+  }
+
+  .events-calendar-column-main .events-upcoming-strip-card {
+    width: 9.5rem;
+    padding: 0.35rem 0.45rem 0.4rem;
   }
 
   .events-upcoming-strip-header {

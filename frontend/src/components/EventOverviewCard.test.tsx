@@ -42,6 +42,9 @@ vi.mock("../lib/events-api", async () => {
         },
       ],
     }),
+    fetchEventVolunteerSignups: vi.fn().mockResolvedValue({
+      signups: [],
+    }),
   };
 });
 
@@ -124,7 +127,6 @@ describe("EventOverviewCard", () => {
             detailError={null}
             rsvpLoading={false}
             onRsvpStatusChange={vi.fn()}
-            onBackToUpcoming={vi.fn()}
           />
         </MemoryRouter>
       </MockAuthProvider>,
@@ -135,25 +137,74 @@ describe("EventOverviewCard", () => {
     expect(screen.queryByText(/organizer/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/committee/i)).not.toBeInTheDocument();
 
-    expect(await screen.findByText("Project Status")).toBeInTheDocument();
+    expect(await screen.findByText("Event health")).toBeInTheDocument();
     expect(screen.getByText("Preparation")).toBeInTheDocument();
-    expect(await screen.findByText(/2\/3 · 67%/i)).toBeInTheDocument();
+    expect(await screen.findByText("67%")).toBeInTheDocument();
     expect(screen.getByText(/\$100\.00 \/ \$300\.00/i)).toBeInTheDocument();
-    expect(screen.getByText(/\$200\.00 left/i)).toBeInTheDocument();
 
-    expect(screen.getByRole("link", { name: "View Event" })).toHaveAttribute(
+    const disclosure = screen.getByText("Event health").closest("details");
+    expect(disclosure).not.toHaveAttribute("open");
+
+    expect(screen.getByRole("link", { name: "Open Workspace" })).toHaveAttribute(
       "href",
       "/events/7",
     );
-    expect(screen.getByRole("link", { name: "Manage" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Manage Event" })).toHaveAttribute(
       "href",
       "/events/7/manage",
     );
 
     expect(
-      await screen.findByRole("button", { name: /Show full attendee list/i }),
+      await screen.findByRole("button", { name: /View attendees/i }),
     ).toBeInTheDocument();
-    expect(await screen.findByText("3 attending")).toBeInTheDocument();
+  });
+
+  it("keeps fixed content order for every event", async () => {
+    render(
+      <MockAuthProvider
+        value={{
+          member: createMockMember("board"),
+          isAuthenticated: true,
+        }}
+      >
+        <MemoryRouter>
+          <EventOverviewCard
+            selectedDate="2030-08-01"
+            dayEvents={[dayEvent]}
+            selectedEventId={7}
+            onSelectEvent={vi.fn()}
+            eventDetail={eventDetail}
+            detailLoading={false}
+            detailError={null}
+            rsvpLoading={false}
+            onRsvpStatusChange={vi.fn()}
+          />
+        </MemoryRouter>
+      </MockAuthProvider>,
+    );
+
+    const banner = await screen.findByText("Cultural");
+    const title = screen.getByRole("heading", { name: "Spring Festival" });
+    const meta = screen.getByLabelText("Date, time, and location");
+    const rsvp = screen.getByLabelText("Your RSVP");
+    const attendees = screen.getByTestId("event-attendees-row");
+    const health = await screen.findByText("Event health");
+
+    const order = [
+      banner.closest(".event-banner") ?? banner,
+      title,
+      meta,
+      rsvp,
+      attendees,
+      health.closest("details") ?? health,
+    ];
+
+    for (let index = 1; index < order.length; index += 1) {
+      expect(
+        order[index - 1]!.compareDocumentPosition(order[index]!) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    }
   });
 
   it("lets each segmented RSVP option fire the shared handler", async () => {
@@ -178,7 +229,6 @@ describe("EventOverviewCard", () => {
             detailError={null}
             rsvpLoading={false}
             onRsvpStatusChange={onRsvpStatusChange}
-            onBackToUpcoming={vi.fn()}
           />
         </MemoryRouter>
       </MockAuthProvider>,

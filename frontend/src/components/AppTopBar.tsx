@@ -1,6 +1,6 @@
 import { Bell, Menu, Search, X } from "lucide-react";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 import { useAuth } from "../context/useAuth";
 import { useLogout } from "../context/useLogout";
@@ -9,6 +9,7 @@ import { fetchEvents } from "../lib/events-api";
 import { canManageTreasury } from "../lib/roles";
 import { AccountMenu } from "./AppNav";
 import { CreateMenu } from "./CreateMenu";
+import { GlobalSearch } from "./GlobalSearch";
 import { LogFinanceEntryForm } from "./LogFinanceEntryForm";
 import { AppIcon } from "./ui/AppIcon";
 import { Modal } from "./ui/Modal";
@@ -28,8 +29,8 @@ export function AppTopBar({
 }: AppTopBarProps) {
   const { member } = useAuth();
   const logout = useLogout();
-  const navigate = useNavigate();
   const [query, setQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [eventOptions, setEventOptions] = useState<
     Array<{ id: number; name: string }>
@@ -66,13 +67,25 @@ export function AppTopBar({
     };
   }, [canLog, isLogOpen]);
 
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setSearchOpen(true);
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  function openSearch() {
+    setSearchOpen(true);
+  }
+
   function handleSearch(event: FormEvent) {
     event.preventDefault();
-    const trimmed = query.trim();
-    if (!trimmed) {
-      return;
-    }
-    navigate(`/events/calendar?q=${encodeURIComponent(trimmed)}`);
+    openSearch();
   }
 
   return (
@@ -105,8 +118,10 @@ export function AppTopBar({
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
+            onFocus={openSearch}
+            onClick={openSearch}
             placeholder="Search events, members, announcements…"
-            aria-label="Search"
+            aria-label="Search events, members, announcements"
             className="ds-topbar-search"
           />
           <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-md border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-label sm:inline">
@@ -136,6 +151,12 @@ export function AppTopBar({
           ) : null}
         </div>
       </header>
+
+      <GlobalSearch
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        initialQuery={query}
+      />
 
       <Modal
         open={isLogOpen}
