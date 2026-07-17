@@ -657,6 +657,8 @@ export function EventsPage() {
           <UpcomingEventsStrip
             events={upcomingEvents}
             loading={upcomingLoading}
+            selectedEventId={selectedEventId}
+            selectedDate={selectedDate}
             onSelectEvent={navigateToEvent}
             onViewAll={() => setUpcomingDrawerOpen(true)}
           />

@@ -3,8 +3,13 @@
  * Compact timeline cards (date · title · location · time · going).
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { toLocalIsoDate } from "../lib/calendar";
+import {
+  UPCOMING_GROUP_ORDER,
+  groupUpcomingEvents,
+} from "../lib/calendar-upcoming";
 import { EVENT_TYPE_COLOR, type EventType } from "../lib/event-types";
 import {
   fetchEventAttendees,
@@ -44,6 +49,8 @@ function formatStripTime(startsAt: string): string {
 type UpcomingEventsStripProps = {
   events: EventResponse[];
   loading: boolean;
+  selectedEventId?: number | null;
+  selectedDate?: string | null;
   onSelectEvent: (event: EventResponse) => void;
   onViewAll: () => void;
 };
@@ -51,14 +58,21 @@ type UpcomingEventsStripProps = {
 export function UpcomingEventsStrip({
   events,
   loading,
+  selectedEventId = null,
+  selectedDate = null,
   onSelectEvent,
   onViewAll,
 }: UpcomingEventsStripProps) {
   const [goingById, setGoingById] = useState<Record<number, number>>({});
 
+  const stripEvents = useMemo(() => {
+    const groups = groupUpcomingEvents(events);
+    return UPCOMING_GROUP_ORDER.flatMap((group) => groups[group]);
+  }, [events]);
+
   useEffect(() => {
     let cancelled = false;
-    const ids = events.map((event) => event.id);
+    const ids = stripEvents.map((event) => event.id);
 
     if (ids.length === 0) {
       setGoingById({});
@@ -88,7 +102,7 @@ export function UpcomingEventsStrip({
     return () => {
       cancelled = true;
     };
-  }, [events]);
+  }, [stripEvents]);
 
   return (
     <section className="events-upcoming-strip" aria-label="Upcoming events">
@@ -105,33 +119,42 @@ export function UpcomingEventsStrip({
 
       {loading ? (
         <p className="text-sm text-label">Loading upcoming events…</p>
-      ) : events.length === 0 ? (
+      ) : stripEvents.length === 0 ? (
         <p className="text-sm text-label">No upcoming events scheduled yet.</p>
       ) : (
         <ul className="events-upcoming-strip-track">
-          {events.map((event) => {
+          {stripEvents.map((event) => {
             const going = goingById[event.id];
             const accent =
               EVENT_TYPE_COLOR[(event.event_type ?? "social") as EventType];
-            const location = event.location?.trim();
+            const location = event.location?.trim() || "Location TBA";
+            const eventIso = toLocalIsoDate(new Date(event.starts_at));
+            const isSelected =
+              selectedEventId != null
+                ? event.id === selectedEventId
+                : selectedDate != null && eventIso === selectedDate;
 
             return (
               <li key={event.id}>
                 <button
                   type="button"
                   onClick={() => onSelectEvent(event)}
-                  className="events-upcoming-strip-card"
+                  className={[
+                    "events-upcoming-strip-card",
+                    isSelected ? "events-upcoming-strip-card--selected" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  aria-pressed={isSelected}
                   style={{ borderLeftColor: accent }}
                 >
                   <p className="events-upcoming-strip-when">
                     {formatStripDate(event.starts_at)}
                   </p>
                   <p className="events-upcoming-strip-name">{event.name}</p>
-                  {location ? (
-                    <p className="events-upcoming-strip-location truncate">
-                      {location}
-                    </p>
-                  ) : null}
+                  <p className="events-upcoming-strip-location truncate">
+                    {location}
+                  </p>
                   <div className="events-upcoming-strip-footer">
                     <span>{formatStripTime(event.starts_at)}</span>
                     {going != null ? <span>{going} going</span> : null}

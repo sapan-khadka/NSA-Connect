@@ -136,7 +136,7 @@ export function EventsCalendarPanel({
   return (
     <section
       aria-label={viewMode === "month" ? `${getMonthLabel(month)} ${year}` : `${year}`}
-      className="events-calendar-card overflow-hidden p-3 sm:p-3.5"
+      className="events-calendar-card p-3 sm:p-3.5"
     >
       <div className="events-calendar-panel-controls">
         <button
