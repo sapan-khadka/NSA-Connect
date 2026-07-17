@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, UniqueConstraint
 from sqlalchemy.orm import relationship
 
@@ -18,7 +20,11 @@ class EventParticipantInvitation(Base):
     event_id = Column(Integer, ForeignKey("events.id"), nullable=False)
     member_id = Column(Integer, ForeignKey("members.id"), nullable=False)
     invited_by_id = Column(Integer, ForeignKey("members.id"), nullable=False)
-    created_at = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+    )
 
     event = relationship("Event", back_populates="participant_invitations")
     member = relationship("Member", foreign_keys=[member_id])

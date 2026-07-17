@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from sqlalchemy import (
     CheckConstraint,
     Column,
@@ -24,7 +26,11 @@ class VolunteerSlot(Base):
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=False, default="")
     capacity = Column(Integer, nullable=False)
-    created_at = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+    )
 
     event = relationship("Event", back_populates="volunteer_slots")
     signups = relationship(
@@ -57,7 +63,11 @@ class VolunteerSignup(Base):
     id = Column(Integer, primary_key=True, index=True)
     slot_id = Column(Integer, ForeignKey("volunteer_slots.id"), nullable=False)
     member_id = Column(Integer, ForeignKey("members.id"), nullable=False)
-    created_at = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+    )
 
     slot = relationship("VolunteerSlot", back_populates="signups")
     member = relationship("Member")
