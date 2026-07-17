@@ -105,14 +105,16 @@ describe("BoardTaskKanban", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("To do")).toBeInTheDocument();
-    expect(screen.getAllByText("In progress").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("Done")).toBeInTheDocument();
-    expect(screen.getByText("Assigned to you")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /To do\s·\s1/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /In progress\s·\s1/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Done\s·\s1/ })).toBeInTheDocument();
     expect(screen.getByText("Setup")).toBeInTheDocument();
     expect(screen.getByText("Order catering")).toBeInTheDocument();
     expect(screen.getByText("Food & Beverage")).toBeInTheDocument();
     expect(document.querySelectorAll('[data-kanban-column="todo"]')).not.toHaveLength(0);
+    expect(screen.getAllByRole("button", { name: "+ Add task" })).toHaveLength(3);
   });
 
   it("styles in-progress cards without ds-card focus-outline classes", () => {

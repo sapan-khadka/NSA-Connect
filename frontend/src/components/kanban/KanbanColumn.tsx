@@ -2,6 +2,8 @@ import { useDroppable } from "@dnd-kit/core";
 
 import { getKanbanColumnTheme } from "../../lib/kanban-theme";
 import type { KanbanColumnId, KanbanTask } from "../../lib/kanban-status";
+import { TASK_STATUS_LABELS } from "../../lib/member-workspace-responsibilities";
+import type { EventTaskStatus } from "../../lib/event-tasks-api";
 import { KanbanTaskCard } from "./KanbanTaskCard";
 
 export type KanbanColumnConfig = {
@@ -13,26 +15,34 @@ export type KanbanColumnConfig = {
 export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
   {
     id: "todo",
-    title: "To do",
+    title: TASK_STATUS_LABELS.todo,
     subtitle: "Assigned to you",
   },
   {
     id: "in_progress",
-    title: "In progress",
+    title: TASK_STATUS_LABELS.in_progress,
     subtitle: "Work underway",
   },
   {
     id: "done",
-    title: "Done",
+    title: TASK_STATUS_LABELS.done,
     subtitle: "Completed with notes or photos",
   },
 ];
+
+/** Status dots aligned with EventTaskManager STATUS_BADGE_STYLES tones. */
+const COLUMN_STATUS_DOT_CLASS: Record<EventTaskStatus, string> = {
+  todo: "bg-label",
+  in_progress: "bg-accent",
+  done: "bg-primary",
+};
 
 type KanbanColumnProps = {
   column: KanbanColumnConfig;
   tasks: KanbanTask[];
   activeTaskId: number | null;
   onOpenTask?: (taskId: number) => void;
+  onAddTask?: (columnId: KanbanColumnId) => void;
 };
 
 export function KanbanColumn({
@@ -40,11 +50,13 @@ export function KanbanColumn({
   tasks,
   activeTaskId,
   onOpenTask,
+  onAddTask,
 }: KanbanColumnProps) {
   const theme = getKanbanColumnTheme(column.id);
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
   });
+  const statusLabel = TASK_STATUS_LABELS[column.id];
 
   return (
     <section
@@ -55,25 +67,21 @@ export function KanbanColumn({
       ].join(" ")}
     >
       <header className="border-b border-kanban-border bg-white px-4 py-3">
-        <div
-          className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium text-white"
-          style={{ backgroundColor: theme.headerBg }}
-        >
-          <span>{column.title}</span>
+        <div className="flex items-center gap-2">
           <span
-            aria-label={`${tasks.length} tasks`}
-            className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white/25 px-1.5 text-xs font-semibold text-white"
-          >
-            {tasks.length}
-          </span>
+            aria-hidden="true"
+            className={`h-2 w-2 shrink-0 rounded-full ${COLUMN_STATUS_DOT_CLASS[column.id]}`}
+          />
+          <h2 className="text-sm font-semibold text-foreground">
+            {`${statusLabel} · ${tasks.length}`}
+          </h2>
         </div>
-        <p className="mt-2 text-sm text-label">{column.subtitle}</p>
       </header>
 
       <div
         ref={setNodeRef}
         className={[
-          "flex flex-col gap-3 p-3 transition-colors duration-200",
+          "flex flex-1 flex-col gap-3 p-3 transition-colors duration-200",
           isOver ? "bg-accent/[0.03]" : "bg-white",
         ].join(" ")}
       >
@@ -86,7 +94,9 @@ export function KanbanColumn({
                 : "",
             ].join(" ")}
             style={
-              column.id === "todo" ? { backgroundColor: theme.emptyBg } : undefined
+              column.id === "todo"
+                ? { backgroundColor: theme.emptyBg }
+                : undefined
             }
           >
             <p className="text-sm text-label">
@@ -104,6 +114,14 @@ export function KanbanColumn({
             />
           ))
         )}
+
+        <button
+          type="button"
+          onClick={() => onAddTask?.(column.id)}
+          className="mt-auto rounded-kanban border border-dashed border-kanban-border px-3 py-2.5 text-left text-sm font-medium text-label transition-colors hover:border-accent/40 hover:bg-accent/[0.03] hover:text-foreground"
+        >
+          + Add task
+        </button>
       </div>
     </section>
   );

@@ -26,6 +26,7 @@ type BoardTaskKanbanProps = {
   onMoveTask: (taskId: number, targetColumn: KanbanColumnId) => void;
   movingTaskId?: number | null;
   onOpenTask?: (taskId: number) => void;
+  onAddTask?: (columnId: KanbanColumnId) => void;
 };
 
 function resolveDropColumn(
@@ -54,6 +55,7 @@ export function BoardTaskKanban({
   onMoveTask,
   movingTaskId = null,
   onOpenTask,
+  onAddTask,
 }: BoardTaskKanbanProps) {
   const grouped = groupTasksByKanbanColumn(tasks);
   const [activeTaskId, setActiveTaskId] = useState<number | null>(null);
@@ -108,6 +110,7 @@ export function BoardTaskKanban({
             tasks={grouped[column.id]}
             activeTaskId={movingTaskId ?? activeTaskId}
             onOpenTask={onOpenTask}
+            onAddTask={onAddTask}
           />
         ))}
       </div>

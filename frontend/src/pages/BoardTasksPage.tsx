@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { BoardTaskKanban } from "../components/kanban/BoardTaskKanban";
 import { KanbanTaskDetailPanel } from "../components/kanban/KanbanTaskDetailPanel";
@@ -16,6 +17,7 @@ import {
   type KanbanColumnId,
   type KanbanTask,
 } from "../lib/kanban-status";
+import { isRoleAtLeast } from "../lib/roles";
 import { Card } from "../components/ui/Card";
 
 type LoadState =
@@ -38,6 +40,7 @@ function calcPersonalProgress(tasks: KanbanTask[]) {
 
 export function BoardTasksPage() {
   const { member } = useAuth();
+  const navigate = useNavigate();
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
   const [movingTaskId, setMovingTaskId] = useState<number | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
@@ -220,19 +223,20 @@ export function BoardTasksPage() {
         <Card
           as="div"
           padding="none"
-          className="border border-dashed border-gray-200 p-16 text-center"
+          className="border border-dashed border-gray-200 p-10 text-center"
         >
           <p className="text-lg font-light tracking-subhead text-foreground">
             No tasks assigned to you yet
           </p>
           <p className="mt-2 text-label">
-            When a task manager assigns you work — for example the treasurer or
-            event manager — it will show up here automatically.
+            {isRoleAtLeast(member.role, "board")
+              ? "Use + Add task on a column to open the calendar and create work on an event."
+              : "When a task manager assigns you work, it will show up here automatically."}
           </p>
         </Card>
       ) : null}
 
-      {loadState.status === "ready" && tasks.length > 0 ? (
+      {loadState.status === "ready" ? (
         <BoardTaskKanban
           tasks={tasks}
           onMoveTask={(taskId, targetColumn) => {
@@ -240,6 +244,9 @@ export function BoardTasksPage() {
           }}
           movingTaskId={movingTaskId}
           onOpenTask={setSelectedTaskId}
+          onAddTask={() => {
+            navigate("/events/calendar");
+          }}
         />
       ) : null}
 
