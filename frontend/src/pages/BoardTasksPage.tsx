@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { BoardTaskKanban } from "../components/kanban/BoardTaskKanban";
 import { KanbanTaskDetailPanel } from "../components/kanban/KanbanTaskDetailPanel";
 import { useAuth } from "../context/useAuth";
+import { isToday } from "../lib/calendar";
 import {
   fetchMyEventTasks,
   updateEventTask,
@@ -25,16 +26,45 @@ type LoadState =
   | { status: "ready"; tasks: KanbanTask[] }
   | { status: "error"; message: string };
 
-function calcPersonalProgress(tasks: KanbanTask[]) {
-  if (tasks.length === 0) {
-    return { percent: 0, done: 0, total: 0 };
+export type BoardTasksStats = {
+  assigned: number;
+  dueToday: number;
+  overdue: number;
+  completed: number;
+  completedPercent: number;
+};
+
+/** Derived from GET /v1/event-tasks/mine — no extra fetch. */
+export function calcBoardTasksStats(
+  tasks: KanbanTask[],
+  now: Date = new Date(),
+): BoardTasksStats {
+  let dueToday = 0;
+  let overdue = 0;
+  let completed = 0;
+
+  for (const task of tasks) {
+    if (getKanbanColumn(task) === "done") {
+      completed += 1;
+      continue;
+    }
+    if (task.is_overdue) {
+      overdue += 1;
+      continue;
+    }
+    if (task.due_date && isToday(new Date(task.due_date), now)) {
+      dueToday += 1;
+    }
   }
 
-  const done = tasks.filter((task) => getKanbanColumn(task) === "done").length;
+  const assigned = tasks.length;
   return {
-    done,
-    total: tasks.length,
-    percent: Math.round((done / tasks.length) * 100),
+    assigned,
+    dueToday,
+    overdue,
+    completed,
+    completedPercent:
+      assigned === 0 ? 0 : Math.round((completed / assigned) * 100),
   };
 }
 
@@ -135,19 +165,11 @@ export function BoardTasksPage() {
   }
 
   const tasks = loadState.status === "ready" ? loadState.tasks : [];
-  const progress = useMemo(() => calcPersonalProgress(tasks), [tasks]);
+  const stats = useMemo(() => calcBoardTasksStats(tasks), [tasks]);
   const selectedTask =
     selectedTaskId !== null
       ? tasks.find((task) => task.id === selectedTaskId) ?? null
       : null;
-
-  const columnCounts = {
-    todo: tasks.filter((task) => getKanbanColumn(task) === "todo").length,
-    in_progress: tasks.filter(
-      (task) => getKanbanColumn(task) === "in_progress",
-    ).length,
-    done: tasks.filter((task) => getKanbanColumn(task) === "done").length,
-  };
 
   if (!member) {
     return null;
@@ -155,51 +177,52 @@ export function BoardTasksPage() {
 
   return (
     <div className="space-y-8">
-      <Card padding="md">
-        <div className="flex flex-wrap items-end justify-between gap-6">
-          <div className="grid min-w-[14rem] grid-cols-3 gap-3">
-            <div className="text-center">
-              <p className="text-2xl font-light tracking-headline text-foreground">{columnCounts.todo}</p>
-              <p className="text-xs uppercase tracking-wide text-label">To do</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-light tracking-headline text-accent">
-                {columnCounts.in_progress}
-              </p>
-              <p className="text-xs uppercase tracking-wide text-label">
-                Active
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-light tracking-headline text-accent">
-                {columnCounts.done}
-              </p>
-              <p className="text-xs uppercase tracking-wide text-label">Done</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6">
-          <div className="mb-2 flex items-center justify-between text-sm text-label">
-            <span>
-              {progress.done} of {progress.total} assigned tasks complete
+      <section
+        aria-label="My tasks summary"
+        className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+      >
+        <Card padding="md" className="text-center">
+          <p className="home-stat-value">{stats.assigned}</p>
+          <p className="mt-1 text-xs uppercase tracking-wide text-label">
+            Assigned
+          </p>
+        </Card>
+        <Card padding="md" className="text-center">
+          <p className="home-stat-value">{stats.dueToday}</p>
+          <p className="mt-1 text-xs uppercase tracking-wide text-label">
+            Due today
+          </p>
+        </Card>
+        <Card padding="md" className="text-center">
+          <p
+            className={[
+              "home-stat-value",
+              stats.overdue > 0 ? "text-overdue" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            {stats.overdue}
+          </p>
+          <p className="mt-1 text-xs uppercase tracking-wide text-label">
+            Overdue
+          </p>
+        </Card>
+        <Card padding="md" className="text-center">
+          <p className="home-stat-value">
+            {stats.completed}
+            <span className="ml-1 text-base font-normal text-label">
+              ({stats.completedPercent}%)
             </span>
-            <span className="font-semibold text-foreground">{progress.percent}%</span>
-          </div>
-          <div className="h-2 overflow-hidden rounded-full bg-gray-100">
-            <div
-              className="h-full rounded-full bg-accent transition-all duration-700"
-              style={{ width: `${progress.percent}%` }}
-            />
-          </div>
-        </div>
-      </Card>
+          </p>
+          <p className="mt-1 text-xs uppercase tracking-wide text-label">
+            Completed
+          </p>
+        </Card>
+      </section>
 
       {moveError ? (
-        <div
-          role="alert"
-          className="ds-alert-banner"
-        >
+        <div role="alert" className="ds-alert-banner">
           {moveError}
         </div>
       ) : null}
@@ -211,10 +234,7 @@ export function BoardTasksPage() {
       ) : null}
 
       {loadState.status === "error" ? (
-        <div
-          role="alert"
-          className="ds-alert-banner p-8 text-center"
-        >
+        <div role="alert" className="ds-alert-banner p-8 text-center">
           {loadState.message}
         </div>
       ) : null}
