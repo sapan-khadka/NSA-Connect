@@ -83,7 +83,8 @@ function calcTaskCompletionSummary(tasks: EventTaskResponse[]): {
   return { completed, total };
 }
 
-function AssigneeAvatar({ name }: { name: string | null }) {
+/** Shared initials chip — same look for Event Manage and Kanban cards. */
+export function AssigneeAvatar({ name }: { name: string | null }) {
   return (
     <span
       aria-hidden="true"
