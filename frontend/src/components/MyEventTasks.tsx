@@ -11,17 +11,12 @@ import {
   type EventTaskStatus,
 } from "../lib/event-tasks-api";
 import { formatEventDateTime } from "../lib/format-datetime";
+import { TASK_STATUS_LABELS } from "../lib/member-workspace-responsibilities";
 import { Card } from "./ui/Card";
 import {
   applyChecklistItemToggle,
   replaceEventTaskInList,
 } from "../lib/task-progress";
-
-const STATUS_LABELS: Record<EventTaskStatus, string> = {
-  todo: "To do",
-  in_progress: "In progress",
-  done: "Done",
-};
 
 const STATUS_ORDER: EventTaskStatus[] = ["todo", "in_progress", "done"];
 
@@ -112,7 +107,7 @@ function MySimpleTaskCard({ task, onUpdated }: MySimpleTaskCardProps) {
           >
             {STATUS_ORDER.map((status) => (
               <option key={status} value={status}>
-                {STATUS_LABELS[status]}
+                {TASK_STATUS_LABELS[status]}
               </option>
             ))}
           </select>

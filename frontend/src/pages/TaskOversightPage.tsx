@@ -15,12 +15,14 @@ import { getApiErrorMessage } from "../lib/api-error";
 import {
   fetchTaskOverview,
   type EventTaskResponse,
-  type EventTaskStatus,
   type TaskOverviewResponse,
 } from "../lib/event-tasks-api";
 import { memberMailtoHref } from "../lib/member-mailto";
 import { fetchMembers } from "../lib/members-api";
-import { getAssignTaskPath } from "../lib/member-workspace-responsibilities";
+import {
+  getAssignTaskPath,
+  TASK_STATUS_LABELS,
+} from "../lib/member-workspace-responsibilities";
 import {
   canManageEventTasks,
   canViewTaskOversight,
@@ -42,12 +44,6 @@ import {
   type AssigneeCategoryFilter,
   type OversightMemberSnapshot,
 } from "../lib/task-oversight";
-
-const STATUS_LABELS: Record<EventTaskStatus, string> = {
-  todo: "To do",
-  in_progress: "In progress",
-  done: "Done",
-};
 
 type HealthFilter = "overdue" | "at_risk" | "on_track" | null;
 
@@ -114,7 +110,7 @@ function TaskDetailRow({ task }: { task: EventTaskResponse }) {
       <span
         className={`task-oversight-task-status task-oversight-task-status--${task.status}`}
       >
-        {STATUS_LABELS[task.status]}
+        {TASK_STATUS_LABELS[task.status]}
       </span>
       {task.completion_note ? (
         <p className="task-oversight-task-note">Note: {task.completion_note}</p>

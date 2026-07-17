@@ -25,6 +25,7 @@ import {
 } from "../lib/event-tasks-api";
 import type { PrepTaskResponse } from "../lib/events-api";
 import type { EventTaskDraft } from "../lib/event-task-draft";
+import { TASK_STATUS_LABELS } from "../lib/member-workspace-responsibilities";
 import { prepTaskToEventTask, eventTaskToPrepTask } from "../lib/task-adapters";
 import { isRoleAtLeast } from "../lib/roles";
 import {
@@ -48,12 +49,6 @@ type EventTaskManagerProps = {
   refreshKey?: number;
   taskDraft?: EventTaskDraft | null;
   onTaskDraftApplied?: () => void;
-};
-
-const STATUS_LABELS: Record<EventTaskStatus, string> = {
-  todo: "To do",
-  in_progress: "In progress",
-  done: "Done",
 };
 
 const STATUS_BADGE_STYLES: Record<EventTaskStatus, string> = {
@@ -148,7 +143,7 @@ function TaskStatusPill({
         onClick={() => setOpen((current) => !current)}
         className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${STATUS_BADGE_STYLES[status]}`}
       >
-        {STATUS_LABELS[status]}
+        {TASK_STATUS_LABELS[status]}
       </button>
 
       {open ? (
@@ -175,7 +170,7 @@ function TaskStatusPill({
                   : "text-foreground hover:bg-surface-muted",
               ].join(" ")}
             >
-              {STATUS_LABELS[option]}
+              {TASK_STATUS_LABELS[option]}
             </button>
           ))}
         </div>

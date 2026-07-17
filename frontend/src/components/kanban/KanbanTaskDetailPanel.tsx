@@ -12,11 +12,7 @@ import {
 import { formatEventDateTime } from "../../lib/format-datetime";
 import { getTaskDisplayName } from "../../lib/home-tasks";
 import { isSimpleKanbanTask, type KanbanTask } from "../../lib/kanban-status";
-const STATUS_LABELS: Record<EventTaskStatus, string> = {
-  todo: "To do",
-  in_progress: "In progress",
-  done: "Done",
-};
+import { TASK_STATUS_LABELS } from "../../lib/member-workspace-responsibilities";
 
 type KanbanTaskDetailPanelProps = {
   task: KanbanTask;
@@ -192,10 +188,10 @@ export function KanbanTaskDetailPanel({
                 }
                 className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none disabled:opacity-60"
               >
-                {(Object.keys(STATUS_LABELS) as EventTaskStatus[]).map(
+                {(Object.keys(TASK_STATUS_LABELS) as EventTaskStatus[]).map(
                   (status) => (
                     <option key={status} value={status}>
-                      {STATUS_LABELS[status]}
+                      {TASK_STATUS_LABELS[status]}
                     </option>
                   ),
                 )}
