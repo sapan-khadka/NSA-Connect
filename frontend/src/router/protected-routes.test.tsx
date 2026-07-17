@@ -126,6 +126,10 @@ describe("protected route redirects", () => {
     ).toBeInTheDocument();
   });
 
+  // TODO(test-maintenance): stale copy assertions — UI text moved; tests did not.
+  // Same root cause as the LoginPage "Welcome back" → time-of-day greeting fix.
+  // Update matchers to current home pending-approvals chip / members page heading
+  // on the next test-maintenance pass. Do not skip: keep failing until copy is synced.
   it("loads pending approvals on home for board members", async () => {
     const { fetchPendingMembers } = await import("../lib/members-api");
 
@@ -145,6 +149,7 @@ describe("protected route redirects", () => {
     ).toBeInTheDocument();
   });
 
+  // TODO(test-maintenance): see note above — "Member directory" copy is stale.
   it("allows general members to browse /members", async () => {
     renderWithRouter(undefined, {
       initialEntries: ["/members"],
