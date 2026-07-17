@@ -337,6 +337,13 @@ export function EventTaskManager({
     );
   })();
 
+  const boardAssigneeOptions = assigneeOptions.filter((candidate) =>
+    isRoleAtLeast(candidate.role, "board"),
+  );
+  const memberAssigneeOptions = assigneeOptions.filter(
+    (candidate) => !isRoleAtLeast(candidate.role, "board"),
+  );
+
   const syncFallbackTasks = useCallback(
     (nextTasks: EventTaskResponse[]) => {
       if (!onFallbackTasksChange) {
@@ -714,11 +721,24 @@ export function EventTaskManager({
                 className="mt-1 w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-accent focus:outline-none"
               >
                 <option value="">Unassigned</option>
-                {assigneeOptions.map((candidate) => (
-                  <option key={candidate.id} value={candidate.id}>
-                    {candidate.full_name}
-                  </option>
-                ))}
+                {boardAssigneeOptions.length > 0 ? (
+                  <optgroup label="Board">
+                    {boardAssigneeOptions.map((candidate) => (
+                      <option key={candidate.id} value={candidate.id}>
+                        {candidate.full_name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : null}
+                {memberAssigneeOptions.length > 0 ? (
+                  <optgroup label="Members">
+                    {memberAssigneeOptions.map((candidate) => (
+                      <option key={candidate.id} value={candidate.id}>
+                        {candidate.full_name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : null}
               </select>
             </div>
 
