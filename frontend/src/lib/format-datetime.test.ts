@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { formatRelativeTimestamp } from "./format-datetime";
+import {
+  formatCountdownBadge,
+  formatRelativeTimestamp,
+} from "./format-datetime";
 
 describe("formatRelativeTimestamp", () => {
   it("formats recent times relative to now", () => {
@@ -14,5 +17,46 @@ describe("formatRelativeTimestamp", () => {
     expect(
       formatRelativeTimestamp("2030-01-01T10:00:00.000Z", now),
     ).toBe("2 hr ago");
+  });
+});
+
+describe("formatCountdownBadge", () => {
+  const now = new Date("2030-01-01T12:00:00.000Z");
+
+  it("returns Soon for invalid dates", () => {
+    expect(formatCountdownBadge("not-a-date", now)).toBe("Soon");
+  });
+
+  it("returns Happening now for past or current times", () => {
+    expect(formatCountdownBadge("2030-01-01T12:00:00.000Z", now)).toBe(
+      "Happening now",
+    );
+    expect(formatCountdownBadge("2030-01-01T11:00:00.000Z", now)).toBe(
+      "Happening now",
+    );
+  });
+
+  it("returns N days left when more than one full day remains", () => {
+    expect(formatCountdownBadge("2030-01-14T12:00:00.000Z", now)).toBe(
+      "13 days left",
+    );
+  });
+
+  it("returns Tomorrow when exactly one full day remains", () => {
+    expect(formatCountdownBadge("2030-01-02T12:00:00.000Z", now)).toBe(
+      "Tomorrow",
+    );
+  });
+
+  it("returns N hr left for same-day countdowns with hours remaining", () => {
+    expect(formatCountdownBadge("2030-01-01T15:00:00.000Z", now)).toBe(
+      "3 hr left",
+    );
+  });
+
+  it("returns N min left when under one hour remains", () => {
+    expect(formatCountdownBadge("2030-01-01T12:25:00.000Z", now)).toBe(
+      "25 min left",
+    );
   });
 });
