@@ -10,6 +10,7 @@ import {
   type EventResponse,
   type RsvpStatus,
 } from "./events-api";
+import { startOfLocalDay } from "./calendar";
 import { fetchMeetings, type MeetingSummary } from "./meetings-api";
 import { isRoleAtLeast, type MemberRole } from "./roles";
 import {
@@ -44,10 +45,6 @@ const RSVP_DETAIL: Partial<Record<RsvpStatus, string>> = {
   going: "Going",
   maybe: "Maybe",
 };
-
-function startOfLocalDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
 
 /** Relative-friendly when label: "Tomorrow • 6:00 PM". */
 export function formatScheduleWhen(

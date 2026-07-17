@@ -20,6 +20,7 @@ import {
   type EventResponse,
 } from "../../lib/events-api";
 import { eventDetailPath } from "../../lib/event-links";
+import { startOfLocalDay as startOfLocalDayDate } from "../../lib/calendar";
 import { formatEventDateTime } from "../../lib/format-datetime";
 import { formatCurrency } from "../../lib/format-currency";
 import { FINANCE_APPROVALS_PATH } from "../../lib/finance-routes";
@@ -76,7 +77,7 @@ function greetingForNow(now = new Date()): string {
 }
 
 function startOfLocalDay(date: Date): number {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  return startOfLocalDayDate(date).getTime();
 }
 
 function formatNextEventChip(

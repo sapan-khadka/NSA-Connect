@@ -30,6 +30,11 @@ export function toLocalIsoDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+/** Local midnight for the given date's calendar day. */
+export function startOfLocalDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
 export function parseIsoDate(isoDate: string): Date {
   const [year, month, day] = isoDate.split("-").map(Number);
   return new Date(year, month - 1, day);

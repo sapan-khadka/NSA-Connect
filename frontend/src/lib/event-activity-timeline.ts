@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import type { EventDetailResponse } from "./events-api";
+import { startOfLocalDay } from "./calendar";
 
 export type EventActivityKind =
   | "budget"
@@ -41,10 +42,6 @@ export const EVENT_ACTIVITY_ICONS: Record<EventActivityKind, LucideIcon> = {
   schedule: CalendarClock,
   invite: Users,
 };
-
-function startOfLocalDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
 
 function dayKey(iso: string): string {
   const date = new Date(iso);

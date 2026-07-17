@@ -1,4 +1,4 @@
-import { toLocalIsoDate } from "./calendar";
+import { toLocalIsoDate, startOfLocalDay as startOfDay } from "./calendar";
 import type { EventResponse } from "./events-api";
 
 export type UpcomingUrgencyGroup =
@@ -20,10 +20,6 @@ export const UPCOMING_GROUP_ORDER: UpcomingUrgencyGroup[] = [
   "next_3_months",
   "later",
 ];
-
-function startOfDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
 
 function endOfWeek(date: Date): Date {
   const day = date.getDay();

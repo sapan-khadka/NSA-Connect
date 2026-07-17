@@ -21,6 +21,7 @@ import {
   formatActivityDayLabel,
   formatActivityTimeLabel,
 } from "./event-activity-timeline";
+import { startOfLocalDay } from "./calendar";
 
 export type MemberActivityKind =
   | "task_completed"
@@ -133,10 +134,6 @@ export function takeMemberActivityPreview(
     hasMore: sorted.length > limit,
     total: sorted.length,
   };
-}
-
-function startOfLocalDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
 function dayKey(iso: string): string {
