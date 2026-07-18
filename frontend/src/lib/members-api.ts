@@ -143,6 +143,32 @@ export async function downloadMembersCsv(): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
+export type MemberImportSkippedRow = {
+  row_number: number;
+  email: string | null;
+  reason: string;
+};
+
+export type MemberImportResponse = {
+  rows_created: number;
+  rows_skipped: number;
+  skipped_rows: MemberImportSkippedRow[];
+};
+
+/** Board-only CSV import of invited members (multipart file upload). */
+export async function importMembersCsv(
+  file: File,
+): Promise<MemberImportResponse> {
+  const form = new FormData();
+  form.append("file", file);
+  const response = await api.post<MemberImportResponse>(
+    "/v1/members/import",
+    form,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return response.data;
+}
+
 export async function approveMember(memberId: number): Promise<MemberResponse> {
   const response = await api.patch<MemberResponse>(
     `/v1/members/${memberId}/approve`,

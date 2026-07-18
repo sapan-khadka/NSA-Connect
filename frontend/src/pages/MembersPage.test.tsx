@@ -4,7 +4,10 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { MemberResponse } from "../lib/auth-api";
-import { downloadMembersCsv } from "../lib/members-api";
+import {
+  downloadMembersCsv,
+  importMembersCsv,
+} from "../lib/members-api";
 import { MockAuthProvider } from "../test/test-utils";
 
 import { MembersPage } from "./MembersPage";
@@ -13,6 +16,7 @@ vi.mock("../lib/members-api", () => ({
   fetchMembers: vi.fn(),
   fetchPendingMembers: vi.fn(),
   downloadMembersCsv: vi.fn(),
+  importMembersCsv: vi.fn(),
 }));
 
 vi.mock("../lib/dues-api", () => ({
@@ -151,8 +155,91 @@ describe("MembersPage", () => {
     expect(
       screen.getByRole("button", { name: "Invite Member" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Import CSV" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Import CSV" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Export" })).toBeEnabled();
+  });
+
+  it("imports a CSV file and shows a summary modal", async () => {
+    await mockDirectoryApis();
+    vi.mocked(importMembersCsv).mockResolvedValue({
+      rows_created: 2,
+      rows_skipped: 1,
+      skipped_rows: [
+        {
+          row_number: 3,
+          email: "dup@semo.edu",
+          reason: "Email already registered",
+        },
+      ],
+    });
+    renderMembersPage();
+
+    const fileInput = document.querySelector(
+      'input[type="file"][accept=".csv,text/csv"]',
+    ) as HTMLInputElement;
+    expect(fileInput).toBeTruthy();
+
+    const file = new File(
+      ["full_name,email,student_id,major,graduation_year\n"],
+      "members.csv",
+      { type: "text/csv" },
+    );
+    await userEvent.upload(fileInput, file);
+
+    await waitFor(() => {
+      expect(importMembersCsv).toHaveBeenCalledOnce();
+    });
+    expect(importMembersCsv).toHaveBeenCalledWith(file);
+
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByRole("heading", { name: "Member import complete" }),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText("2")).toBeInTheDocument();
+    expect(within(dialog).getByText(/members created/i)).toBeInTheDocument();
+    expect(within(dialog).getByText("1")).toBeInTheDocument();
+    expect(within(dialog).getByText(/rows skipped/i)).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/Row 3 — dup@semo.edu/),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("Email already registered"),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText(/Forgot Password/i)).toBeInTheDocument();
+  });
+
+  it("shows a loading state while importing members", async () => {
+    await mockDirectoryApis();
+    let finishImport: (() => void) | undefined;
+    vi.mocked(importMembersCsv).mockReturnValue(
+      new Promise((resolve) => {
+        finishImport = () =>
+          resolve({
+            rows_created: 1,
+            rows_skipped: 0,
+            skipped_rows: [],
+          });
+      }),
+    );
+    renderMembersPage();
+
+    const importButton = screen.getByRole("button", { name: "Import CSV" });
+    const fileInput = document.querySelector(
+      'input[type="file"][accept=".csv,text/csv"]',
+    ) as HTMLInputElement;
+    const file = new File(["csv"], "members.csv", { type: "text/csv" });
+    await userEvent.upload(fileInput, file);
+
+    await waitFor(() => {
+      expect(importButton).toBeDisabled();
+      expect(importButton).toHaveAttribute("aria-busy", "true");
+    });
+
+    finishImport?.();
+    await waitFor(() => {
+      expect(importButton).toBeEnabled();
+      expect(importButton).not.toHaveAttribute("aria-busy");
+    });
   });
 
   it("shows a loading state while exporting members", async () => {

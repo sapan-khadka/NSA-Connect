@@ -10,13 +10,14 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 
 import { Button } from "../components/ui/Button";
 import { AppIcon } from "../components/ui/AppIcon";
 import { InviteMemberDrawer } from "../components/InviteMemberDrawer";
 import { MembersFiltersToolbar } from "../components/MembersFiltersToolbar";
 import { MembersTable } from "../components/MembersTable";
+import { Modal } from "../components/ui/Modal";
 import { useAuth } from "../context/useAuth";
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/api-error";
@@ -34,6 +35,8 @@ import {
   downloadMembersCsv,
   fetchMembers,
   fetchPendingMembers,
+  importMembersCsv,
+  type MemberImportResponse,
 } from "../lib/members-api";
 import { canManageTreasury } from "../lib/roles";
 import { getCurrentSemesterSlug } from "../lib/semester";
@@ -97,10 +100,14 @@ function buildKpiCards(
 
 function MembersPageHeader({
   onInvite,
+  onImportClick,
+  importLoading,
   onExport,
   exportLoading,
 }: {
   onInvite: () => void;
+  onImportClick: () => void;
+  importLoading: boolean;
   onExport: () => void;
   exportLoading: boolean;
 }) {
@@ -125,8 +132,9 @@ function MembersPageHeader({
             type="button"
             variant="outline"
             size="sm"
-            disabled
-            title="Coming soon"
+            onClick={onImportClick}
+            loading={importLoading}
+            disabled={importLoading}
           >
             Import CSV
           </Button>
@@ -186,9 +194,15 @@ function MembersStatistics({
 
 export function MembersPage() {
   const { member: currentMember } = useAuth();
+  const importInputRef = useRef<HTMLInputElement>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importSummary, setImportSummary] =
+    useState<MemberImportResponse | null>(null);
+  const [directoryRefreshKey, setDirectoryRefreshKey] = useState(0);
   const [filters, setFilters] = useState<MembersDirectoryFilters>(
     EMPTY_MEMBERS_DIRECTORY_FILTERS,
   );
@@ -258,7 +272,7 @@ export function MembersPage() {
     return () => {
       cancelled = true;
     };
-  }, [canFetchDues]);
+  }, [canFetchDues, directoryRefreshKey]);
 
   const displayedMembers = useMemo(
     () => filterDirectoryMembers(members, filters, duesByMemberId),
@@ -277,11 +291,44 @@ export function MembersPage() {
     }
   }
 
+  async function handleImportFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) {
+      return;
+    }
+
+    setImportLoading(true);
+    setImportError(null);
+    try {
+      const summary = await importMembersCsv(file);
+      setImportSummary(summary);
+      setDirectoryRefreshKey((value) => value + 1);
+    } catch (caught) {
+      setImportError(getApiErrorMessage(caught));
+    } finally {
+      setImportLoading(false);
+    }
+  }
+
   return (
     <div className="members-page">
+      <input
+        ref={importInputRef}
+        type="file"
+        accept=".csv,text/csv"
+        className="sr-only"
+        aria-hidden="true"
+        tabIndex={-1}
+        onChange={(event) => {
+          void handleImportFileChange(event);
+        }}
+      />
       <div className="members-page-grid">
         <MembersPageHeader
           onInvite={() => setInviteOpen(true)}
+          onImportClick={() => importInputRef.current?.click()}
+          importLoading={importLoading}
           onExport={() => {
             void handleExport();
           }}
@@ -290,6 +337,11 @@ export function MembersPage() {
         {exportError ? (
           <p role="alert" className="ds-field-error members-page-section">
             {exportError}
+          </p>
+        ) : null}
+        {importError ? (
+          <p role="alert" className="ds-field-error members-page-section">
+            {importError}
           </p>
         ) : null}
         <MembersStatistics kpis={kpis} loading={isLoading} />
@@ -323,6 +375,55 @@ export function MembersPage() {
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}
       />
+
+      <Modal
+        open={importSummary !== null}
+        title="Member import complete"
+        onClose={() => setImportSummary(null)}
+      >
+        {importSummary ? (
+          <div className="space-y-4">
+            <div className="space-y-1 text-sm text-foreground">
+              <p>
+                <span className="font-medium tabular-nums">
+                  {importSummary.rows_created}
+                </span>{" "}
+                members created
+              </p>
+              <p>
+                <span className="font-medium tabular-nums">
+                  {importSummary.rows_skipped}
+                </span>{" "}
+                rows skipped
+              </p>
+            </div>
+
+            <p className="text-sm text-label">
+              Setup emails were not sent in bulk. New members should use Forgot
+              Password to receive their password link.
+            </p>
+
+            {importSummary.skipped_rows.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">
+                  Skipped rows
+                </p>
+                <ul className="max-h-64 space-y-2 overflow-y-auto text-sm text-label">
+                  {importSummary.skipped_rows.map((row) => (
+                    <li
+                      key={`${row.row_number}-${row.email ?? "none"}-${row.reason}`}
+                    >
+                      Row {row.row_number}
+                      {row.email ? ` — ${row.email}` : ""}
+                      <span className="block text-foreground">{row.reason}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </Modal>
     </div>
   );
 }
