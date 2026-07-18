@@ -32,15 +32,42 @@ MAX_GRADUATION_YEAR = CURRENT_YEAR + 8
 SENSITIVE_MEMBER_FIELDS = frozenset({"password", "hashed_password"})
 
 
-class MemberCreateRequest(BaseModel):
+class MemberIdentityRequest(BaseModel):
     full_name: str = Field(min_length=1, max_length=255)
     email: SemoEmailStr
-    password: str = Field(
-        min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH
-    )
     student_id: StudentIdStr
     major: str = Field(min_length=1, max_length=255)
     graduation_year: int = Field(ge=CURRENT_YEAR, le=MAX_GRADUATION_YEAR)
+
+
+class MemberCreateRequest(MemberIdentityRequest):
+    password: str = Field(
+        min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH
+    )
+
+
+class MemberInviteRequest(MemberIdentityRequest):
+    phone: str | None = Field(default=None, max_length=32)
+
+    @field_validator("phone", mode="before")
+    @classmethod
+    def strip_optional_phone(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            stripped = value.strip()
+            return stripped or None
+        return value
+
+
+class MemberImportSkippedRow(BaseModel):
+    row_number: int
+    email: str | None = None
+    reason: str
+
+
+class MemberImportResponse(BaseModel):
+    rows_created: int
+    rows_skipped: int
+    skipped_rows: list[MemberImportSkippedRow]
 
 
 class MemberUpdateRequest(BaseModel):

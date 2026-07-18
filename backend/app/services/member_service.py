@@ -1,6 +1,7 @@
 from decimal import Decimal
 from io import StringIO
 import csv
+import secrets
 
 from sqlalchemy import cast, func, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
@@ -19,7 +20,11 @@ from app.models.member import (
     MemberStatus,
 )
 from app.models.member_dues import DuesStatus, MemberDues
-from app.schemas.member import MemberCreateRequest, MemberProfileUpdateRequest
+from app.schemas.member import (
+    MemberCreateRequest,
+    MemberInviteRequest,
+    MemberProfileUpdateRequest,
+)
 
 
 class MemberAlreadyExistsError(Exception):
@@ -54,16 +59,24 @@ class InvalidCurrentPasswordError(Exception):
     pass
 
 
-def create_member(db: Session, data: MemberCreateRequest) -> Member:
-    existing = db.scalar(select(Member).where(Member.email == data.email))
-    if existing:
+def _check_member_identity_uniqueness(
+    db: Session,
+    *,
+    email: str,
+    student_id: str,
+) -> None:
+    if db.scalar(select(Member).where(Member.email == email)):
         raise MemberAlreadyExistsError
-
-    existing_student_id = db.scalar(
-        select(Member).where(Member.student_id == data.student_id)
-    )
-    if existing_student_id:
+    if db.scalar(select(Member).where(Member.student_id == student_id)):
         raise StudentIdAlreadyExistsError
+
+
+def create_member(db: Session, data: MemberCreateRequest) -> Member:
+    _check_member_identity_uniqueness(
+        db,
+        email=data.email,
+        student_id=data.student_id,
+    )
 
     validate_password_strength(
         data.password,
@@ -85,6 +98,49 @@ def create_member(db: Session, data: MemberCreateRequest) -> Member:
     db.add(member)
     db.commit()
     db.refresh(member)
+    return member
+
+
+def create_invited_member(
+    db: Session,
+    data: MemberInviteRequest,
+    *,
+    commit: bool = True,
+) -> Member:
+    """Create an approved member with an unusable password hash.
+
+    Single-invite uses commit=True (default). Bulk import uses commit=False so
+    the caller can flush many rows and checkpoint in chunks.
+    """
+    # One-row path keeps friendly duplicate checks. Bulk import already checked
+    # identities via upfront + seen sets and must not query once per row.
+    if commit:
+        _check_member_identity_uniqueness(
+            db,
+            email=data.email,
+            student_id=data.student_id,
+        )
+
+    unusable_secret = secrets.token_urlsafe(48)
+    member = Member(
+        full_name=data.full_name.strip(),
+        email=data.email,
+        student_id=data.student_id,
+        major=normalize_major(data.major),
+        graduation_year=data.graduation_year,
+        phone=data.phone.strip() if data.phone else None,
+        hashed_password=hash_password(unusable_secret),
+        role=MemberRole.GENERAL,
+        position=MemberPosition.MEMBER,
+        status=MemberStatus.APPROVED,
+        talents=[],
+    )
+    db.add(member)
+    if commit:
+        db.commit()
+        db.refresh(member)
+    else:
+        db.flush()
     return member
 
 

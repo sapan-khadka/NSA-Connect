@@ -30,6 +30,7 @@ from app.models.member_document import MemberDocumentType
 from app.schemas.auth import TokenResponse
 from app.schemas.member import (
     MemberBoardRoleUpdateRequest,
+    MemberImportResponse,
     MemberListResponse,
     MemberPasswordChangeRequest,
     MemberPositionUpdateRequest,
@@ -71,6 +72,7 @@ from app.services.member_meeting_streak_service import (
     MemberMeetingStreakPermissionError,
     get_member_consecutive_missed_meetings,
 )
+from app.services.member_import_service import import_members_csv
 from app.services.member_service import (
     InvalidCurrentPasswordError,
     InvalidMemberRoleError,
@@ -275,6 +277,20 @@ def export_members_csv(
             "Content-Disposition": f'attachment; filename="{filename}"',
         },
     )
+
+
+@router.post("/import", response_model=MemberImportResponse)
+async def import_members(
+    file: UploadFile = File(...),
+    _: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    if not file.filename or not file.filename.lower().endswith(".csv"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Upload must be a CSV file",
+        )
+    return import_members_csv(db, await file.read())
 
 
 @router.patch("/{member_id}/approve", response_model=MemberResponse)

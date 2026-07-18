@@ -51,6 +51,29 @@ def _invalidate_outstanding_tokens(db: Session, member_id: int) -> None:
         token.used_at = now
 
 
+def issue_password_token(
+    db: Session,
+    member: Member,
+    *,
+    commit: bool = True,
+) -> str:
+    """Issue a password reset/setup token. Import uses commit=False (flush only)."""
+    raw_token = secrets.token_urlsafe(32)
+    _invalidate_outstanding_tokens(db, member.id)
+    db.add(
+        PasswordResetToken(
+            member_id=member.id,
+            token_hash=hash_password(raw_token),
+            expires_at=_expires_at(),
+        )
+    )
+    if commit:
+        db.commit()
+    else:
+        db.flush()
+    return raw_token
+
+
 def request_password_reset(db: Session, email: str) -> None:
     normalized_email = _normalize_email(email)
     member = db.scalar(select(Member).where(Member.email == normalized_email))
@@ -58,16 +81,7 @@ def request_password_reset(db: Session, email: str) -> None:
     if member is None or member.status != MemberStatus.APPROVED:
         return
 
-    raw_token = secrets.token_urlsafe(32)
-    _invalidate_outstanding_tokens(db, member.id)
-
-    reset_token = PasswordResetToken(
-        member_id=member.id,
-        token_hash=hash_password(raw_token),
-        expires_at=_expires_at(),
-    )
-    db.add(reset_token)
-    db.commit()
+    raw_token = issue_password_token(db, member)
 
     reset_url = f"{settings.FRONTEND_URL.rstrip('/')}/reset-password?token={raw_token}"
     try:
