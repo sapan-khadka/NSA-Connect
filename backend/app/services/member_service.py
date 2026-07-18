@@ -236,7 +236,7 @@ def list_assignable_approved_members(db: Session) -> list[Member]:
 
 
 def build_members_export_csv(db: Session, *, semester: str) -> str:
-    """CSV of all members with current-semester dues columns when present."""
+    """CSV of all members with current-semester outstanding dues."""
     members = list(
         db.scalars(select(Member).order_by(Member.full_name.asc())).all(),
     )
@@ -249,28 +249,24 @@ def build_members_export_csv(db: Session, *, semester: str) -> str:
     writer = csv.writer(output)
     writer.writerow(
         [
-            "full_name",
+            "name",
             "email",
-            "student_id",
-            "major",
-            "graduation_year",
             "role",
             "status",
-            "position",
-            "dues_status",
+            "graduation_year",
             "outstanding_dues",
         ],
     )
 
     for member in members:
         dues = dues_by_member_id.get(member.id)
-        dues_status = ""
         outstanding = ""
         if dues is not None:
-            dues_status = (
-                dues.status.value if hasattr(dues.status, "value") else str(dues.status)
+            dues_status = MemberDues.compute_status(
+                dues.amount_owed,
+                dues.amount_paid,
             )
-            if dues.status != DuesStatus.EXEMPT:
+            if dues_status != DuesStatus.EXEMPT:
                 owed = Decimal(str(dues.amount_owed))
                 paid = Decimal(str(dues.amount_paid))
                 outstanding = f"{max(owed - paid, Decimal('0')):.2f}"
@@ -281,15 +277,9 @@ def build_members_export_csv(db: Session, *, semester: str) -> str:
             [
                 member.full_name,
                 member.email,
-                member.student_id,
-                member.major,
-                member.graduation_year,
                 member.role.value if hasattr(member.role, "value") else member.role,
                 member.status.value if hasattr(member.status, "value") else member.status,
-                member.position.value
-                if hasattr(member.position, "value")
-                else member.position,
-                dues_status,
+                member.graduation_year,
                 outstanding,
             ],
         )

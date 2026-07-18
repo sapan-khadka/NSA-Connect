@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { MemberResponse } from "../lib/auth-api";
+import { downloadMembersCsv } from "../lib/members-api";
 import { MockAuthProvider } from "../test/test-utils";
 
 import { MembersPage } from "./MembersPage";
@@ -152,6 +153,30 @@ describe("MembersPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Import CSV" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Export" })).toBeEnabled();
+  });
+
+  it("shows a loading state while exporting members", async () => {
+    await mockDirectoryApis();
+    let finishDownload: (() => void) | undefined;
+    vi.mocked(downloadMembersCsv).mockReturnValue(
+      new Promise<void>((resolve) => {
+        finishDownload = resolve;
+      }),
+    );
+    renderMembersPage();
+
+    const exportButton = screen.getByRole("button", { name: "Export" });
+    await userEvent.click(exportButton);
+
+    expect(downloadMembersCsv).toHaveBeenCalledOnce();
+    expect(exportButton).toBeDisabled();
+    expect(exportButton).toHaveAttribute("aria-busy", "true");
+
+    finishDownload?.();
+    await waitFor(() => {
+      expect(exportButton).toBeEnabled();
+      expect(exportButton).not.toHaveAttribute("aria-busy");
+    });
   });
 
   it("renders KPI cards from live member and dues totals", async () => {
