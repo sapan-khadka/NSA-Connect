@@ -130,6 +130,13 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
         "require_board",
     ),
     EndpointAuthRule(
+        "GET",
+        "/api/v1/members/export",
+        "Export members CSV",
+        "board",
+        "require_board",
+    ),
+    EndpointAuthRule(
         "PATCH",
         "/api/v1/members/{member_id}/approve",
         "Approve member",

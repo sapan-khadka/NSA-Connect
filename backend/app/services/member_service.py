@@ -1,3 +1,7 @@
+from decimal import Decimal
+from io import StringIO
+import csv
+
 from sqlalchemy import cast, func, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Session
@@ -14,6 +18,7 @@ from app.models.member import (
     MemberRole,
     MemberStatus,
 )
+from app.models.member_dues import DuesStatus, MemberDues
 from app.schemas.member import MemberCreateRequest, MemberProfileUpdateRequest
 
 
@@ -172,6 +177,68 @@ def list_assignable_approved_members(db: Session) -> list[Member]:
             .order_by(Member.full_name.asc()),
         ).all(),
     )
+
+
+def build_members_export_csv(db: Session, *, semester: str) -> str:
+    """CSV of all members with current-semester dues columns when present."""
+    members = list(
+        db.scalars(select(Member).order_by(Member.full_name.asc())).all(),
+    )
+    dues_rows = list(
+        db.scalars(select(MemberDues).where(MemberDues.semester == semester)).all(),
+    )
+    dues_by_member_id = {row.member_id: row for row in dues_rows}
+
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(
+        [
+            "full_name",
+            "email",
+            "student_id",
+            "major",
+            "graduation_year",
+            "role",
+            "status",
+            "position",
+            "dues_status",
+            "outstanding_dues",
+        ],
+    )
+
+    for member in members:
+        dues = dues_by_member_id.get(member.id)
+        dues_status = ""
+        outstanding = ""
+        if dues is not None:
+            dues_status = (
+                dues.status.value if hasattr(dues.status, "value") else str(dues.status)
+            )
+            if dues.status != DuesStatus.EXEMPT:
+                owed = Decimal(str(dues.amount_owed))
+                paid = Decimal(str(dues.amount_paid))
+                outstanding = f"{max(owed - paid, Decimal('0')):.2f}"
+            else:
+                outstanding = "0.00"
+
+        writer.writerow(
+            [
+                member.full_name,
+                member.email,
+                member.student_id,
+                member.major,
+                member.graduation_year,
+                member.role.value if hasattr(member.role, "value") else member.role,
+                member.status.value if hasattr(member.status, "value") else member.status,
+                member.position.value
+                if hasattr(member.position, "value")
+                else member.position,
+                dues_status,
+                outstanding,
+            ],
+        )
+
+    return output.getvalue()
 
 
 def approve_member(db: Session, member_id: int) -> Member:

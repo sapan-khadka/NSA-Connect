@@ -11,6 +11,7 @@ import { MembersPage } from "./MembersPage";
 vi.mock("../lib/members-api", () => ({
   fetchMembers: vi.fn(),
   fetchPendingMembers: vi.fn(),
+  downloadMembersCsv: vi.fn(),
 }));
 
 vi.mock("../lib/dues-api", () => ({
@@ -150,7 +151,7 @@ describe("MembersPage", () => {
       screen.getByRole("button", { name: "Invite Member" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Import CSV" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Export" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Export" })).toBeEnabled();
   });
 
   it("renders KPI cards from live member and dues totals", async () => {

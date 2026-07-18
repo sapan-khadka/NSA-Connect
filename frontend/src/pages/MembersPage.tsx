@@ -30,7 +30,11 @@ import {
   type MembersDirectoryFilters,
   type MembersDirectoryKpis,
 } from "../lib/members-directory";
-import { fetchMembers, fetchPendingMembers } from "../lib/members-api";
+import {
+  downloadMembersCsv,
+  fetchMembers,
+  fetchPendingMembers,
+} from "../lib/members-api";
 import { canManageTreasury } from "../lib/roles";
 import { getCurrentSemesterSlug } from "../lib/semester";
 
@@ -91,7 +95,15 @@ function buildKpiCards(
   ];
 }
 
-function MembersPageHeader({ onInvite }: { onInvite: () => void }) {
+function MembersPageHeader({
+  onInvite,
+  onExport,
+  exportLoading,
+}: {
+  onInvite: () => void;
+  onExport: () => void;
+  exportLoading: boolean;
+}) {
   return (
     <header
       aria-label="Members page header"
@@ -122,8 +134,9 @@ function MembersPageHeader({ onInvite }: { onInvite: () => void }) {
             type="button"
             variant="outline"
             size="sm"
-            disabled
-            title="Coming soon"
+            onClick={onExport}
+            loading={exportLoading}
+            disabled={exportLoading}
           >
             Export
           </Button>
@@ -174,6 +187,8 @@ function MembersStatistics({
 export function MembersPage() {
   const { member: currentMember } = useAuth();
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [filters, setFilters] = useState<MembersDirectoryFilters>(
     EMPTY_MEMBERS_DIRECTORY_FILTERS,
   );
@@ -250,10 +265,33 @@ export function MembersPage() {
     [members, filters, duesByMemberId],
   );
 
+  async function handleExport() {
+    setExportLoading(true);
+    setExportError(null);
+    try {
+      await downloadMembersCsv();
+    } catch (caught) {
+      setExportError(getApiErrorMessage(caught));
+    } finally {
+      setExportLoading(false);
+    }
+  }
+
   return (
     <div className="members-page">
       <div className="members-page-grid">
-        <MembersPageHeader onInvite={() => setInviteOpen(true)} />
+        <MembersPageHeader
+          onInvite={() => setInviteOpen(true)}
+          onExport={() => {
+            void handleExport();
+          }}
+          exportLoading={exportLoading}
+        />
+        {exportError ? (
+          <p role="alert" className="ds-field-error members-page-section">
+            {exportError}
+          </p>
+        ) : null}
         <MembersStatistics kpis={kpis} loading={isLoading} />
         <section
           aria-label="Search and filters"

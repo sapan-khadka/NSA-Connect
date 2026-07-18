@@ -112,6 +112,37 @@ export async function fetchAssignableMembers(
   return response.data;
 }
 
+function filenameFromContentDisposition(header: string | undefined): string | null {
+  if (!header) {
+    return null;
+  }
+  const utfMatch = /filename\*=UTF-8''([^;]+)/i.exec(header);
+  if (utfMatch?.[1]) {
+    return decodeURIComponent(utfMatch[1]);
+  }
+  const plainMatch = /filename="?([^";]+)"?/i.exec(header);
+  return plainMatch?.[1] ?? null;
+}
+
+/** Board-only CSV download of all members (blob + anchor click). */
+export async function downloadMembersCsv(): Promise<void> {
+  const response = await api.get<Blob>("/v1/members/export", {
+    responseType: "blob",
+  });
+  const filename =
+    filenameFromContentDisposition(
+      response.headers["content-disposition"] as string | undefined,
+    ) ?? "nsa-members.csv";
+  const url = URL.createObjectURL(response.data);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
 export async function approveMember(memberId: number): Promise<MemberResponse> {
   const response = await api.patch<MemberResponse>(
     `/v1/members/${memberId}/approve`,

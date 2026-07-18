@@ -1,4 +1,5 @@
 import math
+from datetime import UTC, datetime
 from typing import Literal
 
 from fastapi import (
@@ -12,6 +13,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -22,6 +24,7 @@ from app.core.rate_limit import change_password_key, limit
 from app.core.security import create_token_pair
 from app.integrations.cloudinary_client import CloudinaryUploadError
 from app.lib.member_talents import ALL_MEMBER_TALENTS, MEMBER_TALENT_LABELS
+from app.lib.semester import get_current_semester_slug
 from app.models.member import Member, MemberRole, MemberStatus
 from app.models.member_document import MemberDocumentType
 from app.schemas.auth import TokenResponse
@@ -75,6 +78,7 @@ from app.services.member_service import (
     MemberAlreadyExistsError,
     MemberNotFoundError,
     approve_member,
+    build_members_export_csv,
     change_member_password,
     get_member_by_id,
     list_assignable_approved_members,
@@ -251,6 +255,25 @@ def list_pending_members(
             for member in members
         ],
         total=len(members),
+    )
+
+
+@router.get("/export")
+def export_members_csv(
+    _: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    """Download all members as CSV (directory columns + current-semester dues)."""
+    semester = get_current_semester_slug()
+    csv_text = build_members_export_csv(db, semester=semester)
+    stamp = datetime.now(UTC).strftime("%Y-%m-%d")
+    filename = f"nsa-members-{stamp}.csv"
+    return StreamingResponse(
+        iter([csv_text]),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
     )
 
 
