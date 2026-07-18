@@ -137,6 +137,13 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
         "require_board",
     ),
     EndpointAuthRule(
+        "POST",
+        "/api/v1/members/import",
+        "Import members CSV",
+        "board",
+        "require_board",
+    ),
+    EndpointAuthRule(
         "PATCH",
         "/api/v1/members/{member_id}/approve",
         "Approve member",
