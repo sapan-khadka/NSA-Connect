@@ -1,5 +1,5 @@
 /**
- * Invite Member form values and client-side validation (UX only).
+ * Invite Member form values and client-side validation.
  */
 
 export const INVITE_DRAFT_STORAGE_KEY = "nsa-connect.invite-member.draft";
@@ -7,9 +7,8 @@ export const INVITE_DRAFT_STORAGE_KEY = "nsa-connect.invite-member.draft";
 export type InviteFormValues = {
   firstName: string;
   lastName: string;
-  organization: string;
-  role: string;
-  committee: string;
+  studentId: string;
+  major: string;
   graduationYear: string;
   email: string;
   phone: string;
@@ -20,9 +19,8 @@ export type InviteFormErrors = Partial<Record<keyof InviteFormValues, string>>;
 export const EMPTY_INVITE_FORM: InviteFormValues = {
   firstName: "",
   lastName: "",
-  organization: "",
-  role: "",
-  committee: "",
+  studentId: "",
+  major: "",
   graduationYear: "",
   email: "",
   phone: "",
@@ -31,19 +29,15 @@ export const EMPTY_INVITE_FORM: InviteFormValues = {
 export const INVITE_FIELD_ORDER: (keyof InviteFormValues)[] = [
   "firstName",
   "lastName",
-  "organization",
-  "role",
-  "committee",
-  "graduationYear",
   "email",
+  "studentId",
+  "major",
+  "graduationYear",
   "phone",
 ];
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-
-function isValidEmail(value: string): boolean {
-  return EMAIL_PATTERN.test(value.trim());
-}
+const EMAIL_PATTERN = /^[^\s@]+@semo\.edu$/i;
+const STUDENT_ID_PATTERN = /^[A-Z0-9]{6,20}$/;
 
 function isValidPhone(value: string): boolean {
   const digits = value.replace(/\D/g, "");
@@ -73,17 +67,20 @@ export function validateInviteField(
       return validateName(values.firstName, "First name");
     case "lastName":
       return validateName(values.lastName, "Last name");
-    case "organization":
-      if (!values.organization) {
-        return "Select an organization.";
+    case "studentId": {
+      const studentId = values.studentId.trim().toUpperCase();
+      if (!studentId) {
+        return "Student ID is required.";
+      }
+      if (!STUDENT_ID_PATTERN.test(studentId)) {
+        return "Student ID must be 6–20 letters or numbers.";
       }
       return undefined;
-    case "role":
-      if (!values.role) {
-        return "Choose a role for this invitation.";
+    }
+    case "major":
+      if (!values.major.trim()) {
+        return "Major is required.";
       }
-      return undefined;
-    case "committee":
       return undefined;
     case "graduationYear":
       if (!values.graduationYear) {
@@ -95,8 +92,8 @@ export function validateInviteField(
       if (!email) {
         return "Email is required.";
       }
-      if (!isValidEmail(email)) {
-        return "Enter a valid email address.";
+      if (!EMAIL_PATTERN.test(email)) {
+        return "Email must be a @semo.edu address.";
       }
       return undefined;
     }

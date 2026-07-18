@@ -31,6 +31,8 @@ from app.schemas.auth import TokenResponse
 from app.schemas.member import (
     MemberBoardRoleUpdateRequest,
     MemberImportResponse,
+    MemberInviteRequest,
+    MemberInviteResponse,
     MemberListResponse,
     MemberPasswordChangeRequest,
     MemberPositionUpdateRequest,
@@ -79,9 +81,11 @@ from app.services.member_service import (
     InvalidMemberStatusError,
     MemberAlreadyExistsError,
     MemberNotFoundError,
+    StudentIdAlreadyExistsError,
     approve_member,
     build_members_export_csv,
     change_member_password,
+    create_invited_member,
     get_member_by_id,
     list_assignable_approved_members,
     list_assignable_board_members,
@@ -92,6 +96,7 @@ from app.services.member_service import (
     update_member_position,
     update_member_profile,
 )
+from app.services.password_reset_service import send_initial_password_setup
 from app.services.receipt_upload_service import (
     ReceiptUploadUnavailableError,
     ReceiptValidationError,
@@ -276,6 +281,36 @@ def export_members_csv(
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',
         },
+    )
+
+
+@router.post(
+    "/invite",
+    response_model=MemberInviteResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def invite_member(
+    data: MemberInviteRequest,
+    current_member: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    try:
+        member = create_invited_member(db, data)
+    except MemberAlreadyExistsError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email already registered",
+        ) from None
+    except StudentIdAlreadyExistsError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Student ID already registered",
+        ) from None
+
+    setup_email_sent = send_initial_password_setup(db, member)
+    return MemberInviteResponse(
+        member=MemberResponse.from_member(member, viewer=current_member),
+        setup_email_sent=setup_email_sent,
     )
 
 

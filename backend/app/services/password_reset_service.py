@@ -12,7 +12,10 @@ from app.core.password_validation import validate_password_strength
 from app.core.security import hash_password, verify_password
 from app.models.member import Member, MemberStatus
 from app.models.password_reset_token import PasswordResetToken
-from app.services.password_reset_email_service import send_password_reset_email
+from app.services.password_reset_email_service import (
+    send_password_reset_email,
+    send_password_setup_email,
+)
 
 PASSWORD_RESET_REQUEST_MESSAGE = (
     "If an account exists for this email, a reset link has been sent."
@@ -72,6 +75,29 @@ def issue_password_token(
     else:
         db.flush()
     return raw_token
+
+
+def send_initial_password_setup(db: Session, member: Member) -> bool:
+    """Issue a setup token and report whether the email provider accepted it."""
+    raw_token = issue_password_token(db, member)
+    setup_url = (
+        f"{settings.FRONTEND_URL.rstrip('/')}"
+        f"/reset-password?token={raw_token}&mode=setup"
+    )
+    try:
+        send_password_setup_email(
+            to_email=member.email,
+            full_name=member.full_name,
+            setup_url=setup_url,
+            expires_minutes=settings.PASSWORD_RESET_EXPIRE_MINUTES,
+        )
+    except Exception:
+        logger.exception(
+            "Failed to send password setup email to %s",
+            member.email,
+        )
+        return False
+    return True
 
 
 def request_password_reset(db: Session, email: str) -> None:

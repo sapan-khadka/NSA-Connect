@@ -7,6 +7,7 @@ import type { MemberResponse } from "../lib/auth-api";
 import {
   downloadMembersCsv,
   importMembersCsv,
+  inviteMember,
 } from "../lib/members-api";
 import { MockAuthProvider } from "../test/test-utils";
 
@@ -17,6 +18,7 @@ vi.mock("../lib/members-api", () => ({
   fetchPendingMembers: vi.fn(),
   downloadMembersCsv: vi.fn(),
   importMembersCsv: vi.fn(),
+  inviteMember: vi.fn(),
 }));
 
 vi.mock("../lib/dues-api", () => ({
@@ -134,6 +136,38 @@ function renderMembersPage(role: "board" | "president" | "treasurer" = "presiden
       </MemoryRouter>
     </MockAuthProvider>,
   );
+}
+
+async function submitValidInvite(
+  user: ReturnType<typeof userEvent.setup>,
+  setupEmailSent: boolean,
+) {
+  vi.mocked(inviteMember).mockResolvedValue({
+    member: {
+      ...directoryMember,
+      id: 44,
+      full_name: "New Member",
+      email: "new@semo.edu",
+      student_id: "S12345678",
+      role: "general",
+      status: "approved",
+      position: "member",
+    },
+    setup_email_sent: setupEmailSent,
+  });
+
+  await user.click(screen.getByRole("button", { name: "Invite Member" }));
+  const dialog = screen.getByRole("dialog", { name: "Invite Member" });
+  await user.type(within(dialog).getByLabelText(/First name/i), "New");
+  await user.type(within(dialog).getByLabelText(/Last name/i), "Member");
+  await user.type(within(dialog).getByLabelText(/Student ID/i), "S12345678");
+  await user.type(within(dialog).getByLabelText(/Major/i), "Computer Science");
+  await user.selectOptions(
+    within(dialog).getByLabelText(/Graduation year/i),
+    String(new Date().getFullYear()),
+  );
+  await user.type(within(dialog).getByLabelText(/Email address/i), "new@semo.edu");
+  await user.click(within(dialog).getByRole("button", { name: "Invite" }));
 }
 
 describe("MembersPage", () => {
@@ -412,6 +446,32 @@ describe("MembersPage", () => {
 
     expect(
       screen.getByRole("dialog", { name: "Invite Member" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows success when the setup email was accepted", async () => {
+    const user = userEvent.setup();
+    await mockDirectoryApis();
+    renderMembersPage();
+
+    await submitValidInvite(user, true);
+
+    expect(
+      await screen.findByText("Member created and setup email sent."),
+    ).toBeInTheDocument();
+  });
+
+  it("warns when the member was created but setup email failed", async () => {
+    const user = userEvent.setup();
+    await mockDirectoryApis();
+    renderMembersPage();
+
+    await submitValidInvite(user, false);
+
+    expect(
+      await screen.findByText(
+        "Member created, but we couldn't send the setup email — ask them to use Forgot Password.",
+      ),
     ).toBeInTheDocument();
   });
 });

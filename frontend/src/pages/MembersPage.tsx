@@ -196,6 +196,10 @@ export function MembersPage() {
   const { member: currentMember } = useAuth();
   const importInputRef = useRef<HTMLInputElement>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteNotice, setInviteNotice] = useState<{
+    message: string;
+    emailSent: boolean;
+  } | null>(null);
   const [exportLoading, setExportLoading] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [importLoading, setImportLoading] = useState(false);
@@ -344,6 +348,17 @@ export function MembersPage() {
             {importError}
           </p>
         ) : null}
+        {inviteNotice ? (
+          <p
+            role="status"
+            className={[
+              "members-invite-banner members-page-section",
+              inviteNotice.emailSent ? "is-success" : "is-error",
+            ].join(" ")}
+          >
+            {inviteNotice.message}
+          </p>
+        ) : null}
         <MembersStatistics kpis={kpis} loading={isLoading} />
         <section
           aria-label="Search and filters"
@@ -374,6 +389,15 @@ export function MembersPage() {
       <InviteMemberDrawer
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}
+        onInvited={(result) => {
+          setDirectoryRefreshKey((value) => value + 1);
+          setInviteNotice({
+            emailSent: result.setup_email_sent,
+            message: result.setup_email_sent
+              ? "Member created and setup email sent."
+              : "Member created, but we couldn't send the setup email — ask them to use Forgot Password.",
+          });
+        }}
       />
 
       <Modal

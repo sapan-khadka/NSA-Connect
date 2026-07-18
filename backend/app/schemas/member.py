@@ -291,6 +291,11 @@ class MemberResponse(BaseModel):
         )
 
 
+class MemberInviteResponse(BaseModel):
+    member: MemberResponse
+    setup_email_sent: bool
+
+
 class MemberListResponse(BaseModel):
     members: list[MemberResponse]
     total: int

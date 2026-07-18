@@ -169,6 +169,30 @@ export async function importMembersCsv(
   return response.data;
 }
 
+export type InviteMemberRequest = {
+  full_name: string;
+  email: string;
+  student_id: string;
+  major: string;
+  graduation_year: number;
+  phone?: string | null;
+};
+
+export type InviteMemberResponse = {
+  member: MemberResponse;
+  setup_email_sent: boolean;
+};
+
+export async function inviteMember(
+  data: InviteMemberRequest,
+): Promise<InviteMemberResponse> {
+  const response = await api.post<InviteMemberResponse>(
+    "/v1/members/invite",
+    data,
+  );
+  return response.data;
+}
+
 export async function approveMember(memberId: number): Promise<MemberResponse> {
   const response = await api.patch<MemberResponse>(
     `/v1/members/${memberId}/approve`,

@@ -1,5 +1,5 @@
 /**
- * Invite Member — professional side drawer. UX / validation only. No backend.
+ * Invite Member — board-facing account invitation drawer.
  */
 
 import {
@@ -25,36 +25,23 @@ import {
   type InviteFormErrors,
   type InviteFormValues,
 } from "../lib/invite-member-form";
-import { MEMBER_ROLES } from "../lib/roles";
+import { getApiErrorMessage } from "../lib/api-error";
+import {
+  inviteMember,
+  type InviteMemberResponse,
+} from "../lib/members-api";
 import { Button } from "./ui/Button";
 
-const ROLE_OPTIONS = MEMBER_ROLES.map((role) => ({
-  value: role,
-  label: role.charAt(0).toUpperCase() + role.slice(1),
-}));
-
-const ORGANIZATION_OPTIONS = [
-  { value: "nsa-main", label: "NSA — Main Chapter" },
-  { value: "nsa-grad", label: "NSA — Graduate Chapter" },
-  { value: "cultural", label: "Cultural Affairs" },
-  { value: "outreach", label: "Community Outreach" },
-];
-
-const COMMITTEE_OPTIONS = [
-  { value: "events", label: "Events" },
-  { value: "finance", label: "Finance" },
-  { value: "outreach", label: "Outreach" },
-  { value: "academic", label: "Academic" },
-];
-
-const GRADUATION_YEAR_OPTIONS = [2026, 2027, 2028, 2029, 2030].map((year) => ({
-  value: String(year),
-  label: String(year),
-}));
+const currentYear = new Date().getFullYear();
+const GRADUATION_YEAR_OPTIONS = Array.from(
+  { length: 9 },
+  (_, index) => currentYear + index,
+).map((year) => ({ value: String(year), label: String(year) }));
 
 type InviteMemberDrawerProps = {
   open: boolean;
   onClose: () => void;
+  onInvited: (result: InviteMemberResponse) => void;
 };
 
 function FormSection({
@@ -91,7 +78,11 @@ function RequiredMark() {
   );
 }
 
-export function InviteMemberDrawer({ open, onClose }: InviteMemberDrawerProps) {
+export function InviteMemberDrawer({
+  open,
+  onClose,
+  onInvited,
+}: InviteMemberDrawerProps) {
   const [values, setValues] = useState<InviteFormValues>(EMPTY_INVITE_FORM);
   const [errors, setErrors] = useState<InviteFormErrors>({});
   const [touched, setTouched] = useState<
@@ -99,6 +90,8 @@ export function InviteMemberDrawer({ open, onClose }: InviteMemberDrawerProps) {
   >({});
   const [draftSaved, setDraftSaved] = useState(false);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -111,6 +104,8 @@ export function InviteMemberDrawer({ open, onClose }: InviteMemberDrawerProps) {
     setTouched({});
     setDraftSaved(false);
     setAttemptedSubmit(false);
+    setIsSubmitting(false);
+    setServerError(null);
   }, [open]);
 
   function updateField<K extends keyof InviteFormValues>(
@@ -161,9 +156,13 @@ export function InviteMemberDrawer({ open, onClose }: InviteMemberDrawerProps) {
     setDraftSaved(true);
   }
 
-  function handleInvite(event: FormEvent<HTMLFormElement>) {
+  async function handleInvite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isSubmitting) {
+      return;
+    }
     setAttemptedSubmit(true);
+    setServerError(null);
     const nextErrors = validateInviteForm(values);
     setErrors(nextErrors);
 
@@ -179,13 +178,28 @@ export function InviteMemberDrawer({ open, onClose }: InviteMemberDrawerProps) {
       return;
     }
 
-    // No backend invite endpoint wired — keep invitation local-only for now.
-    clearInviteDraft();
-    setDraftSaved(false);
-    setValues(EMPTY_INVITE_FORM);
-    setTouched({});
-    setAttemptedSubmit(false);
-    onClose();
+    setIsSubmitting(true);
+    try {
+      const result = await inviteMember({
+        full_name: `${values.firstName.trim()} ${values.lastName.trim()}`,
+        email: values.email.trim().toLowerCase(),
+        student_id: values.studentId.trim().toUpperCase(),
+        major: values.major.trim(),
+        graduation_year: Number(values.graduationYear),
+        phone: values.phone.trim() || null,
+      });
+      clearInviteDraft();
+      setDraftSaved(false);
+      setValues(EMPTY_INVITE_FORM);
+      setTouched({});
+      setAttemptedSubmit(false);
+      onInvited(result);
+      onClose();
+    } catch (caught) {
+      setServerError(getApiErrorMessage(caught));
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   const errorCount = Object.keys(errors).length;
@@ -216,6 +230,7 @@ export function InviteMemberDrawer({ open, onClose }: InviteMemberDrawerProps) {
               variant="outline"
               size="sm"
               onClick={handleSaveDraft}
+              disabled={isSubmitting}
             >
               Save Draft
             </Button>
@@ -224,6 +239,8 @@ export function InviteMemberDrawer({ open, onClose }: InviteMemberDrawerProps) {
               variant="primary"
               size="sm"
               onClick={() => formRef.current?.requestSubmit()}
+              loading={isSubmitting}
+              disabled={isSubmitting}
             >
               Invite
             </Button>
@@ -240,6 +257,11 @@ export function InviteMemberDrawer({ open, onClose }: InviteMemberDrawerProps) {
         {draftSaved ? (
           <p className="members-invite-banner is-success" role="status">
             Draft saved on this device.
+          </p>
+        ) : null}
+        {serverError ? (
+          <p className="members-invite-banner is-error" role="alert">
+            {serverError}
           </p>
         ) : null}
         {attemptedSubmit && errorCount > 0 ? (
@@ -291,61 +313,41 @@ export function InviteMemberDrawer({ open, onClose }: InviteMemberDrawerProps) {
         </FormSection>
 
         <FormSection
-          title="Organization"
-          description="Which chapter or group they are joining."
+          title="Membership"
+          description="University details used to create the member account."
         >
-          <Select
-            label={
-              <>
-                Organization <RequiredMark />
-              </>
-            }
-            name="organization"
-            options={ORGANIZATION_OPTIONS}
-            placeholder="Select an organization"
-            value={values.organization}
-            error={errors.organization}
-            onChange={(event) =>
-              updateField("organization", event.target.value)
-            }
-            onBlur={() => handleBlur("organization")}
-            required
-          />
-        </FormSection>
-
-        <FormSection
-          title="Role"
-          description="Controls access level after they accept."
-        >
-          <Select
-            label={
-              <>
-                Member role <RequiredMark />
-              </>
-            }
-            name="role"
-            options={ROLE_OPTIONS}
-            placeholder="Select a role"
-            value={values.role}
-            error={errors.role}
-            onChange={(event) => updateField("role", event.target.value)}
-            onBlur={() => handleBlur("role")}
-            required
-          />
-        </FormSection>
-
-        <FormSection
-          title="Committee"
-          description="Optional group assignment for reporting and outreach."
-        >
-          <Select
-            label="Committee"
-            name="committee"
-            options={COMMITTEE_OPTIONS}
-            placeholder="Select a committee (optional)"
-            value={values.committee}
-            onChange={(event) => updateField("committee", event.target.value)}
-          />
+          <div className="members-invite-stack">
+            <Input
+              label={
+                <>
+                  Student ID <RequiredMark />
+                </>
+              }
+              name="studentId"
+              value={values.studentId}
+              error={errors.studentId}
+              onChange={(event) => updateField("studentId", event.target.value)}
+              onBlur={() => handleBlur("studentId")}
+              placeholder="S12345678"
+              required
+              maxLength={20}
+            />
+            <Input
+              label={
+                <>
+                  Major <RequiredMark />
+                </>
+              }
+              name="major"
+              value={values.major}
+              error={errors.major}
+              onChange={(event) => updateField("major", event.target.value)}
+              onBlur={() => handleBlur("major")}
+              placeholder="Computer Science"
+              required
+              maxLength={255}
+            />
+          </div>
         </FormSection>
 
         <FormSection
