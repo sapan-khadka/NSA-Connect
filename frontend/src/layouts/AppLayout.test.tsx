@@ -1,8 +1,29 @@
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createMockMember, renderWithRouter } from "../test/test-utils";
+
+vi.mock("../lib/notifications-api", () => ({
+  EMPTY_NOTIFICATION_SUMMARY: {
+    members_pending: 0,
+    finance_pending: 0,
+    suggestions_pending: 0,
+    discussions_unread: 0,
+    tasks_overdue: 0,
+    tasks_due_today: 0,
+    attention_total: 0,
+  },
+  fetchNotificationSummary: vi.fn().mockResolvedValue({
+    members_pending: 0,
+    finance_pending: 0,
+    suggestions_pending: 0,
+    discussions_unread: 0,
+    tasks_overdue: 0,
+    tasks_due_today: 0,
+    attention_total: 0,
+  }),
+}));
 
 describe("AppLayout navigation", () => {
   afterEach(() => {

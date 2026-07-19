@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 
 import { MeetingRecordSection } from "../components/MeetingRecordSection";
 import { MeetingStatusChips } from "../components/MeetingStatusChips";
@@ -14,6 +14,7 @@ import { Card } from "../components/ui/Card";
 
 export function MeetingDetailPage() {
   const { eventId } = useParams();
+  const location = useLocation();
   const numericEventId = Number(eventId);
 
   const [detail, setDetail] = useState<MeetingDetailResponse | null>(null);
@@ -55,6 +56,23 @@ export function MeetingDetailPage() {
       cancelled = true;
     };
   }, [numericEventId]);
+
+  useEffect(() => {
+    if (!detail || location.hash !== "#meeting-minutes") {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      document
+        .getElementById("meeting-minutes")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document
+        .getElementById("meeting-minutes-notes")
+        ?.focus({ preventScroll: true });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [detail, location.hash]);
 
   if (isLoading) {
     return <p className="text-sm text-label">Loading meeting…</p>;

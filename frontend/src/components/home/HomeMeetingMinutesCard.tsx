@@ -1,4 +1,4 @@
-import { NotebookPen } from "lucide-react";
+import { ChevronRight, NotebookPen } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -10,7 +10,15 @@ import { AppIcon } from "../ui/AppIcon";
 import { ArrowLink } from "../ui/ArrowLink";
 import { HomeCard } from "../ui/HomeCard";
 
-const MINUTES_PATH = "/board/meeting-minutes";
+const MEETINGS_PATH = "/events/meetings";
+
+function meetingPath(eventId: number): string {
+  return `${MEETINGS_PATH}/${eventId}`;
+}
+
+function meetingNotesPath(eventId: number): string {
+  return `${meetingPath(eventId)}#meeting-minutes`;
+}
 
 function formatMeetingWhen(isoDate: string): string {
   return new Intl.DateTimeFormat(undefined, {
@@ -91,7 +99,7 @@ export function HomeMeetingMinutesCard() {
     >
       <div className="flex shrink-0 items-center justify-between gap-3">
         <h2 className="home-section-title">Meeting Minutes</h2>
-        <ArrowLink to={MINUTES_PATH}>Open tool</ArrowLink>
+        <ArrowLink to={MEETINGS_PATH}>All meetings</ArrowLink>
       </div>
 
       <div className="mt-3 flex min-h-0 flex-1 flex-col">
@@ -104,11 +112,15 @@ export function HomeMeetingMinutesCard() {
 
         {!isLoading && focus ? (
           <>
-            <div className="flex items-start gap-2.5">
+            <Link
+              to={meetingPath(focus.event_id)}
+              aria-label={`Open ${focus.event_name}`}
+              className="group flex items-start gap-2.5 rounded-xl p-1 transition hover:bg-surface-muted"
+            >
               <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-800">
                 <AppIcon icon={NotebookPen} size="xs" className="text-current" />
               </span>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-foreground">
                   {focus.event_name}
                 </p>
@@ -121,19 +133,22 @@ export function HomeMeetingMinutesCard() {
                       : " · Minutes saved"}
                 </p>
               </div>
-            </div>
+              <AppIcon
+                icon={ChevronRight}
+                size="xs"
+                className="mt-2 text-label transition group-hover:translate-x-0.5 group-hover:text-primary"
+              />
+            </Link>
             <div className="mt-auto flex flex-wrap gap-2 pt-4">
               <Link
-                to={`/events/meetings/${focus.event_id}`}
+                to={meetingNotesPath(focus.event_id)}
                 className="inline-flex rounded-xl bg-primary px-3.5 py-2 text-xs font-medium text-white transition hover:bg-primary-hover"
               >
-                {needsNotes ? "Add notes" : "Open meeting"}
-              </Link>
-              <Link
-                to={MINUTES_PATH}
-                className="inline-flex rounded-xl px-3 py-2 text-xs font-medium text-gray-600 transition hover:bg-surface-muted hover:text-foreground"
-              >
-                Summarize notes
+                {needsNotes
+                  ? "Write notes"
+                  : focus.has_summary
+                    ? "View minutes"
+                    : "Review & publish"}
               </Link>
             </div>
           </>
@@ -142,13 +157,13 @@ export function HomeMeetingMinutesCard() {
         {!isLoading && !focus ? (
           <>
             <p className="text-sm text-gray-600">
-              No board meetings lined up. Use the minutes tool anytime.
+              No board meetings lined up. Create a meeting to record minutes.
             </p>
             <Link
-              to={MINUTES_PATH}
+              to={MEETINGS_PATH}
               className="mt-auto inline-flex w-fit rounded-xl bg-primary px-3.5 py-2 text-xs font-medium text-white transition hover:bg-primary-hover"
             >
-              Open minutes tool
+              View board meetings
             </Link>
           </>
         ) : null}

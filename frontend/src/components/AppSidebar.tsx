@@ -16,6 +16,10 @@ import type { LucideIcon } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 
+import {
+  NavCountBadge,
+  useNotificationSummary,
+} from "../context/NotificationSummaryProvider";
 import { useAuth } from "../context/useAuth";
 import { useLogout } from "../context/useLogout";
 import {
@@ -32,6 +36,7 @@ type SidebarLink = {
   label: string;
   icon: LucideIcon;
   end?: boolean;
+  badgeCount?: number;
 };
 
 type AppSidebarProps = {
@@ -223,6 +228,7 @@ function SidebarNavLink({
             }
           />
           <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
+          <NavCountBadge count={item.badgeCount ?? 0} />
         </>
       )}
     </NavLink>
@@ -233,12 +239,17 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const { member } = useAuth();
   const logout = useLogout();
   const location = useLocation();
+  const { summary } = useNotificationSummary();
   const showMembers = member ? canBrowseMemberDirectory(member.role) : false;
   const showFinance = member ? canAccessFinance(member.role) : false;
   const showAdmin = member ? canViewMemberDirectory(member.role) : false;
 
   const adminItems = [
-    { label: "Discussions", to: "/discussions" },
+    {
+      label: "Discussions",
+      to: "/discussions",
+      badgeCount: summary.discussions_unread,
+    },
     { label: "Meeting minutes", to: "/board/meeting-minutes" },
     { label: "Announcement email", to: "/board/announcement-email" },
   ];
@@ -254,6 +265,9 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     }
   }, [adminActive]);
 
+  const eventsBadge =
+    summary.suggestions_pending + summary.tasks_overdue + summary.tasks_due_today;
+
   const mainItems: SidebarLink[] = [
     { to: "/", label: "Home", icon: Home, end: true },
     {
@@ -265,6 +279,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       to: "/events/calendar",
       label: "Events",
       icon: CalendarDays,
+      badgeCount: eventsBadge,
     },
     ...(showMembers
       ? [
@@ -272,6 +287,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
             to: "/members",
             label: "Members",
             icon: Users,
+            badgeCount: summary.members_pending,
           } satisfies SidebarLink,
         ]
       : []),
@@ -294,6 +310,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
             to: "/finance",
             label: "Finance",
             icon: Wallet,
+            badgeCount: summary.finance_pending,
           } satisfies SidebarLink,
         ]
       : []),
@@ -379,7 +396,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                             onClick={onNavigate}
                             className={({ isActive }) =>
                               [
-                                "block rounded-md px-2.5 py-1.5 text-[13px] transition-colors duration-150",
+                                "flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] transition-colors duration-150",
                                 focusRingClass,
                                 isActive
                                   ? "bg-badge-teal-bg font-semibold text-primary"
@@ -387,7 +404,12 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                               ].join(" ")
                             }
                           >
-                            {item.label}
+                            <span className="min-w-0 flex-1 truncate">
+                              {item.label}
+                            </span>
+                            {"badgeCount" in item ? (
+                              <NavCountBadge count={item.badgeCount ?? 0} />
+                            ) : null}
                           </NavLink>
                         </li>
                       ))}

@@ -221,9 +221,9 @@ describe("HomePage", () => {
     expect(screen.getByLabelText("Meeting Minutes")).toBeInTheDocument();
     expect(
       within(screen.getByLabelText("Meeting Minutes")).getByRole("link", {
-        name: /Open tool/i,
+        name: /All meetings/i,
       }),
-    ).toHaveAttribute("href", "/board/meeting-minutes");
+    ).toHaveAttribute("href", "/events/meetings");
   });
 
   it("shows urgency chips only when counts are non-zero", async () => {

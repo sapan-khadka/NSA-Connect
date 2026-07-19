@@ -1,5 +1,25 @@
 import api from "./api";
 
+export type NotificationSummary = {
+  members_pending: number;
+  finance_pending: number;
+  suggestions_pending: number;
+  discussions_unread: number;
+  tasks_overdue: number;
+  tasks_due_today: number;
+  attention_total: number;
+};
+
+export const EMPTY_NOTIFICATION_SUMMARY: NotificationSummary = {
+  members_pending: 0,
+  finance_pending: 0,
+  suggestions_pending: 0,
+  discussions_unread: 0,
+  tasks_overdue: 0,
+  tasks_due_today: 0,
+  attention_total: 0,
+};
+
 export type NotificationPreferences = {
   event_reminders: boolean;
   rsvp_nudges: boolean;
@@ -29,6 +49,11 @@ export type NotificationCheckSummary = {
   task_due_reminders: NotificationCheckStats;
   dues_reminders: NotificationCheckStats;
 };
+
+export async function fetchNotificationSummary(): Promise<NotificationSummary> {
+  const response = await api.get<NotificationSummary>("/v1/notifications/summary");
+  return response.data;
+}
 
 export async function fetchNotificationPreferences(): Promise<NotificationPreferences> {
   const response = await api.get<NotificationPreferences>("/v1/notifications/preferences");

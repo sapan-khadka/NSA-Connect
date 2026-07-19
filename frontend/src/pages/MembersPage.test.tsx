@@ -120,7 +120,10 @@ async function mockDirectoryApis(options?: {
   });
 }
 
-function renderMembersPage(role: "board" | "president" | "treasurer" = "president") {
+function renderMembersPage(
+  role: "board" | "president" | "treasurer" = "president",
+  initialEntry = "/members",
+) {
   return render(
     <MockAuthProvider
       value={{
@@ -138,7 +141,7 @@ function renderMembersPage(role: "board" | "president" | "treasurer" = "presiden
         isAuthenticated: true,
       }}
     >
-      <MemoryRouter initialEntries={["/members"]}>
+      <MemoryRouter initialEntries={[initialEntry]}>
         <MembersPage />
       </MemoryRouter>
     </MockAuthProvider>,
@@ -378,6 +381,35 @@ describe("MembersPage", () => {
     expect(
       screen.getByRole("button", { name: "Reset Filters" }),
     ).toBeEnabled();
+  });
+
+  it("applies pending status filter from ?tab=pending", async () => {
+    await mockDirectoryApis({
+      members: [
+        directoryMember,
+        {
+          ...directoryMember,
+          id: 9,
+          full_name: "Pending Person",
+          email: "pending@semo.edu",
+          student_id: "S99999999",
+          status: "pending",
+          role: "general",
+        },
+      ],
+      total: 2,
+      approvedTotal: 1,
+      pendingTotal: 1,
+    });
+
+    renderMembersPage("board", "/members?tab=pending");
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Member Status")).toHaveValue("pending");
+    });
+
+    expect(screen.getByText("Pending Person")).toBeInTheDocument();
+    expect(screen.queryByText("Alex Member")).not.toBeInTheDocument();
   });
 
   it("renders the members table with redesigned columns", async () => {

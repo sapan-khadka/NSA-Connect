@@ -11,6 +11,7 @@ import {
   Users,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { Button } from "../components/ui/Button";
 import { AppIcon } from "../components/ui/AppIcon";
@@ -209,6 +210,7 @@ function MembersStatistics({
 
 export function MembersPage() {
   const { member: currentMember } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const importInputRef = useRef<HTMLInputElement>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [managePositionsOpen, setManagePositionsOpen] = useState(false);
@@ -223,9 +225,12 @@ export function MembersPage() {
   const [importSummary, setImportSummary] =
     useState<MemberImportResponse | null>(null);
   const [directoryRefreshKey, setDirectoryRefreshKey] = useState(0);
-  const [filters, setFilters] = useState<MembersDirectoryFilters>(
-    EMPTY_MEMBERS_DIRECTORY_FILTERS,
-  );
+  const [filters, setFilters] = useState<MembersDirectoryFilters>(() => {
+    if (searchParams.get("tab") === "pending") {
+      return { ...EMPTY_MEMBERS_DIRECTORY_FILTERS, memberStatus: "pending" };
+    }
+    return EMPTY_MEMBERS_DIRECTORY_FILTERS;
+  });
 
   const [members, setMembers] = useState<MemberResponse[]>([]);
   const [kpis, setKpis] = useState<MembersDirectoryKpis | null>(null);
@@ -240,6 +245,22 @@ export function MembersPage() {
       canManageTreasury(currentMember.role, currentMember.position),
   );
   const canManagePositions = currentMember?.role === "president";
+
+  useEffect(() => {
+    if (searchParams.get("tab") !== "pending") {
+      return;
+    }
+
+    setFilters((current) =>
+      current.memberStatus === "pending"
+        ? current
+        : { ...current, memberStatus: "pending" },
+    );
+
+    const next = new URLSearchParams(searchParams);
+    next.delete("tab");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     let cancelled = false;

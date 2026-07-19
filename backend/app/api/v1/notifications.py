@@ -11,15 +11,25 @@ from app.schemas.notification_preferences import (
     NotificationPreferencesResponse,
     NotificationPreferencesUpdateRequest,
 )
+from app.schemas.notification_summary import NotificationSummaryResponse
 from app.schemas.test_email import SendTestEmailRequest
 from app.services.notification_preferences_service import (
     get_notification_preferences,
     update_notification_preferences,
 )
 from app.services.notification_scan_service import run_scheduled_notification_checks
+from app.services.notification_summary_service import get_notification_summary
 from app.services.resend_email_service import send_test_email
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
+
+
+@router.get("/summary", response_model=NotificationSummaryResponse)
+def get_my_notification_summary(
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    return get_notification_summary(db, current_member)
 
 
 @router.get("/preferences", response_model=NotificationPreferencesResponse)

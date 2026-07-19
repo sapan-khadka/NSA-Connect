@@ -103,7 +103,12 @@ export function MeetingMinutesEditor({
   }
 
   return (
-    <Card aria-label="Minutes" padding="md">
+    <Card
+      id="meeting-minutes"
+      aria-label="Minutes"
+      padding="md"
+      className="scroll-mt-24"
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-light tracking-subhead text-foreground">Minutes</h2>
         <MinutesStatusChip

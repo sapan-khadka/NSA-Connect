@@ -6,6 +6,7 @@ import { AppTopBar, MobileSidebarDrawer } from "../components/AppTopBar";
 import { MobileBottomNav } from "../components/MobileBottomNav";
 import { buildNavLinkClass } from "../components/AppNav";
 import { AppLogo } from "../components/AppLogo";
+import { NotificationSummaryProvider } from "../context/NotificationSummaryProvider";
 import { useAuth } from "../context/useAuth";
 
 /**
@@ -48,33 +49,35 @@ export function AppLayout() {
   }
 
   return (
-    <div className="ds-app-shell">
-      {/* Fixed left sidebar — desktop */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:flex lg:w-[var(--sidebar-width)]">
-        <AppSidebar />
+    <NotificationSummaryProvider>
+      <div className="ds-app-shell">
+        {/* Fixed left sidebar — desktop */}
+        <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:flex lg:w-[var(--sidebar-width)]">
+          <AppSidebar />
+        </div>
+
+        {/* Mobile drawer sidebar */}
+        <MobileSidebarDrawer
+          open={mobileSidebarOpen}
+          onClose={() => setMobileSidebarOpen(false)}
+        >
+          <AppSidebar onNavigate={() => setMobileSidebarOpen(false)} />
+        </MobileSidebarDrawer>
+
+        {/* Scrollable column: sticky header + main content */}
+        <div className="flex min-h-screen min-w-0 flex-col lg:pl-[var(--sidebar-width)]">
+          <AppTopBar
+            showMenuButton
+            onOpenSidebar={() => setMobileSidebarOpen(true)}
+          />
+
+          <main className="ds-main-canvas pb-24 lg:pb-8">
+            <Outlet />
+          </main>
+
+          <MobileBottomNav />
+        </div>
       </div>
-
-      {/* Mobile drawer sidebar */}
-      <MobileSidebarDrawer
-        open={mobileSidebarOpen}
-        onClose={() => setMobileSidebarOpen(false)}
-      >
-        <AppSidebar onNavigate={() => setMobileSidebarOpen(false)} />
-      </MobileSidebarDrawer>
-
-      {/* Scrollable column: sticky header + main content */}
-      <div className="flex min-h-screen min-w-0 flex-col lg:pl-[var(--sidebar-width)]">
-        <AppTopBar
-          showMenuButton
-          onOpenSidebar={() => setMobileSidebarOpen(true)}
-        />
-
-        <main className="ds-main-canvas pb-24 lg:pb-8">
-          <Outlet />
-        </main>
-
-        <MobileBottomNav />
-      </div>
-    </div>
+    </NotificationSummaryProvider>
   );
 }

@@ -1,4 +1,4 @@
-import { Bell, Menu, Search, X } from "lucide-react";
+import { Menu, Search, X } from "lucide-react";
 import {
   useEffect,
   useRef,
@@ -6,10 +6,11 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
-import { Link } from "react-router-dom";
 
 import { useAuth } from "../context/useAuth";
 import { useLogout } from "../context/useLogout";
+import { useNotificationSummary } from "../context/NotificationSummaryProvider";
+import { NotificationMenu } from "../design-system/components/navigation/NotificationMenu";
 import { isEventFinanceEditable } from "../lib/event-finance";
 import { fetchEvents } from "../lib/events-api";
 import { canManageTreasury } from "../lib/roles";
@@ -35,6 +36,7 @@ export function AppTopBar({
 }: AppTopBarProps) {
   const { member } = useAuth();
   const logout = useLogout();
+  const { summary, menuItems } = useNotificationSummary();
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [isLogOpen, setIsLogOpen] = useState(false);
@@ -155,13 +157,13 @@ export function AppTopBar({
             onLogTransaction={canLog ? () => setIsLogOpen(true) : undefined}
           />
 
-          <Link
-            to="/announcements"
-            aria-label="Notifications"
-            className="relative ds-icon-btn h-10 w-10 rounded-xl text-label transition duration-200 hover:bg-surface-muted hover:text-foreground"
-          >
-            <AppIcon icon={Bell} size="sm" className="text-current" />
-          </Link>
+          <NotificationMenu
+            items={menuItems}
+            unreadCount={summary.attention_total}
+            emptyMessage="You're all caught up."
+            viewAllTo="/announcements"
+            viewAllLabel="View announcements"
+          />
 
           {member ? (
             <AccountMenu

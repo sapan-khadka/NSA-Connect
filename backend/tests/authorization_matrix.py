@@ -1070,6 +1070,14 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
     # Notifications
     EndpointAuthRule(
         "GET",
+        "/api/v1/notifications/summary",
+        "In-app notification attention counts",
+        "self",
+        "get_current_member",
+        object_rules="Role-gated fields zeroed when unauthorized",
+    ),
+    EndpointAuthRule(
+        "GET",
         "/api/v1/notifications/preferences",
         "Notification preferences",
         "self",
