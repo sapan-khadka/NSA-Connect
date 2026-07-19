@@ -7,7 +7,9 @@ import {
   classifyOversightWorkload,
   countOverdueTasks,
   filterOverviewMembersByAssigneeCategory,
+  filterOverviewMembersByEvent,
   isDueWithinNext48Hours,
+  listOversightEvents,
   sortActiveMembers,
   sortOversightSnapshots,
   splitTaskOverviewMembers,
@@ -417,5 +419,68 @@ describe("task-oversight health & workload thresholds", () => {
         (row) => row.member.full_name,
       ),
     ).toEqual(["Late", "Risk", "Steady", "Complete"]);
+  });
+
+  it("lists events with overdue risk first", () => {
+    const events = listOversightEvents([
+      task({
+        id: 1,
+        title: "Done",
+        event_id: 10,
+        event_name: "Dashain",
+        status: "done",
+        is_complete: true,
+      }),
+      task({
+        id: 2,
+        title: "Open",
+        event_id: 10,
+        event_name: "Dashain",
+        status: "todo",
+      }),
+      task({
+        id: 3,
+        title: "Late",
+        event_id: 22,
+        event_name: "Tihar",
+        status: "todo",
+        is_overdue: true,
+      }),
+    ]);
+
+    expect(events.map((event) => event.eventId)).toEqual([22, 10]);
+    expect(events[0]).toMatchObject({
+      eventName: "Tihar",
+      overdueTasks: 1,
+      openTasks: 1,
+    });
+  });
+
+  it("filters overview members to a single event", () => {
+    const members = [
+      member({
+        member_id: 1,
+        full_name: "Alex",
+        total: 2,
+        tasks: [
+          task({ id: 1, title: "A", event_id: 10, event_name: "Dashain" }),
+          task({ id: 2, title: "B", event_id: 22, event_name: "Tihar" }),
+        ],
+      }),
+      member({
+        member_id: 2,
+        full_name: "Blair",
+        total: 1,
+        tasks: [
+          task({ id: 3, title: "C", event_id: 22, event_name: "Tihar" }),
+        ],
+      }),
+    ];
+
+    const scoped = filterOverviewMembersByEvent(members, 22);
+    expect(scoped).toHaveLength(2);
+    expect(scoped[0].tasks.map((row) => row.id)).toEqual([2]);
+    expect(scoped[0].total).toBe(1);
+    expect(scoped[1].tasks.map((row) => row.id)).toEqual([3]);
   });
 });

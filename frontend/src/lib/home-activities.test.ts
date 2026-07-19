@@ -15,8 +15,10 @@ describe("home-activities", () => {
       tasksSummary: {
         openCount: 1,
         overdueCount: 1,
+        dueTodayCount: 0,
         nextTask: null,
         overdueTask: null,
+        previewTasks: [],
       },
       pendingMembersTotal: 2,
       financePendingTotal: 1,
@@ -45,8 +47,10 @@ describe("home-activities", () => {
       tasksSummary: {
         openCount: 0,
         overdueCount: 0,
+        dueTodayCount: 0,
         nextTask: null,
         overdueTask: null,
+        previewTasks: [],
       },
       pendingMembersTotal: 0,
       financePendingTotal: 0,

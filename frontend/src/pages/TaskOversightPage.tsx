@@ -1,277 +1,157 @@
 /**
- * Task Oversight — people-first team health dashboard.
- * Data: existing task overview (+ member emails for mailto). No inventing metrics.
+ * Task Oversight — event-scoped Kanban + workload for President / VP.
+ * Pick an event first; stats, board, and side rail only show that event.
  */
 
-import { ChevronDown, Mail, PencilLine, UserRound } from "lucide-react";
+import {
+  AlertCircle,
+  CalendarClock,
+  ListTodo,
+  Plus,
+  Search,
+  Users,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
-import { Avatar } from "../design-system/components/Avatar";
 import { AppIcon } from "../components/ui/AppIcon";
 import { Card } from "../components/ui/Card";
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage } from "../lib/api-error";
+import { isToday } from "../lib/calendar";
 import {
   fetchTaskOverview,
   type EventTaskResponse,
+  type EventTaskStatus,
   type TaskOverviewResponse,
 } from "../lib/event-tasks-api";
-import { memberMailtoHref } from "../lib/member-mailto";
-import { fetchMembers } from "../lib/members-api";
+import { getTaskDisplayName, getTaskUrgency } from "../lib/home-tasks";
 import {
-  getAssignTaskPath,
-  TASK_STATUS_LABELS,
-} from "../lib/member-workspace-responsibilities";
+  buildOversightSnapshots,
+  filterOverviewMembersByEvent,
+  formatOversightDueDate,
+  listOversightEvents,
+  sortOversightSnapshots,
+  type OversightEventOption,
+} from "../lib/task-oversight";
 import {
   canManageEventTasks,
   canViewTaskOversight,
-  formatPositionLabel,
-  formatRoleLabel,
-  type MemberRole,
 } from "../lib/roles";
-import {
-  ACTIVE_ASSIGNMENTS_SORT_OPTIONS,
-  ASSIGNEE_CATEGORY_FILTER_OPTIONS,
-  buildOversightSnapshots,
-  countHealthStatuses,
-  filterOverviewMembersByAssigneeCategory,
-  formatOversightDueDate,
-  OVERSIGHT_HEALTH_LABELS,
-  OVERSIGHT_WORKLOAD_LABELS,
-  sortOversightSnapshots,
-  type ActiveAssignmentsSort,
-  type AssigneeCategoryFilter,
-  type OversightMemberSnapshot,
-} from "../lib/task-oversight";
 
-type HealthFilter = "overdue" | "at_risk" | "on_track" | null;
+type BoardColumn = {
+  id: EventTaskStatus;
+  label: string;
+};
 
-function SegmentedProgress({
-  done,
-  active,
-  overdue,
-}: {
-  done: number;
-  active: number;
-  overdue: number;
-}) {
-  const total = done + active + overdue;
-  if (total === 0) {
-    return (
-      <div
-        className="task-oversight-progress is-empty"
-        aria-label="No tasks"
-      />
-    );
+const COLUMNS: BoardColumn[] = [
+  { id: "todo", label: "To Do" },
+  { id: "in_progress", label: "In Progress" },
+  { id: "done", label: "Done" },
+];
+
+const URGENCY_LABEL = {
+  high: "High",
+  medium: "Medium",
+  low: "Low",
+} as const;
+
+const URGENCY_CLASS = {
+  high: "bg-rose-50 text-rose-700",
+  medium: "bg-amber-50 text-amber-800",
+  low: "bg-emerald-50 text-emerald-700",
+} as const;
+
+function flattenOverviewTasks(
+  overview: TaskOverviewResponse,
+): EventTaskResponse[] {
+  const byId = new Map<number, EventTaskResponse>();
+  for (const member of overview.members) {
+    for (const task of member.tasks) {
+      byId.set(task.id, task);
+    }
   }
-
-  return (
-    <div
-      className="task-oversight-progress"
-      role="img"
-      aria-label={`Done ${done}, Active ${active}, Overdue ${overdue}`}
-    >
-      {done > 0 ? (
-        <span
-          className="task-oversight-progress-seg is-done"
-          style={{ flexGrow: done }}
-        />
-      ) : null}
-      {active > 0 ? (
-        <span
-          className="task-oversight-progress-seg is-active"
-          style={{ flexGrow: active }}
-        />
-      ) : null}
-      {overdue > 0 ? (
-        <span
-          className="task-oversight-progress-seg is-overdue"
-          style={{ flexGrow: overdue }}
-        />
-      ) : null}
-    </div>
-  );
+  return [...byId.values()];
 }
 
-function TaskDetailRow({ task }: { task: EventTaskResponse }) {
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) {
+    return "?";
+  }
+  if (parts.length === 1) {
+    return parts[0].slice(0, 1).toUpperCase();
+  }
+  return `${parts[0][0] ?? ""}${parts[parts.length - 1][0] ?? ""}`.toUpperCase();
+}
+
+function OversightTaskCard({ task }: { task: EventTaskResponse }) {
+  const urgency = getTaskUrgency(task);
   const dueLabel = formatOversightDueDate(task.due_date);
+  const checklistDone = task.checklist_items.filter((item) => item.is_completed)
+    .length;
+  const checklistTotal = task.checklist_items.length;
+  const progress =
+    task.status === "done"
+      ? 100
+      : checklistTotal > 0
+        ? Math.round((checklistDone / checklistTotal) * 100)
+        : task.status === "in_progress"
+          ? 50
+          : 0;
 
   return (
-    <li className="task-oversight-task-row">
-      <div className="task-oversight-task-main">
-        <p className="task-oversight-task-title">{task.title}</p>
-        <p className="task-oversight-task-meta">
-          {task.event_name}
-          {dueLabel ? ` · Due ${dueLabel}` : ""}
-          {task.is_overdue && !task.is_complete ? " · Overdue" : ""}
-        </p>
+    <article className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
+      <div className="flex items-start justify-between gap-2">
+        <h3 className="min-w-0 text-sm font-semibold leading-snug text-foreground">
+          {getTaskDisplayName(task)}
+        </h3>
+        <span
+          className={[
+            "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium",
+            URGENCY_CLASS[urgency],
+          ].join(" ")}
+        >
+          {URGENCY_LABEL[urgency]}
+        </span>
       </div>
-      <span
-        className={`task-oversight-task-status task-oversight-task-status--${task.status}`}
-      >
-        {TASK_STATUS_LABELS[task.status]}
-      </span>
-      {task.completion_note ? (
-        <p className="task-oversight-task-note">Note: {task.completion_note}</p>
-      ) : null}
-      {task.completion_photo_url ? (
-        <a
-          href={task.completion_photo_url}
-          target="_blank"
-          rel="noreferrer"
-          className="task-oversight-task-photo-link"
-        >
-          <img
-            src={task.completion_photo_url}
-            alt={`Completion photo for ${task.title}`}
-            className="task-oversight-task-photo"
-          />
-        </a>
-      ) : null}
-    </li>
-  );
-}
 
-function MemberOversightCard({
-  snapshot,
-  email,
-  assignTaskPath,
-}: {
-  snapshot: OversightMemberSnapshot;
-  email: string | null;
-  assignTaskPath: string | null;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const { member, status, workload, nextDueTask } = snapshot;
-  const mailto = memberMailtoHref(email);
-  const nextDueLabel = nextDueTask
-    ? `${nextDueTask.title}${
-        formatOversightDueDate(nextDueTask.due_date)
-          ? ` · ${formatOversightDueDate(nextDueTask.due_date)}`
-          : ""
-      }`
-    : "No upcoming due date";
+      <div className="mt-2.5 flex items-center gap-2">
+        <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-badge-teal-bg text-[10px] font-semibold text-primary">
+          {initials(task.assignee_name)}
+        </span>
+        <span className="truncate text-xs text-gray-600">
+          {task.assignee_name}
+        </span>
+      </div>
 
-  return (
-    <article
-      className={`task-oversight-card task-oversight-card--${status}`}
-      aria-label={`${member.full_name}, ${OVERSIGHT_HEALTH_LABELS[status]}`}
-    >
-      <div className="task-oversight-card-top">
-        <button
-          type="button"
-          className="task-oversight-card-toggle"
-          aria-expanded={expanded}
-          aria-label={`${expanded ? "Collapse" : "Expand"} tasks for ${member.full_name}`}
-          onClick={() => setExpanded((value) => !value)}
-        >
-          <Avatar
-            name={member.full_name}
-            size="md"
-            className="task-oversight-avatar"
-          />
-          <div className="task-oversight-card-identity">
-            <div className="task-oversight-card-title-row">
-              <h3 className="task-oversight-card-name">{member.full_name}</h3>
-              <span
-                className={`task-oversight-status-badge task-oversight-status-badge--${status}`}
-              >
-                {OVERSIGHT_HEALTH_LABELS[status]}
-              </span>
-              <span
-                className={`task-oversight-workload-badge task-oversight-workload-badge--${workload}`}
-              >
-                {OVERSIGHT_WORKLOAD_LABELS[workload]}
-              </span>
-            </div>
-            <p className="task-oversight-card-role">
-              {formatRoleLabel(member.role as MemberRole)} ·{" "}
-              {formatPositionLabel(member.position)}
-            </p>
-          </div>
-          <AppIcon
-            icon={ChevronDown}
-            size="sm"
-            className={`task-oversight-chevron${expanded ? " is-open" : ""}`}
-          />
-        </button>
+      <p className="mt-2 truncate text-[11px] text-gray-500">
+        {dueLabel ?? "No due date"}
+        {task.is_overdue && !task.is_complete ? " · Overdue" : ""}
+      </p>
 
-        <div className="task-oversight-card-actions" aria-label="Quick actions">
-          <Link
-            to={`/members/${member.member_id}`}
-            className="task-oversight-action"
-            title="Open Workspace"
-            aria-label={`Open Workspace for ${member.full_name}`}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <AppIcon icon={UserRound} size="xs" className="text-current" />
-            <span>Open Workspace</span>
-          </Link>
-          {assignTaskPath ? (
-            <Link
-              to={assignTaskPath}
-              className="task-oversight-action"
-              title="Assign Task"
-              aria-label={`Assign Task for ${member.full_name}`}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <AppIcon icon={PencilLine} size="xs" className="text-current" />
-              <span>Assign Task</span>
-            </Link>
-          ) : null}
-          {mailto ? (
-            <a
-              href={mailto}
-              className="task-oversight-action"
-              title="Message"
-              aria-label={`Message ${member.full_name}`}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <AppIcon icon={Mail} size="xs" className="text-current" />
-              <span>Message</span>
-            </a>
-          ) : (
-            <span
-              className="task-oversight-action is-disabled"
-              title="No email on file"
-              aria-label={`Message ${member.full_name} (No email on file)`}
-            >
-              <AppIcon icon={Mail} size="xs" className="text-current" />
-              <span>Message</span>
+      {task.status !== "todo" || checklistTotal > 0 ? (
+        <div className="mt-2.5">
+          <div className="mb-1 flex items-center justify-between text-[10px] text-gray-500">
+            <span>
+              {checklistTotal > 0
+                ? `${checklistDone}/${checklistTotal}`
+                : task.status === "done"
+                  ? "Complete"
+                  : "In progress"}
             </span>
-          )}
+            <span className="tabular-nums">{progress}%</span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-gray-100">
+            <div
+              className={[
+                "h-full rounded-full transition-[width]",
+                task.status === "done" ? "bg-emerald-500" : "bg-primary",
+              ].join(" ")}
+              style={{ width: `${progress}%` }}
+            />
+          </div>
         </div>
-      </div>
-
-      <div className="task-oversight-card-summary">
-        <SegmentedProgress
-          done={snapshot.doneTaskCount}
-          active={snapshot.activeNonOverdueCount}
-          overdue={snapshot.overdueTaskCount}
-        />
-        <div className="task-oversight-card-meta-row">
-          <p className="task-oversight-next-due">
-            <span className="task-oversight-meta-label">Next due</span>
-            {nextDueLabel}
-          </p>
-          <p className="task-oversight-completion tabular-nums">
-            {snapshot.completionPercent}% complete · {snapshot.member.total}{" "}
-            task{snapshot.member.total === 1 ? "" : "s"}
-          </p>
-        </div>
-      </div>
-
-      {expanded ? (
-        <ul className="task-oversight-task-list" aria-label="Tasks">
-          {member.tasks.length === 0 ? (
-            <li className="task-oversight-task-empty">No tasks assigned.</li>
-          ) : (
-            member.tasks.map((task) => (
-              <TaskDetailRow key={task.id} task={task} />
-            ))
-          )}
-        </ul>
       ) : null}
     </article>
   );
@@ -279,30 +159,21 @@ function MemberOversightCard({
 
 export function TaskOversightPage() {
   const { member } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [overview, setOverview] = useState<TaskOverviewResponse | null>(null);
-  const [emailsByMemberId, setEmailsByMemberId] = useState<
-    Map<number, string | null>
-  >(() => new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeSort, setActiveSort] =
-    useState<ActiveAssignmentsSort>("status");
-  const [assigneeFilter, setAssigneeFilter] =
-    useState<AssigneeCategoryFilter>("all");
-  const [healthFilter, setHealthFilter] = useState<HealthFilter>(null);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | EventTaskStatus>(
+    "all",
+  );
 
   const allowed = member
     ? canViewTaskOversight(member.role, member.position)
     : false;
-  const assignTaskPath = member
-    ? getAssignTaskPath({
-        canManageEventTasks: canManageEventTasks(
-          member.role,
-          member.position,
-        ),
-      })
-    : null;
+  const canCreateTask = member
+    ? canManageEventTasks(member.role, member.position)
+    : false;
 
   useEffect(() => {
     if (!allowed) {
@@ -315,19 +186,10 @@ export function TaskOversightPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const [response, directory] = await Promise.all([
-          fetchTaskOverview(),
-          fetchMembers({ page: 1, page_size: 100 }).catch(() => null),
-        ]);
-        if (cancelled) {
-          return;
+        const response = await fetchTaskOverview();
+        if (!cancelled) {
+          setOverview(response);
         }
-        setOverview(response);
-        const emailMap = new Map<number, string | null>();
-        for (const row of directory?.members ?? []) {
-          emailMap.set(row.id, row.email);
-        }
-        setEmailsByMemberId(emailMap);
       } catch (caught) {
         if (!cancelled) {
           setError(getApiErrorMessage(caught));
@@ -340,75 +202,150 @@ export function TaskOversightPage() {
     }
 
     void load();
-
     return () => {
       cancelled = true;
     };
   }, [allowed]);
 
+  const allTasks = useMemo(
+    () => (overview ? flattenOverviewTasks(overview) : []),
+    [overview],
+  );
+
+  const events = useMemo(() => listOversightEvents(allTasks), [allTasks]);
+
+  const eventParam = Number(searchParams.get("event"));
+  const selectedEventId =
+    Number.isInteger(eventParam) && eventParam > 0 ? eventParam : null;
+  const effectiveEventId =
+    selectedEventId != null &&
+    events.some((event) => event.eventId === selectedEventId)
+      ? selectedEventId
+      : (events[0]?.eventId ?? null);
+
+  const selectedEvent: OversightEventOption | null =
+    events.find((event) => event.eventId === effectiveEventId) ?? null;
+
   const {
-    needsAttention,
-    everyoneElse,
-    healthCounts,
+    tasks,
+    needsAttentionCount,
+    overdueCount,
+    dueTodayCount,
+    openCount,
     completePercent,
+    completedTasks,
+    totalTasks,
+    deadlines,
+    workload,
   } = useMemo(() => {
-    if (!overview) {
+    if (!overview || effectiveEventId == null) {
       return {
-        needsAttention: [] as OversightMemberSnapshot[],
-        everyoneElse: [] as OversightMemberSnapshot[],
-        healthCounts: { overdue: 0, at_risk: 0, on_track: 0 },
+        tasks: [] as EventTaskResponse[],
+        needsAttentionCount: 0,
+        overdueCount: 0,
+        dueTodayCount: 0,
+        openCount: 0,
         completePercent: 0,
+        completedTasks: 0,
+        totalTasks: 0,
+        deadlines: [] as EventTaskResponse[],
+        workload: [] as Array<{
+          memberId: number;
+          name: string;
+          active: number;
+          overdue: number;
+          widthPct: number;
+        }>,
       };
     }
 
-    const filteredMembers = filterOverviewMembersByAssigneeCategory(
+    const scopedMembers = filterOverviewMembersByEvent(
       overview.members,
-      assigneeFilter,
+      effectiveEventId,
     );
-    const snapshots = sortOversightSnapshots(
-      buildOversightSnapshots(filteredMembers),
-      activeSort,
+    const eventTasks = flattenOverviewTasks({
+      ...overview,
+      members: scopedMembers,
+    });
+    const openTasks = eventTasks.filter((task) => !task.is_complete);
+    const overdueTasks = openTasks.filter((task) => task.is_overdue);
+    const dueTodayTasks = openTasks.filter(
+      (task) =>
+        !task.is_overdue &&
+        task.due_date != null &&
+        isToday(new Date(task.due_date)),
     );
-    const counts = countHealthStatuses(snapshots);
-    const query = search.trim().toLowerCase();
+    const snapshots = buildOversightSnapshots(scopedMembers);
+    const attentionMembers = snapshots.filter(
+      (row) => row.status === "overdue" || row.status === "at_risk",
+    ).length;
+    const completed = eventTasks.filter(
+      (task) => task.is_complete || task.status === "done",
+    ).length;
 
-    const matchesSearch = (row: OversightMemberSnapshot) =>
-      !query || row.member.full_name.toLowerCase().includes(query);
+    const upcomingDeadlines = [...openTasks]
+      .filter((task) => task.due_date)
+      .sort(
+        (left, right) =>
+          new Date(left.due_date!).getTime() -
+          new Date(right.due_date!).getTime(),
+      )
+      .slice(0, 5);
 
-    const matchesHealth = (row: OversightMemberSnapshot) =>
-      !healthFilter || row.status === healthFilter;
+    const workloadRows = sortOversightSnapshots(snapshots, "incomplete_first")
+      .filter((row) => row.member.total > 0)
+      .slice(0, 6)
+      .map((row) => ({
+        memberId: row.member.member_id,
+        name: row.member.full_name,
+        active: row.activeTaskCount,
+        overdue: row.overdueTaskCount,
+      }));
 
-    const attention = snapshots.filter(
-      (row) =>
-        (row.status === "overdue" || row.status === "at_risk") &&
-        matchesSearch(row) &&
-        matchesHealth(row),
-    );
-    const rest = snapshots.filter(
-      (row) =>
-        (row.status === "on_track" ||
-          row.status === "completed" ||
-          row.status === "no_data") &&
-        matchesSearch(row) &&
-        matchesHealth(row),
-    );
+    const maxActive = Math.max(1, ...workloadRows.map((row) => row.active));
 
     return {
-      needsAttention: attention,
-      everyoneElse: rest,
-      healthCounts: counts,
+      tasks: eventTasks,
+      needsAttentionCount: attentionMembers,
+      overdueCount: overdueTasks.length,
+      dueTodayCount: dueTodayTasks.length,
+      openCount: openTasks.length,
       completePercent:
-        overview.total_tasks > 0
-          ? Math.round(
-              (overview.completed_tasks / overview.total_tasks) * 100,
-            )
+        eventTasks.length > 0
+          ? Math.round((completed / eventTasks.length) * 100)
           : 0,
+      completedTasks: completed,
+      totalTasks: eventTasks.length,
+      deadlines: upcomingDeadlines,
+      workload: workloadRows.map((row) => ({
+        ...row,
+        widthPct: Math.round((row.active / maxActive) * 100),
+      })),
     };
-  }, [overview, activeSort, assigneeFilter, healthFilter, search]);
+  }, [overview, effectiveEventId]);
 
-  function toggleHealthFilter(next: Exclude<HealthFilter, null>) {
-    setHealthFilter((current) => (current === next ? null : next));
-  }
+  const filteredTasks = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return tasks.filter((task) => {
+      if (statusFilter !== "all" && task.status !== statusFilter) {
+        return false;
+      }
+      if (!query) {
+        return true;
+      }
+      return (
+        getTaskDisplayName(task).toLowerCase().includes(query) ||
+        task.assignee_name.toLowerCase().includes(query)
+      );
+    });
+  }, [tasks, search, statusFilter]);
+
+  const columns = useMemo(() => {
+    return COLUMNS.map((column) => ({
+      ...column,
+      items: filteredTasks.filter((task) => task.status === column.id),
+    }));
+  }, [filteredTasks]);
 
   if (!member) {
     return null;
@@ -423,210 +360,343 @@ export function TaskOversightPage() {
     );
   }
 
+  const newTaskPath =
+    canCreateTask && effectiveEventId != null
+      ? `/events/${effectiveEventId}/manage`
+      : null;
+
+  const stats = [
+    {
+      id: "attention",
+      label: "Needs Attention",
+      value: needsAttentionCount,
+      hint: "Assignees overdue or at risk",
+      icon: AlertCircle,
+      tone: "bg-rose-50 text-rose-700",
+    },
+    {
+      id: "overdue",
+      label: "Overdue",
+      value: overdueCount,
+      hint: "Open tasks past due",
+      icon: CalendarClock,
+      tone: "bg-amber-50 text-amber-800",
+    },
+    {
+      id: "due-today",
+      label: "Due Today",
+      value: dueTodayCount,
+      hint: "Tasks due today",
+      icon: ListTodo,
+      tone: "bg-sky-50 text-sky-700",
+    },
+    {
+      id: "open",
+      label: "Open",
+      value: openCount,
+      hint: "Incomplete tasks for this event",
+      icon: ListTodo,
+      tone: "bg-violet-50 text-violet-700",
+    },
+  ] as const;
+
   return (
-    <div className="task-oversight">
-      <header className="task-oversight-header">
-        <div>
-          <h1 className="task-oversight-title">Task Oversight</h1>
-          <p className="task-oversight-subtitle">
-            People-first view of assignment health across the team.
+    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-4 pb-6">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+            Task Oversight
+          </h1>
+          <p className="mt-0.5 text-sm text-gray-600">
+            {selectedEvent
+              ? `Track progress for ${selectedEvent.eventName}.`
+              : "Pick an event to track progress and risks."}
           </p>
         </div>
+        {newTaskPath ? (
+          <Link
+            to={newTaskPath}
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-sm font-medium text-white transition hover:bg-primary-hover"
+          >
+            <AppIcon icon={Plus} size="sm" className="text-current" />
+            New Task
+          </Link>
+        ) : null}
       </header>
 
       {isLoading ? (
-        <Card as="div" padding="none" className="p-10 text-center text-label">
-          Loading oversight…
-        </Card>
+        <p className="text-sm text-gray-600">Loading oversight…</p>
       ) : null}
 
       {error ? (
-        <div role="alert" className="ds-alert-banner p-6">
+        <div role="alert" className="ds-alert-banner">
           {error}
         </div>
       ) : null}
 
       {overview && !isLoading && !error ? (
-        <>
-          <section
-            className="task-oversight-health"
-            aria-label="Today's Team Health"
-          >
-            <div className="task-oversight-health-heading">
-              <h2 className="task-oversight-section-title">
-                Today&apos;s Team Health
-              </h2>
-              <p className="task-oversight-section-desc">
-                Click a status to filter the lists below.
-              </p>
-            </div>
-            <div className="task-oversight-health-grid">
-              {(
-                [
-                  ["on_track", "On Track", healthCounts.on_track],
-                  ["at_risk", "At Risk", healthCounts.at_risk],
-                  ["overdue", "Overdue", healthCounts.overdue],
-                ] as const
-              ).map(([key, label, value]) => (
-                <button
-                  key={key}
-                  type="button"
-                  className={`task-oversight-health-tile task-oversight-health-tile--${key}${
-                    healthFilter === key ? " is-active" : ""
-                  }`}
-                  aria-pressed={healthFilter === key}
-                  aria-label={`Filter ${label}`}
-                  onClick={() => toggleHealthFilter(key)}
+        events.length === 0 ? (
+          <Card padding="md" className="text-sm text-gray-600">
+            No event tasks yet. Create tasks on an event to oversee them here.
+          </Card>
+        ) : (
+          <>
+            <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
+              <label className="block">
+                <span className="text-xs font-medium text-gray-500">Event</span>
+                <select
+                  aria-label="Event"
+                  value={effectiveEventId ?? ""}
+                  onChange={(event) => {
+                    const next = Number(event.target.value);
+                    const nextParams = new URLSearchParams(searchParams);
+                    if (Number.isInteger(next) && next > 0) {
+                      nextParams.set("event", String(next));
+                    } else {
+                      nextParams.delete("event");
+                    }
+                    setSearchParams(nextParams);
+                    setSearch("");
+                    setStatusFilter("all");
+                  }}
+                  className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 sm:max-w-md"
                 >
-                  <span className="task-oversight-health-label">{label}</span>
-                  <span className="task-oversight-health-value tabular-nums">
-                    {value}
-                  </span>
-                </button>
+                  {events.map((event) => (
+                    <option key={event.eventId} value={event.eventId}>
+                      {event.eventName}
+                      {event.overdueTasks > 0
+                        ? ` · ${event.overdueTasks} overdue`
+                        : event.openTasks > 0
+                          ? ` · ${event.openTasks} open`
+                          : " · complete"}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {selectedEvent ? (
+                <p className="mt-2 text-xs text-gray-500">
+                  {selectedEvent.openTasks} open
+                  {selectedEvent.overdueTasks > 0
+                    ? ` · ${selectedEvent.overdueTasks} overdue`
+                    : ""}
+                  {" · "}
+                  {selectedEvent.completedTasks} of {selectedEvent.totalTasks}{" "}
+                  complete
+                </p>
+              ) : null}
+            </div>
+
+            <ul className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+              {stats.map((stat) => (
+                <li
+                  key={stat.id}
+                  className="rounded-xl border border-gray-100 bg-white px-3 py-2.5 shadow-sm"
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={[
+                        "inline-flex h-7 w-7 items-center justify-center rounded-lg",
+                        stat.tone,
+                      ].join(" ")}
+                    >
+                      <AppIcon
+                        icon={stat.icon}
+                        size="xs"
+                        className="text-current"
+                      />
+                    </span>
+                    <p className="text-xs text-gray-500">{stat.label}</p>
+                  </div>
+                  <p className="mt-1.5 text-xl font-semibold tabular-nums tracking-tight text-foreground">
+                    {stat.value}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-gray-500">{stat.hint}</p>
+                </li>
               ))}
-              <div
-                className="task-oversight-health-tile task-oversight-health-tile--complete"
-                aria-label={`Overall completion ${completePercent} percent`}
-              >
-                <span className="task-oversight-health-label">
-                  Overall completion
-                </span>
-                <span className="task-oversight-health-value tabular-nums">
-                  {completePercent}%
-                </span>
-              </div>
-            </div>
-          </section>
+            </ul>
 
-          <section
-            className="task-oversight-section"
-            aria-labelledby="needs-attention-heading"
-          >
-            <div className="task-oversight-section-header">
-              <div>
-                <h2
-                  id="needs-attention-heading"
-                  className="task-oversight-section-title"
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-12 xl:items-start">
+              <div className="min-w-0 space-y-3 xl:col-span-8">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <label className="relative min-w-0 flex-1">
+                    <span className="sr-only">Search tasks</span>
+                    <AppIcon
+                      icon={Search}
+                      size="xs"
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    />
+                    <input
+                      type="search"
+                      value={search}
+                      onChange={(event) => setSearch(event.target.value)}
+                      placeholder="Search tasks or members…"
+                      className="w-full rounded-xl border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    />
+                  </label>
+                  <label className="shrink-0 text-sm text-gray-600">
+                    <span className="sr-only">Status</span>
+                    <select
+                      aria-label="Status"
+                      value={statusFilter}
+                      onChange={(event) =>
+                        setStatusFilter(
+                          event.target.value as "all" | EventTaskStatus,
+                        )
+                      }
+                      className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    >
+                      <option value="all">All statuses</option>
+                      <option value="todo">To Do</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="done">Done</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div
+                  className="grid grid-cols-1 gap-3 md:grid-cols-3"
+                  aria-label="Task board"
                 >
-                  Needs Attention
-                </h2>
-                <p className="task-oversight-section-desc">
-                  {needsAttention.length} member
-                  {needsAttention.length === 1 ? "" : "s"} overdue or at risk
-                </p>
+                  {columns.map((column) => (
+                    <section
+                      key={column.id}
+                      aria-label={column.label}
+                      className="rounded-xl border border-gray-100 bg-slate-50/80 p-2.5"
+                    >
+                      <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                        <h2 className="text-sm font-semibold text-foreground">
+                          {column.label}
+                        </h2>
+                        <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-medium tabular-nums text-gray-600 ring-1 ring-inset ring-gray-200">
+                          {column.items.length}
+                        </span>
+                      </div>
+                      <ul className="space-y-2">
+                        {column.items.length === 0 ? (
+                          <li className="rounded-lg border border-dashed border-gray-200 bg-white/60 px-3 py-6 text-center text-xs text-gray-500">
+                            No tasks
+                          </li>
+                        ) : (
+                          column.items.map((task) => (
+                            <li key={task.id}>
+                              <OversightTaskCard task={task} />
+                            </li>
+                          ))
+                        )}
+                      </ul>
+                    </section>
+                  ))}
+                </div>
               </div>
-            </div>
-            {needsAttention.length === 0 ? (
-              <p className="task-oversight-empty">
-                No members currently need attention.
-              </p>
-            ) : (
-              <div className="task-oversight-card-list">
-                {needsAttention.map((snapshot) => (
-                  <MemberOversightCard
-                    key={snapshot.member.member_id}
-                    snapshot={snapshot}
-                    email={
-                      emailsByMemberId.get(snapshot.member.member_id) ?? null
-                    }
-                    assignTaskPath={assignTaskPath}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
 
-          <section
-            className="task-oversight-section"
-            aria-labelledby="everyone-else-heading"
-          >
-            <div className="task-oversight-section-header task-oversight-section-header--controls">
-              <div>
-                <h2
-                  id="everyone-else-heading"
-                  className="task-oversight-section-title"
+              <aside className="flex min-w-0 flex-col gap-3 xl:col-span-4">
+                <section
+                  aria-label="Event health"
+                  className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm"
                 >
-                  Everyone Else
-                </h2>
-                <p className="task-oversight-section-desc">
-                  On track, completed, or without assignments
-                </p>
-              </div>
-              <div className="task-oversight-controls">
-                <label className="task-oversight-control">
-                  <span className="sr-only">Search members</span>
-                  <input
-                    type="search"
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Search members"
-                    className="task-oversight-input"
-                    aria-label="Search members"
-                  />
-                </label>
-                <label className="task-oversight-control">
-                  Assignee
-                  <select
-                    aria-label="Assignee"
-                    value={assigneeFilter}
-                    onChange={(event) =>
-                      setAssigneeFilter(
-                        event.target.value as AssigneeCategoryFilter,
-                      )
-                    }
-                    className="task-oversight-select"
-                  >
-                    {ASSIGNEE_CATEGORY_FILTER_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="task-oversight-control">
-                  Sort by
-                  <select
-                    aria-label="Sort by"
-                    value={activeSort}
-                    onChange={(event) =>
-                      setActiveSort(
-                        event.target.value as ActiveAssignmentsSort,
-                      )
-                    }
-                    className="task-oversight-select"
-                  >
-                    {ACTIVE_ASSIGNMENTS_SORT_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            </div>
+                  <div className="flex items-center gap-2">
+                    <AppIcon icon={Users} size="sm" className="text-primary" />
+                    <h2 className="text-sm font-semibold text-foreground">
+                      Event Health
+                    </h2>
+                  </div>
+                  <p className="mt-2 text-2xl font-semibold tabular-nums tracking-tight text-foreground">
+                    {completePercent}%
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {completedTasks} of {totalTasks} tasks complete
+                  </p>
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-100">
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{ width: `${completePercent}%` }}
+                    />
+                  </div>
+                </section>
 
-            {everyoneElse.length === 0 ? (
-              <p className="task-oversight-empty">
-                {assigneeFilter === "all" && !search && !healthFilter
-                  ? "No other members to show."
-                  : "No members match these filters."}
-              </p>
-            ) : (
-              <div className="task-oversight-card-list">
-                {everyoneElse.map((snapshot) => (
-                  <MemberOversightCard
-                    key={snapshot.member.member_id}
-                    snapshot={snapshot}
-                    email={
-                      emailsByMemberId.get(snapshot.member.member_id) ?? null
-                    }
-                    assignTaskPath={assignTaskPath}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-        </>
+                <section
+                  aria-label="Upcoming deadlines"
+                  className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm"
+                >
+                  <h2 className="text-sm font-semibold text-foreground">
+                    Upcoming Deadlines
+                  </h2>
+                  {deadlines.length === 0 ? (
+                    <p className="mt-2 text-xs text-gray-500">
+                      No open deadlines for this event.
+                    </p>
+                  ) : (
+                    <ul className="mt-2 space-y-2">
+                      {deadlines.map((task) => (
+                        <li
+                          key={task.id}
+                          className="rounded-lg border border-gray-100 px-2.5 py-2"
+                        >
+                          <p className="truncate text-xs font-medium text-foreground">
+                            {getTaskDisplayName(task)}
+                          </p>
+                          <p className="mt-0.5 text-[11px] text-gray-500">
+                            {task.assignee_name}
+                            {formatOversightDueDate(task.due_date)
+                              ? ` · ${formatOversightDueDate(task.due_date)}`
+                              : ""}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+
+                <section
+                  aria-label="Team workload"
+                  className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm"
+                >
+                  <h2 className="text-sm font-semibold text-foreground">
+                    Team Workload
+                  </h2>
+                  {workload.length === 0 ? (
+                    <p className="mt-2 text-xs text-gray-500">
+                      No assignees on this event.
+                    </p>
+                  ) : (
+                    <ul className="mt-2 space-y-2.5">
+                      {workload.map((row) => (
+                        <li key={row.memberId}>
+                          <div className="mb-1 flex items-center justify-between gap-2">
+                            <Link
+                              to={`/members/${row.memberId}`}
+                              className="truncate text-xs font-medium text-foreground hover:text-primary"
+                            >
+                              {row.name}
+                            </Link>
+                            <span className="shrink-0 text-[11px] tabular-nums text-gray-500">
+                              {row.active}
+                              {row.overdue > 0 ? (
+                                <span className="text-rose-700">
+                                  {" "}
+                                  · {row.overdue} overdue
+                                </span>
+                              ) : null}
+                            </span>
+                          </div>
+                          <div className="h-1.5 overflow-hidden rounded-full bg-gray-100">
+                            <div
+                              className={[
+                                "h-full rounded-full",
+                                row.overdue > 0 ? "bg-rose-500" : "bg-primary",
+                              ].join(" ")}
+                              style={{ width: `${row.widthPct}%` }}
+                            />
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              </aside>
+            </div>
+          </>
+        )
       ) : null}
     </div>
   );

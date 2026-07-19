@@ -5,25 +5,24 @@ import { CoverBanner } from "../components/CoverBanner";
 import { HomeHeroBrand } from "../components/AppLogo";
 import {
   HomeStatCards,
-  HomeUpNextSection,
   HomeWelcomeBanner,
   HomeYourWorkSection,
 } from "../components/home/HomeMemberSections";
-import {
-  HomeBoardFeed,
-  HomeCampusAiCard,
-} from "../components/home/HomeWorkspacePanels";
+import { HomeCampusAiCard } from "../components/home/HomeWorkspacePanels";
+import { HomeFeaturedEvent } from "../components/home/HomeFeaturedEvent";
+import { HomeOrgHealth } from "../components/home/HomeOrgHealth";
+import { HomeQuickActions } from "../components/home/HomeQuickActions";
+import { HomeTaskOversightSection } from "../components/home/HomeTaskOversightSection";
+import { HomeTodayTimeline } from "../components/home/HomeTodayTimeline";
+import { HomeUpcomingDeadlines } from "../components/home/HomeUpcomingDeadlines";
 import { useAuth } from "../context/useAuth";
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/api-error";
 import { fetchMyEventTasks, updateEventTask } from "../lib/event-tasks-api";
 import type { EventTaskResponse } from "../lib/event-tasks-api";
-import { applyRsvpStatus } from "../lib/event-rsvp";
 import {
   fetchUpcomingEvents,
-  updateEventRsvp,
   type EventResponse,
-  type RsvpStatus,
 } from "../lib/events-api";
 import {
   fetchFinanceSummary,
@@ -42,6 +41,8 @@ import {
   canBrowseMemberDirectory,
   canManageTreasury,
   canViewMemberDirectory,
+  canViewTaskOversight,
+  isRoleAtLeast,
 } from "../lib/roles";
 
 function PublicHomeView() {
@@ -77,133 +78,165 @@ function PublicHomeView() {
 type MemberHomeLayoutProps = {
   member: MemberResponse;
   nextEvent: EventResponse | null;
+  timelineEvents: EventResponse[];
+  deadlineEvents: EventResponse[];
   upcomingCount: number;
+  openTaskCountByEventId: Record<number, number>;
   tasksSummary: ReturnType<typeof summarizeMyTasks>;
   isLoading: boolean;
   loadError: string | null;
-  rsvpLoading: boolean;
   financePendingCount: number;
   pendingMemberApprovals: number;
   memberCount: number | null;
   budgetBalance: string | null;
   canViewMembers: boolean;
   canViewFinance: boolean;
+  showAssistant: boolean;
+  showTaskOversight: boolean;
   tasksPath: string;
   completingTaskId: number | null;
   taskCompleteError: string | null;
   onCompleteTask: (taskId: number) => void;
-  onRsvpStatusChange: (status: RsvpStatus) => void;
 };
 
-const DASHBOARD_GAP = "gap-4";
+const DASHBOARD_GAP = "gap-3";
 
 function MemberHomeLayout({
   member,
   nextEvent,
+  timelineEvents,
+  deadlineEvents,
   upcomingCount,
+  openTaskCountByEventId,
   tasksSummary,
   isLoading,
   loadError,
-  rsvpLoading,
   financePendingCount,
   pendingMemberApprovals,
   memberCount,
   budgetBalance,
   canViewMembers,
   canViewFinance,
+  showAssistant,
+  showTaskOversight,
   tasksPath,
   completingTaskId,
   taskCompleteError,
   onCompleteTask,
-  onRsvpStatusChange,
 }: MemberHomeLayoutProps) {
   return (
-    <div className="home-dashboard mx-auto flex w-full max-w-[1280px] flex-col gap-4 pb-6 xl:min-h-0">
+    <div className="home-dashboard mx-auto flex w-full max-w-[1280px] flex-col gap-3 pb-4">
       {loadError ? (
         <div role="alert" className="ds-alert-banner shrink-0">
           {loadError}
         </div>
       ) : null}
 
-      {/* Row 1 — Hero (12) */}
-      <div className="shrink-0">
-        <HomeWelcomeBanner
-          member={member}
-          pendingApprovalCount={financePendingCount}
-          nextEvent={nextEvent}
-          openTaskCount={tasksSummary.openCount}
-          budgetBalance={budgetBalance}
-          showBudgetChip={canViewFinance}
-        />
-      </div>
+      <HomeWelcomeBanner member={member} />
 
-      {/* Row 2 — KPIs (12) */}
-      <div className="shrink-0">
-        <HomeStatCards
-          tasksSummary={tasksSummary}
-          upcomingCount={upcomingCount}
-          nextEvent={nextEvent}
-          memberCount={memberCount}
-          budgetBalance={budgetBalance}
-          tasksPath={tasksPath}
-          canViewMembers={canViewMembers}
-          canViewFinance={canViewFinance}
-          isLoading={isLoading}
-        />
-      </div>
+      <HomeStatCards
+        tasksSummary={tasksSummary}
+        upcomingCount={upcomingCount}
+        nextEvent={nextEvent}
+        memberCount={memberCount}
+        budgetBalance={budgetBalance}
+        tasksPath={tasksPath}
+        canViewMembers={canViewMembers}
+        canViewFinance={canViewFinance}
+        isLoading={isLoading}
+      />
 
-      {/* Row 3 — Board Feed (6) + Upcoming Event (6) */}
+      {/* Featured + AI */}
       <div
         className={[
           "grid grid-cols-1",
           DASHBOARD_GAP,
-          "md:grid-cols-6 lg:grid-cols-12 lg:items-stretch",
+          "xl:grid-cols-12 xl:items-stretch",
         ].join(" ")}
       >
-        <div className="min-h-[18rem] md:col-span-6 lg:col-span-6 [&_>_*]:h-full">
-          <HomeBoardFeed previewLimit={3} />
-        </div>
-        <div className="min-h-[18rem] md:col-span-6 lg:col-span-6 [&_>_*]:h-full">
-          <HomeUpNextSection
-            nextEvent={nextEvent}
+        <div className="min-w-0 xl:col-span-8 [&_>_*]:h-full">
+          <HomeFeaturedEvent
+            events={deadlineEvents}
+            openTaskCountByEventId={openTaskCountByEventId}
+            canManage={showAssistant}
             isLoading={isLoading}
-            rsvpLoading={rsvpLoading}
-            onRsvpStatusChange={onRsvpStatusChange}
           />
+        </div>
+        <div className="min-w-0 xl:col-span-4 [&_>_*]:h-full">
+          {showAssistant ? (
+            <HomeCampusAiCard compact />
+          ) : (
+            <HomeQuickActions
+              member={member}
+              featuredEventId={nextEvent?.id ?? null}
+            />
+          )}
         </div>
       </div>
 
-      {/* Row 4 — My Tasks (6) + CampusOS AI (6) */}
+      {/* Tasks | Timeline | Quick Actions + Deadlines */}
       <div
         className={[
           "grid grid-cols-1",
           DASHBOARD_GAP,
-          "md:grid-cols-6 lg:grid-cols-12 lg:items-stretch",
+          "lg:grid-cols-2 xl:grid-cols-12 xl:items-stretch",
         ].join(" ")}
       >
-        <div className="min-h-[16rem] md:col-span-6 lg:col-span-6 [&_>_*]:h-full">
-          <HomeYourWorkSection
-            member={member}
-            tasksSummary={tasksSummary}
-            tasksPath={tasksPath}
+        <div className="min-h-0 xl:col-span-4 [&_>_*]:h-full">
+          {showTaskOversight ? (
+            <HomeTaskOversightSection />
+          ) : (
+            <HomeYourWorkSection
+              member={member}
+              tasksSummary={tasksSummary}
+              tasksPath={tasksPath}
+              isLoading={isLoading}
+              completingTaskId={completingTaskId}
+              taskCompleteError={taskCompleteError}
+              onCompleteTask={onCompleteTask}
+              pendingMemberApprovals={pendingMemberApprovals}
+              financePendingCount={financePendingCount}
+            />
+          )}
+        </div>
+        <div className="min-h-0 xl:col-span-4 [&_>_*]:h-full">
+          <HomeTodayTimeline events={timelineEvents} isLoading={isLoading} />
+        </div>
+        <div
+          className={[
+            "flex min-w-0 flex-col",
+            DASHBOARD_GAP,
+            "xl:col-span-4",
+          ].join(" ")}
+        >
+          {showAssistant ? (
+            <HomeQuickActions
+              member={member}
+              featuredEventId={nextEvent?.id ?? null}
+            />
+          ) : null}
+          <HomeUpcomingDeadlines
+            events={deadlineEvents}
             isLoading={isLoading}
-            completingTaskId={completingTaskId}
-            taskCompleteError={taskCompleteError}
-            onCompleteTask={onCompleteTask}
-            pendingMemberApprovals={pendingMemberApprovals}
-            financePendingCount={financePendingCount}
           />
         </div>
-        <div className="min-h-[16rem] md:col-span-6 lg:col-span-6 [&_>_*]:h-full">
-          <HomeCampusAiCard />
-        </div>
       </div>
+
+      <HomeOrgHealth
+        memberCount={memberCount}
+        openTaskCount={tasksSummary.openCount}
+        overdueCount={tasksSummary.overdueCount}
+        upcomingCount={upcomingCount}
+        budgetBalance={budgetBalance}
+        canViewFinance={canViewFinance}
+      />
     </div>
   );
 }
 
 function MemberHomeView({ member }: { member: MemberResponse }) {
-  const [nextEvent, setNextEvent] = useState<EventResponse | null>(null);
+  const [upcomingEvents, setUpcomingEvents] = useState<EventResponse[]>([]);
+  const [timelineEvents, setTimelineEvents] = useState<EventResponse[]>([]);
   const [upcomingCount, setUpcomingCount] = useState(0);
   const [myTasks, setMyTasks] = useState<EventTaskResponse[]>([]);
   const [completingTaskId, setCompletingTaskId] = useState<number | null>(null);
@@ -212,7 +245,6 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [rsvpLoading, setRsvpLoading] = useState(false);
   const [financePendingCount, setFinancePendingCount] = useState(0);
   const [pendingMemberApprovals, setPendingMemberApprovals] = useState(0);
   const [memberCount, setMemberCount] = useState<number | null>(null);
@@ -222,8 +254,24 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
   const canReviewMembers = canViewMemberDirectory(member.role);
   const canViewMembers = canBrowseMemberDirectory(member.role);
   const canViewFinance = canAccessFinance(member.role);
+  const showAssistant = isRoleAtLeast(member.role, "board");
+  const showTaskOversight = canViewTaskOversight(member.role, member.position);
   const tasksPath = getMyTasksPath(member.role);
   const tasksSummary = useMemo(() => summarizeMyTasks(myTasks), [myTasks]);
+  const nextEvent = useMemo(
+    () => findNextNonMeetingEvent(upcomingEvents),
+    [upcomingEvents],
+  );
+  const openTaskCountByEventId = useMemo(() => {
+    const counts: Record<number, number> = {};
+    for (const task of myTasks) {
+      if (task.is_complete) {
+        continue;
+      }
+      counts[task.event_id] = (counts[task.event_id] ?? 0) + 1;
+    }
+    return counts;
+  }, [myTasks]);
 
   async function handleCompleteTask(taskId: number) {
     const target = myTasks.find((task) => task.id === taskId);
@@ -312,7 +360,8 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
         const nonMeetingUpcoming = upcoming.events.filter(
           (event) => event.event_type !== "meeting",
         );
-        setNextEvent(findNextNonMeetingEvent(upcoming.events));
+        setTimelineEvents(upcoming.events);
+        setUpcomingEvents(nonMeetingUpcoming);
         setUpcomingCount(nonMeetingUpcoming.length);
         setMyTasks(tasksResult.tasks);
         setFinancePendingCount(financePending?.total ?? 0);
@@ -343,51 +392,31 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
     canViewFinance,
   ]);
 
-  async function handleRsvpStatusChange(status: RsvpStatus) {
-    if (!nextEvent) {
-      return;
-    }
-
-    const snapshot = nextEvent;
-    setRsvpLoading(true);
-    setNextEvent((current) =>
-      current ? { ...current, current_member_rsvp_status: status } : current,
-    );
-
-    try {
-      const response = await updateEventRsvp(nextEvent.id, status);
-      setNextEvent((current) =>
-        current ? applyRsvpStatus(current, response) : current,
-      );
-    } catch {
-      setNextEvent(snapshot);
-    } finally {
-      setRsvpLoading(false);
-    }
-  }
-
   return (
     <MemberHomeLayout
       member={member}
       nextEvent={nextEvent}
+      timelineEvents={timelineEvents}
+      deadlineEvents={upcomingEvents}
       upcomingCount={upcomingCount}
+      openTaskCountByEventId={openTaskCountByEventId}
       tasksSummary={tasksSummary}
       isLoading={isLoading}
       loadError={loadError}
-      rsvpLoading={rsvpLoading}
       financePendingCount={financePendingCount}
       pendingMemberApprovals={pendingMemberApprovals}
       memberCount={memberCount}
       budgetBalance={budgetBalance}
       canViewMembers={canViewMembers}
       canViewFinance={canViewFinance}
+      showAssistant={showAssistant}
+      showTaskOversight={showTaskOversight}
       tasksPath={tasksPath}
       completingTaskId={completingTaskId}
       taskCompleteError={taskCompleteError}
       onCompleteTask={(taskId) => {
         void handleCompleteTask(taskId);
       }}
-      onRsvpStatusChange={handleRsvpStatusChange}
     />
   );
 }

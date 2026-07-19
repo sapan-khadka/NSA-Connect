@@ -15,17 +15,26 @@ vi.mock("../lib/events-api", () => ({
   fetchEvents: vi.fn().mockResolvedValue({ events: [], total: 0 }),
   updateEventRsvp: vi.fn(),
   fetchEventAttendees: vi.fn().mockResolvedValue({
-    going_count: 0,
-    maybe_count: 0,
+    going_count: 2,
+    maybe_count: 1,
     not_going_count: 0,
-    no_response_count: 0,
+    no_response_count: 3,
     attendees: [],
+  }),
+  fetchEventVolunteerSignups: vi.fn().mockResolvedValue({
+    signups: [],
+    total: 4,
   }),
 }));
 
 vi.mock("../lib/event-tasks-api", () => ({
   fetchMyEventTasks: vi.fn(),
   updateEventTask: vi.fn(),
+  fetchTaskOverview: vi.fn().mockResolvedValue({
+    members: [],
+    total_tasks: 0,
+    completed_tasks: 0,
+  }),
 }));
 
 vi.mock("../lib/members-api", () => ({
@@ -72,19 +81,16 @@ vi.mock("../lib/recent-memories", () => ({
 }));
 
 import { fetchUpcomingEvents } from "../lib/events-api";
-import { fetchMyEventTasks, updateEventTask } from "../lib/event-tasks-api";
+import { fetchMyEventTasks, updateEventTask, fetchTaskOverview } from "../lib/event-tasks-api";
 import { fetchPendingFinanceChangeRequests } from "../lib/finance-api";
 import { fetchPendingMembers } from "../lib/members-api";
-import { fetchDiscussionInbox } from "../lib/discussion-api";
-import { fetchAnnouncements } from "../lib/announcements-api";
 
 const mockedUpcoming = vi.mocked(fetchUpcomingEvents);
 const mockedMyTasks = vi.mocked(fetchMyEventTasks);
 const mockedUpdateTask = vi.mocked(updateEventTask);
+const mockedTaskOverview = vi.mocked(fetchTaskOverview);
 const mockedPendingMembers = vi.mocked(fetchPendingMembers);
 const mockedFinancePending = vi.mocked(fetchPendingFinanceChangeRequests);
-const mockedDiscussionInbox = vi.mocked(fetchDiscussionInbox);
-const mockedAnnouncements = vi.mocked(fetchAnnouncements);
 
 const sampleEvent = createMockEventResponse({
   id: 5,
@@ -96,43 +102,61 @@ const sampleEvent = createMockEventResponse({
 describe("HomePage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockedDiscussionInbox.mockResolvedValue({ rooms: [] });
-    mockedAnnouncements.mockResolvedValue({ announcements: [], total: 0 });
     mockedPendingMembers.mockResolvedValue({ members: [], total: 0 });
     mockedFinancePending.mockResolvedValue({ requests: [], total: 0 });
+    mockedTaskOverview.mockResolvedValue({
+      members: [],
+      total_tasks: 0,
+      completed_tasks: 0,
+    });
   });
 
   afterEach(() => {
     cleanup();
   });
 
-  it("renders the workspace command center hierarchy", async () => {
+  it("renders the dashboard hierarchy matching the command center", async () => {
     mockedUpcoming.mockResolvedValue({ events: [sampleEvent], total: 1 });
-    mockedMyTasks.mockResolvedValue({
-      tasks: [
+    mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
+    mockedTaskOverview.mockResolvedValue({
+      members: [
         {
-          id: 1,
-          event_id: 5,
-          event_name: "Dashain Celebration",
-          task_kind: "simple",
-          title: "Print flyers",
-          group_name: null,
-          description: "",
-          assignee_id: 1,
-          assignee_name: "Board User",
-          status: "todo",
-          due_date: "2030-05-20T12:00:00+00:00",
-          is_overdue: true,
-          is_complete: false,
-          checklist_items: [],
-          completion_note: null,
-          completion_photo_url: null,
-          completed_at: null,
-          created_by_id: 2,
-          created_at: "2030-05-01T12:00:00+00:00",
+          member_id: 99,
+          full_name: "Asha Thapa",
+          role: "general",
+          position: "member",
+          total: 2,
+          completed: 0,
+          in_progress: 0,
+          todo: 2,
+          completion_percent: 0,
+          tasks: [
+            {
+              id: 1,
+              event_id: 5,
+              event_name: "Dashain Celebration",
+              task_kind: "simple",
+              title: "Print flyers",
+              group_name: null,
+              description: "",
+              assignee_id: 99,
+              assignee_name: "Asha Thapa",
+              status: "todo",
+              due_date: "2030-05-20T12:00:00+00:00",
+              is_overdue: true,
+              is_complete: false,
+              checklist_items: [],
+              completion_note: null,
+              completion_photo_url: null,
+              completed_at: null,
+              created_by_id: 2,
+              created_at: "2030-05-01T12:00:00+00:00",
+            },
+          ],
         },
       ],
-      total: 1,
+      total_tasks: 2,
+      completed_tasks: 0,
     });
 
     render(
@@ -144,40 +168,52 @@ describe("HomePage", () => {
     );
 
     expect(
-      await screen.findByRole("heading", { name: /Good (Morning|Afternoon|Evening), Test/i }),
+      await screen.findByRole("heading", {
+        name: /Good (Morning|Afternoon|Evening), Test/i,
+      }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/President/i)).toBeInTheDocument();
     expect(
-      screen.getByText(/Your workspace for what needs attention/i),
+      screen.getByText(/Here's what's happening with NSA today/i),
     ).toBeInTheDocument();
 
-    expect(screen.getByLabelText("Board Feed")).toBeInTheDocument();
-    expect(screen.getByText("My Tasks")).toBeInTheDocument();
-    expect(screen.getByLabelText("CampusOS AI")).toBeInTheDocument();
-    expect(screen.getByLabelText("Upcoming Event")).toBeInTheDocument();
+    expect(screen.getAllByText("Overdue").length).toBeGreaterThan(0);
+    expect(screen.getByText("Due Today")).toBeInTheDocument();
+    expect(screen.getByText("Active Tasks")).toBeInTheDocument();
+    expect(screen.getByText("Active Members")).toBeInTheDocument();
+    expect(screen.getByText("Budget Balance")).toBeInTheDocument();
 
-    expect(screen.getByRole("link", { name: "View Event" })).toHaveAttribute(
+    expect(screen.getByLabelText("Featured Event")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Open Workspace/i })).toHaveAttribute(
       "href",
       "/events/5",
     );
-    expect(screen.queryByRole("link", { name: /^Manage$/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^Going$/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^Maybe$/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^Not going$/i })).toBeInTheDocument();
-    expect(screen.queryByText(/^DATE$/i)).not.toBeInTheDocument();
-    expect(screen.queryByText("Upcoming Event")).not.toBeInTheDocument();
-    expect(screen.getByText("Student Center")).toBeInTheDocument();
-    expect(screen.getByText("RSVP Open")).toBeInTheDocument();
-    expect(screen.queryByText(/You're going/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Manage Event/i })).toHaveAttribute(
+      "href",
+      "/events/5/manage",
+    );
+    const oversight = await screen.findByLabelText("Task Oversight");
+    expect(
+      within(oversight).getByText("Dashain Celebration"),
+    ).toBeInTheDocument();
+    expect(within(oversight).getByText("1 overdue")).toBeInTheDocument();
+    expect(
+      within(oversight).getByRole("link", { name: /Dashain Celebration/i }),
+    ).toHaveAttribute("href", "/events/oversight?event=5");
+    expect(
+      within(oversight).getByRole("link", { name: /View all/i }),
+    ).toHaveAttribute("href", "/events/oversight");
+    expect(screen.queryByText("My Tasks")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Today's Timeline")).toBeInTheDocument();
+    expect(screen.getByLabelText("CampusOS AI")).toBeInTheDocument();
+    expect(screen.getByLabelText("Quick Actions")).toBeInTheDocument();
+    expect(screen.getByLabelText("Upcoming Deadlines")).toBeInTheDocument();
+    expect(screen.getByLabelText("Organization Health")).toBeInTheDocument();
 
-    expect(screen.getByText("Print flyers")).toBeInTheDocument();
-    expect(screen.queryByText("Your Profile")).not.toBeInTheDocument();
-    expect(screen.queryByText("Tools for Your Role")).not.toBeInTheDocument();
-    expect(screen.queryByText("Quick actions")).not.toBeInTheDocument();
-    expect(screen.queryByText("Discussion")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Board Feed")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Your Workspaces")).not.toBeInTheDocument();
   });
 
-  it("shows Create in the header menu destinations via empty task state copy", async () => {
+  it("shows create-style quick actions for board", async () => {
     mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
     mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
 
@@ -189,16 +225,19 @@ describe("HomePage", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() =>
-      expect(screen.getByText("My Tasks")).toBeInTheDocument(),
-    );
-
-    expect(screen.getByText("You're clear for now")).toBeInTheDocument();
-    expect(screen.queryByText("Create event")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Log transaction/i })).not.toBeInTheDocument();
+    const quickActions = await screen.findByLabelText("Quick Actions");
+    expect(
+      within(quickActions).getByRole("link", { name: /New Event/i }),
+    ).toHaveAttribute("href", "/events/calendar?create=1");
+    expect(
+      within(quickActions).getByRole("link", { name: /Meeting Minutes/i }),
+    ).toHaveAttribute("href", "/board/meeting-minutes");
+    expect(
+      within(quickActions).getByRole("link", { name: /Invite Member/i }),
+    ).toHaveAttribute("href", "/members");
   });
 
-  it("surfaces pending reviews in My Tasks", async () => {
+  it("surfaces pending reviews in My Tasks for board without oversight", async () => {
     mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
     mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
     mockedPendingMembers.mockResolvedValue({ members: [], total: 2 });
@@ -206,7 +245,7 @@ describe("HomePage", () => {
 
     render(
       <MemoryRouter>
-        <MockAuthProvider value={{ member: createMockMember("president") }}>
+        <MockAuthProvider value={{ member: createMockMember("treasurer") }}>
           <HomePage />
         </MockAuthProvider>
       </MemoryRouter>,
@@ -218,9 +257,51 @@ describe("HomePage", () => {
     expect(
       screen.getByRole("link", { name: /1 finance review required/i }),
     ).toHaveAttribute("href", "/finance?tab=approvals");
+    expect(screen.getByText("My Tasks")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Task Oversight")).not.toBeInTheDocument();
   });
 
-  it("hides board-only workspace affordances for general members", async () => {
+  it("cycles featured upcoming events with carousel controls", async () => {
+    const user = userEvent.setup();
+    const secondEvent = createMockEventResponse({
+      id: 9,
+      name: "Holi Night",
+      starts_at: "2030-07-01T18:00:00+00:00",
+    });
+    mockedUpcoming.mockResolvedValue({
+      events: [sampleEvent, secondEvent],
+      total: 2,
+    });
+    mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
+
+    render(
+      <MemoryRouter>
+        <MockAuthProvider value={{ member: createMockMember("president") }}>
+          <HomePage />
+        </MockAuthProvider>
+      </MemoryRouter>,
+    );
+
+    const featured = await screen.findByLabelText("Featured Event");
+    expect(
+      within(featured).getByRole("heading", { name: "Dashain Celebration" }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      within(featured).getAllByRole("button", {
+        name: /Next upcoming event/i,
+      })[0]!,
+    );
+
+    expect(
+      await within(featured).findByRole("heading", { name: "Holi Night" }),
+    ).toBeInTheDocument();
+    expect(
+      within(featured).getByRole("link", { name: /Open Workspace/i }),
+    ).toHaveAttribute("href", "/events/9");
+  });
+
+  it("hides board-only affordances for general members", async () => {
     mockedUpcoming.mockResolvedValue({ events: [sampleEvent], total: 1 });
     mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
 
@@ -232,12 +313,16 @@ describe("HomePage", () => {
       </MemoryRouter>,
     );
 
-    await screen.findByLabelText("Upcoming Event");
-    expect(screen.queryByRole("link", { name: /^Manage$/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View Event" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^Going$/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^Maybe$/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^Not going$/i })).toBeInTheDocument();
+    await screen.findByLabelText("Featured Event");
+    expect(screen.queryByLabelText("CampusOS AI")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Manage Event/i })).not.toBeInTheDocument();
+    const quickActions = screen.getByLabelText("Quick Actions");
+    expect(
+      within(quickActions).queryByRole("link", { name: /New Event/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(quickActions).getByRole("link", { name: /New Task/i }),
+    ).toBeInTheDocument();
   });
 
   it("renders CampusOS AI suggestions", async () => {

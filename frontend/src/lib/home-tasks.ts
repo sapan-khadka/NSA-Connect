@@ -1,8 +1,38 @@
+import { isToday } from "./calendar";
 import type {
   EventTaskResponse,
   UpdateEventTaskRequest,
 } from "./event-tasks-api";
 import type { MemberRole } from "./roles";
+
+export type TaskUrgency = "high" | "medium" | "low";
+
+/** Visual urgency for home task rows — derived from due state (no stored priority). */
+export function getTaskUrgency(
+  task: EventTaskResponse,
+  now = new Date(),
+): TaskUrgency {
+  if (task.is_overdue) {
+    return "high";
+  }
+  if (task.due_date && isToday(new Date(task.due_date), now)) {
+    return "medium";
+  }
+  return "low";
+}
+
+export function countDueTodayTasks(
+  tasks: EventTaskResponse[],
+  now = new Date(),
+): number {
+  return tasks.filter(
+    (task) =>
+      !task.is_complete &&
+      !task.is_overdue &&
+      task.due_date != null &&
+      isToday(new Date(task.due_date), now),
+  ).length;
+}
 
 export function getTaskDisplayName(task: EventTaskResponse): string {
   if (task.task_kind === "checklist") {
@@ -47,6 +77,7 @@ export function applyOptimisticTaskComplete(
 export type MyTasksSummary = {
   openCount: number;
   overdueCount: number;
+  dueTodayCount: number;
   nextTask: EventTaskResponse | null;
   overdueTask: EventTaskResponse | null;
   /** Open tasks: overdue first, then soonest due date. */
@@ -88,6 +119,7 @@ export function summarizeMyTasks(tasks: EventTaskResponse[]): MyTasksSummary {
   return {
     openCount: open.length,
     overdueCount: overdue.length,
+    dueTodayCount: countDueTodayTasks(tasks),
     nextTask: withDue[0] ?? open[0] ?? null,
     overdueTask: overdue[0] ?? null,
     previewTasks: sortedOpen.slice(0, PREVIEW_LIMIT),

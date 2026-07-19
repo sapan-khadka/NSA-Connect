@@ -1,5 +1,11 @@
 import { Bell, Menu, Search, X } from "lucide-react";
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { Link } from "react-router-dom";
 
 import { useAuth } from "../context/useAuth";
@@ -35,6 +41,8 @@ export function AppTopBar({
   const [eventOptions, setEventOptions] = useState<
     Array<{ id: number; name: string }>
   >([]);
+  /** Blocks header-input onFocus from reopening search after close focus restore. */
+  const suppressSearchOpenRef = useRef(false);
 
   const canLog =
     member != null && canManageTreasury(member.role, member.position);
@@ -71,7 +79,7 @@ export function AppTopBar({
     function handleKeyDown(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        setSearchOpen(true);
+        openSearch();
       }
     }
 
@@ -80,7 +88,20 @@ export function AppTopBar({
   }, []);
 
   function openSearch() {
+    if (suppressSearchOpenRef.current) {
+      return;
+    }
     setSearchOpen(true);
+  }
+
+  function closeSearch() {
+    // Focus trap restores focus to the header field on unmount; that would
+    // fire onFocus → openSearch and bounce the dialog back open.
+    suppressSearchOpenRef.current = true;
+    setSearchOpen(false);
+    window.setTimeout(() => {
+      suppressSearchOpenRef.current = false;
+    }, 0);
   }
 
   function handleSearch(event: FormEvent) {
@@ -154,7 +175,7 @@ export function AppTopBar({
 
       <GlobalSearch
         open={searchOpen}
-        onClose={() => setSearchOpen(false)}
+        onClose={closeSearch}
         initialQuery={query}
       />
 

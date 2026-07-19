@@ -128,6 +128,77 @@ function recomputeMemberTaskStats(
   };
 }
 
+export type OversightEventOption = {
+  eventId: number;
+  eventName: string;
+  totalTasks: number;
+  openTasks: number;
+  overdueTasks: number;
+  completedTasks: number;
+};
+
+/** Events that have at least one task in the overview, riskiest first. */
+export function listOversightEvents(
+  tasks: EventTaskResponse[],
+): OversightEventOption[] {
+  const byEvent = new Map<number, OversightEventOption>();
+
+  for (const task of tasks) {
+    const existing = byEvent.get(task.event_id);
+    const open = !task.is_complete && task.status !== "done";
+    const overdue = open && task.is_overdue;
+    const completed = task.is_complete || task.status === "done";
+
+    if (existing) {
+      existing.totalTasks += 1;
+      if (open) {
+        existing.openTasks += 1;
+      }
+      if (overdue) {
+        existing.overdueTasks += 1;
+      }
+      if (completed) {
+        existing.completedTasks += 1;
+      }
+      continue;
+    }
+
+    byEvent.set(task.event_id, {
+      eventId: task.event_id,
+      eventName: task.event_name,
+      totalTasks: 1,
+      openTasks: open ? 1 : 0,
+      overdueTasks: overdue ? 1 : 0,
+      completedTasks: completed ? 1 : 0,
+    });
+  }
+
+  return [...byEvent.values()].sort((left, right) => {
+    if (right.overdueTasks !== left.overdueTasks) {
+      return right.overdueTasks - left.overdueTasks;
+    }
+    if (right.openTasks !== left.openTasks) {
+      return right.openTasks - left.openTasks;
+    }
+    return left.eventName.localeCompare(right.eventName);
+  });
+}
+
+export function filterOverviewMembersByEvent(
+  members: TaskOverviewMember[],
+  eventId: number,
+): TaskOverviewMember[] {
+  return members
+    .map((member) => {
+      const tasks = member.tasks.filter((task) => task.event_id === eventId);
+      if (tasks.length === 0) {
+        return null;
+      }
+      return recomputeMemberTaskStats(member, tasks);
+    })
+    .filter((member): member is TaskOverviewMember => member !== null);
+}
+
 export function filterOverviewMembersByAssigneeCategory(
   members: TaskOverviewMember[],
   filter: AssigneeCategoryFilter,

@@ -9,10 +9,8 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import { useState } from "react";
 import { Link } from "react-router-dom";
 
-import { useAuth } from "../../context/useAuth";
 import type { MemberResponse } from "../../lib/auth-api";
 import type { BadgeCategory } from "../../lib/badge-tones";
 import type { EventTaskResponse } from "../../lib/event-tasks-api";
@@ -25,20 +23,17 @@ import { formatEventDateTime } from "../../lib/format-datetime";
 import { formatCurrency } from "../../lib/format-currency";
 import { FINANCE_APPROVALS_PATH } from "../../lib/finance-routes";
 import { type HomeActivity } from "../../lib/home-activities";
-import { getTaskDisplayName, type MyTasksSummary } from "../../lib/home-tasks";
+import { getTaskDisplayName, getTaskUrgency, type MyTasksSummary } from "../../lib/home-tasks";
 import type { MeetingSummary } from "../../lib/meetings-api";
 import {
   canAccessFinance,
   canViewMemberDirectory,
-  formatRoleLabel,
-  isRoleAtLeast,
 } from "../../lib/roles";
 import { AppIcon } from "../ui/AppIcon";
 import { ArrowLink } from "../ui/ArrowLink";
 import { EmptyState } from "../ui/EmptyState";
 import { HomeCard } from "../ui/HomeCard";
 import { IconBadge } from "../ui/IconBadge";
-import nsaCover from "../../assets/nsa-cover.PNG";
 
 const HOME_ACTIVITY_MAX_HEIGHT_CLASS = "max-h-72";
 
@@ -161,11 +156,6 @@ function buildHeroStatusChips({
 
 export function HomeWelcomeBanner({
   member,
-  pendingApprovalCount = 0,
-  nextEvent = null,
-  openTaskCount = 0,
-  budgetBalance = null,
-  showBudgetChip = false,
 }: {
   member: MemberResponse;
   pendingApprovalCount?: number;
@@ -175,73 +165,30 @@ export function HomeWelcomeBanner({
   showBudgetChip?: boolean;
 }) {
   const firstName = member.full_name.split(/\s+/)[0] ?? member.full_name;
-  const roleLabel = formatRoleLabel(member.role);
   const greeting = greetingForNow();
-  const chips = buildHeroStatusChips({
-    pendingApprovalCount,
-    nextEvent,
-    openTaskCount,
-    budgetBalance,
-    showBudgetChip,
-  });
+  const todayLabel = new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date());
 
   return (
     <section
-      className="relative overflow-hidden rounded-xl"
+      className="flex flex-col gap-0.5 sm:flex-row sm:items-end sm:justify-between"
       aria-label="Workspace welcome"
     >
-      <img
-        src={nsaCover}
-        alt=""
-        aria-hidden="true"
-        className="absolute inset-0 h-full w-full object-cover object-center"
-      />
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 bg-gradient-to-r from-teal-950 via-teal-950/80 to-teal-950/45"
-      />
-      <div className="relative flex flex-col gap-3 px-5 py-5 sm:px-6 sm:py-6">
-        <div className="min-w-0 text-white">
-          <h1 className="text-2xl font-semibold leading-tight tracking-tight text-white sm:text-3xl">
-            {greeting}, {firstName}
-          </h1>
-          <p className="mt-1 text-sm font-medium text-white/85">
-            {roleLabel}
-            <span className="mx-1.5 text-white/40" aria-hidden="true">
-              ·
-            </span>
-            NSA Connect
-          </p>
-          <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/75">
-            Your workspace for what needs attention, what&apos;s next, and what to
-            do today.
-          </p>
-        </div>
-
-        {chips.length > 0 ? (
-          <ul
-            className="flex min-w-0 flex-wrap items-center gap-2"
-            aria-label="Today at a glance"
-          >
-            {chips.map((chip) => (
-              <li key={chip.id}>
-                {chip.to ? (
-                  <Link
-                    to={chip.to}
-                    className="inline-flex items-center rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-xs font-medium text-white/95 transition hover:border-white/40 hover:bg-white/15"
-                  >
-                    {chip.label}
-                  </Link>
-                ) : (
-                  <span className="inline-flex items-center rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-xs font-medium text-white/95">
-                    {chip.label}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        ) : null}
+      <div className="min-w-0">
+        <h1 className="text-lg font-semibold leading-tight tracking-tight text-foreground sm:text-xl">
+          {greeting}, {firstName}
+        </h1>
+        <p className="mt-0.5 text-xs text-gray-600">
+          Here&apos;s what&apos;s happening with NSA today.
+        </p>
       </div>
+      <p className="shrink-0 text-xs font-medium tabular-nums text-gray-500">
+        {todayLabel}
+      </p>
     </section>
   );
 }
@@ -289,8 +236,6 @@ export type HomeStatCardsProps = {
 
 export function HomeStatCards({
   tasksSummary,
-  upcomingCount,
-  nextEvent,
   memberCount,
   budgetBalance,
   tasksPath,
@@ -298,43 +243,58 @@ export function HomeStatCards({
   canViewFinance,
   isLoading,
 }: HomeStatCardsProps) {
-  const nextLabel = nextEvent ? `Next: ${nextEvent.name}` : "No upcoming events";
+  const budgetUrgent =
+    canViewFinance &&
+    budgetBalance != null &&
+    Number.isFinite(Number(budgetBalance)) &&
+    Number(budgetBalance) < 0;
 
   const cards = [
     {
-      key: "tasks",
-      label: "Open Tasks",
-      value: isLoading ? "—" : String(tasksSummary.openCount),
-      hint:
-        tasksSummary.overdueCount > 0
-          ? `${tasksSummary.overdueCount} overdue`
-          : "Assigned work still open",
+      key: "overdue",
+      label: "Overdue",
+      value: isLoading ? "—" : String(tasksSummary.overdueCount),
+      hint: tasksSummary.overdueCount > 0 ? "Needs attention" : "All clear",
       hintUrgent: tasksSummary.overdueCount > 0,
-      icon: ListTodo,
-      category: "tasks" as const,
+      icon: AlertCircle,
+      iconClass: "bg-rose-50 text-rose-700",
+      valueClass: tasksSummary.overdueCount > 0 ? "text-overdue" : "",
       to: tasksPath,
     },
     {
-      key: "events",
-      label: "Upcoming Events",
-      value: isLoading ? "—" : String(upcomingCount),
-      hint: nextLabel,
+      key: "due-today",
+      label: "Due Today",
+      value: isLoading ? "—" : String(tasksSummary.dueTodayCount),
+      hint: "Tasks to complete",
       hintUrgent: false,
       icon: CalendarDays,
-      category: "events" as const,
-      to: "/events/calendar",
+      iconClass: "bg-amber-50 text-amber-800",
+      valueClass: "",
+      to: tasksPath,
+    },
+    {
+      key: "active-tasks",
+      label: "Active Tasks",
+      value: isLoading ? "—" : String(tasksSummary.openCount),
+      hint: "Across all workspaces",
+      hintUrgent: false,
+      icon: ListTodo,
+      iconClass: "bg-emerald-50 text-emerald-700",
+      valueClass: "",
+      to: tasksPath,
     },
     {
       key: "members",
-      label: "Members",
+      label: "Active Members",
       value:
         isLoading || !canViewMembers || memberCount === null
           ? "—"
           : String(memberCount),
-      hint: canViewMembers ? "Active members" : "Directory access required",
+      hint: canViewMembers ? "In the directory" : "Directory access required",
       hintUrgent: false,
       icon: Users,
-      category: "members" as const,
+      iconClass: "bg-violet-50 text-violet-700",
+      valueClass: "",
       to: canViewMembers ? "/members" : null,
     },
     {
@@ -344,34 +304,50 @@ export function HomeStatCards({
         isLoading || !canViewFinance || budgetBalance === null
           ? "—"
           : formatCurrency(budgetBalance),
-      hint: canViewFinance ? "Net treasury balance" : "Finance access required",
-      hintUrgent: false,
+      hint: canViewFinance
+        ? budgetUrgent
+          ? "Needs attention"
+          : "View finance"
+        : "Finance access required",
+      hintUrgent: budgetUrgent,
       icon: Wallet,
-      category: "finance" as const,
+      iconClass: budgetUrgent ? "bg-rose-50 text-rose-700" : "bg-slate-100 text-slate-600",
+      valueClass: budgetUrgent ? "text-overdue" : "",
       to: canViewFinance ? "/finance" : null,
     },
   ];
 
   return (
-    <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <ul className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-5">
       {cards.map((card) => {
         const content = (
           <>
-            <div className="flex items-center gap-2">
-              <IconBadge
-                icon={card.icon}
-                tone="gray"
-                size="xs"
-                shape="rounded"
-              />
-              <p className="truncate text-xs font-normal leading-relaxed tracking-[0.04em] text-gray-500">
+            <div className="flex items-center gap-1.5">
+              <span
+                className={[
+                  "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md",
+                  card.iconClass,
+                ].join(" ")}
+              >
+                <AppIcon icon={card.icon} size="xs" className="text-current" />
+              </span>
+              <p className="truncate text-[11px] font-normal text-gray-500">
                 {card.label}
               </p>
             </div>
-            <p className="home-stat-value mt-2">{card.value}</p>
             <p
               className={[
-                "mt-1 line-clamp-1 text-xs font-normal leading-relaxed tracking-[0.01em]",
+                "mt-1 text-lg font-semibold tabular-nums tracking-tight leading-none",
+                card.valueClass,
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              {card.value}
+            </p>
+            <p
+              className={[
+                "mt-1 line-clamp-1 text-[11px]",
                 card.hintUrgent ? "text-overdue" : "text-gray-500",
               ].join(" ")}
             >
@@ -381,7 +357,7 @@ export function HomeStatCards({
         );
 
         const className =
-          "group flex h-full min-h-0 flex-col justify-center rounded-xl bg-white px-3.5 py-3 shadow-sm transition duration-200 ease-out hover:shadow-md xl:min-h-[96px]";
+          "group flex h-full min-h-0 flex-col justify-center rounded-xl bg-white px-3 py-2 shadow-sm transition duration-200 ease-out hover:shadow-md";
 
         return (
           <li key={card.key} className="min-w-0">
@@ -603,7 +579,7 @@ export function HomeYourWorkSection({
 
   return (
     <HomeCard
-      padding="sm"
+      padding="xs"
       className="flex h-full min-h-0 flex-col home-surface-quiet"
     >
       <div className="flex shrink-0 items-center justify-between gap-3">
@@ -611,26 +587,26 @@ export function HomeYourWorkSection({
         <ArrowLink to={tasksPath}>View all</ArrowLink>
       </div>
 
-      <div className="mt-2 min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
+      <div className="mt-1.5 min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
         {isLoading ? (
-          <p className="text-sm font-normal text-gray-600">Loading tasks…</p>
+          <p className="text-xs text-gray-600">Loading tasks…</p>
         ) : null}
 
         {taskCompleteError ? (
-          <p className="mb-2 text-sm text-overdue" role="alert">
+          <p className="mb-1.5 text-xs text-overdue" role="alert">
             {taskCompleteError}
           </p>
         ) : null}
 
         {!isLoading && attentionItems.length > 0 ? (
-          <ul className="mb-3 space-y-1.5">
+          <ul className="mb-2 space-y-1">
             {attentionItems.map((item) => (
               <li key={item.id}>
                 <Link
                   to={item.to}
-                  className="flex items-center gap-2 rounded-lg border border-amber-100 bg-amber-50/60 px-2.5 py-2 text-sm font-medium text-foreground transition hover:border-amber-200"
+                  className="flex items-center gap-2 rounded-lg border border-amber-100 bg-amber-50/60 px-2 py-1.5 text-xs font-medium text-foreground transition hover:border-amber-200"
                 >
-                  <AppIcon icon={AlertCircle} size="sm" className="text-amber-700" />
+                  <AppIcon icon={AlertCircle} size="xs" className="text-amber-700" />
                   <span className="min-w-0 flex-1">{item.label}</span>
                 </Link>
               </li>
@@ -640,17 +616,30 @@ export function HomeYourWorkSection({
 
         {!isLoading && hasTasks ? (
           <ul className="divide-y divide-gray-100">
-            {tasksSummary.previewTasks.map((task) => {
+            {tasksSummary.previewTasks.slice(0, 4).map((task) => {
               const dueLabel = formatTaskDueLabel(task);
               const completing = completingTaskId === task.id;
+              const urgency = getTaskUrgency(task);
+              const urgencyClass =
+                urgency === "high"
+                  ? "bg-rose-50 text-rose-700"
+                  : urgency === "medium"
+                    ? "bg-amber-50 text-amber-800"
+                    : "bg-emerald-50 text-emerald-700";
+              const urgencyLabel =
+                urgency === "high"
+                  ? "High"
+                  : urgency === "medium"
+                    ? "Medium"
+                    : "Low";
               return (
-                <li key={task.id} className="flex items-start gap-2 py-2 first:pt-0 last:pb-0">
+                <li key={task.id} className="flex items-start gap-2 py-1.5 first:pt-0 last:pb-0">
                   <button
                     type="button"
                     aria-label={`Mark ${getTaskDisplayName(task)} complete`}
                     disabled={!onCompleteTask || completing}
                     onClick={() => onCompleteTask?.(task.id)}
-                    className="group mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-gray-300 bg-white text-primary transition hover:border-primary hover:bg-badge-teal-bg disabled:cursor-not-allowed disabled:opacity-60"
+                    className="group mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border border-gray-300 bg-white text-primary transition hover:border-primary hover:bg-badge-teal-bg disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <AppIcon
                       icon={Check}
@@ -663,12 +652,29 @@ export function HomeYourWorkSection({
                     />
                   </button>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {getTaskDisplayName(task)}
-                    </p>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-medium text-foreground">
+                          {getTaskDisplayName(task)}
+                        </p>
+                        {task.event_name ? (
+                          <p className="mt-0.5 truncate text-[10px] text-gray-500">
+                            {task.event_name}
+                          </p>
+                        ) : null}
+                      </div>
+                      <span
+                        className={[
+                          "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                          urgencyClass,
+                        ].join(" ")}
+                      >
+                        {urgencyLabel}
+                      </span>
+                    </div>
                     <p
                       className={[
-                        "mt-0.5 text-xs font-normal",
+                        "mt-0.5 text-[10px] font-normal",
                         task.is_overdue ? "font-medium text-overdue" : "text-gray-500",
                       ].join(" ")}
                     >
@@ -692,8 +698,6 @@ export function HomeYourWorkSection({
     </HomeCard>
   );
 }
-
-export { HomeUpNextSection } from "./HomeUpcomingEventCard";
 
 export function HomeBoardMeetingSection({
   meeting,

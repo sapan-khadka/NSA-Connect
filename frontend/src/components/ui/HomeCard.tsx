@@ -5,12 +5,13 @@ import { Card } from "./Card";
 type HomeCardProps = {
   children: ReactNode;
   className?: string;
-  padding?: "sm" | "md";
+  padding?: "xs" | "sm" | "md";
   interactive?: boolean;
   "aria-label"?: string;
 };
 
 const PADDING_CLASS = {
+  xs: "p-3",
   sm: "p-4",
   md: "p-6",
 } as const;

@@ -237,7 +237,11 @@ function AppIconBadge() {
 /**
  * CampusOS AI — suggestion chips + compact prompt (navigates to /assistant).
  */
-export function HomeCampusAiCard() {
+export function HomeCampusAiCard({
+  compact = false,
+}: {
+  compact?: boolean;
+}) {
   const navigate = useNavigate();
   const [draft, setDraft] = useState("");
 
@@ -255,31 +259,36 @@ export function HomeCampusAiCard() {
     goWithPrompt(draft);
   }
 
+  const suggestions = compact ? AI_SUGGESTIONS.slice(0, 3) : AI_SUGGESTIONS;
+
   return (
     <HomeCard
-      padding="sm"
+      padding="xs"
       className="flex h-full min-h-0 flex-col home-surface-quiet"
       aria-label="CampusOS AI"
     >
-      <div className="flex shrink-0 items-center justify-between gap-3">
+      <div className="flex shrink-0 items-center justify-between gap-2">
         <div className="ds-icon-label">
-          <IconBadge icon={Sparkles} category="tasks" size="sm" />
-          <h2 className="home-section-title">CampusOS AI</h2>
+          <IconBadge icon={Sparkles} category="tasks" size="xs" />
+          <h2 className="home-section-title">
+            {compact ? "AI Assistant Beta" : "CampusOS AI"}
+          </h2>
         </div>
         <ArrowLink to="/assistant">Open</ArrowLink>
       </div>
 
-      <p className="mt-2 text-sm text-gray-600">
-        Suggestions to move work forward — open the assistant for full answers.
-      </p>
-
-      <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {AI_SUGGESTIONS.map((suggestion) => (
+      <ul
+        className={[
+          "mt-2 grid gap-1.5",
+          compact ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2",
+        ].join(" ")}
+      >
+        {suggestions.map((suggestion) => (
           <li key={suggestion.id}>
             <button
               type="button"
               onClick={() => goWithPrompt(suggestion.prompt)}
-              className="w-full rounded-lg border border-gray-100 bg-white px-3 py-2.5 text-left text-sm font-medium text-foreground shadow-sm transition hover:border-gray-200 hover:shadow-md"
+              className="w-full rounded-lg border border-gray-100 bg-white px-2.5 py-1.5 text-left text-xs font-medium text-foreground shadow-sm transition hover:border-gray-200 hover:shadow-md"
             >
               {suggestion.label}
             </button>
@@ -287,22 +296,22 @@ export function HomeCampusAiCard() {
         ))}
       </ul>
 
-      <form onSubmit={handleSubmit} className="mt-auto pt-3">
+      <form onSubmit={handleSubmit} className="mt-auto pt-2">
         <label htmlFor="campusos-ai-prompt" className="sr-only">
           Ask CampusOS AI
         </label>
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           <input
             id="campusos-ai-prompt"
             type="text"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             placeholder="Ask anything…"
-            className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-foreground placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+            className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-foreground placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
           />
           <button
             type="submit"
-            className="shrink-0 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white transition hover:bg-primary-hover"
+            className="shrink-0 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-medium text-white transition hover:bg-primary-hover"
           >
             Ask
           </button>
