@@ -28,9 +28,10 @@ function DiscussionCardShell({
     <HomeCard
       padding="sm"
       className="flex h-full min-h-0 flex-col home-surface-quiet"
+      aria-label="Discussions"
     >
       <div className="flex shrink-0 items-center justify-between gap-3">
-        <h2 className="home-section-title">Discussion</h2>
+        <h2 className="home-section-title">Discussions</h2>
         {headerAction}
       </div>
       <div className="mt-2 min-h-0 flex-1 overflow-y-auto overscroll-y-contain">

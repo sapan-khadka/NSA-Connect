@@ -32,11 +32,25 @@ function relativeWhen(isoDate: string, now = new Date()): string {
   return `In ${minutes}m`;
 }
 
-function isSameLocalDay(isoDate: string, day: Date): boolean {
+export function isSameLocalDay(isoDate: string, day: Date = new Date()): boolean {
   const start = startOfLocalDay(day).getTime();
   const end = start + 24 * 60 * 60 * 1000;
   const value = new Date(isoDate).getTime();
   return value >= start && value < end;
+}
+
+/** Events/meetings starting today, soonest first (max 4). */
+export function getTodayTimelineItems(
+  events: EventResponse[],
+  now = new Date(),
+): EventResponse[] {
+  return events
+    .filter((event) => isSameLocalDay(event.starts_at, now))
+    .sort(
+      (left, right) =>
+        new Date(left.starts_at).getTime() - new Date(right.starts_at).getTime(),
+    )
+    .slice(0, 4);
 }
 
 const DOT_TONES = [
@@ -47,21 +61,22 @@ const DOT_TONES = [
   "bg-rose-500",
 ] as const;
 
+/**
+ * Compact today-only schedule. Returns null when nothing is scheduled today
+ * so Home can give Work Center full width.
+ */
 export function HomeTodayTimeline({
   events,
-  isLoading,
+  now = new Date(),
 }: {
   events: EventResponse[];
-  isLoading: boolean;
+  now?: Date;
 }) {
-  const now = new Date();
-  const todayItems = events
-    .filter((event) => isSameLocalDay(event.starts_at, now))
-    .sort(
-      (left, right) =>
-        new Date(left.starts_at).getTime() - new Date(right.starts_at).getTime(),
-    )
-    .slice(0, 4);
+  const todayItems = getTodayTimelineItems(events, now);
+
+  if (todayItems.length === 0) {
+    return null;
+  }
 
   return (
     <HomeCard
@@ -69,68 +84,60 @@ export function HomeTodayTimeline({
       className="home-surface-quiet"
       aria-label="Today's Timeline"
     >
-      <h2 className="home-section-title">Today&apos;s Timeline</h2>
+      <h2 className="home-section-title">Today</h2>
 
-      <div className="mt-2">
-        {isLoading ? (
-          <p className="text-xs text-gray-600">Loading timeline…</p>
-        ) : null}
-
-        {!isLoading && todayItems.length === 0 ? (
-          <p className="text-xs text-gray-600">Nothing scheduled for today.</p>
-        ) : null}
-
-        {!isLoading && todayItems.length > 0 ? (
-          <ol className="space-y-0">
-            {todayItems.map((event, index) => {
-              const when = relativeWhen(event.starts_at, now);
-              const isNow = when === "Now";
-              return (
-                <li key={event.id} className="relative flex gap-2.5 pb-2.5 last:pb-0">
-                  {index < todayItems.length - 1 ? (
-                    <span
-                      aria-hidden="true"
-                      className="absolute left-[0.35rem] top-4 bottom-0 w-px bg-gray-200"
-                    />
-                  ) : null}
+      <ol className="mt-2 space-y-0">
+        {todayItems.map((event, index) => {
+          const when = relativeWhen(event.starts_at, now);
+          const isNow = when === "Now";
+          return (
+            <li
+              key={event.id}
+              className="relative flex gap-2.5 pb-2.5 last:pb-0"
+            >
+              {index < todayItems.length - 1 ? (
+                <span
+                  aria-hidden="true"
+                  className="absolute left-[0.35rem] top-4 bottom-0 w-px bg-gray-200"
+                />
+              ) : null}
+              <span
+                aria-hidden="true"
+                className={[
+                  "relative z-10 mt-1 h-2 w-2 shrink-0 rounded-full ring-2 ring-white",
+                  DOT_TONES[index % DOT_TONES.length],
+                ].join(" ")}
+              />
+              <Link
+                to={eventDetailPath(event.id)}
+                className="min-w-0 flex-1 rounded-md transition hover:bg-surface-muted"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-medium text-foreground">
+                      {event.name}
+                    </p>
+                    <p className="mt-0.5 text-[10px] tabular-nums text-gray-500">
+                      {formatClock(event.starts_at)}
+                      {event.event_type === "meeting" ? " · Meeting" : ""}
+                    </p>
+                  </div>
                   <span
-                    aria-hidden="true"
                     className={[
-                      "relative z-10 mt-1 h-2 w-2 shrink-0 rounded-full ring-2 ring-white",
-                      DOT_TONES[index % DOT_TONES.length],
+                      "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                      isNow
+                        ? "bg-emerald-50 text-emerald-800"
+                        : "bg-gray-100 text-gray-600",
                     ].join(" ")}
-                  />
-                  <Link
-                    to={eventDetailPath(event.id)}
-                    className="min-w-0 flex-1 rounded-md transition hover:bg-surface-muted"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-medium text-foreground">
-                          {event.name}
-                        </p>
-                        <p className="mt-0.5 text-[10px] tabular-nums text-gray-500">
-                          {formatClock(event.starts_at)}
-                        </p>
-                      </div>
-                      <span
-                        className={[
-                          "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
-                          isNow
-                            ? "bg-emerald-50 text-emerald-800"
-                            : "bg-gray-100 text-gray-600",
-                        ].join(" ")}
-                      >
-                        {when}
-                      </span>
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
-          </ol>
-        ) : null}
-      </div>
+                    {when}
+                  </span>
+                </div>
+              </Link>
+            </li>
+          );
+        })}
+      </ol>
     </HomeCard>
   );
 }

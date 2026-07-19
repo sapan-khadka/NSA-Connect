@@ -62,7 +62,19 @@ function OversightRow({ event }: { event: OversightEventOption }) {
   );
 }
 
-export function HomeTaskOversightSection() {
+export type OversightSummary = {
+  hasRisk: boolean;
+  eventCount: number;
+  openTaskCount: number;
+};
+
+export function HomeTaskOversightSection({
+  embedded = false,
+  onSummary,
+}: {
+  embedded?: boolean;
+  onSummary?: (summary: OversightSummary) => void;
+} = {}) {
   const [tasks, setTasks] = useState<EventTaskResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -110,22 +122,42 @@ export function HomeTaskOversightSection() {
     0,
   );
 
-  return (
-    <HomeCard
-      padding="xs"
-      className="flex h-full min-h-0 flex-col home-surface-quiet"
-      aria-label="Task Oversight"
-    >
-      <div className="flex shrink-0 items-center justify-between gap-3">
-        <h2 className="home-section-title">Task Oversight</h2>
-        <ArrowLink to="/events/oversight">View all</ArrowLink>
-      </div>
+  useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+    onSummary?.({
+      hasRisk: overdueEventCount > 0,
+      eventCount: events.length,
+      openTaskCount: totalOpenTasks,
+    });
+  }, [
+    isLoading,
+    overdueEventCount,
+    events.length,
+    totalOpenTasks,
+    onSummary,
+  ]);
+
+  const body = (
+    <>
+      {!embedded ? (
+        <div className="flex shrink-0 items-center justify-between gap-3">
+          <h2 className="home-section-title">Task Oversight</h2>
+          <ArrowLink to="/events/oversight">View all</ArrowLink>
+        </div>
+      ) : (
+        <div className="flex shrink-0 items-center justify-end">
+          <ArrowLink to="/events/oversight">View all</ArrowLink>
+        </div>
+      )}
 
       {!isLoading && !loadError && events.length > 0 ? (
         <p className="mt-1.5 text-[10px] text-gray-500">
           {overdueEventCount > 0 ? (
             <span className="font-medium text-rose-700">
-              {overdueEventCount} {overdueEventCount === 1 ? "event" : "events"} at risk
+              {overdueEventCount}{" "}
+              {overdueEventCount === 1 ? "event" : "events"} at risk
             </span>
           ) : null}
           {overdueEventCount > 0 ? " · " : null}
@@ -147,10 +179,7 @@ export function HomeTaskOversightSection() {
         {!isLoading && !loadError && preview.length > 0 ? (
           <ul className="divide-y divide-gray-100">
             {preview.map((event) => (
-              <OversightRow
-                key={event.eventId}
-                event={event}
-              />
+              <OversightRow key={event.eventId} event={event} />
             ))}
           </ul>
         ) : null}
@@ -163,6 +192,27 @@ export function HomeTaskOversightSection() {
           />
         ) : null}
       </div>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div
+        className="flex h-full min-h-0 flex-col"
+        aria-label="Task Oversight"
+      >
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <HomeCard
+      padding="xs"
+      className="flex h-full min-h-0 flex-col home-surface-quiet"
+      aria-label="Task Oversight"
+    >
+      {body}
     </HomeCard>
   );
 }

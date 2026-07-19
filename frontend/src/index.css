@@ -214,6 +214,10 @@
     min-width: 0;
   }
 
+  .home-dashboard .ds-card.home-surface-quiet {
+    background: color-mix(in srgb, white 92%, transparent);
+  }
+
   .home-section-title {
     font-size: 0.9375rem;
     font-weight: 500;
