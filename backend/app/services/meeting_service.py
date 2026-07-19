@@ -209,11 +209,16 @@ def get_meeting_detail(
         else:
             unmarked_count += 1
 
+        if member.custom_board_position is not None:
+            position_label = member.custom_board_position.name
+        else:
+            position_label = member.position.value
+
         attendance.append(
             MeetingAttendanceEntryResponse(
                 member_id=member.id,
                 full_name=member.full_name,
-                position=member.position.value,
+                position=position_label,
                 role=member.role.value,
                 status=status,
             ),

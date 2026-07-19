@@ -23,6 +23,15 @@ export function RolePromotionSelect({
   isUpdating = false,
   onRoleChange,
 }: RolePromotionSelectProps) {
+  if (member.custom_board_position) {
+    return (
+      <PositionBadge
+        position="member"
+        customPositionName={member.custom_board_position.name}
+      />
+    );
+  }
+
   if (isExclusiveMemberPosition(member.position)) {
     return <PositionBadge position={member.position} />;
   }

@@ -25,7 +25,7 @@ import { formatCurrency } from "../lib/format-currency";
 import { memberMailtoHref } from "../lib/member-mailto";
 import { formatOutstandingDuesCell } from "../lib/members-directory";
 import {
-  formatPositionLabel,
+  formatMemberPositionLabel,
   getRoleBadgeClassName,
   isMemberRole,
   type MemberRole,
@@ -132,21 +132,23 @@ function QuickViewStatusPill({ status }: { status: string }) {
 }
 
 function QuickViewRoleBadge({
-  role,
-  position,
+  member,
 }: {
-  role: string;
-  position: MemberResponse["position"];
+  member: Pick<MemberResponse, "role" | "position" | "custom_board_position">;
 }) {
-  if (!role) {
+  if (!member.role) {
     return <span className="members-quick-view-value is-muted">{MISSING}</span>;
   }
 
-  const memberRole: MemberRole = isMemberRole(role) ? role : "general";
-  const label = role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
+  const memberRole: MemberRole = isMemberRole(member.role)
+    ? member.role
+    : "general";
+  const label =
+    member.role.charAt(0).toUpperCase() + member.role.slice(1).toLowerCase();
+  const positionLabel = formatMemberPositionLabel(member);
   const title =
-    position !== "member"
-      ? `${label} · ${formatPositionLabel(position)}`
+    member.custom_board_position || member.position !== "member"
+      ? `${label} · ${positionLabel}`
       : label;
 
   return (
@@ -267,10 +269,7 @@ export function MemberQuickViewDrawer({
             </span>
           </span>
           <span className="members-quick-view-title-badges">
-            <QuickViewRoleBadge
-              role={member.role}
-              position={member.position}
-            />
+            <QuickViewRoleBadge member={member} />
             <QuickViewStatusPill status={member.status} />
           </span>
         </span>

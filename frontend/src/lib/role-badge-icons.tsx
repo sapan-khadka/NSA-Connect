@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Award,
+  Briefcase,
   CalendarDays,
   CircleDollarSign,
   Crown,
@@ -42,6 +43,10 @@ export function getPositionBadgeIcon(
   }
 
   return POSITION_BADGE_ICONS[position];
+}
+
+export function getCustomPositionBadgeIcon(): LucideIcon {
+  return Briefcase;
 }
 
 export function getRoleBadgeIcon(role: MemberRole): LucideIcon {

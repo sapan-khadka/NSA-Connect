@@ -1,6 +1,6 @@
 from enum import StrEnum
 
-from sqlalchemy import JSON, Boolean, Column, Integer, String, Text
+from sqlalchemy import JSON, Boolean, Column, ForeignKey, Integer, String, Text
 from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.orm import relationship
 
@@ -159,11 +159,29 @@ class Member(Base):
         server_default="true",
     )
     token_version = Column(Integer, nullable=False, default=1, server_default="1")
+    custom_board_position_id = Column(
+        Integer,
+        ForeignKey(
+            "custom_board_positions.id",
+            ondelete="SET NULL",
+            use_alter=True,
+            name="fk_members_custom_board_position_id",
+        ),
+        nullable=True,
+        unique=True,
+        index=True,
+    )
 
     password_reset_tokens = relationship(
         "PasswordResetToken",
         back_populates="member",
         cascade="all, delete-orphan",
+    )
+    custom_board_position = relationship(
+        "CustomBoardPosition",
+        foreign_keys=[custom_board_position_id],
+        back_populates="holder",
+        uselist=False,
     )
 
     @property

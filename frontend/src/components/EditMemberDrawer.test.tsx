@@ -11,6 +11,13 @@ vi.mock("../lib/members-api", () => ({
   updateMemberProfile: vi.fn(),
   updateMemberRole: vi.fn(),
   updateMemberPosition: vi.fn(),
+  fetchMemberPositionCatalog: vi.fn().mockResolvedValue({
+    built_in: [
+      { key: "president", label: "President", immutable: true },
+      { key: "member", label: "Member", immutable: true },
+    ],
+    custom: [],
+  }),
 }));
 
 const subject: MemberResponse = {

@@ -270,13 +270,78 @@ export async function updateMemberRole(
   return response.data;
 }
 
+export type MemberPositionAssignment =
+  | { kind: "fixed"; position: MemberPosition }
+  | { kind: "custom"; custom_board_position_id: number };
+
+export type BuiltInBoardPosition = {
+  key: MemberPosition;
+  label: string;
+  immutable: true;
+};
+
+export type CustomBoardPositionRecord = {
+  id: number;
+  name: string;
+  is_active: boolean;
+  created_by_id: number;
+  created_at: string;
+  updated_at: string;
+  archived_at: string | null;
+  holder: { id: number; full_name: string } | null;
+};
+
+export type MemberPositionCatalog = {
+  built_in: BuiltInBoardPosition[];
+  custom: CustomBoardPositionRecord[];
+};
+
+export async function fetchMemberPositionCatalog(params?: {
+  includeArchived?: boolean;
+}): Promise<MemberPositionCatalog> {
+  const response = await api.get<MemberPositionCatalog>("/v1/member-positions", {
+    params: params?.includeArchived ? { include_archived: true } : undefined,
+  });
+  return response.data;
+}
+
+export async function createCustomBoardPosition(
+  name: string,
+): Promise<CustomBoardPositionRecord> {
+  const response = await api.post<CustomBoardPositionRecord>(
+    "/v1/member-positions/custom",
+    { name },
+  );
+  return response.data;
+}
+
+export async function renameCustomBoardPosition(
+  positionId: number,
+  name: string,
+): Promise<CustomBoardPositionRecord> {
+  const response = await api.patch<CustomBoardPositionRecord>(
+    `/v1/member-positions/custom/${positionId}`,
+    { name },
+  );
+  return response.data;
+}
+
+export async function archiveCustomBoardPosition(
+  positionId: number,
+): Promise<CustomBoardPositionRecord> {
+  const response = await api.post<CustomBoardPositionRecord>(
+    `/v1/member-positions/custom/${positionId}/archive`,
+  );
+  return response.data;
+}
+
 export async function updateMemberPosition(
   memberId: number,
-  position: MemberPosition,
+  assignment: MemberPositionAssignment,
 ): Promise<MemberResponse> {
   const response = await api.patch<MemberResponse>(
     `/v1/members/${memberId}/position`,
-    { position },
+    assignment,
   );
   return response.data;
 }

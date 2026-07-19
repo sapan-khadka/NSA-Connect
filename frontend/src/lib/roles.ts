@@ -163,6 +163,27 @@ export function formatPositionLabel(position: MemberPosition): string {
   return POSITION_LABELS[position] ?? position;
 }
 
+/** Display label for built-in or custom board seat. */
+export function formatMemberPositionLabel(member: {
+  position: MemberPosition;
+  custom_board_position?: { name: string } | null;
+}): string {
+  if (member.custom_board_position?.name) {
+    return member.custom_board_position.name;
+  }
+  return formatPositionLabel(member.position);
+}
+
+export function memberHoldsBoardSeat(member: {
+  position: MemberPosition;
+  custom_board_position?: { id: number } | null;
+}): boolean {
+  return (
+    isExclusiveMemberPosition(member.position) ||
+    Boolean(member.custom_board_position)
+  );
+}
+
 export const POSITION_BADGE_STYLES: Record<
   Exclude<MemberPosition, "member">,
   string
@@ -176,6 +197,9 @@ export const POSITION_BADGE_STYLES: Record<
   new_student_representative: "bg-roleBadge-nsr-bg text-roleBadge-nsr",
 };
 
+export const CUSTOM_POSITION_BADGE_STYLE =
+  "bg-roleBadge-board-bg text-roleBadge-board";
+
 export function getPositionBadgeClassName(
   position: Exclude<MemberPosition, "member">,
   size: RoleBadgeSize = "sm",
@@ -184,6 +208,16 @@ export function getPositionBadgeClassName(
     BADGE_BASE_CLASS,
     ROLE_BADGE_SIZE_STYLES[size],
     POSITION_BADGE_STYLES[position],
+  ].join(" ");
+}
+
+export function getCustomPositionBadgeClassName(
+  size: RoleBadgeSize = "sm",
+): string {
+  return [
+    BADGE_BASE_CLASS,
+    ROLE_BADGE_SIZE_STYLES[size],
+    CUSTOM_POSITION_BADGE_STYLE,
   ].join(" ");
 }
 
@@ -250,13 +284,14 @@ export function canPresidentPromoteMember(
     role: MemberRole;
     status: string;
     position: MemberPosition;
+    custom_board_position?: { id: number } | null;
   },
   currentMemberId: number,
 ): boolean {
   return (
     member.id !== currentMemberId &&
     member.status === "approved" &&
-    !isExclusiveMemberPosition(member.position) &&
+    !memberHoldsBoardSeat(member) &&
     isPromotableBoardRole(member.role)
   );
 }

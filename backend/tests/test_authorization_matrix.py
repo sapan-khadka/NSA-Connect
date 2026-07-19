@@ -274,7 +274,7 @@ def test_no_restricted_endpoints_marked_skip_probe():
 
 
 def test_all_restricted_endpoints_have_probe_definitions():
-    assert len(RESTRICTED_ENDPOINT_RULES) == 74
+    assert len(RESTRICTED_ENDPOINT_RULES) == 85
 
 
 @pytest.mark.parametrize(

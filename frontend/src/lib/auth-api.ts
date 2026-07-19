@@ -37,6 +37,12 @@ export type RegisterRequest = {
   graduation_year: number;
 };
 
+export type CustomBoardPositionSummary = {
+  id: number;
+  name: string;
+  is_active: boolean;
+};
+
 export type MemberResponse = {
   id: number;
   full_name: string;
@@ -47,6 +53,7 @@ export type MemberResponse = {
   role: MemberRole;
   status: string;
   position: MemberPosition;
+  custom_board_position?: CustomBoardPositionSummary | null;
   interests?: string | null;
   bio?: string | null;
   talents?: MemberTalent[] | string[];

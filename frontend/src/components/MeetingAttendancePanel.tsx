@@ -131,9 +131,14 @@ export function MeetingAttendancePanel({
                 <PositionBadge
                   position={entry.position as Exclude<MemberPosition, "member">}
                 />
+              ) : entry.position && entry.position !== "member" ? (
+                <PositionBadge
+                  position="member"
+                  customPositionName={entry.position}
+                />
               ) : (
                 <p className="text-xs text-label">
-                  {formatPositionLabel(entry.position as MemberPosition)}
+                  {formatPositionLabel("member")}
                 </p>
               )}
             </div>

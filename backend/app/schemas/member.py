@@ -165,12 +165,16 @@ class MemberBoardRoleUpdateRequest(BaseModel):
     role: Literal[MemberRole.BOARD, MemberRole.GENERAL]
 
 
-class MemberPositionUpdateRequest(BaseModel):
-    position: MemberPosition
-
-
 class MemberStatusUpdateRequest(BaseModel):
     status: MemberStatus
+
+
+class CustomBoardPositionField(BaseModel):
+    id: int
+    name: str
+    is_active: bool
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MemberResponse(BaseModel):
@@ -183,6 +187,7 @@ class MemberResponse(BaseModel):
     role: MemberRole
     status: MemberStatus
     position: MemberPosition = MemberPosition.MEMBER
+    custom_board_position: CustomBoardPositionField | None = None
     interests: str | None = None
     bio: str | None = None
     talents: list[str] = Field(default_factory=list)
@@ -269,6 +274,12 @@ class MemberResponse(BaseModel):
         )
         student_id = member.student_id if is_self or is_board else None
 
+        custom_position = (
+            CustomBoardPositionField.model_validate(member.custom_board_position)
+            if member.custom_board_position is not None
+            else None
+        )
+
         return cls(
             id=member.id,
             full_name=member.full_name,
@@ -279,6 +290,7 @@ class MemberResponse(BaseModel):
             role=member.role,
             status=member.status,
             position=member.position or MemberPosition.MEMBER,
+            custom_board_position=custom_position,
             interests=member.interests,
             bio=member.bio,
             talents=list(member.talents or []),

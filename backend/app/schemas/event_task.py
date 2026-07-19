@@ -214,11 +214,18 @@ class EventTaskListResponse(BaseModel):
     total: int
 
 
+class TaskOverviewCustomPosition(BaseModel):
+    id: int
+    name: str
+    is_active: bool
+
+
 class TaskOverviewMember(BaseModel):
     member_id: int
     full_name: str
     role: str
     position: MemberPosition
+    custom_board_position: TaskOverviewCustomPosition | None = None
     total: int
     completed: int
     in_progress: int
@@ -241,11 +248,19 @@ class TaskOverviewMember(BaseModel):
         todo = sum(1 for task in tasks if task.status == EventTaskStatus.TODO)
         total = len(tasks)
         percent = round((completed / total) * 100) if total else 0
+        custom_position = None
+        if member.custom_board_position is not None:
+            custom_position = TaskOverviewCustomPosition(
+                id=member.custom_board_position.id,
+                name=member.custom_board_position.name,
+                is_active=member.custom_board_position.is_active,
+            )
         return cls(
             member_id=member.id,
             full_name=member.full_name,
             role=member.role.value,
             position=member.position or MemberPosition.MEMBER,
+            custom_board_position=custom_position,
             total=total,
             completed=completed,
             in_progress=in_progress,

@@ -28,6 +28,7 @@ from app.lib.semester import get_current_semester_slug
 from app.models.member import Member, MemberRole, MemberStatus
 from app.models.member_document import MemberDocumentType
 from app.schemas.auth import TokenResponse
+from app.schemas.custom_board_position import MemberPositionUpdateRequest
 from app.schemas.member import (
     MemberBoardRoleUpdateRequest,
     MemberImportResponse,
@@ -35,7 +36,6 @@ from app.schemas.member import (
     MemberInviteResponse,
     MemberListResponse,
     MemberPasswordChangeRequest,
-    MemberPositionUpdateRequest,
     MemberProfileUpdateRequest,
     MemberResponse,
     MemberTalentOptionsResponse,
@@ -75,6 +75,11 @@ from app.services.member_meeting_streak_service import (
     get_member_consecutive_missed_meetings,
 )
 from app.services.member_import_service import import_members_csv
+from app.services.custom_board_position_service import (
+    CustomBoardPositionConflictError,
+    CustomBoardPositionNotFoundError,
+    CustomBoardPositionValidationError,
+)
 from app.services.member_service import (
     InvalidCurrentPasswordError,
     InvalidMemberRoleError,
@@ -83,6 +88,7 @@ from app.services.member_service import (
     MemberNotFoundError,
     StudentIdAlreadyExistsError,
     approve_member,
+    assign_member_position,
     build_members_export_csv,
     change_member_password,
     create_invited_member,
@@ -93,7 +99,6 @@ from app.services.member_service import (
     list_members_paginated,
     reject_member,
     update_member_board_role,
-    update_member_position,
     update_member_profile,
 )
 from app.services.password_reset_service import send_initial_password_setup
@@ -437,15 +442,36 @@ def update_member_position_endpoint(
     db: Session = Depends(get_db),
 ):
     try:
-        member = update_member_position(db, member_id, data.position)
+        member = assign_member_position(
+            db,
+            member_id,
+            kind=data.kind,
+            position=data.position,
+            custom_board_position_id=data.custom_board_position_id,
+        )
     except MemberNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Member not found",
         ) from None
+    except CustomBoardPositionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Custom board position not found",
+        ) from None
     except InvalidMemberRoleError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from None
+    except CustomBoardPositionValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from None
+    except CustomBoardPositionConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),
         ) from None
 

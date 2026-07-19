@@ -244,6 +244,9 @@ def resolve_probe_path(path_template: str, ctx: ProbeContext) -> str:
         "{item_id}": str(ctx.checklist_item_id),
         "{slot_id}": str(ctx.slot_id),
         "{photo_id}": "1",
+        "{position_id}": "1",
+        "{note_id}": "1",
+        "{document_id}": "1",
     }
     if event_id is not None:
         replacements["{event_id}"] = str(event_id)
@@ -308,7 +311,22 @@ def probe_request_kwargs(method: str, path_template: str) -> dict:
     elif path_template.endswith("/members/{member_id}/role") and method == "PATCH":
         kwargs["json"] = {"role": "board"}
     elif path_template.endswith("/members/{member_id}/position") and method == "PATCH":
-        kwargs["json"] = {"position": "member"}
+        kwargs["json"] = {"kind": "fixed", "position": "member"}
+    elif path_template == "/api/v1/member-positions/custom" and method == "POST":
+        kwargs["json"] = {"name": "Probe Custom Position"}
+    elif (
+        path_template.endswith("/member-positions/custom/{position_id}")
+        and method == "PATCH"
+    ):
+        kwargs["json"] = {"name": "Renamed Probe Position"}
+    elif path_template.endswith("/notes") and method == "POST":
+        kwargs["json"] = {"content": "Probe private note"}
+    elif path_template.endswith("/notes/{note_id}") and method == "PATCH":
+        kwargs["json"] = {"content": "Updated probe note"}
+    elif path_template.endswith("/event-photo") and method == "POST":
+        kwargs["files"] = {
+            "file": ("cover.jpg", b"\xff\xd8\xffprobe", "image/jpeg"),
+        }
     elif path_template.endswith("/members/{member_id}/approve") and method == "PATCH":
         kwargs["json"] = {}
     elif path_template.endswith("/members/{member_id}/reject") and method == "PATCH":

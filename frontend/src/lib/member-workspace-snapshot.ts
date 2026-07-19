@@ -3,7 +3,11 @@
  */
 
 import type { MemberResponse } from "./auth-api";
-import { formatPositionLabel, formatRoleLabel, isMemberRole } from "./roles";
+import {
+  formatMemberPositionLabel,
+  formatRoleLabel,
+  isMemberRole,
+} from "./roles";
 
 export type MemberWorkspaceSnapshotChipId =
   | "active_status"
@@ -42,16 +46,17 @@ function statusDisplayLabel(status: string): string {
 function boardRoleDisplayLabel(member: MemberResponse): string {
   const roleLabel = isMemberRole(member.role)
     ? formatRoleLabel(member.role)
-    : member.role
-      ? member.role.charAt(0).toUpperCase() + member.role.slice(1)
-      : MISSING;
+    : MISSING;
 
-  if (!roleLabel || roleLabel === MISSING) {
+  if (roleLabel === MISSING) {
     return MISSING;
   }
 
-  if (member.position && member.position !== "member") {
-    return `${roleLabel} · ${formatPositionLabel(member.position)}`;
+  if (
+    member.custom_board_position ||
+    (member.position && member.position !== "member")
+  ) {
+    return `${roleLabel} · ${formatMemberPositionLabel(member)}`;
   }
 
   return roleLabel;

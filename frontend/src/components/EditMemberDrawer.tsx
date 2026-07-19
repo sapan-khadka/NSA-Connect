@@ -13,6 +13,7 @@ import {
   updateMemberPosition,
   updateMemberProfile,
   updateMemberRole,
+  type MemberPositionAssignment,
   type UpdateProfileRequest,
 } from "../lib/members-api";
 import {
@@ -23,6 +24,7 @@ import {
 import {
   isExclusiveMemberPosition,
   isRoleAtLeast,
+  memberHoldsBoardSeat,
   type MemberPosition,
   type PromotableBoardRole,
 } from "../lib/roles";
@@ -37,7 +39,10 @@ type EditMemberDrawerProps = {
   open: boolean;
   onClose: () => void;
   /** Called after any successful profile / role / position update. */
-  onMemberUpdated: (member: MemberResponse) => void;
+  onMemberUpdated: (
+    member: MemberResponse,
+    previousHolder?: MemberResponse | null,
+  ) => void;
   positionHolders?: Partial<
     Record<MemberPosition, { id: number; full_name: string }>
   >;
@@ -185,12 +190,12 @@ export function EditMemberDrawer({
 
   async function handlePositionChange(
     memberId: number,
-    position: MemberPosition,
+    assignment: MemberPositionAssignment,
   ) {
     setIsUpdatingPosition(true);
     setError(null);
     try {
-      const updated = await updateMemberPosition(memberId, position);
+      const updated = await updateMemberPosition(memberId, assignment);
       setDraftMember(updated);
       onMemberUpdated(updated);
     } catch (caught) {
@@ -387,7 +392,8 @@ export function EditMemberDrawer({
                   isUpdating={isUpdatingRole}
                   onRoleChange={handleRoleChange}
                 />
-                {isExclusiveMemberPosition(draftMember.position) ? (
+                {memberHoldsBoardSeat(draftMember) &&
+                isExclusiveMemberPosition(draftMember.position) ? (
                   <p className="mt-1 text-xs text-label">
                     Role is tied to this exclusive position.
                   </p>

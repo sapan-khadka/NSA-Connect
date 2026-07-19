@@ -27,4 +27,14 @@ describe("PositionBadge", () => {
     const { container } = render(<PositionBadge position="member" />);
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("renders a neutral badge for custom positions", () => {
+    render(
+      <PositionBadge position="member" customPositionName="Cultural Lead" />,
+    );
+    expect(screen.getByText("Cultural Lead")).toBeInTheDocument();
+    expect(screen.getByText("Cultural Lead").closest("span")).toHaveClass(
+      "bg-roleBadge-board-bg",
+    );
+  });
 });

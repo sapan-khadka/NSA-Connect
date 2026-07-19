@@ -100,6 +100,8 @@ export function filterDirectoryMembers(
         member.email ?? "",
         member.major,
         member.student_id ?? "",
+        member.position,
+        member.custom_board_position?.name ?? "",
       ]
         .join(" ")
         .toLowerCase();

@@ -62,28 +62,20 @@ vi.mock("../lib/discussion-api", () => ({
   toggleDiscussionRoomPin: vi.fn(),
 }));
 
-vi.mock("../lib/announcements-api", () => ({
-  fetchAnnouncements: vi.fn().mockResolvedValue({ announcements: [], total: 0 }),
-  ANNOUNCEMENT_CATEGORY_LABELS: {
-    general: "General",
-    event: "Event",
-    finance: "Finance",
-    other: "Other",
-  },
-}));
-
 vi.mock("../lib/meetings-api", () => ({
   fetchMeetings: vi.fn().mockResolvedValue({ meetings: [], total: 0 }),
 }));
 
-vi.mock("../lib/recent-memories", () => ({
-  fetchRecentMemories: vi.fn().mockResolvedValue({ album: null, photos: [], extraPhotoCount: 0 }),
-}));
-
 import { fetchUpcomingEvents } from "../lib/events-api";
-import { fetchMyEventTasks, updateEventTask, fetchTaskOverview } from "../lib/event-tasks-api";
+import {
+  fetchMyEventTasks,
+  updateEventTask,
+  fetchTaskOverview,
+} from "../lib/event-tasks-api";
 import { fetchPendingFinanceChangeRequests } from "../lib/finance-api";
 import { fetchPendingMembers } from "../lib/members-api";
+import { fetchDiscussionInbox } from "../lib/discussion-api";
+import { fetchMeetings } from "../lib/meetings-api";
 
 const mockedUpcoming = vi.mocked(fetchUpcomingEvents);
 const mockedMyTasks = vi.mocked(fetchMyEventTasks);
@@ -91,6 +83,8 @@ const mockedUpdateTask = vi.mocked(updateEventTask);
 const mockedTaskOverview = vi.mocked(fetchTaskOverview);
 const mockedPendingMembers = vi.mocked(fetchPendingMembers);
 const mockedFinancePending = vi.mocked(fetchPendingFinanceChangeRequests);
+const mockedDiscussions = vi.mocked(fetchDiscussionInbox);
+const mockedMeetings = vi.mocked(fetchMeetings);
 
 const sampleEvent = createMockEventResponse({
   id: 5,
@@ -109,13 +103,15 @@ describe("HomePage", () => {
       total_tasks: 0,
       completed_tasks: 0,
     });
+    mockedDiscussions.mockResolvedValue({ rooms: [] });
+    mockedMeetings.mockResolvedValue({ meetings: [], total: 0 });
   });
 
   afterEach(() => {
     cleanup();
   });
 
-  it("renders the dashboard hierarchy matching the command center", async () => {
+  it("renders the calm SaaS home hierarchy for President", async () => {
     mockedUpcoming.mockResolvedValue({ events: [sampleEvent], total: 1 });
     mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
     mockedTaskOverview.mockResolvedValue({
@@ -125,10 +121,10 @@ describe("HomePage", () => {
           full_name: "Asha Thapa",
           role: "general",
           position: "member",
-          total: 2,
+          total: 1,
           completed: 0,
           in_progress: 0,
-          todo: 2,
+          todo: 1,
           completion_percent: 0,
           tasks: [
             {
@@ -151,11 +147,12 @@ describe("HomePage", () => {
               completed_at: null,
               created_by_id: 2,
               created_at: "2030-05-01T12:00:00+00:00",
+              assignee_has_volunteer_signup: false,
             },
           ],
         },
       ],
-      total_tasks: 2,
+      total_tasks: 1,
       completed_tasks: 0,
     });
 
@@ -172,50 +169,89 @@ describe("HomePage", () => {
         name: /Good (Morning|Afternoon|Evening), Test/i,
       }),
     ).toBeInTheDocument();
+
+    expect(screen.queryByText("Overdue")).not.toBeInTheDocument();
+    expect(screen.queryByText("Due Today")).not.toBeInTheDocument();
+    expect(screen.queryByText("Active Tasks")).not.toBeInTheDocument();
+    expect(screen.queryByText("Needs Review")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Needs attention")).not.toBeInTheDocument();
+
+    const featured = screen.getByLabelText("Featured Event");
     expect(
-      screen.getByText(/Here's what's happening with NSA today/i),
+      within(featured).getByRole("heading", { name: "Dashain Celebration" }),
+    ).toBeInTheDocument();
+    expect(
+      within(featured).getByRole("link", { name: /Open event/i }),
+    ).toHaveAttribute("href", "/events/5");
+    expect(within(featured).queryByText("Budget")).not.toBeInTheDocument();
+    expect(
+      within(featured).queryByText("Confirmed attendance"),
+    ).not.toBeInTheDocument();
+
+    const actionCenter = screen.getByLabelText("Action Center");
+    expect(within(actionCenter).getByText("Do next")).toBeInTheDocument();
+    expect(
+      within(actionCenter).getByRole("link", { name: /New Event/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(actionCenter).getByRole("link", { name: /Ask AI/i }),
+    ).toHaveAttribute("href", "/assistant");
+    expect(
+      within(actionCenter).queryByPlaceholderText("Ask AI…"),
+    ).not.toBeInTheDocument();
+    expect(
+      within(actionCenter).queryByRole("link", { name: /Meeting Minutes/i }),
+    ).not.toBeInTheDocument();
+
+    const work = await screen.findByLabelText("Work Center");
+    expect(within(work).getByRole("tab", { name: "Mine" })).toBeInTheDocument();
+    expect(
+      within(work).getByRole("tab", { name: "Oversight" }),
     ).toBeInTheDocument();
 
-    expect(screen.getAllByText("Overdue").length).toBeGreaterThan(0);
-    expect(screen.getByText("Due Today")).toBeInTheDocument();
-    expect(screen.getByText("Active Tasks")).toBeInTheDocument();
-    expect(screen.getByText("Active Members")).toBeInTheDocument();
-    expect(screen.getByText("Budget Balance")).toBeInTheDocument();
-
-    expect(screen.getByLabelText("Featured Event")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Open Workspace/i })).toHaveAttribute(
-      "href",
-      "/events/5",
-    );
-    expect(screen.getByRole("link", { name: /Manage Event/i })).toHaveAttribute(
-      "href",
-      "/events/5/manage",
-    );
-    const oversight = await screen.findByLabelText("Task Oversight");
+    const oversight = await within(work).findByLabelText("Task Oversight");
     expect(
       within(oversight).getByText("Dashain Celebration"),
     ).toBeInTheDocument();
-    expect(within(oversight).getByText("1 overdue")).toBeInTheDocument();
-    expect(
-      within(oversight).getByRole("link", { name: /Dashain Celebration/i }),
-    ).toHaveAttribute("href", "/events/oversight?event=5");
-    expect(
-      within(oversight).getByRole("link", { name: /View all/i }),
-    ).toHaveAttribute("href", "/events/oversight");
-    expect(screen.queryByText("My Tasks")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Today's Timeline")).toBeInTheDocument();
-    expect(screen.getByLabelText("CampusOS AI")).toBeInTheDocument();
-    expect(screen.getByLabelText("Quick Actions")).toBeInTheDocument();
-    expect(screen.getByLabelText("Upcoming Deadlines")).toBeInTheDocument();
-    expect(screen.getByLabelText("Organization Health")).toBeInTheDocument();
 
-    expect(screen.queryByLabelText("Board Feed")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Your Workspaces")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Today's Timeline")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Organization Health")).not.toBeInTheDocument();
+
+    expect(await screen.findByLabelText("Discussions")).toBeInTheDocument();
+    expect(screen.getByLabelText("Meeting Minutes")).toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText("Meeting Minutes")).getByRole("link", {
+        name: /Open tool/i,
+      }),
+    ).toHaveAttribute("href", "/board/meeting-minutes");
   });
 
-  it("shows create-style quick actions for board", async () => {
-    mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
-    mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
+  it("shows urgency chips only when counts are non-zero", async () => {
+    const overdueTask = {
+      id: 1,
+      event_id: 5,
+      event_name: "Dashain Celebration",
+      task_kind: "simple" as const,
+      title: "Late flyer",
+      group_name: null,
+      description: "",
+      assignee_id: 1,
+      assignee_name: "Test User",
+      status: "todo" as const,
+      due_date: "2020-01-01T12:00:00+00:00",
+      is_overdue: true,
+      is_complete: false,
+      checklist_items: [],
+      completion_note: null,
+      completion_photo_url: null,
+      completed_at: null,
+      created_by_id: 2,
+      created_at: "2020-01-01T12:00:00+00:00",
+      assignee_has_volunteer_signup: false,
+    };
+    mockedUpcoming.mockResolvedValue({ events: [sampleEvent], total: 1 });
+    mockedMyTasks.mockResolvedValue({ tasks: [overdueTask], total: 1 });
+    mockedPendingMembers.mockResolvedValue({ members: [], total: 2 });
 
     render(
       <MemoryRouter>
@@ -225,19 +261,53 @@ describe("HomePage", () => {
       </MemoryRouter>,
     );
 
-    const quickActions = await screen.findByLabelText("Quick Actions");
-    expect(
-      within(quickActions).getByRole("link", { name: /New Event/i }),
-    ).toHaveAttribute("href", "/events/calendar?create=1");
-    expect(
-      within(quickActions).getByRole("link", { name: /Meeting Minutes/i }),
-    ).toHaveAttribute("href", "/board/meeting-minutes");
-    expect(
-      within(quickActions).getByRole("link", { name: /Invite Member/i }),
-    ).toHaveAttribute("href", "/members");
+    const chips = await screen.findByLabelText("Needs attention");
+    expect(within(chips).getByRole("link", { name: /1 overdue/i })).toBeInTheDocument();
+    expect(within(chips).getByRole("link", { name: /2 reviews/i })).toBeInTheDocument();
   });
 
-  it("surfaces pending reviews in My Tasks for board without oversight", async () => {
+  it("lets President switch Work Center to personal tasks", async () => {
+    const user = userEvent.setup();
+    const openTask = {
+      id: 1,
+      event_id: 5,
+      event_name: "Dashain Celebration",
+      task_kind: "simple" as const,
+      title: "Book venue",
+      group_name: null,
+      description: "",
+      assignee_id: 1,
+      assignee_name: "Test User",
+      status: "todo" as const,
+      due_date: "2030-05-20T12:00:00+00:00",
+      is_overdue: false,
+      is_complete: false,
+      checklist_items: [],
+      completion_note: null,
+      completion_photo_url: null,
+      completed_at: null,
+      created_by_id: 2,
+      created_at: "2030-05-01T12:00:00+00:00",
+      assignee_has_volunteer_signup: false,
+    };
+    mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
+    mockedMyTasks.mockResolvedValue({ tasks: [openTask], total: 1 });
+
+    render(
+      <MemoryRouter>
+        <MockAuthProvider value={{ member: createMockMember("president") }}>
+          <HomePage />
+        </MockAuthProvider>
+      </MemoryRouter>,
+    );
+
+    const work = await screen.findByLabelText("Work Center");
+    await user.click(within(work).getByRole("tab", { name: "Mine" }));
+    expect(await within(work).findByText("Book venue")).toBeInTheDocument();
+    expect(within(work).queryByText("High")).not.toBeInTheDocument();
+  });
+
+  it("surfaces pending reviews in Action Center for treasurer", async () => {
     mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
     mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
     mockedPendingMembers.mockResolvedValue({ members: [], total: 2 });
@@ -251,14 +321,18 @@ describe("HomePage", () => {
       </MemoryRouter>,
     );
 
+    const actionCenter = await screen.findByLabelText("Action Center");
     expect(
-      await screen.findByRole("link", { name: /2 member approvals pending/i }),
+      within(actionCenter).getByRole("link", {
+        name: /2 member approvals pending/i,
+      }),
     ).toHaveAttribute("href", "/members?tab=pending");
     expect(
-      screen.getByRole("link", { name: /1 finance review required/i }),
+      within(actionCenter).getByRole("link", {
+        name: /1 finance review required/i,
+      }),
     ).toHaveAttribute("href", "/finance?tab=approvals");
-    expect(screen.getByText("My Tasks")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Task Oversight")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("My Tasks")).toBeInTheDocument();
   });
 
   it("cycles featured upcoming events with carousel controls", async () => {
@@ -296,9 +370,6 @@ describe("HomePage", () => {
     expect(
       await within(featured).findByRole("heading", { name: "Holi Night" }),
     ).toBeInTheDocument();
-    expect(
-      within(featured).getByRole("link", { name: /Open Workspace/i }),
-    ).toHaveAttribute("href", "/events/9");
   });
 
   it("hides board-only affordances for general members", async () => {
@@ -314,19 +385,117 @@ describe("HomePage", () => {
     );
 
     await screen.findByLabelText("Featured Event");
-    expect(screen.queryByLabelText("CampusOS AI")).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /Manage Event/i })).not.toBeInTheDocument();
-    const quickActions = screen.getByLabelText("Quick Actions");
+    expect(screen.queryByRole("link", { name: /^Manage$/i })).not.toBeInTheDocument();
+    const actionCenter = screen.getByLabelText("Action Center");
     expect(
-      within(quickActions).queryByRole("link", { name: /New Event/i }),
+      within(actionCenter).queryByRole("link", { name: /New Event/i }),
     ).not.toBeInTheDocument();
     expect(
-      within(quickActions).getByRole("link", { name: /New Task/i }),
+      within(actionCenter).getByRole("link", { name: /New Task/i }),
     ).toBeInTheDocument();
+    expect(
+      within(actionCenter).queryByRole("link", { name: /Ask AI/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Discussions")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Meeting Minutes")).not.toBeInTheDocument();
   });
 
-  it("renders CampusOS AI suggestions", async () => {
+  it.each([
+    ["president", "president"] as const,
+    ["board", "vice_president"] as const,
+    ["board", "secretary"] as const,
+    ["treasurer", "treasurer"] as const,
+    ["board", "event_manager"] as const,
+    ["board", "public_relations_officer"] as const,
+    ["board", "new_student_representative"] as const,
+  ])(
+    "shows board Home collaboration for %s / %s",
+    async (role, position) => {
+      mockedUpcoming.mockResolvedValue({ events: [sampleEvent], total: 1 });
+      mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
+
+      render(
+        <MemoryRouter>
+          <MockAuthProvider
+            value={{
+              member: createMockMember(role, { position }),
+            }}
+          >
+            <HomePage />
+          </MockAuthProvider>
+        </MemoryRouter>,
+      );
+
+      expect(await screen.findByLabelText("Discussions")).toBeInTheDocument();
+      expect(screen.getByLabelText("Meeting Minutes")).toBeInTheDocument();
+    },
+  );
+
+  it("shows board Home collaboration for custom board position holders", async () => {
+    mockedUpcoming.mockResolvedValue({ events: [sampleEvent], total: 1 });
+    mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
+
+    render(
+      <MemoryRouter>
+        <MockAuthProvider
+          value={{
+            member: createMockMember("board", {
+              position: "member",
+              custom_board_position: {
+                id: 7,
+                name: "Cultural Lead",
+                is_active: true,
+              },
+            }),
+          }}
+        >
+          <HomePage />
+        </MockAuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByLabelText("Discussions")).toBeInTheDocument();
+    expect(screen.getByLabelText("Meeting Minutes")).toBeInTheDocument();
+  });
+
+  it("shows View calendar empty state for general members with no events", async () => {
     mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
+    mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
+
+    render(
+      <MemoryRouter>
+        <MockAuthProvider value={{ member: createMockMember("general") }}>
+          <HomePage />
+        </MockAuthProvider>
+      </MemoryRouter>,
+    );
+
+    const featured = await screen.findByLabelText("Featured Event");
+    expect(
+      within(featured).getByRole("link", { name: /View calendar/i }),
+    ).toHaveAttribute("href", "/events/calendar");
+  });
+
+  it("shows Today only when an event is scheduled today", async () => {
+    const now = new Date();
+    const todayIso = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      15,
+      0,
+      0,
+    ).toISOString();
+    const todayMeeting = createMockEventResponse({
+      id: 42,
+      name: "Board Sync",
+      event_type: "meeting",
+      starts_at: todayIso,
+    });
+    mockedUpcoming.mockResolvedValue({
+      events: [sampleEvent, todayMeeting],
+      total: 2,
+    });
     mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
 
     render(
@@ -337,9 +506,8 @@ describe("HomePage", () => {
       </MemoryRouter>,
     );
 
-    const ai = await screen.findByLabelText("CampusOS AI");
-    expect(within(ai).getByText("Draft announcement")).toBeInTheDocument();
-    expect(within(ai).getByPlaceholderText("Ask anything…")).toBeInTheDocument();
+    const timeline = await screen.findByLabelText("Today's Timeline");
+    expect(within(timeline).getByText("Board Sync")).toBeInTheDocument();
   });
 
   it("marks a simple My Tasks row complete via status done", async () => {
@@ -364,6 +532,7 @@ describe("HomePage", () => {
       completed_at: null,
       created_by_id: 2,
       created_at: "2030-05-01T12:00:00+00:00",
+      assignee_has_volunteer_signup: false,
     };
     mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
     mockedMyTasks.mockResolvedValue({ tasks: [openTask], total: 1 });
@@ -393,7 +562,7 @@ describe("HomePage", () => {
     await waitFor(() => {
       expect(screen.queryByText("Book venue")).not.toBeInTheDocument();
     });
-    expect(screen.getByText("You're clear for now")).toBeInTheDocument();
+    expect(screen.getByText("You're clear")).toBeInTheDocument();
   });
 
   it("rolls back and shows an error when completing a task fails", async () => {
@@ -418,6 +587,7 @@ describe("HomePage", () => {
       completed_at: null,
       created_by_id: 2,
       created_at: "2030-05-01T12:00:00+00:00",
+      assignee_has_volunteer_signup: false,
     };
     mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
     mockedMyTasks.mockResolvedValue({ tasks: [openTask], total: 1 });

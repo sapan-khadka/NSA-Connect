@@ -19,6 +19,13 @@ vi.mock("../lib/members-api", () => ({
   downloadMembersCsv: vi.fn(),
   importMembersCsv: vi.fn(),
   inviteMember: vi.fn(),
+  fetchMemberPositionCatalog: vi.fn().mockResolvedValue({
+    built_in: [],
+    custom: [],
+  }),
+  createCustomBoardPosition: vi.fn(),
+  renameCustomBoardPosition: vi.fn(),
+  archiveCustomBoardPosition: vi.fn(),
 }));
 
 vi.mock("../lib/dues-api", () => ({
@@ -191,6 +198,18 @@ describe("MembersPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Import CSV" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Export" })).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "Manage board positions" }),
+    ).toBeInTheDocument();
+  });
+
+  it("hides manage board positions for non-presidents", async () => {
+    await mockDirectoryApis();
+    renderMembersPage("board");
+
+    expect(
+      screen.queryByRole("button", { name: "Manage board positions" }),
+    ).not.toBeInTheDocument();
   });
 
   it("imports a CSV file and shows a summary modal", async () => {

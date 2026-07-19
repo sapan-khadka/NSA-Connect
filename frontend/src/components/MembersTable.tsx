@@ -35,7 +35,7 @@ import { fetchMembers } from "../lib/members-api";
 import {
   buildPositionHolders,
   canViewMemberDirectory,
-  formatPositionLabel,
+  formatMemberPositionLabel,
   getRoleBadgeClassName,
   isMemberRole,
   type MemberRole,
@@ -53,6 +53,8 @@ type SortDirection = "asc" | "desc";
 
 type MembersTableProps = {
   members?: MemberResponse[];
+  /** Unfiltered directory used for exclusive-position occupancy labels. */
+  positionSourceMembers?: MemberResponse[];
   isLoading?: boolean;
   error?: string | null;
   /** Real dues rows from the finance API; omitted cells show "—". */
@@ -61,7 +63,10 @@ type MembersTableProps = {
   isFilterEmpty?: boolean;
   onInvite?: () => void;
   /** Keep parent directory state in sync after Edit Member saves. */
-  onMemberUpdated?: (member: MemberResponse) => void;
+  onMemberUpdated?: (
+    member: MemberResponse,
+    previousHolder?: MemberResponse | null,
+  ) => void;
 };
 
 type DuesTone = "paid" | "partial" | "overdue" | "missing";
@@ -126,22 +131,23 @@ function MembersDirectoryStatusPill({ status }: { status: string }) {
 }
 
 function MembersRoleBadge({
-  role,
-  position,
+  member,
 }: {
-  role: string;
-  position: MemberResponse["position"];
+  member: Pick<MemberResponse, "role" | "position" | "custom_board_position">;
 }) {
-  if (!role) {
+  if (!member.role) {
     return <span className="members-table-cell-muted">{MISSING}</span>;
   }
 
-  const memberRole: MemberRole = isMemberRole(role) ? role : "general";
+  const memberRole: MemberRole = isMemberRole(member.role)
+    ? member.role
+    : "general";
   const label =
-    role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
+    member.role.charAt(0).toUpperCase() + member.role.slice(1).toLowerCase();
+  const positionLabel = formatMemberPositionLabel(member);
   const title =
-    position !== "member"
-      ? `${label} · ${formatPositionLabel(position)}`
+    member.custom_board_position || member.position !== "member"
+      ? `${label} · ${positionLabel}`
       : label;
 
   return (
@@ -449,6 +455,7 @@ function SortHeader({
 
 export function MembersTable({
   members: controlledMembers,
+  positionSourceMembers,
   isLoading: controlledLoading,
   error: controlledError,
   duesByMemberId,
@@ -658,8 +665,8 @@ export function MembersTable({
   }
 
   const positionHolders = useMemo(
-    () => buildPositionHolders(members),
-    [members],
+    () => buildPositionHolders(positionSourceMembers ?? members),
+    [positionSourceMembers, members],
   );
 
   function handleRowKeyDown(
@@ -765,10 +772,7 @@ export function MembersTable({
                       <div>
                         <dt>Role</dt>
                         <dd>
-                          <MembersRoleBadge
-                            role={member.role}
-                            position={member.position}
-                          />
+                          <MembersRoleBadge member={member} />
                         </dd>
                       </div>
                       <div>
@@ -915,10 +919,7 @@ export function MembersTable({
                         </div>
                       </td>
                       <td>
-                        <MembersRoleBadge
-                          role={member.role}
-                          position={member.position}
-                        />
+                        <MembersRoleBadge member={member} />
                       </td>
                       <td>
                         <MembersDirectoryStatusPill status={member.status} />

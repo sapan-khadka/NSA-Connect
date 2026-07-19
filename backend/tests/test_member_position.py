@@ -23,12 +23,13 @@ def board_member(db_session):
 def test_president_can_set_member_position(client, president_headers, board_member):
     response = client.patch(
         f"/api/v1/members/{board_member.id}/position",
-        json={"position": "event_manager"},
+        json={"kind": "fixed", "position": "event_manager"},
         headers=president_headers,
     )
 
     assert response.status_code == 200
     assert response.json()["position"] == "event_manager"
+    assert response.json()["custom_board_position"] is None
 
 
 def test_position_defaults_to_member(client, president_headers, board_member):
@@ -38,6 +39,7 @@ def test_position_defaults_to_member(client, president_headers, board_member):
     )
     assert response.status_code == 200
     assert response.json()["position"] == "member"
+    assert response.json()["custom_board_position"] is None
 
 
 def test_non_president_cannot_set_position(client, db_session, board_member):
@@ -47,7 +49,7 @@ def test_non_president_cannot_set_position(client, db_session, board_member):
 
     response = client.patch(
         f"/api/v1/members/{board_member.id}/position",
-        json={"position": "secretary"},
+        json={"kind": "fixed", "position": "secretary"},
         headers=general_headers,
     )
     assert response.status_code == 403
@@ -56,7 +58,7 @@ def test_non_president_cannot_set_position(client, db_session, board_member):
 def test_set_position_missing_member_returns_404(client, president_headers):
     response = client.patch(
         "/api/v1/members/9999/position",
-        json={"position": "secretary"},
+        json={"kind": "fixed", "position": "secretary"},
         headers=president_headers,
     )
     assert response.status_code == 404
@@ -65,7 +67,7 @@ def test_set_position_missing_member_returns_404(client, president_headers):
 def test_set_position_rejects_invalid_value(client, president_headers, board_member):
     response = client.patch(
         f"/api/v1/members/{board_member.id}/position",
-        json={"position": "supreme_leader"},
+        json={"kind": "fixed", "position": "supreme_leader"},
         headers=president_headers,
     )
     assert response.status_code == 422
@@ -90,7 +92,7 @@ def test_assigning_exclusive_position_demotes_previous_holder(
 
     first_response = client.patch(
         f"/api/v1/members/{first.id}/position",
-        json={"position": "secretary"},
+        json={"kind": "fixed", "position": "secretary"},
         headers=president_headers,
     )
     assert first_response.status_code == 200
@@ -98,7 +100,7 @@ def test_assigning_exclusive_position_demotes_previous_holder(
 
     second_response = client.patch(
         f"/api/v1/members/{second.id}/position",
-        json={"position": "secretary"},
+        json={"kind": "fixed", "position": "secretary"},
         headers=president_headers,
     )
     assert second_response.status_code == 200
@@ -136,7 +138,7 @@ def test_president_position_syncs_auth_role_and_demotes_previous(
 
     response = client.patch(
         f"/api/v1/members/{first.id}/position",
-        json={"position": "president"},
+        json={"kind": "fixed", "position": "president"},
         headers=president_headers,
     )
     assert response.status_code == 200

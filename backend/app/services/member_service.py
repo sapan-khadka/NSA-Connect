@@ -1,15 +1,17 @@
-from decimal import Decimal
-from io import StringIO
 import csv
 import secrets
+from decimal import Decimal
+from io import StringIO
 
 from sqlalchemy import cast, func, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.password_validation import validate_password_strength
 from app.core.security import hash_password, verify_password
 from app.lib.member_majors import normalize_major
+from app.models.custom_board_position import CustomBoardPosition
 from app.models.member import (
     EXCLUSIVE_AUTH_ROLES,
     EXCLUSIVE_MEMBER_POSITIONS,
@@ -24,6 +26,10 @@ from app.schemas.member import (
     MemberCreateRequest,
     MemberInviteRequest,
     MemberProfileUpdateRequest,
+)
+from app.services.custom_board_position_service import (
+    CustomBoardPositionConflictError,
+    CustomBoardPositionNotFoundError,
 )
 
 
@@ -157,7 +163,11 @@ def authenticate_member(db: Session, email: str, password: str) -> Member:
 
 
 def get_member_by_id(db: Session, member_id: int) -> Member:
-    member = db.get(Member, member_id)
+    member = db.scalar(
+        select(Member)
+        .options(joinedload(Member.custom_board_position))
+        .where(Member.id == member_id),
+    )
     if member is None:
         raise MemberNotFoundError
     return member
@@ -166,10 +176,10 @@ def get_member_by_id(db: Session, member_id: int) -> Member:
 def list_members_by_status(
     db: Session, status: MemberStatus | None = None
 ) -> list[Member]:
-    query = select(Member)
+    query = select(Member).options(joinedload(Member.custom_board_position))
     if status is not None:
         query = query.where(Member.status == status)
-    return list(db.scalars(query.order_by(Member.id)).all())
+    return list(db.scalars(query.order_by(Member.id)).unique().all())
 
 
 def _member_has_talent_filters(db: Session, talents: list[str]):
@@ -200,11 +210,14 @@ def list_members_paginated(
     members = list(
         db.scalars(
             select(Member)
+            .options(joinedload(Member.custom_board_position))
             .where(*filters)
             .order_by(Member.full_name.asc(), Member.id.asc())
             .offset(offset)
             .limit(page_size)
-        ).all()
+        )
+        .unique()
+        .all()
     )
     return members, total
 
@@ -213,6 +226,7 @@ def list_assignable_board_members(db: Session) -> list[Member]:
     return list(
         db.scalars(
             select(Member)
+            .options(joinedload(Member.custom_board_position))
             .where(Member.status == MemberStatus.APPROVED)
             .where(
                 Member.role.in_(
@@ -220,7 +234,9 @@ def list_assignable_board_members(db: Session) -> list[Member]:
                 ),
             )
             .order_by(Member.full_name.asc()),
-        ).all(),
+        )
+        .unique()
+        .all(),
     )
 
 
@@ -338,10 +354,11 @@ def update_member_board_role(db: Session, member_id: int, role: MemberRole) -> M
     if role == MemberRole.GENERAL and member.role != MemberRole.GENERAL:
         if member.position in EXCLUSIVE_MEMBER_POSITIONS:
             member.position = MemberPosition.MEMBER
+        member.custom_board_position_id = None
 
     member.role = role
     db.commit()
-    db.refresh(member)
+    return get_member_by_id(db, member.id)
     return member
 
 
@@ -394,17 +411,53 @@ def _sync_auth_role_from_position(member: Member) -> None:
         member.role = MemberRole.BOARD
         return
 
-    if (
-        member.role == MemberRole.GENERAL
-        and member.position in EXCLUSIVE_MEMBER_POSITIONS
-    ):
+    holds_board_seat = (
+        member.position in EXCLUSIVE_MEMBER_POSITIONS
+        or member.custom_board_position_id is not None
+    )
+    if member.role == MemberRole.GENERAL and holds_board_seat:
         member.role = MemberRole.BOARD
+
+
+def _clear_custom_position_holder(
+    db: Session,
+    custom_position_id: int,
+    except_member_id: int,
+) -> None:
+    previous_holder = db.scalar(
+        select(Member)
+        .options(joinedload(Member.custom_board_position))
+        .where(
+            Member.custom_board_position_id == custom_position_id,
+            Member.id != except_member_id,
+        ),
+    )
+    if previous_holder is not None:
+        previous_holder.custom_board_position_id = None
+        _sync_auth_role_from_position(previous_holder)
 
 
 def update_member_position(
     db: Session,
     member_id: int,
     position: MemberPosition,
+) -> Member:
+    """Assign a fixed built-in position (clears any custom seat)."""
+    return assign_member_position(
+        db,
+        member_id,
+        kind="fixed",
+        position=position,
+    )
+
+
+def assign_member_position(
+    db: Session,
+    member_id: int,
+    *,
+    kind: str,
+    position: MemberPosition | None = None,
+    custom_board_position_id: int | None = None,
 ) -> Member:
     member = get_member_by_id(db, member_id)
 
@@ -413,17 +466,83 @@ def update_member_position(
             "Only approved members can have their position updated",
         )
 
-    if position != member.position:
-        _clear_exclusive_position_holder(db, position, member_id)
-        mapped_role = POSITION_AUTH_ROLES.get(position)
-        if mapped_role is not None:
-            _clear_exclusive_auth_role_holder(db, mapped_role, member_id)
-        member.position = position
-        _sync_auth_role_from_position(member)
-        db.commit()
-        db.refresh(member)
+    if kind == "fixed":
+        if position is None:
+            raise InvalidMemberRoleError("position is required")
+        return _assign_fixed_position(db, member, position)
 
-    return member
+    if custom_board_position_id is None:
+        raise InvalidMemberRoleError("custom_board_position_id is required")
+    return _assign_custom_position(db, member, custom_board_position_id)
+
+
+def _assign_fixed_position(
+    db: Session,
+    member: Member,
+    position: MemberPosition,
+) -> Member:
+    already_set = (
+        member.position == position and member.custom_board_position_id is None
+    )
+    if already_set:
+        return member
+
+    _clear_exclusive_position_holder(db, position, member.id)
+    mapped_role = POSITION_AUTH_ROLES.get(position)
+    if mapped_role is not None:
+        _clear_exclusive_auth_role_holder(db, mapped_role, member.id)
+
+    member.custom_board_position_id = None
+    member.position = position
+    _sync_auth_role_from_position(member)
+
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise CustomBoardPositionConflictError(
+            "Position assignment conflict; please retry",
+        ) from exc
+    return get_member_by_id(db, member.id)
+
+
+def _assign_custom_position(
+    db: Session,
+    member: Member,
+    custom_board_position_id: int,
+) -> Member:
+    custom_position = db.scalar(
+        select(CustomBoardPosition).where(
+            CustomBoardPosition.id == custom_board_position_id,
+        ),
+    )
+    if custom_position is None:
+        raise CustomBoardPositionNotFoundError
+    if not custom_position.is_active:
+        raise CustomBoardPositionConflictError(
+            "Cannot assign an archived custom board position",
+        )
+
+    if member.custom_board_position_id == custom_board_position_id:
+        return member
+
+    if member.position in EXCLUSIVE_MEMBER_POSITIONS:
+        # Clear conflicting built-in seat before taking the custom seat.
+        member.position = MemberPosition.MEMBER
+
+    _clear_custom_position_holder(db, custom_board_position_id, member.id)
+    member.custom_board_position_id = custom_board_position_id
+    member.position = MemberPosition.MEMBER
+    _sync_auth_role_from_position(member)
+
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise CustomBoardPositionConflictError(
+            "Position assignment conflict; please retry",
+        ) from exc
+    return get_member_by_id(db, member.id)
 
 
 def update_member_profile(

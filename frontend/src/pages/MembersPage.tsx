@@ -15,6 +15,7 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { Button } from "../components/ui/Button";
 import { AppIcon } from "../components/ui/AppIcon";
 import { InviteMemberDrawer } from "../components/InviteMemberDrawer";
+import { ManageBoardPositionsDrawer } from "../components/ManageBoardPositionsDrawer";
 import { MembersFiltersToolbar } from "../components/MembersFiltersToolbar";
 import { MembersTable } from "../components/MembersTable";
 import { Modal } from "../components/ui/Modal";
@@ -104,12 +105,16 @@ function MembersPageHeader({
   importLoading,
   onExport,
   exportLoading,
+  canManagePositions,
+  onManagePositions,
 }: {
   onInvite: () => void;
   onImportClick: () => void;
   importLoading: boolean;
   onExport: () => void;
   exportLoading: boolean;
+  canManagePositions: boolean;
+  onManagePositions: () => void;
 }) {
   return (
     <header
@@ -125,6 +130,16 @@ function MembersPageHeader({
         </div>
 
         <div className="members-page-header-actions">
+          {canManagePositions ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onManagePositions}
+            >
+              Manage board positions
+            </Button>
+          ) : null}
           <Button type="button" variant="primary" size="sm" onClick={onInvite}>
             Invite Member
           </Button>
@@ -196,6 +211,7 @@ export function MembersPage() {
   const { member: currentMember } = useAuth();
   const importInputRef = useRef<HTMLInputElement>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [managePositionsOpen, setManagePositionsOpen] = useState(false);
   const [inviteNotice, setInviteNotice] = useState<{
     message: string;
     emailSent: boolean;
@@ -223,6 +239,7 @@ export function MembersPage() {
     currentMember &&
       canManageTreasury(currentMember.role, currentMember.position),
   );
+  const canManagePositions = currentMember?.role === "president";
 
   useEffect(() => {
     let cancelled = false;
@@ -337,6 +354,8 @@ export function MembersPage() {
             void handleExport();
           }}
           exportLoading={exportLoading}
+          canManagePositions={canManagePositions}
+          onManagePositions={() => setManagePositionsOpen(true)}
         />
         {exportError ? (
           <p role="alert" className="ds-field-error members-page-section">
@@ -372,14 +391,43 @@ export function MembersPage() {
         >
           <MembersTable
             members={displayedMembers}
+            positionSourceMembers={members}
             isLoading={isLoading}
             error={error}
             duesByMemberId={duesByMemberId}
             isFilterEmpty={members.length > 0 && displayedMembers.length === 0}
             onInvite={() => setInviteOpen(true)}
-            onMemberUpdated={(updated) => {
+            onMemberUpdated={(updated, previousHolder) => {
               setMembers((prev) =>
-                prev.map((row) => (row.id === updated.id ? updated : row)),
+                prev.map((row) => {
+                  if (row.id === updated.id) {
+                    return updated;
+                  }
+                  if (previousHolder && row.id === previousHolder.id) {
+                    return previousHolder;
+                  }
+                  // Clear stale custom occupancy when a seat transfers.
+                  if (
+                    updated.custom_board_position &&
+                    row.custom_board_position?.id ===
+                      updated.custom_board_position.id &&
+                    row.id !== updated.id
+                  ) {
+                    return { ...row, custom_board_position: null };
+                  }
+                  if (
+                    updated.position !== "member" &&
+                    row.position === updated.position &&
+                    row.id !== updated.id
+                  ) {
+                    return {
+                      ...row,
+                      position: "member",
+                      custom_board_position: null,
+                    };
+                  }
+                  return row;
+                }),
               );
             }}
           />
@@ -397,6 +445,14 @@ export function MembersPage() {
               ? "Member created and setup email sent."
               : "Member created, but we couldn't send the setup email — ask them to use Forgot Password.",
           });
+        }}
+      />
+
+      <ManageBoardPositionsDrawer
+        open={managePositionsOpen}
+        onClose={() => setManagePositionsOpen(false)}
+        onCatalogChanged={() => {
+          setDirectoryRefreshKey((value) => value + 1);
         }}
       />
 
