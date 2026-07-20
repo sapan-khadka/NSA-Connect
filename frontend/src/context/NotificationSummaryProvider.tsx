@@ -10,105 +10,47 @@ import {
 
 import { useAuth } from "./useAuth";
 import type { NotificationMenuItem } from "../design-system/components/navigation/NotificationMenu";
-import { FINANCE_APPROVALS_PATH } from "../lib/finance-routes";
 import {
+  EMPTY_INBOX,
   EMPTY_NOTIFICATION_SUMMARY,
+  fetchInboxNotifications,
   fetchNotificationSummary,
+  markAllInboxNotificationsRead,
+  markInboxNotificationRead,
+  type InboxNotification,
+  type InboxNotificationList,
   type NotificationSummary,
 } from "../lib/notifications-api";
 
 const POLL_INTERVAL_MS = 60_000;
+const BELL_PREVIEW_LIMIT = 8;
 
 type NotificationSummaryContextValue = {
   summary: NotificationSummary;
+  inbox: InboxNotificationList;
   loading: boolean;
   refresh: () => void;
   menuItems: NotificationMenuItem[];
+  unreadCount: number;
+  markRead: (notificationId: number) => Promise<void>;
+  markAllRead: () => Promise<void>;
 };
 
 const NotificationSummaryContext =
   createContext<NotificationSummaryContextValue | null>(null);
 
-function buildMenuItems(summary: NotificationSummary): NotificationMenuItem[] {
-  const items: NotificationMenuItem[] = [];
-
-  if (summary.members_pending > 0) {
-    items.push({
-      id: "members-pending",
-      title:
-        summary.members_pending === 1
-          ? "1 member awaiting approval"
-          : `${summary.members_pending} members awaiting approval`,
-      description: "Review pending membership requests",
-      to: "/members?tab=pending",
-      unread: true,
-    });
-  }
-
-  if (summary.finance_pending > 0) {
-    items.push({
-      id: "finance-pending",
-      title:
-        summary.finance_pending === 1
-          ? "1 finance change to review"
-          : `${summary.finance_pending} finance changes to review`,
-      description: "Approve or reject pending edits",
-      to: FINANCE_APPROVALS_PATH,
-      unread: true,
-    });
-  }
-
-  if (summary.suggestions_pending > 0) {
-    items.push({
-      id: "suggestions-pending",
-      title:
-        summary.suggestions_pending === 1
-          ? "1 event suggestion submitted"
-          : `${summary.suggestions_pending} event suggestions submitted`,
-      description: "Review member ideas",
-      to: "/events/suggestions",
-      unread: true,
-    });
-  }
-
-  if (summary.discussions_unread > 0) {
-    items.push({
-      id: "discussions-unread",
-      title:
-        summary.discussions_unread === 1
-          ? "1 unread discussion message"
-          : `${summary.discussions_unread} unread discussion messages`,
-      description: "Catch up on board and event chats",
-      to: "/discussions",
-      unread: true,
-    });
-  }
-
-  if (summary.tasks_overdue > 0) {
-    items.push({
-      id: "tasks-overdue",
-      title:
-        summary.tasks_overdue === 1
-          ? "1 overdue task"
-          : `${summary.tasks_overdue} overdue tasks`,
-      description: "Complete or update overdue work",
-      to: "/events/tasks",
-      unread: true,
-    });
-  } else if (summary.tasks_due_today > 0) {
-    items.push({
-      id: "tasks-due-today",
-      title:
-        summary.tasks_due_today === 1
-          ? "1 task due today"
-          : `${summary.tasks_due_today} tasks due today`,
-      description: "Stay on top of today's assignments",
-      to: "/events/tasks",
-      unread: true,
-    });
-  }
-
-  return items;
+function inboxToMenuItems(
+  notifications: InboxNotification[],
+): NotificationMenuItem[] {
+  return notifications.slice(0, BELL_PREVIEW_LIMIT).map((item) => ({
+    id: String(item.id),
+    title: item.title,
+    description: item.body ?? undefined,
+    to: item.href ?? undefined,
+    unread: item.unread,
+    type: item.type,
+    createdAt: item.created_at,
+  }));
 }
 
 function formatBadgeCount(count: number): string {
@@ -148,6 +90,7 @@ export function NotificationSummaryProvider({
   const [summary, setSummary] = useState<NotificationSummary>(
     EMPTY_NOTIFICATION_SUMMARY,
   );
+  const [inbox, setInbox] = useState<InboxNotificationList>(EMPTY_INBOX);
   const [loading, setLoading] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -158,6 +101,7 @@ export function NotificationSummaryProvider({
   useEffect(() => {
     if (!isAuthenticated) {
       setSummary(EMPTY_NOTIFICATION_SUMMARY);
+      setInbox(EMPTY_INBOX);
       setLoading(false);
       return;
     }
@@ -167,13 +111,18 @@ export function NotificationSummaryProvider({
     async function load() {
       setLoading(true);
       try {
-        const next = await fetchNotificationSummary();
+        const [nextSummary, nextInbox] = await Promise.all([
+          fetchNotificationSummary(),
+          fetchInboxNotifications(50),
+        ]);
         if (!cancelled) {
-          setSummary(next);
+          setSummary(nextSummary);
+          setInbox(nextInbox);
         }
       } catch {
         if (!cancelled) {
           setSummary(EMPTY_NOTIFICATION_SUMMARY);
+          setInbox(EMPTY_INBOX);
         }
       } finally {
         if (!cancelled) {
@@ -208,16 +157,79 @@ export function NotificationSummaryProvider({
     };
   }, [isAuthenticated]);
 
-  const menuItems = useMemo(() => buildMenuItems(summary), [summary]);
+  const markRead = useCallback(async (notificationId: number) => {
+    setInbox((current) => ({
+      ...current,
+      notifications: current.notifications.map((item) =>
+        item.id === notificationId
+          ? {
+              ...item,
+              unread: false,
+              read_at: item.read_at ?? new Date().toISOString(),
+            }
+          : item,
+      ),
+      unread_count: Math.max(
+        0,
+        current.unread_count -
+          (current.notifications.find((item) => item.id === notificationId)
+            ?.unread
+            ? 1
+            : 0),
+      ),
+    }));
+    try {
+      await markInboxNotificationRead(notificationId);
+    } catch {
+      setRefreshKey((current) => current + 1);
+    }
+  }, []);
+
+  const markAllRead = useCallback(async () => {
+    setInbox((current) => ({
+      ...current,
+      notifications: current.notifications.map((item) => ({
+        ...item,
+        unread: false,
+        read_at: item.read_at ?? new Date().toISOString(),
+      })),
+      unread_count: 0,
+    }));
+    try {
+      await markAllInboxNotificationsRead();
+    } catch {
+      setRefreshKey((current) => current + 1);
+    }
+  }, []);
+
+  const menuItems = useMemo(
+    () => inboxToMenuItems(inbox.notifications),
+    [inbox.notifications],
+  );
+
+  const unreadCount = inbox.unread_count;
 
   const value = useMemo(
     () => ({
       summary,
+      inbox,
       loading,
       refresh,
       menuItems,
+      unreadCount,
+      markRead,
+      markAllRead,
     }),
-    [summary, loading, refresh, menuItems],
+    [
+      summary,
+      inbox,
+      loading,
+      refresh,
+      menuItems,
+      unreadCount,
+      markRead,
+      markAllRead,
+    ],
   );
 
   return (
@@ -232,9 +244,13 @@ export function useNotificationSummary(): NotificationSummaryContextValue {
   if (value == null) {
     return {
       summary: EMPTY_NOTIFICATION_SUMMARY,
+      inbox: EMPTY_INBOX,
       loading: false,
       refresh: () => undefined,
       menuItems: [],
+      unreadCount: 0,
+      markRead: async () => undefined,
+      markAllRead: async () => undefined,
     };
   }
   return value;

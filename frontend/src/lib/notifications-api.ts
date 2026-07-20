@@ -20,6 +20,29 @@ export const EMPTY_NOTIFICATION_SUMMARY: NotificationSummary = {
   attention_total: 0,
 };
 
+export type InboxNotification = {
+  id: number;
+  type: string;
+  title: string;
+  body: string | null;
+  href: string | null;
+  read_at: string | null;
+  created_at: string;
+  unread: boolean;
+};
+
+export type InboxNotificationList = {
+  notifications: InboxNotification[];
+  total: number;
+  unread_count: number;
+};
+
+export const EMPTY_INBOX: InboxNotificationList = {
+  notifications: [],
+  total: 0,
+  unread_count: 0,
+};
+
 export type NotificationPreferences = {
   event_reminders: boolean;
   rsvp_nudges: boolean;
@@ -52,6 +75,36 @@ export type NotificationCheckSummary = {
 
 export async function fetchNotificationSummary(): Promise<NotificationSummary> {
   const response = await api.get<NotificationSummary>("/v1/notifications/summary");
+  return response.data;
+}
+
+export async function fetchInboxNotifications(
+  limit = 50,
+): Promise<InboxNotificationList> {
+  const response = await api.get<InboxNotificationList>("/v1/notifications", {
+    params: { limit },
+  });
+  return response.data;
+}
+
+export async function markInboxNotificationRead(
+  notificationId: number,
+): Promise<{ id: number; read_at: string; unread: boolean }> {
+  const response = await api.patch<{
+    id: number;
+    read_at: string;
+    unread: boolean;
+  }>(`/v1/notifications/${notificationId}/read`);
+  return response.data;
+}
+
+export async function markAllInboxNotificationsRead(): Promise<{
+  marked_count: number;
+  read_at: string;
+}> {
+  const response = await api.post<{ marked_count: number; read_at: string }>(
+    "/v1/notifications/read-all",
+  );
   return response.data;
 }
 

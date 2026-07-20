@@ -42,6 +42,11 @@ vi.mock("../lib/members-api", () => ({
   fetchPendingMembers: vi.fn(),
 }));
 
+vi.mock("../context/NotificationSummaryProvider", () => ({
+  useNotificationSummary: vi.fn(),
+  NavCountBadge: () => null,
+}));
+
 vi.mock("../lib/finance-api", () => ({
   fetchFinanceSummary: vi.fn().mockResolvedValue({
     balance: "1000.00",
@@ -72,19 +77,31 @@ import {
   updateEventTask,
   fetchTaskOverview,
 } from "../lib/event-tasks-api";
-import { fetchPendingFinanceChangeRequests } from "../lib/finance-api";
-import { fetchPendingMembers } from "../lib/members-api";
 import { fetchDiscussionInbox } from "../lib/discussion-api";
 import { fetchMeetings } from "../lib/meetings-api";
+import { useNotificationSummary } from "../context/NotificationSummaryProvider";
+import { EMPTY_INBOX, EMPTY_NOTIFICATION_SUMMARY } from "../lib/notifications-api";
 
 const mockedUpcoming = vi.mocked(fetchUpcomingEvents);
 const mockedMyTasks = vi.mocked(fetchMyEventTasks);
 const mockedUpdateTask = vi.mocked(updateEventTask);
 const mockedTaskOverview = vi.mocked(fetchTaskOverview);
-const mockedPendingMembers = vi.mocked(fetchPendingMembers);
-const mockedFinancePending = vi.mocked(fetchPendingFinanceChangeRequests);
 const mockedDiscussions = vi.mocked(fetchDiscussionInbox);
 const mockedMeetings = vi.mocked(fetchMeetings);
+const mockedNotificationSummary = vi.mocked(useNotificationSummary);
+
+function mockSummary(overrides: Partial<typeof EMPTY_NOTIFICATION_SUMMARY> = {}) {
+  mockedNotificationSummary.mockReturnValue({
+    summary: { ...EMPTY_NOTIFICATION_SUMMARY, ...overrides },
+    inbox: EMPTY_INBOX,
+    loading: false,
+    refresh: () => undefined,
+    menuItems: [],
+    unreadCount: 0,
+    markRead: async () => undefined,
+    markAllRead: async () => undefined,
+  });
+}
 
 const sampleEvent = createMockEventResponse({
   id: 5,
@@ -96,8 +113,7 @@ const sampleEvent = createMockEventResponse({
 describe("HomePage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockedPendingMembers.mockResolvedValue({ members: [], total: 0 });
-    mockedFinancePending.mockResolvedValue({ requests: [], total: 0 });
+    mockSummary();
     mockedTaskOverview.mockResolvedValue({
       members: [],
       total_tasks: 0,
@@ -251,7 +267,7 @@ describe("HomePage", () => {
     };
     mockedUpcoming.mockResolvedValue({ events: [sampleEvent], total: 1 });
     mockedMyTasks.mockResolvedValue({ tasks: [overdueTask], total: 1 });
-    mockedPendingMembers.mockResolvedValue({ members: [], total: 2 });
+    mockSummary({ members_pending: 2 });
 
     render(
       <MemoryRouter>
@@ -310,8 +326,7 @@ describe("HomePage", () => {
   it("surfaces pending reviews in Action Center for treasurer", async () => {
     mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
     mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
-    mockedPendingMembers.mockResolvedValue({ members: [], total: 2 });
-    mockedFinancePending.mockResolvedValue({ requests: [], total: 1 });
+    mockSummary({ members_pending: 2, finance_pending: 1 });
 
     render(
       <MemoryRouter>

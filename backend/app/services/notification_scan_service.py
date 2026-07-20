@@ -108,7 +108,20 @@ def notify_task_assigned_if_enabled(
     *,
     task: EventTask,
     assignee: Member,
+    assigner_name: str | None = None,
 ) -> bool:
+    from app.services.inbox_notification_service import notify_task_assigned_inbox
+
+    event_title = task.event.title if task.event else None
+    notify_task_assigned_inbox(
+        db,
+        task_id=task.id,
+        assignee_id=assignee.id,
+        task_title=task.title,
+        event_title=event_title,
+        assigner_name=assigner_name,
+    )
+
     if not assignee.notify_task_reminders:
         logger.info(
             "Skipping task assigned notification — preference off "
@@ -117,8 +130,6 @@ def notify_task_assigned_if_enabled(
             task.id,
         )
         return False
-
-    event_title = task.event.title if task.event else None
 
     def _send() -> None:
         send_task_assigned_email(
@@ -310,6 +321,17 @@ def _process_task_due_reminders(db: Session, *, as_of: datetime) -> dict[str, in
 
         stats["candidates"] += 1
 
+        from app.services.inbox_notification_service import notify_task_due_inbox
+
+        event_title = task.event.title if task.event else None
+        notify_task_due_inbox(
+            db,
+            task_id=task.id,
+            assignee_id=assignee.id,
+            task_title=task.title,
+            event_title=event_title,
+        )
+
         if not _member_prefers(db, assignee, NotificationType.TASK_DUE_REMINDER):
             stats["skipped"] += 1
             continue
@@ -323,7 +345,6 @@ def _process_task_due_reminders(db: Session, *, as_of: datetime) -> dict[str, in
             stats["skipped"] += 1
             continue
 
-        event_title = task.event.title if task.event else None
         assert task.due_date is not None
 
         def _send(task=task, assignee=assignee, event_title=event_title) -> None:

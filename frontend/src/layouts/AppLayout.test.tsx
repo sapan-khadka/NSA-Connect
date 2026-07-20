@@ -14,6 +14,11 @@ vi.mock("../lib/notifications-api", () => ({
     tasks_due_today: 0,
     attention_total: 0,
   },
+  EMPTY_INBOX: {
+    notifications: [],
+    total: 0,
+    unread_count: 0,
+  },
   fetchNotificationSummary: vi.fn().mockResolvedValue({
     members_pending: 0,
     finance_pending: 0,
@@ -23,6 +28,13 @@ vi.mock("../lib/notifications-api", () => ({
     tasks_due_today: 0,
     attention_total: 0,
   }),
+  fetchInboxNotifications: vi.fn().mockResolvedValue({
+    notifications: [],
+    total: 0,
+    unread_count: 0,
+  }),
+  markInboxNotificationRead: vi.fn(),
+  markAllInboxNotificationsRead: vi.fn(),
 }));
 
 describe("AppLayout navigation", () => {

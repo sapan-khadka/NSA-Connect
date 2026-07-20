@@ -62,6 +62,16 @@ def create_announcement(
 
     announcement = get_announcement(db, announcement.id)
     notify_announcement_broadcast(db, announcement)
+
+    from app.services.inbox_notification_service import notify_announcement_published
+
+    notify_announcement_published(
+        db,
+        announcement_id=announcement.id,
+        title=announcement.title,
+        author=author,
+        category_label=announcement.category.value.replace("_", " ").title(),
+    )
     return announcement
 
 

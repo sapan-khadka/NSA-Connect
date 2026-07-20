@@ -3,7 +3,38 @@ import { Link } from "react-router-dom";
 import type { ReactNode } from "react";
 
 import { cx } from "../../cx";
+import { getNotificationVisual } from "./notificationVisuals";
 import { useDismissibleMenu } from "./useDismissibleMenu";
+
+function formatMenuRelativeTime(isoDate: string, now = new Date()): string {
+  const then = new Date(isoDate).getTime();
+  const diffSeconds = Math.round((now.getTime() - then) / 1000);
+  if (!Number.isFinite(diffSeconds)) {
+    return "";
+  }
+  if (diffSeconds < 45) {
+    return "just now";
+  }
+  if (diffSeconds < 90) {
+    return "1 min ago";
+  }
+  if (diffSeconds < 3600) {
+    return `${Math.floor(diffSeconds / 60)} min ago`;
+  }
+  if (diffSeconds < 86400) {
+    return `${Math.floor(diffSeconds / 3600)} hr ago`;
+  }
+  if (diffSeconds < 172800) {
+    return "yesterday";
+  }
+  if (diffSeconds < 604800) {
+    return `${Math.floor(diffSeconds / 86400)} days ago`;
+  }
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+  }).format(new Date(isoDate));
+}
 
 export type NotificationMenuItem = {
   id: string;
@@ -13,6 +44,8 @@ export type NotificationMenuItem = {
   href?: string;
   onClick?: () => void;
   unread?: boolean;
+  type?: string;
+  createdAt?: string;
 };
 
 export type NotificationMenuProps = {
@@ -21,6 +54,8 @@ export type NotificationMenuProps = {
   unreadCount?: number;
   /** Called when an item is activated. */
   onItemSelect?: (item: NotificationMenuItem) => void;
+  /** Mark all notifications as read. */
+  onMarkAllRead?: () => void;
   /** Fallback when the menu is empty. */
   emptyMessage?: string;
   /** Optional “View all” destination. */
@@ -38,7 +73,8 @@ export function NotificationMenu({
   items = [],
   unreadCount,
   onItemSelect,
-  emptyMessage = "No notifications yet.",
+  onMarkAllRead,
+  emptyMessage = "You're all caught up.",
   viewAllTo,
   viewAllLabel = "View all",
   className = "",
@@ -47,6 +83,7 @@ export function NotificationMenu({
   const { open, setOpen, rootRef, menuId } = useDismissibleMenu();
   const badgeCount =
     unreadCount ?? items.filter((item) => item.unread).length;
+  const hasUnread = badgeCount > 0;
 
   return (
     <div ref={rootRef} className={cx("relative", className)}>
@@ -95,31 +132,92 @@ export function NotificationMenu({
           id={menuId}
           role="menu"
           aria-label="Notifications"
-          className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-card border border-gray-200 bg-surface-card py-1 shadow-card"
+          className="absolute right-0 top-full z-50 mt-2 w-[22rem] overflow-hidden rounded-2xl border border-gray-200 bg-surface-card shadow-card"
         >
+          <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                Notifications
+              </p>
+              <p className="text-[11px] text-label">
+                {hasUnread
+                  ? `${badgeCount} unread`
+                  : "You're up to date"}
+              </p>
+            </div>
+            {onMarkAllRead ? (
+              <button
+                type="button"
+                disabled={!hasUnread}
+                className="text-xs font-semibold text-primary transition enabled:hover:text-primary-hover disabled:cursor-default disabled:text-label/50"
+                onClick={() => {
+                  onMarkAllRead();
+                }}
+              >
+                Mark all read
+              </button>
+            ) : null}
+          </div>
+
           {items.length === 0 ? (
-            <p className="px-4 py-6 text-center text-sm text-label">
+            <p className="px-4 py-10 text-center text-sm text-label">
               {emptyMessage}
             </p>
           ) : (
-            <ul className="max-h-80 overflow-y-auto">
+            <ul className="max-h-80 overflow-y-auto py-1">
               {items.map((item) => {
+                const visual = getNotificationVisual(item.type);
+                const Icon = visual.icon;
+
                 const body = (
-                  <>
-                    <span className="block text-sm font-medium text-foreground">
-                      {item.title}
+                  <span className="flex items-start gap-3">
+                    <span
+                      className={cx(
+                        "mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+                        visual.chipClass,
+                      )}
+                      aria-hidden="true"
+                    >
+                      <Icon
+                        className={cx("h-3.5 w-3.5", visual.iconClass)}
+                        strokeWidth={1.75}
+                      />
                     </span>
-                    {item.description ? (
-                      <span className="mt-0.5 block text-xs text-label">
-                        {item.description}
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-start justify-between gap-2">
+                        <span className="block text-sm font-medium leading-snug text-foreground">
+                          {item.title}
+                        </span>
+                        {item.unread ? (
+                          <span
+                            className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-overdue"
+                            aria-hidden="true"
+                          />
+                        ) : null}
                       </span>
-                    ) : null}
-                  </>
+                      {item.description ? (
+                        <span className="mt-0.5 block truncate text-xs text-label">
+                          {item.description}
+                        </span>
+                      ) : null}
+                      <span className="mt-1 flex items-center gap-1.5 text-[11px] text-label/80">
+                        <span>{visual.label}</span>
+                        {item.createdAt ? (
+                          <>
+                            <span aria-hidden="true">·</span>
+                            <span>
+                              {formatMenuRelativeTime(item.createdAt)}
+                            </span>
+                          </>
+                        ) : null}
+                      </span>
+                    </span>
+                  </span>
                 );
 
                 const itemClass = cx(
                   "block w-full px-4 py-3 text-left transition-colors hover:bg-surface-muted",
-                  item.unread ? "bg-badge-teal-bg/40" : "",
+                  item.unread ? "bg-badge-teal-bg/25" : "",
                 );
 
                 function activate() {
@@ -165,11 +263,11 @@ export function NotificationMenu({
           )}
 
           {viewAllTo ? (
-            <div className="border-t border-gray-200">
+            <div className="border-t border-gray-100">
               <Link
                 to={viewAllTo}
                 role="menuitem"
-                className="block px-4 py-2.5 text-center text-sm font-semibold text-primary hover:bg-surface-muted"
+                className="block px-4 py-3 text-center text-sm font-semibold text-primary transition hover:bg-surface-muted"
                 onClick={() => setOpen(false)}
               >
                 {viewAllLabel}

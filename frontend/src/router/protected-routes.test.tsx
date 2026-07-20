@@ -15,6 +15,39 @@ vi.mock("../lib/members-api", () => ({
   fetchTalentOptions: vi.fn().mockResolvedValue({ talents: [], labels: {} }),
 }));
 
+vi.mock("../lib/notifications-api", () => ({
+  EMPTY_NOTIFICATION_SUMMARY: {
+    members_pending: 0,
+    finance_pending: 0,
+    suggestions_pending: 0,
+    discussions_unread: 0,
+    tasks_overdue: 0,
+    tasks_due_today: 0,
+    attention_total: 0,
+  },
+  EMPTY_INBOX: {
+    notifications: [],
+    total: 0,
+    unread_count: 0,
+  },
+  fetchNotificationSummary: vi.fn().mockResolvedValue({
+    members_pending: 3,
+    finance_pending: 0,
+    suggestions_pending: 0,
+    discussions_unread: 0,
+    tasks_overdue: 0,
+    tasks_due_today: 0,
+    attention_total: 3,
+  }),
+  fetchInboxNotifications: vi.fn().mockResolvedValue({
+    notifications: [],
+    total: 0,
+    unread_count: 0,
+  }),
+  markInboxNotificationRead: vi.fn(),
+  markAllInboxNotificationsRead: vi.fn(),
+}));
+
 vi.mock("../lib/finance-api", () => ({
   fetchFinanceSummary: vi.fn().mockResolvedValue({
     balance: "0.00",
@@ -126,12 +159,8 @@ describe("protected route redirects", () => {
     ).toBeInTheDocument();
   });
 
-  // TODO(test-maintenance): stale copy assertions — UI text moved; tests did not.
-  // Same root cause as the LoginPage "Welcome back" → time-of-day greeting fix.
-  // Update matchers to current home pending-approvals chip / members page heading
-  // on the next test-maintenance pass. Do not skip: keep failing until copy is synced.
   it("loads pending approvals on home for board members", async () => {
-    const { fetchPendingMembers } = await import("../lib/members-api");
+    const { fetchNotificationSummary } = await import("../lib/notifications-api");
 
     renderWithRouter(undefined, {
       initialEntries: ["/"],
@@ -142,14 +171,15 @@ describe("protected route redirects", () => {
     });
 
     await waitFor(() => {
-      expect(fetchPendingMembers).toHaveBeenCalled();
+      expect(fetchNotificationSummary).toHaveBeenCalled();
     });
     expect(
-      await screen.findByText(/member signups waiting for approval/i),
-    ).toBeInTheDocument();
+      await screen.findByRole("link", {
+        name: /3 member approvals pending/i,
+      }),
+    ).toHaveAttribute("href", "/members?tab=pending");
   });
 
-  // TODO(test-maintenance): see note above — "Member directory" copy is stale.
   it("allows general members to browse /members", async () => {
     renderWithRouter(undefined, {
       initialEntries: ["/members"],
@@ -159,7 +189,9 @@ describe("protected route redirects", () => {
       },
     });
 
-    expect(await screen.findByText("Member directory")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Members" }),
+    ).toBeInTheDocument();
   });
 
   it("allows board members to view /finance budget tracking", async () => {

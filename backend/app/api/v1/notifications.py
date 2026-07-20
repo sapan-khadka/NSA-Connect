@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -6,6 +6,11 @@ from app.core.dependencies import get_current_member, require_board
 from app.core.safe_messages import GENERIC_EMAIL_SEND_FAILED
 from app.integrations.resend_client import ResendDeliveryError
 from app.models.member import Member
+from app.schemas.inbox_notification import (
+    InboxNotificationListResponse,
+    MarkAllInboxReadResponse,
+    MarkInboxReadResponse,
+)
 from app.schemas.notification_check import RunNotificationCheckRequest
 from app.schemas.notification_preferences import (
     NotificationPreferencesResponse,
@@ -13,6 +18,12 @@ from app.schemas.notification_preferences import (
 )
 from app.schemas.notification_summary import NotificationSummaryResponse
 from app.schemas.test_email import SendTestEmailRequest
+from app.services.inbox_notification_service import (
+    InboxNotificationNotFoundError,
+    list_inbox_notifications,
+    mark_all_inbox_notifications_read,
+    mark_inbox_notification_read,
+)
 from app.services.notification_preferences_service import (
     get_notification_preferences,
     update_notification_preferences,
@@ -30,6 +41,42 @@ def get_my_notification_summary(
     db: Session = Depends(get_db),
 ):
     return get_notification_summary(db, current_member)
+
+
+@router.get("", response_model=InboxNotificationListResponse)
+def list_my_inbox_notifications(
+    limit: int = Query(default=50, ge=1, le=100),
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    return list_inbox_notifications(db, member_id=current_member.id, limit=limit)
+
+
+@router.patch("/{notification_id}/read", response_model=MarkInboxReadResponse)
+def mark_my_inbox_notification_read(
+    notification_id: int,
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    try:
+        return mark_inbox_notification_read(
+            db,
+            member_id=current_member.id,
+            notification_id=notification_id,
+        )
+    except InboxNotificationNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Notification not found",
+        ) from exc
+
+
+@router.post("/read-all", response_model=MarkAllInboxReadResponse)
+def mark_all_my_inbox_notifications_read(
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    return mark_all_inbox_notifications_read(db, member_id=current_member.id)
 
 
 @router.get("/preferences", response_model=NotificationPreferencesResponse)

@@ -120,6 +120,7 @@ def _load_task(db: Session, task_id: int) -> EventTask | None:
         .options(
             selectinload(EventTask.event),
             selectinload(EventTask.assignee),
+            selectinload(EventTask.created_by),
             selectinload(EventTask.group),
             selectinload(EventTask.checklist_items),
         ),
@@ -155,8 +156,15 @@ def _maybe_notify_new_assignee(
     if assignee is None:
         return
 
+    assigner_name = task.created_by.full_name if task.created_by else None
+
     try:
-        notify_task_assigned_if_enabled(db, task=task, assignee=assignee)
+        notify_task_assigned_if_enabled(
+            db,
+            task=task,
+            assignee=assignee,
+            assigner_name=assigner_name,
+        )
     except Exception:
         logger.exception(
             "Task assigned notification failed task_id=%s assignee_id=%s email=%s",

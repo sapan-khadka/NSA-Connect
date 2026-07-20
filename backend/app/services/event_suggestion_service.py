@@ -62,6 +62,15 @@ def create_event_suggestion(
     loaded = _load_suggestion(db, suggestion.id)
     if loaded is None:
         raise EventSuggestionNotFoundError
+
+    from app.services.inbox_notification_service import notify_board_of_suggestion
+
+    notify_board_of_suggestion(
+        db,
+        suggestion_id=loaded.id,
+        title=loaded.title,
+        suggested_by=member,
+    )
     return loaded
 
 
@@ -85,4 +94,14 @@ def mark_event_suggestion_noted(
     loaded = _load_suggestion(db, suggestion.id)
     if loaded is None:
         raise EventSuggestionNotFoundError
+
+    if loaded.suggested_by_id is not None:
+        from app.services.inbox_notification_service import notify_suggestion_noted
+
+        notify_suggestion_noted(
+            db,
+            suggestion_id=loaded.id,
+            suggested_by_id=loaded.suggested_by_id,
+            title=loaded.title,
+        )
     return loaded

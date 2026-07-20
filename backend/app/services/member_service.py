@@ -104,6 +104,10 @@ def create_member(db: Session, data: MemberCreateRequest) -> Member:
     db.add(member)
     db.commit()
     db.refresh(member)
+
+    from app.services.inbox_notification_service import notify_board_of_pending_member
+
+    notify_board_of_pending_member(db, pending_member=member)
     return member
 
 
@@ -310,6 +314,10 @@ def approve_member(db: Session, member_id: int) -> Member:
     member.status = MemberStatus.APPROVED
     db.commit()
     db.refresh(member)
+
+    from app.services.inbox_notification_service import notify_member_approved
+
+    notify_member_approved(db, member=member)
     return member
 
 

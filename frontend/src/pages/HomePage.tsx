@@ -21,6 +21,7 @@ import {
 import { HomeWorkCenter } from "../components/home/HomeWorkCenter";
 import { HomeDiscussionSection } from "../components/HomeDiscussionSection";
 import { useAuth } from "../context/useAuth";
+import { useNotificationSummary } from "../context/NotificationSummaryProvider";
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/api-error";
 import { fetchMyEventTasks, updateEventTask } from "../lib/event-tasks-api";
@@ -29,14 +30,12 @@ import {
   fetchUpcomingEvents,
   type EventResponse,
 } from "../lib/events-api";
-import { fetchPendingFinanceChangeRequests } from "../lib/finance-api";
 import {
   applyOptimisticTaskComplete,
   buildMarkTaskCompleteRequest,
   getMyTasksPath,
   summarizeMyTasks,
 } from "../lib/home-tasks";
-import { fetchPendingMembers } from "../lib/members-api";
 import { findNextNonMeetingEvent } from "../lib/calendar-upcoming";
 import {
   canManageTreasury,
@@ -230,6 +229,7 @@ function MemberHomeLayout({
 }
 
 function MemberHomeView({ member }: { member: MemberResponse }) {
+  const { summary } = useNotificationSummary();
   const [upcomingEvents, setUpcomingEvents] = useState<EventResponse[]>([]);
   const [timelineEvents, setTimelineEvents] = useState<EventResponse[]>([]);
   const [myTasks, setMyTasks] = useState<EventTaskResponse[]>([]);
@@ -239,11 +239,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [financePendingCount, setFinancePendingCount] = useState(0);
-  const [pendingMemberApprovals, setPendingMemberApprovals] = useState(0);
 
-  const showFinancePending = canManageTreasury(member.role, member.position);
-  const canReviewMembers = canViewMemberDirectory(member.role);
   const showAssistant = isRoleAtLeast(member.role, "board");
   const showTaskOversight = canViewTaskOversight(member.role, member.position);
   const tasksPath = getMyTasksPath(member.role);
@@ -252,6 +248,8 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
     () => findNextNonMeetingEvent(upcomingEvents),
     [upcomingEvents],
   );
+  const financePendingCount = summary.finance_pending;
+  const pendingMemberApprovals = summary.members_pending;
 
   async function handleCompleteTask(taskId: number) {
     const target = myTasks.find((task) => task.id === taskId);
@@ -292,30 +290,13 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
       setLoadError(null);
 
       try {
-        const upcomingPromise = fetchUpcomingEvents({ limit: 10 });
-        const tasksPromise = fetchMyEventTasks().catch(() => ({
-          tasks: [],
-          total: 0,
-        }));
-
-        const financePendingPromise = showFinancePending
-          ? fetchPendingFinanceChangeRequests().catch(() => ({
-              requests: [],
-              total: 0,
-            }))
-          : Promise.resolve(null);
-
-        const pendingMembersPromise = canReviewMembers
-          ? fetchPendingMembers().catch(() => ({ members: [], total: 0 }))
-          : Promise.resolve(null);
-
-        const [upcoming, tasksResult, financePending, pendingMembers] =
-          await Promise.all([
-            upcomingPromise,
-            tasksPromise,
-            financePendingPromise,
-            pendingMembersPromise,
-          ]);
+        const [upcoming, tasksResult] = await Promise.all([
+          fetchUpcomingEvents({ limit: 10 }),
+          fetchMyEventTasks().catch(() => ({
+            tasks: [],
+            total: 0,
+          })),
+        ]);
 
         if (cancelled) {
           return;
@@ -327,8 +308,6 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
         setTimelineEvents(upcoming.events);
         setUpcomingEvents(nonMeetingUpcoming);
         setMyTasks(tasksResult.tasks);
-        setFinancePendingCount(financePending?.total ?? 0);
-        setPendingMemberApprovals(pendingMembers?.total ?? 0);
       } catch (caught) {
         if (!cancelled) {
           setLoadError(getApiErrorMessage(caught));
@@ -345,7 +324,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
     return () => {
       cancelled = true;
     };
-  }, [member, showFinancePending, canReviewMembers]);
+  }, [member]);
 
   return (
     <MemberHomeLayout

@@ -39,6 +39,7 @@ from app.models.member_dues import (
     SemesterDuesSettings,
 )
 from app.models.notification_sent_log import NotificationSentLog, NotificationType
+from app.models.inbox_notification import InboxNotification, InboxNotificationType
 from app.models.password_reset_token import PasswordResetToken
 from app.models.preptask import PrepTaskGroup, PrepTaskGroupItem
 from app.models.reminder import PrepTaskReminder, ReminderType
@@ -86,6 +87,8 @@ __all__ = [
     "SemesterDuesSettings",
     "NotificationSentLog",
     "NotificationType",
+    "InboxNotification",
+    "InboxNotificationType",
     "Member",
     "MemberDocument",
     "MemberDocumentType",

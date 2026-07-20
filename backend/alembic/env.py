@@ -15,6 +15,7 @@ import app.models.event_photo  # noqa: F401
 import app.models.finance_entry  # noqa: F401
 import app.models.member_dues  # noqa: F401
 import app.models.notification_sent_log  # noqa: F401
+import app.models.inbox_notification  # noqa: F401
 import app.models.member  # noqa: F401
 import app.models.password_reset_token  # noqa: F401
 import app.models.preptask  # noqa: F401

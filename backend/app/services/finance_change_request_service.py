@@ -126,7 +126,18 @@ def submit_update_request(
     )
     db.add(request)
     db.commit()
-    return _load_request(db, request.id)  # type: ignore[return-value]
+    loaded = _load_request(db, request.id)
+    assert loaded is not None
+
+    from app.services.inbox_notification_service import notify_finance_change_pending
+
+    notify_finance_change_pending(
+        db,
+        request_id=loaded.id,
+        requester=requester,
+        action_label="update",
+    )
+    return loaded
 
 
 def submit_delete_request(
@@ -162,7 +173,18 @@ def submit_delete_request(
     )
     db.add(request)
     db.commit()
-    return _load_request(db, request.id)  # type: ignore[return-value]
+    loaded = _load_request(db, request.id)
+    assert loaded is not None
+
+    from app.services.inbox_notification_service import notify_finance_change_pending
+
+    notify_finance_change_pending(
+        db,
+        request_id=loaded.id,
+        requester=requester,
+        action_label="deletion",
+    )
+    return loaded
 
 
 def list_pending_for_reviewer(
@@ -298,7 +320,18 @@ def approve_change_request(
     request.status = FinanceChangeStatus.APPROVED
     request.reviewed_by_id = reviewer.id
     request.reviewed_at = datetime.now(UTC)
+    requester_id = request.requested_by_id
     db.commit()
+
+    from app.services.inbox_notification_service import notify_finance_change_resolved
+
+    notify_finance_change_resolved(
+        db,
+        request_id=request_id,
+        requester_id=requester_id,
+        approved=True,
+        reviewer_name=reviewer.full_name,
+    )
     return _load_request(db, request_id)  # type: ignore[return-value]
 
 
@@ -323,5 +356,16 @@ def reject_change_request(
     request.reviewed_by_id = reviewer.id
     request.reviewed_at = datetime.now(UTC)
     request.review_note = review_note
+    requester_id = request.requested_by_id
     db.commit()
+
+    from app.services.inbox_notification_service import notify_finance_change_resolved
+
+    notify_finance_change_resolved(
+        db,
+        request_id=request_id,
+        requester_id=requester_id,
+        approved=False,
+        reviewer_name=reviewer.full_name,
+    )
     return _load_request(db, request_id)  # type: ignore[return-value]

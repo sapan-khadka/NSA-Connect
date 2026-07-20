@@ -22,6 +22,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { MeetingMinutesPage } from "./pages/MeetingMinutesPage";
 import { MemberProfilePage } from "./pages/MemberProfilePage";
 import { MembersPage } from "./pages/MembersPage";
+import { NotificationsPage } from "./pages/NotificationsPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { PastEventsPage } from "./pages/PastEventsPage";
 import { BoardMeetingsPage } from "./pages/BoardMeetingsPage";
@@ -49,6 +50,14 @@ export const appRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute>
             <AnnouncementsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "notifications",
+        element: (
+          <ProtectedRoute>
+            <NotificationsPage />
           </ProtectedRoute>
         ),
       },

@@ -36,7 +36,8 @@ export function AppTopBar({
 }: AppTopBarProps) {
   const { member } = useAuth();
   const logout = useLogout();
-  const { summary, menuItems } = useNotificationSummary();
+  const { menuItems, unreadCount, markRead, markAllRead } =
+    useNotificationSummary();
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [isLogOpen, setIsLogOpen] = useState(false);
@@ -159,10 +160,19 @@ export function AppTopBar({
 
           <NotificationMenu
             items={menuItems}
-            unreadCount={summary.attention_total}
-            emptyMessage="You're all caught up."
-            viewAllTo="/announcements"
-            viewAllLabel="View announcements"
+            unreadCount={unreadCount}
+            emptyMessage="You're all caught up. New tasks, budget updates, and announcements will show up here."
+            viewAllTo="/notifications"
+            viewAllLabel="View all notifications"
+            onMarkAllRead={() => {
+              void markAllRead();
+            }}
+            onItemSelect={(item) => {
+              const id = Number(item.id);
+              if (Number.isFinite(id) && item.unread) {
+                void markRead(id);
+              }
+            }}
           />
 
           {member ? (
