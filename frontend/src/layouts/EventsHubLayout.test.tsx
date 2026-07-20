@@ -1,4 +1,4 @@
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createMockMember, renderWithRouter } from "../test/test-utils";
@@ -6,6 +6,14 @@ import { createMockMember, renderWithRouter } from "../test/test-utils";
 vi.mock("../lib/events-api", () => ({
   fetchEvents: vi.fn().mockResolvedValue({ events: [], total: 0 }),
   fetchUpcomingEvents: vi.fn().mockResolvedValue({ events: [], total: 0 }),
+  fetchEventVolunteerSignups: vi.fn().mockResolvedValue({ signups: [], total: 0 }),
+  fetchEventAttendees: vi.fn().mockResolvedValue({
+    going_count: 0,
+    maybe_count: 0,
+    not_going_count: 0,
+    no_response_count: 0,
+    attendees: [],
+  }),
   fetchEvent: vi.fn().mockResolvedValue({
     id: 1,
     name: "Test Event",
@@ -43,6 +51,41 @@ vi.mock("../lib/members-api", () => ({
   fetchAssignableMembers: vi.fn().mockResolvedValue({ members: [], total: 0 }),
 }));
 
+vi.mock("../lib/notifications-api", () => ({
+  EMPTY_NOTIFICATION_SUMMARY: {
+    members_pending: 0,
+    finance_pending: 0,
+    suggestions_pending: 0,
+    discussions_unread: 0,
+    tasks_overdue: 0,
+    tasks_due_today: 0,
+    tasks_oversight_overdue: 0,
+    attention_total: 0,
+  },
+  EMPTY_INBOX: {
+    notifications: [],
+    total: 0,
+    unread_count: 0,
+  },
+  fetchNotificationSummary: vi.fn().mockResolvedValue({
+    members_pending: 0,
+    finance_pending: 0,
+    suggestions_pending: 2,
+    discussions_unread: 0,
+    tasks_overdue: 1,
+    tasks_due_today: 1,
+    tasks_oversight_overdue: 3,
+    attention_total: 7,
+  }),
+  fetchInboxNotifications: vi.fn().mockResolvedValue({
+    notifications: [],
+    total: 0,
+    unread_count: 0,
+  }),
+  markInboxNotificationRead: vi.fn(),
+  markAllInboxNotificationsRead: vi.fn(),
+}));
+
 describe("EventsHubLayout", () => {
   afterEach(() => {
     cleanup();
@@ -57,15 +100,15 @@ describe("EventsHubLayout", () => {
       },
     });
 
-    expect(await screen.findByRole("link", { name: "Calendar" })).toHaveAttribute(
+    expect(await screen.findByRole("link", { name: /Calendar/ })).toHaveAttribute(
       "href",
       "/events/calendar",
     );
-    expect(screen.getByRole("link", { name: "My tasks" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /My tasks/ })).toHaveAttribute(
       "href",
       "/events/tasks",
     );
-    expect(screen.getByRole("link", { name: "Photo archive" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /Photo archive/ })).toHaveAttribute(
       "href",
       "/events/photos",
     );
@@ -81,7 +124,7 @@ describe("EventsHubLayout", () => {
       },
     });
 
-    const myTasksTab = await screen.findByRole("link", { name: "My tasks" });
+    const myTasksTab = await screen.findByRole("link", { name: /My tasks/ });
     expect(myTasksTab).toHaveAttribute("href", "/events/tasks");
     expect(myTasksTab.className).toContain("border-accent");
   });
@@ -95,12 +138,29 @@ describe("EventsHubLayout", () => {
       },
     });
 
-    expect(await screen.findByRole("link", { name: "Past events" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Board meetings" })).toHaveAttribute(
+    expect(await screen.findByRole("link", { name: /Past events/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Board meetings/ })).toHaveAttribute(
       "href",
       "/events/meetings",
     );
-    expect(screen.queryByRole("link", { name: "Task oversight" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Task oversight/ })).not.toBeInTheDocument();
+  });
+
+  it("shows section badges for My tasks, Suggestions, and Task oversight", async () => {
+    renderWithRouter(undefined, {
+      initialEntries: ["/events/calendar"],
+      auth: {
+        member: createMockMember("president"),
+        isAuthenticated: true,
+      },
+    });
+
+    const myTasks = await screen.findByRole("link", { name: /My tasks/ });
+    expect(myTasks).toHaveTextContent("2");
+    expect(screen.getByRole("link", { name: /Suggestions/ })).toHaveTextContent("2");
+    expect(screen.getByRole("link", { name: /Task oversight/ })).toHaveTextContent(
+      "3",
+    );
   });
 
   it("shows Task oversight for president and highlights it on /events/oversight", async () => {
@@ -112,7 +172,7 @@ describe("EventsHubLayout", () => {
       },
     });
 
-    const oversightTab = await screen.findByRole("link", { name: "Task oversight" });
+    const oversightTab = await screen.findByRole("link", { name: /Task oversight/ });
     expect(oversightTab).toHaveAttribute("href", "/events/oversight");
     expect(oversightTab.className).toContain("border-accent");
   });
@@ -126,7 +186,7 @@ describe("EventsHubLayout", () => {
       },
     });
 
-    expect(await screen.findByRole("link", { name: "Task oversight" })).toHaveAttribute(
+    expect(await screen.findByRole("link", { name: /Task oversight/ })).toHaveAttribute(
       "href",
       "/events/oversight",
     );
@@ -141,10 +201,10 @@ describe("EventsHubLayout", () => {
       },
     });
 
-    await screen.findByRole("link", { name: "Calendar" });
-    expect(screen.queryByRole("link", { name: "Past events" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Board meetings" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Task oversight" })).not.toBeInTheDocument();
+    await screen.findByRole("link", { name: /Calendar/ });
+    expect(screen.queryByRole("link", { name: /Past events/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Board meetings/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Task oversight/ })).not.toBeInTheDocument();
   });
 
   it("hides the tab bar on event manage pages", async () => {
@@ -156,7 +216,10 @@ describe("EventsHubLayout", () => {
       },
     });
 
-    await screen.findByText("← Back to calendar");
-    expect(screen.queryByRole("link", { name: "Calendar" })).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("navigation", { name: "Events sections" }),
+      ).not.toBeInTheDocument();
+    });
   });
 });

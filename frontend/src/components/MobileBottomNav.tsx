@@ -29,7 +29,10 @@ export function MobileBottomNav() {
   }
 
   const eventsBadge =
-    summary.suggestions_pending + summary.tasks_overdue + summary.tasks_due_today;
+    summary.suggestions_pending +
+    summary.tasks_overdue +
+    summary.tasks_due_today +
+    summary.tasks_oversight_overdue;
 
   const tabs: TabItem[] = [
     { to: "/", label: "Home", icon: Home, end: true },

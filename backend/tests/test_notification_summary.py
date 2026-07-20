@@ -59,6 +59,7 @@ def test_general_member_summary_zeros_board_counts(client, db_session):
     assert body["discussions_unread"] == 0
     assert body["tasks_overdue"] == 0
     assert body["tasks_due_today"] == 0
+    assert body["tasks_oversight_overdue"] == 0
     assert body["attention_total"] == 0
 
 

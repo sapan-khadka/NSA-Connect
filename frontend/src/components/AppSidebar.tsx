@@ -265,8 +265,11 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     }
   }, [adminActive]);
 
+  const myTasksCount = summary.tasks_overdue + summary.tasks_due_today;
   const eventsBadge =
-    summary.suggestions_pending + summary.tasks_overdue + summary.tasks_due_today;
+    myTasksCount +
+    summary.suggestions_pending +
+    summary.tasks_oversight_overdue;
 
   const mainItems: SidebarLink[] = [
     { to: "/", label: "Home", icon: Home, end: true },

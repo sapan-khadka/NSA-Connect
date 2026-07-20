@@ -7,6 +7,7 @@ export type NotificationSummary = {
   discussions_unread: number;
   tasks_overdue: number;
   tasks_due_today: number;
+  tasks_oversight_overdue: number;
   attention_total: number;
 };
 
@@ -17,6 +18,7 @@ export const EMPTY_NOTIFICATION_SUMMARY: NotificationSummary = {
   discussions_unread: 0,
   tasks_overdue: 0,
   tasks_due_today: 0,
+  tasks_oversight_overdue: 0,
   attention_total: 0,
 };
 

@@ -12,6 +12,7 @@ vi.mock("../lib/notifications-api", () => ({
     discussions_unread: 0,
     tasks_overdue: 0,
     tasks_due_today: 0,
+    tasks_oversight_overdue: 0,
     attention_total: 0,
   },
   EMPTY_INBOX: {
@@ -26,6 +27,7 @@ vi.mock("../lib/notifications-api", () => ({
     discussions_unread: 0,
     tasks_overdue: 0,
     tasks_due_today: 0,
+    tasks_oversight_overdue: 0,
     attention_total: 0,
   }),
   fetchInboxNotifications: vi.fn().mockResolvedValue({

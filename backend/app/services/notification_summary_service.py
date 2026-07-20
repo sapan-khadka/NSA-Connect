@@ -1,10 +1,10 @@
 from datetime import UTC, datetime
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.event_suggestion import EventSuggestion, EventSuggestionStatus
-from app.models.event_task import EventTask
+from app.models.event_task import EventTask, EventTaskStatus
 from app.models.member import Member, MemberPosition, MemberRole, MemberStatus
 from app.schemas.notification_summary import NotificationSummaryResponse
 from app.services.discussion_inbox_service import list_discussion_inbox
@@ -19,6 +19,13 @@ def _is_treasury_writer(member: Member) -> bool:
     return member.position == MemberPosition.VICE_PRESIDENT
 
 
+def _can_view_task_oversight(member: Member) -> bool:
+    return (
+        member.role == MemberRole.PRESIDENT
+        or member.position == MemberPosition.VICE_PRESIDENT
+    )
+
+
 def _is_due_today(task: EventTask, now: datetime) -> bool:
     if task.due_date is None:
         return False
@@ -28,6 +35,23 @@ def _is_due_today(task: EventTask, now: datetime) -> bool:
     return due.astimezone(UTC).date() == now.astimezone(UTC).date()
 
 
+def _count_oversight_overdue(db: Session, *, now: datetime) -> int:
+    candidates = list(
+        db.scalars(
+            select(EventTask)
+            .where(EventTask.due_date.is_not(None))
+            .where(EventTask.due_date < now)
+            .where(EventTask.status != EventTaskStatus.DONE)
+            .options(selectinload(EventTask.checklist_items)),
+        ).all(),
+    )
+    return sum(
+        1
+        for task in candidates
+        if task.is_overdue and not task.is_checklist_complete
+    )
+
+
 def get_notification_summary(
     db: Session,
     member: Member,
@@ -35,6 +59,7 @@ def get_notification_summary(
     members_pending = 0
     finance_pending = 0
     suggestions_pending = 0
+    tasks_oversight_overdue = 0
 
     if member.has_role_at_least(MemberRole.BOARD):
         members_pending = len(list_members_by_status(db, MemberStatus.PENDING))
@@ -64,6 +89,9 @@ def get_notification_summary(
         if not task.is_overdue and _is_due_today(task, now)
     )
 
+    if _can_view_task_oversight(member):
+        tasks_oversight_overdue = _count_oversight_overdue(db, now=now)
+
     attention_total = (
         members_pending
         + finance_pending
@@ -71,6 +99,7 @@ def get_notification_summary(
         + discussions_unread
         + tasks_overdue
         + tasks_due_today
+        + tasks_oversight_overdue
     )
 
     return NotificationSummaryResponse(
@@ -80,5 +109,6 @@ def get_notification_summary(
         discussions_unread=discussions_unread,
         tasks_overdue=tasks_overdue,
         tasks_due_today=tasks_due_today,
+        tasks_oversight_overdue=tasks_oversight_overdue,
         attention_total=attention_total,
     )

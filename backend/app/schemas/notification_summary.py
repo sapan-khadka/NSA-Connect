@@ -10,4 +10,5 @@ class NotificationSummaryResponse(BaseModel):
     discussions_unread: int = Field(ge=0)
     tasks_overdue: int = Field(ge=0)
     tasks_due_today: int = Field(ge=0)
+    tasks_oversight_overdue: int = Field(ge=0)
     attention_total: int = Field(ge=0)
