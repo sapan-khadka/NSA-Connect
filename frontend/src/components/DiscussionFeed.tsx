@@ -38,7 +38,8 @@ const COMPOSER_EMOJIS = ["😀", "😊", "😂", "🎉", "👍", "❤️", "🙏
 
 type DiscussionScope =
   | { type: "event"; eventId: number }
-  | { type: "board" };
+  | { type: "board" }
+  | { type: "room"; roomId: number };
 
 type DiscussionFeedProps = {
   title: string;
@@ -49,6 +50,7 @@ type DiscussionFeedProps = {
   /** Full-height messaging pane vs embedded card (event detail). */
   variant?: "pane" | "card";
   onBack?: () => void;
+  headerAction?: ReactNode;
 };
 
 type TimelineItem =
@@ -706,6 +708,7 @@ function DiscussionShell({
   className,
   variant,
   onBack,
+  headerAction,
   scopeKey,
   messages,
   loading,
@@ -733,6 +736,7 @@ function DiscussionShell({
   className: string;
   variant: "pane" | "card";
   onBack?: () => void;
+  headerAction?: ReactNode;
   scopeKey: string;
   messages: DiscussionMessage[];
   loading: boolean;
@@ -819,6 +823,7 @@ function DiscussionShell({
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-3">
+        {headerAction}
         {presence}
         {statusBadge}
       </div>
@@ -935,6 +940,7 @@ function LiveDiscussionFeed({
   scope,
   variant,
   onBack,
+  headerAction,
 }: {
   title: string;
   description?: string;
@@ -943,6 +949,7 @@ function LiveDiscussionFeed({
   scope: DiscussionScope;
   variant: "pane" | "card";
   onBack?: () => void;
+  headerAction?: ReactNode;
 }) {
   const { member } = useAuth();
   const {
@@ -965,7 +972,11 @@ function LiveDiscussionFeed({
   const listRef = useRef<HTMLDivElement>(null);
   const nearBottomRef = useRef(true);
   const scopeKey =
-    scope.type === "board" ? "board" : `event:${scope.eventId}`;
+    scope.type === "board"
+      ? "board"
+      : scope.type === "event"
+        ? `event:${scope.eventId}`
+        : `room:${scope.roomId}`;
   const othersTyping = typingUsers.filter(
     (user) => user.user_id !== member?.id,
   );
@@ -1034,6 +1045,7 @@ function LiveDiscussionFeed({
       className={className}
       variant={variant}
       onBack={onBack}
+      headerAction={headerAction}
       scopeKey={scopeKey}
       messages={messages}
       loading={loading}
@@ -1072,6 +1084,7 @@ export function DiscussionFeed({
   className = "",
   variant = "card",
   onBack,
+  headerAction,
 }: DiscussionFeedProps) {
   return (
     <LiveDiscussionFeed
@@ -1082,6 +1095,7 @@ export function DiscussionFeed({
       scope={scope}
       variant={variant}
       onBack={onBack}
+      headerAction={headerAction}
     />
   );
 }

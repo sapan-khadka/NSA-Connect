@@ -60,6 +60,7 @@ class DiscussionMessageResponse(BaseModel):
     id: int
     content: str
     event_id: int | None
+    custom_room_id: int | None = None
     created_at: datetime
     author: DiscussionMessageAuthor
     reactions: dict[str, DiscussionReactionSummary] = Field(default_factory=dict)

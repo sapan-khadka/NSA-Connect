@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.discussion_message import DiscussionMessage
@@ -23,7 +23,11 @@ from app.services.discussion_service import (
     DiscussionValidationError,
     member_can_access_event_discussion,
 )
-from app.services.discussion_ws_manager import BOARD_ROOM_KEY, event_room_key
+from app.services.discussion_ws_manager import (
+    BOARD_ROOM_KEY,
+    custom_room_key,
+    event_room_key,
+)
 from app.services.event_service import EventNotFoundError
 
 BOARD_ROOM_LABEL = "Board Discussion"
@@ -32,7 +36,7 @@ PREVIEW_MAX_CHARS = 120
 
 
 def parse_discussion_room_id(room_id: str) -> tuple[str, int | None]:
-    """Return ('board', None) or ('event', event_id)."""
+    """Return ('board', None), ('event', event_id), or ('room', custom_room_id)."""
     cleaned = room_id.strip()
     if cleaned == BOARD_ROOM_KEY:
         return "board", None
@@ -45,6 +49,15 @@ def parse_discussion_room_id(room_id: str) -> tuple[str, int | None]:
         if event_id < 1:
             raise DiscussionValidationError("Invalid room_id")
         return "event", event_id
+    if cleaned.startswith("room:"):
+        raw = cleaned.removeprefix("room:")
+        try:
+            custom_id = int(raw)
+        except ValueError as exc:
+            raise DiscussionValidationError("Invalid room_id") from exc
+        if custom_id < 1:
+            raise DiscussionValidationError("Invalid room_id")
+        return "room", custom_id
     raise DiscussionValidationError("Invalid room_id")
 
 
@@ -54,19 +67,26 @@ def assert_can_access_room(
     member: Member,
     room_id: str,
 ) -> tuple[str, int | None]:
-    kind, event_id = parse_discussion_room_id(room_id)
+    kind, ref_id = parse_discussion_room_id(room_id)
     if kind == "board":
         if not member.has_role_at_least(MemberRole.BOARD):
             raise DiscussionForbiddenError
-        return kind, event_id
+        return kind, ref_id
 
-    assert event_id is not None
-    event = db.get(Event, event_id)
+    if kind == "room":
+        from app.services.discussion_room_service import assert_can_access_custom_room
+
+        assert ref_id is not None
+        assert_can_access_custom_room(db, room_id=ref_id, member=member)
+        return kind, ref_id
+
+    assert ref_id is not None
+    event = db.get(Event, ref_id)
     if event is None:
         raise EventNotFoundError
     if not member_can_access_event_discussion(db, event, member):
         raise DiscussionForbiddenError
-    return kind, event_id
+    return kind, ref_id
 
 
 def _preview_text(content: str) -> str:
@@ -172,13 +192,24 @@ def _count_unread(
     db: Session,
     *,
     event_id: int | None,
+    custom_room_id: int | None = None,
     last_read_at: datetime | None,
 ) -> int:
-    scope = (
-        DiscussionMessage.event_id.is_(None)
-        if event_id is None
-        else DiscussionMessage.event_id == event_id
-    )
+    if custom_room_id is not None:
+        scope = and_(
+            DiscussionMessage.custom_room_id == custom_room_id,
+            DiscussionMessage.event_id.is_(None),
+        )
+    elif event_id is None:
+        scope = and_(
+            DiscussionMessage.event_id.is_(None),
+            DiscussionMessage.custom_room_id.is_(None),
+        )
+    else:
+        scope = and_(
+            DiscussionMessage.event_id == event_id,
+            DiscussionMessage.custom_room_id.is_(None),
+        )
     statement = select(func.count()).select_from(DiscussionMessage).where(scope)
     if last_read_at is not None:
         statement = statement.where(DiscussionMessage.created_at > last_read_at)
@@ -189,12 +220,23 @@ def _latest_message(
     db: Session,
     *,
     event_id: int | None,
+    custom_room_id: int | None = None,
 ) -> DiscussionMessage | None:
-    scope = (
-        DiscussionMessage.event_id.is_(None)
-        if event_id is None
-        else DiscussionMessage.event_id == event_id
-    )
+    if custom_room_id is not None:
+        scope = and_(
+            DiscussionMessage.custom_room_id == custom_room_id,
+            DiscussionMessage.event_id.is_(None),
+        )
+    elif event_id is None:
+        scope = and_(
+            DiscussionMessage.event_id.is_(None),
+            DiscussionMessage.custom_room_id.is_(None),
+        )
+    else:
+        scope = and_(
+            DiscussionMessage.event_id == event_id,
+            DiscussionMessage.custom_room_id.is_(None),
+        )
     return db.scalars(
         select(DiscussionMessage)
         .options(joinedload(DiscussionMessage.author))
@@ -313,6 +355,39 @@ def list_discussion_inbox(
                     last_message_at=latest.created_at,
                     last_message_author=latest.author.full_name
                     if latest.author
+                    else None,
+                    unread_count=unread,
+                    unread_display=_unread_display(unread),
+                    pinned=room_id in pins,
+                    pinned_at=pins.get(room_id),
+                )
+            )
+
+    if member.has_role_at_least(MemberRole.BOARD):
+        from app.services.discussion_room_service import list_live_rooms_for_member
+
+        for custom in list_live_rooms_for_member(db, member=member):
+            room_id = custom_room_key(custom.id)
+            latest = _latest_message(db, event_id=None, custom_room_id=custom.id)
+            unread = _count_unread(
+                db,
+                event_id=None,
+                custom_room_id=custom.id,
+                last_read_at=reads.get(room_id),
+            )
+            rooms.append(
+                DiscussionInboxRoomResponse(
+                    room_id=room_id,
+                    label=custom.name,
+                    event_id=None,
+                    event_type="group",
+                    href=f"/discussions/room/{custom.id}",
+                    last_message_preview=_preview_text(latest.content)
+                    if latest
+                    else None,
+                    last_message_at=latest.created_at if latest else custom.created_at,
+                    last_message_author=latest.author.full_name
+                    if latest and latest.author
                     else None,
                     unread_count=unread,
                     unread_display=_unread_display(unread),

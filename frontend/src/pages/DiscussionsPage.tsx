@@ -2,18 +2,28 @@ import { useEffect, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 
 import { DiscussionFeed } from "../components/DiscussionFeed";
+import { CreateDiscussionRoomModal } from "../components/discussions/CreateDiscussionRoomModal";
 import { DiscussionRoomSidebar } from "../components/discussions/DiscussionRoomSidebar";
+import { Button } from "../components/ui/Button";
+import { useAuth } from "../context/useAuth";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import {
+  approveDiscussionRoom,
+  archiveDiscussionRoom,
   fetchDiscussionInbox,
+  fetchMyDiscussionRooms,
+  fetchPendingDiscussionRooms,
+  rejectDiscussionRoom,
   toggleDiscussionRoomPin,
   type DiscussionInboxRoom,
+  type DiscussionRoom,
 } from "../lib/discussion-api";
 import {
   discussionRoomIdFromPath,
   discussionRoomPath,
   discussionScopeFromPath,
 } from "../lib/discussion-paths";
+import { canViewTaskOversight, isRoleAtLeast } from "../lib/roles";
 
 const INBOX_POLL_MS = 12_000;
 
@@ -32,22 +42,45 @@ function sortRooms(rooms: DiscussionInboxRoom[]): DiscussionInboxRoom[] {
   ];
 }
 
+function isInvalidDiscussionsDeepLink(pathname: string): boolean {
+  return (
+    pathname.startsWith("/discussions/") &&
+    pathname !== "/discussions/board" &&
+    !/^\/discussions\/event\/\d+$/.test(pathname) &&
+    !/^\/discussions\/room\/\d+$/.test(pathname)
+  );
+}
+
 export function DiscussionsPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { member } = useAuth();
   const isMdUp = useMediaQuery("(min-width: 768px)");
   const selectedRoomId = discussionRoomIdFromPath(location.pathname);
   const scope = discussionScopeFromPath(location.pathname);
+
+  const canCreateGroup = member
+    ? isRoleAtLeast(member.role, "board")
+    : false;
+  const canReviewGroups = member
+    ? canViewTaskOversight(member.role, member.position)
+    : false;
 
   const [rooms, setRooms] = useState<DiscussionInboxRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pinningId, setPinningId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [pendingRooms, setPendingRooms] = useState<DiscussionRoom[]>([]);
+  const [awaitingRooms, setAwaitingRooms] = useState<DiscussionRoom[]>([]);
+  const [pendingBusyId, setPendingBusyId] = useState<number | null>(null);
+  const [archiving, setArchiving] = useState(false);
+  const [queuesVersion, setQueuesVersion] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function load(opts?: { silent?: boolean }) {
+    async function loadInbox(opts?: { silent?: boolean }) {
       if (!opts?.silent) {
         setLoading(true);
         setError(null);
@@ -69,16 +102,61 @@ export function DiscussionsPage() {
       }
     }
 
-    void load();
+    async function loadQueues() {
+      if (!member) {
+        if (!cancelled) {
+          setPendingRooms([]);
+          setAwaitingRooms([]);
+        }
+        return;
+      }
+
+      if (canReviewGroups) {
+        try {
+          const response = await fetchPendingDiscussionRooms();
+          if (!cancelled) {
+            setPendingRooms(response.rooms);
+          }
+        } catch {
+          if (!cancelled) {
+            setPendingRooms([]);
+          }
+        }
+      } else if (!cancelled) {
+        setPendingRooms([]);
+      }
+
+      if (canCreateGroup && !canReviewGroups) {
+        try {
+          const response = await fetchMyDiscussionRooms();
+          if (!cancelled) {
+            setAwaitingRooms(
+              response.rooms.filter((room) => room.status === "pending"),
+            );
+          }
+        } catch {
+          if (!cancelled) {
+            setAwaitingRooms([]);
+          }
+        }
+      } else if (!cancelled) {
+        setAwaitingRooms([]);
+      }
+    }
+
+    void loadInbox();
+    void loadQueues();
 
     const pollId = window.setInterval(() => {
       if (document.visibilityState === "visible") {
-        void load({ silent: true });
+        void loadInbox({ silent: true });
+        void loadQueues();
       }
     }, INBOX_POLL_MS);
 
     function handleFocus() {
-      void load({ silent: true });
+      void loadInbox({ silent: true });
+      void loadQueues();
     }
 
     window.addEventListener("focus", handleFocus);
@@ -87,7 +165,7 @@ export function DiscussionsPage() {
       window.clearInterval(pollId);
       window.removeEventListener("focus", handleFocus);
     };
-  }, []);
+  }, [member, canCreateGroup, canReviewGroups, queuesVersion]);
 
   // Clear unread badge immediately when a room is opened (mark-read runs in feed).
   useEffect(() => {
@@ -110,6 +188,15 @@ export function DiscussionsPage() {
     }
     navigate(discussionRoomPath(rooms[0].room_id), { replace: true });
   }, [isMdUp, loading, selectedRoomId, rooms, navigate]);
+
+  async function reloadInboxSilent() {
+    try {
+      const response = await fetchDiscussionInbox();
+      setRooms(sortRooms(response.rooms));
+    } catch {
+      // Keep existing list on silent refresh failure.
+    }
+  }
 
   async function handleTogglePin(roomId: string) {
     if (roomId === "board") {
@@ -154,22 +241,84 @@ export function DiscussionsPage() {
     }
   }
 
+  async function handleApprovePending(roomId: number) {
+    setPendingBusyId(roomId);
+    try {
+      const room = await approveDiscussionRoom(roomId);
+      setPendingRooms((current) => current.filter((row) => row.id !== roomId));
+      await reloadInboxSilent();
+      navigate(discussionRoomPath(room.room_id));
+    } catch {
+      // Keep queue; user can retry.
+    } finally {
+      setPendingBusyId(null);
+    }
+  }
+
+  async function handleRejectPending(roomId: number) {
+    setPendingBusyId(roomId);
+    try {
+      await rejectDiscussionRoom(roomId);
+      setPendingRooms((current) => current.filter((row) => row.id !== roomId));
+    } catch {
+      // Keep queue; user can retry.
+    } finally {
+      setPendingBusyId(null);
+    }
+  }
+
+  async function handleArchiveRoom(roomId: number) {
+    if (archiving) {
+      return;
+    }
+    const confirmed = window.confirm(
+      "Archive this group? Members will no longer see it in Discussions.",
+    );
+    if (!confirmed) {
+      return;
+    }
+    setArchiving(true);
+    try {
+      await archiveDiscussionRoom(roomId);
+      await reloadInboxSilent();
+      navigate("/discussions");
+    } catch {
+      // Leave thread open on failure.
+    } finally {
+      setArchiving(false);
+    }
+  }
+
+  function handleRoomCreated(room: DiscussionRoom) {
+    if (room.status === "live") {
+      void reloadInboxSilent();
+      navigate(discussionRoomPath(room.room_id));
+      return;
+    }
+    setQueuesVersion((value) => value + 1);
+  }
+
   const selectedRoom = rooms.find((room) => room.room_id === selectedRoomId);
   const showList = isMdUp || !selectedRoomId;
   const showThread = isMdUp || Boolean(selectedRoomId);
 
   const feedTitle =
     selectedRoom?.label ??
-    (scope?.type === "board" ? "Board Discussion" : "Discussion");
+    (scope?.type === "board"
+      ? "Board Discussion"
+      : scope?.type === "room"
+        ? "Group"
+        : "Discussion");
   const feedDescription =
-    scope?.type === "board" ? "Visible to board members and above" : undefined;
+    scope?.type === "board"
+      ? "Visible to board members and above"
+      : scope?.type === "room"
+        ? "Private group"
+        : undefined;
 
-  // Invalid deep link → bounce to inbox root.
-  if (
-    location.pathname.startsWith("/discussions/") &&
-    location.pathname !== "/discussions/board" &&
-    !/^\/discussions\/event\/\d+$/.test(location.pathname)
-  ) {
+  const canArchiveSelected = canCreateGroup && scope?.type === "room";
+
+  if (isInvalidDiscussionsDeepLink(location.pathname)) {
     return <Navigate to="/discussions" replace />;
   }
 
@@ -183,6 +332,13 @@ export function DiscussionsPage() {
           pinDisabled={pinningId != null}
           loading={loading}
           error={error}
+          canCreateGroup={canCreateGroup}
+          onCreateGroup={() => setCreateOpen(true)}
+          pendingRooms={pendingRooms}
+          pendingBusyId={pendingBusyId}
+          onApprovePending={handleApprovePending}
+          onRejectPending={handleRejectPending}
+          awaitingRooms={awaitingRooms}
         />
       ) : null}
 
@@ -197,6 +353,19 @@ export function DiscussionsPage() {
               variant="pane"
               onBack={() => navigate("/discussions")}
               className="h-full"
+              headerAction={
+                canArchiveSelected && scope.type === "room" ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    loading={archiving}
+                    onClick={() => void handleArchiveRoom(scope.roomId)}
+                  >
+                    Archive
+                  </Button>
+                ) : undefined
+              }
             />
           ) : (
             <div className="flex h-full items-center justify-center px-6 text-sm text-gray-500">
@@ -204,6 +373,15 @@ export function DiscussionsPage() {
             </div>
           )}
         </div>
+      ) : null}
+
+      {member && canCreateGroup ? (
+        <CreateDiscussionRoomModal
+          open={createOpen}
+          currentMemberId={member.id}
+          onClose={() => setCreateOpen(false)}
+          onCreated={handleRoomCreated}
+        />
       ) : null}
     </div>
   );

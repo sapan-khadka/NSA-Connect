@@ -196,7 +196,7 @@ const ROUTES: RouteMeta[] = [
     crumbs: () => [DASHBOARD, leaf("settings", "Settings")],
   },
   {
-    pattern: /^\/discussions(\/board|\/event\/\d+)?\/?$/,
+    pattern: /^\/discussions(\/board|\/event\/\d+|\/room\/\d+)?\/?$/,
     title: "Discussions",
     crumbs: () => [DASHBOARD, leaf("discussions", "Discussions")],
   },

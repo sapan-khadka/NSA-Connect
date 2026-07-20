@@ -13,7 +13,8 @@ export type EventDiscussionStatus = DiscussionStatus;
 
 export type DiscussionScope =
   | { type: "event"; eventId: number }
-  | { type: "board" };
+  | { type: "board" }
+  | { type: "room"; roomId: number };
 
 export type DiscussionPresenceUser = {
   user_id: number;
@@ -107,7 +108,13 @@ function scopeKey(scope: DiscussionScope | null): string | null {
   if (scope == null) {
     return null;
   }
-  return scope.type === "board" ? "board" : `event:${scope.eventId}`;
+  if (scope.type === "board") {
+    return "board";
+  }
+  if (scope.type === "event") {
+    return `event:${scope.eventId}`;
+  }
+  return `room:${scope.roomId}`;
 }
 
 function buildDiscussionWsUrl(scope: DiscussionScope, token: string): string {
@@ -117,7 +124,9 @@ function buildDiscussionWsUrl(scope: DiscussionScope, token: string): string {
   const path =
     scope.type === "board"
       ? "/ws/board/discussion"
-      : `/ws/events/${scope.eventId}/discussion`;
+      : scope.type === "event"
+        ? `/ws/events/${scope.eventId}/discussion`
+        : `/ws/rooms/${scope.roomId}/discussion`;
   return `${protocol}//${host}${path}?${params.toString()}`;
 }
 
@@ -774,12 +783,7 @@ export function useDiscussion(
 
         if (payload.type === "read_receipt") {
           const roomId =
-            payload.room_id ||
-            (scopeRef.current
-              ? scopeRef.current.type === "board"
-                ? "board"
-                : `event:${scopeRef.current.eventId}`
-              : "");
+            payload.room_id || scopeKey(scopeRef.current) || "";
           const incoming: DiscussionReadReceipt = {
             user_id: payload.user_id,
             room_id: roomId,

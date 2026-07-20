@@ -2,7 +2,7 @@ from collections import defaultdict
 from datetime import UTC, datetime
 from typing import Literal
 
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.lib.event_visibility import event_visible_to_member
@@ -22,6 +22,7 @@ from app.schemas.discussion import (
 )
 from app.services.discussion_ws_manager import (
     BOARD_ROOM_KEY,
+    custom_room_key,
     event_room_key,
     initials_from_name,
 )
@@ -53,6 +54,10 @@ def discussion_room_id_for_event(event_id: int) -> str:
 
 def discussion_room_id_for_board() -> str:
     return BOARD_ROOM_KEY
+
+
+def discussion_room_id_for_custom_room(room_id: int) -> str:
+    return custom_room_key(room_id)
 
 
 def _normalize_content(content: str) -> str:
@@ -113,7 +118,13 @@ def list_event_discussion_messages(
     limit: int = DEFAULT_DISCUSSION_LIMIT,
 ) -> list[DiscussionMessage]:
     assert_can_access_event_discussion(db, event_id=event_id, member=member)
-    return _list_messages(db, event_id=event_id, after_id=after_id, limit=limit)
+    return _list_messages(
+        db,
+        event_id=event_id,
+        custom_room_id=None,
+        after_id=after_id,
+        limit=limit,
+    )
 
 
 def list_board_discussion_messages(
@@ -124,22 +135,64 @@ def list_board_discussion_messages(
     limit: int = DEFAULT_DISCUSSION_LIMIT,
 ) -> list[DiscussionMessage]:
     assert_can_access_board_discussion(member)
-    return _list_messages(db, event_id=None, after_id=after_id, limit=limit)
+    return _list_messages(
+        db,
+        event_id=None,
+        custom_room_id=None,
+        after_id=after_id,
+        limit=limit,
+    )
+
+
+def list_custom_room_discussion_messages(
+    db: Session,
+    *,
+    room_id: int,
+    member: Member,
+    after_id: int | None = None,
+    limit: int = DEFAULT_DISCUSSION_LIMIT,
+) -> list[DiscussionMessage]:
+    from app.services.discussion_room_service import assert_can_access_custom_room
+
+    assert_can_access_custom_room(
+        db,
+        room_id=room_id,
+        member=member,
+        for_messaging=True,
+    )
+    return _list_messages(
+        db,
+        event_id=None,
+        custom_room_id=room_id,
+        after_id=after_id,
+        limit=limit,
+    )
 
 
 def _list_messages(
     db: Session,
     *,
     event_id: int | None,
+    custom_room_id: int | None,
     after_id: int | None,
     limit: int,
 ) -> list[DiscussionMessage]:
     capped_limit = max(1, min(limit, MAX_DISCUSSION_LIMIT))
-    scope_filter = (
-        DiscussionMessage.event_id.is_(None)
-        if event_id is None
-        else DiscussionMessage.event_id == event_id
-    )
+    if custom_room_id is not None:
+        scope_filter = and_(
+            DiscussionMessage.custom_room_id == custom_room_id,
+            DiscussionMessage.event_id.is_(None),
+        )
+    elif event_id is None:
+        scope_filter = and_(
+            DiscussionMessage.event_id.is_(None),
+            DiscussionMessage.custom_room_id.is_(None),
+        )
+    else:
+        scope_filter = and_(
+            DiscussionMessage.event_id == event_id,
+            DiscussionMessage.custom_room_id.is_(None),
+        )
 
     if after_id is not None:
         statement = (
@@ -171,7 +224,13 @@ def create_event_discussion_message(
     content: str,
 ) -> DiscussionMessage:
     assert_can_access_event_discussion(db, event_id=event_id, member=member)
-    return _create_message(db, author=member, content=content, event_id=event_id)
+    return _create_message(
+        db,
+        author=member,
+        content=content,
+        event_id=event_id,
+        custom_room_id=None,
+    )
 
 
 def create_board_discussion_message(
@@ -181,7 +240,37 @@ def create_board_discussion_message(
     content: str,
 ) -> DiscussionMessage:
     assert_can_access_board_discussion(member)
-    return _create_message(db, author=member, content=content, event_id=None)
+    return _create_message(
+        db,
+        author=member,
+        content=content,
+        event_id=None,
+        custom_room_id=None,
+    )
+
+
+def create_custom_room_discussion_message(
+    db: Session,
+    *,
+    room_id: int,
+    member: Member,
+    content: str,
+) -> DiscussionMessage:
+    from app.services.discussion_room_service import assert_can_access_custom_room
+
+    assert_can_access_custom_room(
+        db,
+        room_id=room_id,
+        member=member,
+        for_messaging=True,
+    )
+    return _create_message(
+        db,
+        author=member,
+        content=content,
+        event_id=None,
+        custom_room_id=room_id,
+    )
 
 
 def _create_message(
@@ -190,11 +279,13 @@ def _create_message(
     author: Member,
     content: str,
     event_id: int | None,
+    custom_room_id: int | None,
 ) -> DiscussionMessage:
     message = DiscussionMessage(
         content=_normalize_content(content),
         author_id=author.id,
         event_id=event_id,
+        custom_room_id=custom_room_id,
     )
     db.add(message)
     db.commit()
@@ -212,6 +303,7 @@ def build_message_response(
         id=message.id,
         content=message.content,
         event_id=message.event_id,
+        custom_room_id=message.custom_room_id,
         created_at=message.created_at,
         author=DiscussionMessageAuthor.model_validate(message.author),
         reactions=reactions or {},
@@ -281,13 +373,23 @@ def apply_discussion_message_reaction(
     emoji: str,
     action: ReactionAction,
     room_event_id: int | None,
+    custom_room_id: int | None = None,
 ) -> bool:
     """Persist a reaction add/remove. Returns True if the DB row changed."""
     cleaned = emoji.strip()
     if cleaned not in ALLOWED_DISCUSSION_REACTION_EMOJIS:
         raise DiscussionValidationError("Unsupported reaction emoji")
 
-    if room_event_id is None:
+    if custom_room_id is not None:
+        from app.services.discussion_room_service import assert_can_access_custom_room
+
+        assert_can_access_custom_room(
+            db,
+            room_id=custom_room_id,
+            member=member,
+            for_messaging=True,
+        )
+    elif room_event_id is None:
         assert_can_access_board_discussion(member)
     else:
         assert_can_access_event_discussion(
@@ -300,11 +402,11 @@ def apply_discussion_message_reaction(
     if message is None:
         raise DiscussionMessageNotFoundError
 
-    if room_event_id is None:
-        if message.event_id is not None:
-            raise DiscussionMessageNotFoundError
-    elif message.event_id != room_event_id:
-        raise DiscussionMessageNotFoundError
+    _assert_message_in_room(
+        message,
+        room_event_id=room_event_id,
+        custom_room_id=custom_room_id,
+    )
 
     existing = db.scalars(
         select(DiscussionMessageReaction).where(
@@ -338,11 +440,16 @@ def _assert_message_in_room(
     message: DiscussionMessage,
     *,
     room_event_id: int | None,
+    custom_room_id: int | None = None,
 ) -> None:
-    if room_event_id is None:
-        if message.event_id is not None:
+    if custom_room_id is not None:
+        if message.custom_room_id != custom_room_id or message.event_id is not None:
             raise DiscussionMessageNotFoundError
-    elif message.event_id != room_event_id:
+        return
+    if room_event_id is None:
+        if message.event_id is not None or message.custom_room_id is not None:
+            raise DiscussionMessageNotFoundError
+    elif message.event_id != room_event_id or message.custom_room_id is not None:
         raise DiscussionMessageNotFoundError
 
 
@@ -380,9 +487,21 @@ def upsert_discussion_read_state(
     room_id: str,
     last_read_message_id: int,
     room_event_id: int | None,
+    custom_room_id: int | None = None,
 ) -> DiscussionReadReceiptResponse | None:
     """Advance the user's read watermark. Returns None if unchanged/backwards."""
-    if room_event_id is None:
+    if custom_room_id is not None:
+        from app.services.discussion_room_service import assert_can_access_custom_room
+
+        assert_can_access_custom_room(
+            db,
+            room_id=custom_room_id,
+            member=member,
+            for_messaging=True,
+        )
+        if room_id != custom_room_key(custom_room_id):
+            raise DiscussionValidationError("Invalid room")
+    elif room_event_id is None:
         assert_can_access_board_discussion(member)
         if room_id != BOARD_ROOM_KEY:
             raise DiscussionValidationError("Invalid room")
@@ -398,7 +517,11 @@ def upsert_discussion_read_state(
     message = db.get(DiscussionMessage, last_read_message_id)
     if message is None:
         raise DiscussionMessageNotFoundError
-    _assert_message_in_room(message, room_event_id=room_event_id)
+    _assert_message_in_room(
+        message,
+        room_event_id=room_event_id,
+        custom_room_id=custom_room_id,
+    )
 
     existing = db.scalars(
         select(DiscussionReadState).where(

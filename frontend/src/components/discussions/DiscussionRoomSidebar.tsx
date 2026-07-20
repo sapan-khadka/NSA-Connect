@@ -1,4 +1,4 @@
-import { MessagesSquare, Pin } from "lucide-react";
+import { MessagesSquare, Pin, Plus, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { MouseEvent } from "react";
 
@@ -6,10 +6,16 @@ import {
   EVENT_TYPE_COLOR,
   type EventType,
 } from "../../lib/event-types";
-import type { DiscussionInboxRoom } from "../../lib/discussion-api";
+import type {
+  DiscussionInboxRoom,
+  DiscussionRoom,
+} from "../../lib/discussion-api";
 import { discussionRoomPath } from "../../lib/discussion-paths";
 import { formatRelativeTimestamp } from "../../lib/format-datetime";
 import { AppIcon } from "../ui/AppIcon";
+import { Button } from "../ui/Button";
+
+const GROUP_AVATAR_COLOR = "#0F766E";
 
 function RoomAvatar({ room }: { room: DiscussionInboxRoom }) {
   if (room.room_id === "board") {
@@ -19,6 +25,18 @@ function RoomAvatar({ room }: { room: DiscussionInboxRoom }) {
         aria-hidden="true"
       >
         <AppIcon icon={MessagesSquare} size="sm" />
+      </span>
+    );
+  }
+
+  if (room.room_id.startsWith("room:") || room.event_type === "group") {
+    return (
+      <span
+        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white"
+        style={{ backgroundColor: GROUP_AVATAR_COLOR }}
+        aria-hidden="true"
+      >
+        <AppIcon icon={Users} size="sm" />
       </span>
     );
   }
@@ -145,6 +163,48 @@ function DiscussionSidebarRow({
   );
 }
 
+function PendingReviewRow({
+  room,
+  busy,
+  onApprove,
+  onReject,
+}: {
+  room: DiscussionRoom;
+  busy: boolean;
+  onApprove: (roomId: number) => void;
+  onReject: (roomId: number) => void;
+}) {
+  return (
+    <div className="border-b border-gray-100 px-3 py-2.5 last:border-b-0">
+      <p className="truncate text-sm font-medium text-foreground">{room.name}</p>
+      <p className="mt-0.5 truncate text-xs text-gray-500">
+        Proposed by {room.created_by_name}
+        {room.description ? ` · ${room.description}` : ""}
+      </p>
+      <div className="mt-2 flex gap-2">
+        <Button
+          type="button"
+          variant="primary"
+          size="sm"
+          disabled={busy}
+          onClick={() => onApprove(room.id)}
+        >
+          Approve
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={busy}
+          onClick={() => onReject(room.id)}
+        >
+          Reject
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function DiscussionRoomSidebar({
   rooms,
   selectedRoomId,
@@ -152,6 +212,13 @@ export function DiscussionRoomSidebar({
   pinDisabled,
   loading,
   error,
+  canCreateGroup,
+  onCreateGroup,
+  pendingRooms,
+  pendingBusyId,
+  onApprovePending,
+  onRejectPending,
+  awaitingRooms,
 }: {
   rooms: DiscussionInboxRoom[];
   selectedRoomId: string | null;
@@ -159,10 +226,19 @@ export function DiscussionRoomSidebar({
   pinDisabled?: boolean;
   loading?: boolean;
   error?: string | null;
+  canCreateGroup?: boolean;
+  onCreateGroup?: () => void;
+  pendingRooms?: DiscussionRoom[];
+  pendingBusyId?: number | null;
+  onApprovePending?: (roomId: number) => void;
+  onRejectPending?: (roomId: number) => void;
+  awaitingRooms?: DiscussionRoom[];
 }) {
   const navigate = useNavigate();
   const pinned = rooms.filter((room) => room.pinned);
   const unpinned = rooms.filter((room) => !room.pinned);
+  const reviewQueue = pendingRooms ?? [];
+  const awaiting = awaitingRooms ?? [];
 
   function handleSelect(roomId: string) {
     navigate(discussionRoomPath(roomId));
@@ -173,8 +249,20 @@ export function DiscussionRoomSidebar({
       className="flex h-full w-full flex-col border-r border-gray-200 bg-white md:w-[320px] md:shrink-0"
       aria-label="Discussion rooms"
     >
-      <div className="flex h-14 shrink-0 items-center border-b border-gray-200 px-4">
+      <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-gray-200 px-4">
         <h1 className="text-base font-medium text-foreground">Discussions</h1>
+        {canCreateGroup && onCreateGroup ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={onCreateGroup}
+            aria-label="New discussion group"
+          >
+            <AppIcon icon={Plus} size="xs" />
+            New group
+          </Button>
+        ) : null}
       </div>
 
       <div
@@ -190,7 +278,43 @@ export function DiscussionRoomSidebar({
             {error}
           </p>
         ) : null}
-        {!loading && !error && rooms.length === 0 ? (
+
+        {reviewQueue.length > 0 &&
+        onApprovePending &&
+        onRejectPending ? (
+          <div className="border-b border-gray-200 pt-3">
+            <p className="px-4 pb-1 text-xs font-medium tracking-wide text-gray-400">
+              PENDING REVIEW
+            </p>
+            {reviewQueue.map((room) => (
+              <PendingReviewRow
+                key={room.id}
+                room={room}
+                busy={pendingBusyId === room.id}
+                onApprove={onApprovePending}
+                onReject={onRejectPending}
+              />
+            ))}
+          </div>
+        ) : null}
+
+        {awaiting.length > 0 ? (
+          <div className="border-b border-gray-200 pt-3">
+            <p className="px-4 pb-1 text-xs font-medium tracking-wide text-gray-400">
+              AWAITING APPROVAL
+            </p>
+            {awaiting.map((room) => (
+              <div key={room.id} className="px-3 py-2.5">
+                <p className="truncate text-sm text-foreground">{room.name}</p>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  Waiting for President or VP
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {!loading && !error && rooms.length === 0 && reviewQueue.length === 0 ? (
           <p className="px-4 py-3 text-sm text-gray-500">No discussions yet</p>
         ) : null}
 

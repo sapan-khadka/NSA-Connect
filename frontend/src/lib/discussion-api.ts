@@ -14,9 +14,44 @@ export type DiscussionMessage = {
   id: number;
   content: string;
   event_id: number | null;
+  custom_room_id?: number | null;
   created_at: string;
   author: DiscussionMessageAuthor;
   reactions?: Record<string, DiscussionReactionSummary>;
+};
+
+export type DiscussionRoomStatus =
+  | "pending"
+  | "live"
+  | "rejected"
+  | "archived";
+
+export type DiscussionRoomMember = {
+  member_id: number;
+  full_name: string;
+  role: "owner" | "member";
+};
+
+export type DiscussionRoom = {
+  id: number;
+  name: string;
+  description: string | null;
+  status: DiscussionRoomStatus;
+  room_id: string;
+  href: string;
+  created_by_id: number;
+  created_by_name: string;
+  reviewed_by_id: number | null;
+  reviewed_by_name: string | null;
+  review_note: string | null;
+  created_at: string;
+  reviewed_at: string | null;
+  members: DiscussionRoomMember[];
+};
+
+export type DiscussionRoomListResponse = {
+  rooms: DiscussionRoom[];
+  total: number;
 };
 
 export type DiscussionMessageListResponse = {
@@ -55,9 +90,18 @@ export type DiscussionInboxResponse = {
 };
 
 export function discussionRoomIdFromScope(
-  scope: { type: "board" } | { type: "event"; eventId: number },
+  scope:
+    | { type: "board" }
+    | { type: "event"; eventId: number }
+    | { type: "room"; roomId: number },
 ): string {
-  return scope.type === "board" ? "board" : `event:${scope.eventId}`;
+  if (scope.type === "board") {
+    return "board";
+  }
+  if (scope.type === "event") {
+    return `event:${scope.eventId}`;
+  }
+  return `room:${scope.roomId}`;
 }
 
 export async function fetchDiscussionInbox(): Promise<DiscussionInboxResponse> {
@@ -136,5 +180,93 @@ export async function postBoardDiscussion(
   const response = await api.post<DiscussionMessage>("/v1/board/discussion", {
     content,
   });
+  return response.data;
+}
+
+export async function createDiscussionRoom(payload: {
+  name: string;
+  description?: string;
+  member_ids?: number[];
+}): Promise<DiscussionRoom> {
+  const response = await api.post<DiscussionRoom>("/v1/discussions/rooms", payload);
+  return response.data;
+}
+
+export async function fetchDiscussionRoom(
+  roomId: number,
+): Promise<DiscussionRoom> {
+  const response = await api.get<DiscussionRoom>(
+    `/v1/discussions/rooms/${roomId}`,
+  );
+  return response.data;
+}
+
+export async function fetchPendingDiscussionRooms(): Promise<DiscussionRoomListResponse> {
+  const response = await api.get<DiscussionRoomListResponse>(
+    "/v1/discussions/rooms/pending",
+  );
+  return response.data;
+}
+
+export async function fetchMyDiscussionRooms(): Promise<DiscussionRoomListResponse> {
+  const response = await api.get<DiscussionRoomListResponse>(
+    "/v1/discussions/rooms/mine",
+  );
+  return response.data;
+}
+
+export async function approveDiscussionRoom(
+  roomId: number,
+): Promise<DiscussionRoom> {
+  const response = await api.post<DiscussionRoom>(
+    `/v1/discussions/rooms/${roomId}/approve`,
+  );
+  return response.data;
+}
+
+export async function rejectDiscussionRoom(
+  roomId: number,
+  reviewNote?: string,
+): Promise<DiscussionRoom> {
+  const response = await api.post<DiscussionRoom>(
+    `/v1/discussions/rooms/${roomId}/reject`,
+    { review_note: reviewNote ?? null },
+  );
+  return response.data;
+}
+
+export async function archiveDiscussionRoom(
+  roomId: number,
+): Promise<DiscussionRoom> {
+  const response = await api.post<DiscussionRoom>(
+    `/v1/discussions/rooms/${roomId}/archive`,
+  );
+  return response.data;
+}
+
+export async function fetchCustomRoomDiscussion(
+  roomId: number,
+  options?: { afterId?: number; limit?: number },
+): Promise<DiscussionMessageListResponse> {
+  const response = await api.get<DiscussionMessageListResponse>(
+    `/v1/discussions/rooms/${roomId}/messages`,
+    {
+      params: {
+        after_id: options?.afterId,
+        limit: options?.limit,
+      },
+    },
+  );
+  return response.data;
+}
+
+export async function postCustomRoomDiscussion(
+  roomId: number,
+  content: string,
+): Promise<DiscussionMessage> {
+  const response = await api.post<DiscussionMessage>(
+    `/v1/discussions/rooms/${roomId}/messages`,
+    { content },
+  );
   return response.data;
 }

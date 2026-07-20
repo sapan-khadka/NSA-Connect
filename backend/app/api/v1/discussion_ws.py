@@ -29,8 +29,10 @@ from app.services.discussion_service import (
     apply_discussion_message_reaction,
     build_message_response,
     create_board_discussion_message,
+    create_custom_room_discussion_message,
     create_event_discussion_message,
     list_board_discussion_messages,
+    list_custom_room_discussion_messages,
     list_discussion_read_receipts,
     list_event_discussion_messages,
     messages_to_responses,
@@ -39,6 +41,7 @@ from app.services.discussion_service import (
 from app.services.discussion_ws_manager import (
     BOARD_ROOM_KEY,
     PresenceUser,
+    custom_room_key,
     discussion_connection_manager,
     event_room_key,
     new_fanout_id,
@@ -115,6 +118,7 @@ async def _discussion_websocket(
     room_event_id: int | None,
     load_history: Callable,
     create_message: Callable,
+    custom_room_id: int | None = None,
 ):
     # Auth + history use a short-lived DB session so an open socket cannot
     # exhaust the SQLAlchemy connection pool and freeze the rest of the app.
@@ -251,6 +255,7 @@ async def _discussion_websocket(
                         room_id=room_key,
                         last_read_message_id=receipt_request.last_read_message_id,
                         room_event_id=room_event_id,
+                        custom_room_id=custom_room_id,
                     )
                 except EventNotFoundError:
                     await websocket.send_json(
@@ -325,6 +330,7 @@ async def _discussion_websocket(
                         emoji=reaction.emoji,
                         action=reaction.action,
                         room_event_id=room_event_id,
+                        custom_room_id=custom_room_id,
                     )
                 except EventNotFoundError:
                     await websocket.send_json(
@@ -481,5 +487,32 @@ async def board_discussion_websocket(
         load_history=lambda db, member: _load_board_history(db, member=member),
         create_message=lambda db, member, content: _create_board_message(
             db, member=member, content=content
+        ),
+    )
+
+
+@router.websocket("/ws/rooms/{room_id}/discussion")
+async def custom_room_discussion_websocket(
+    websocket: WebSocket,
+    room_id: int,
+    token: str | None = Query(default=None),
+):
+    await _discussion_websocket(
+        websocket,
+        token=token,
+        room_key=custom_room_key(room_id),
+        room_event_id=None,
+        custom_room_id=room_id,
+        load_history=lambda db, member: list_custom_room_discussion_messages(
+            db,
+            room_id=room_id,
+            member=member,
+            limit=WS_HISTORY_LIMIT,
+        ),
+        create_message=lambda db, member, content: create_custom_room_discussion_message(
+            db,
+            room_id=room_id,
+            member=member,
+            content=content,
         ),
     )

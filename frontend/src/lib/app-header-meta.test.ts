@@ -23,4 +23,8 @@ describe("getAppHeaderMeta", () => {
   it("resolves settings from profile path", () => {
     expect(getAppHeaderMeta("/profile").title).toBe("Settings");
   });
+
+  it("resolves custom discussion room paths", () => {
+    expect(getAppHeaderMeta("/discussions/room/4").title).toBe("Discussions");
+  });
 });

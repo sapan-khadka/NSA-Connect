@@ -4,6 +4,12 @@ from app.models.constitutional_chunk import ConstitutionalChunk
 from app.models.discussion_message import DiscussionMessage
 from app.models.discussion_message_reaction import DiscussionMessageReaction
 from app.models.discussion_read_state import DiscussionReadState
+from app.models.discussion_room import (
+    DiscussionRoom,
+    DiscussionRoomMember,
+    DiscussionRoomMemberRole,
+    DiscussionRoomStatus,
+)
 from app.models.discussion_room_pin import DiscussionRoomPin
 from app.models.discussion_room_read import DiscussionRoomRead
 from app.models.event import Event, EventType, MeetingVisibility
@@ -55,6 +61,10 @@ __all__ = [
     "DiscussionMessage",
     "DiscussionMessageReaction",
     "DiscussionReadState",
+    "DiscussionRoom",
+    "DiscussionRoomMember",
+    "DiscussionRoomMemberRole",
+    "DiscussionRoomStatus",
     "DiscussionRoomPin",
     "DiscussionRoomRead",
     "Event",

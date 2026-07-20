@@ -9,10 +9,11 @@ MAX_DISCUSSION_CONTENT_LENGTH = 2000
 
 
 class DiscussionMessage(Base):
-    """Async discussion post for an event thread or the board-only channel.
+    """Async discussion post for board, event, or custom room threads.
 
-    ``event_id`` set → event-scoped thread.
-    ``event_id`` null → board-only general channel.
+    Board: ``event_id`` null and ``custom_room_id`` null.
+    Event: ``event_id`` set and ``custom_room_id`` null.
+    Custom room: ``custom_room_id`` set and ``event_id`` null.
     """
 
     __tablename__ = "discussion_messages"
@@ -26,6 +27,12 @@ class DiscussionMessage(Base):
         nullable=True,
         index=True,
     )
+    custom_room_id = Column(
+        Integer,
+        ForeignKey("discussion_rooms.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,
@@ -35,6 +42,7 @@ class DiscussionMessage(Base):
 
     author = relationship("Member")
     event = relationship("Event")
+    custom_room = relationship("DiscussionRoom")
     reactions = relationship(
         "DiscussionMessageReaction",
         back_populates="message",

@@ -26,6 +26,10 @@ def event_room_key(event_id: int) -> str:
     return f"event:{event_id}"
 
 
+def custom_room_key(room_id: int) -> str:
+    return f"room:{room_id}"
+
+
 def redis_channel_for_room(room_key: str) -> str:
     """Map internal room keys to Redis channels.
 

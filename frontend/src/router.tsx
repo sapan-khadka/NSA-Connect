@@ -134,6 +134,14 @@ export const appRoutes: RouteObject[] = [
         ),
       },
       {
+        path: "discussions/room/:roomId",
+        element: (
+          <ProtectedRoute>
+            <DiscussionsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: "board/discussion",
         element: (
           <ProtectedRoute minRole="board">
