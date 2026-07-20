@@ -307,6 +307,13 @@ describe("EventManagePage", () => {
     await waitFor(() =>
       expect(screen.getByTestId("finance-entry-list")).toBeInTheDocument(),
     );
+    expect(screen.getByRole("link", { name: "Open in Books" })).toHaveAttribute(
+      "href",
+      "/finance?tab=books&event_id=1",
+    );
+    expect(
+      screen.getByRole("button", { name: "+ Log transaction" }),
+    ).toBeInTheDocument();
   });
 
   it("opens check-in and attendance detail modals", async () => {

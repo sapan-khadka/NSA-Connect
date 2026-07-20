@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { MoreHorizontal } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { getApiErrorMessage } from "../lib/api-error";
@@ -8,15 +7,13 @@ import { DuesDashboard } from "../components/DuesDashboard";
 import { EventBudgetBreakdown } from "../components/EventBudgetBreakdown";
 import { ExpenseCategoryChart } from "../components/ExpenseCategoryChart";
 import { FinanceEntryList } from "../components/FinanceEntryList";
-import { FinanceMyChangeRequests } from "../components/FinanceMyChangeRequests";
-import { FinancePendingApprovals } from "../components/FinancePendingApprovals";
+import { FinanceInbox } from "../components/FinanceInbox";
 import {
   FinanceSummaryMetrics,
   FinanceTransactionBreakdown,
 } from "../components/FinanceSummaryCard";
 import { LogFinanceEntryForm } from "../components/LogFinanceEntryForm";
 import { RoleBadge } from "../components/RoleBadge";
-import { AppIcon } from "../components/ui/AppIcon";
 import { useAuth } from "../context/useAuth";
 import { fetchEvents } from "../lib/events-api";
 import { isEventFinanceEditable } from "../lib/event-finance";
@@ -33,6 +30,7 @@ import {
 import { canManageTreasury } from "../lib/roles";
 import {
   financeTabSearchParams,
+  parseFinanceEventId,
   parseFinanceTab,
   type FinanceTab,
 } from "../lib/finance-routes";
@@ -62,13 +60,11 @@ type ExpenseCategoryState =
     }
   | { status: "error"; message: string };
 
-type FinanceTabId = FinanceTab;
-
-const FINANCE_TABS: { id: FinanceTabId; label: string }[] = [
-  { id: "overview", label: "Overview" },
-  { id: "transactions", label: "Transactions" },
+const FINANCE_TABS: { id: FinanceTab; label: string }[] = [
+  { id: "pulse", label: "Pulse" },
+  { id: "inbox", label: "Inbox" },
+  { id: "books", label: "Books" },
   { id: "dues", label: "Dues" },
-  { id: "approvals", label: "Approvals" },
 ];
 
 function tabButtonClass(isActive: boolean): string {
@@ -91,23 +87,15 @@ function semesterFilterLabel(semester: string): string {
   return semester === "all" ? "All time" : formatSemesterLabel(semester);
 }
 
-function FinancePageMenuButton() {
-  return (
-    <button
-      type="button"
-      aria-label="More actions"
-      className="ds-icon-btn h-9 w-9 rounded-full text-label transition-colors hover:bg-gray-100 hover:text-foreground"
-    >
-      <AppIcon icon={MoreHorizontal} size="sm" className="text-current" />
-    </button>
-  );
-}
-
 export function FinancePage() {
   const { member } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [semester, setSemester] = useState<string>("all");
-  const activeTab = parseFinanceTab(searchParams.get("tab"));
+  const tabParam = searchParams.get("tab");
+  const activeTab = parseFinanceTab(tabParam);
+  const booksEventId =
+    activeTab === "books" ? parseFinanceEventId(searchParams.get("event_id")) : null;
+  const autoOpenedInbox = useRef(false);
   const [summaryState, setSummaryState] = useState<SummaryState>({ status: "idle" });
   const [budgetState, setBudgetState] = useState<BudgetState>({ status: "loading" });
   const [expenseCategoryState, setExpenseCategoryState] = useState<ExpenseCategoryState>({
@@ -119,13 +107,24 @@ export function FinancePage() {
   const [eventOptions, setEventOptions] = useState<Array<{ id: number; name: string }>>(
     [],
   );
+  const [filterEventOptions, setFilterEventOptions] = useState<
+    Array<{ id: number; name: string }>
+  >([]);
 
   const canViewTreasury = member
     ? canManageTreasury(member.role, member.position)
     : false;
 
-  function switchTab(tab: FinanceTabId) {
+  function switchTab(tab: FinanceTab) {
     setSearchParams(financeTabSearchParams(tab));
+  }
+
+  function openBooksForEvent(eventId?: number | null) {
+    setSearchParams(financeTabSearchParams("books", { eventId: eventId ?? null }));
+  }
+
+  function setBooksEventFilter(eventId: number | null) {
+    setSearchParams(financeTabSearchParams("books", { eventId }), { replace: true });
   }
 
   function handleFinanceEntryCreated(_entry: FinanceEntryResponse) {
@@ -135,6 +134,17 @@ export function FinancePage() {
   function handleApprovalsChanged() {
     setRefreshKey((current) => current + 1);
   }
+
+  useEffect(() => {
+    if (!canViewTreasury || autoOpenedInbox.current || tabParam !== null) {
+      return;
+    }
+
+    if (pendingApprovalCount > 0) {
+      autoOpenedInbox.current = true;
+      setSearchParams(financeTabSearchParams("inbox"), { replace: true });
+    }
+  }, [canViewTreasury, pendingApprovalCount, tabParam, setSearchParams]);
 
   useEffect(() => {
     if (!canViewTreasury) {
@@ -147,6 +157,11 @@ export function FinancePage() {
       try {
         const response = await fetchEvents();
         if (!cancelled) {
+          const options = response.events.map((event) => ({
+            id: event.id,
+            name: event.name,
+          }));
+          setFilterEventOptions(options);
           setEventOptions(
             response.events
               .filter((event) => isEventFinanceEditable(event))
@@ -158,6 +173,7 @@ export function FinancePage() {
         }
       } catch {
         if (!cancelled) {
+          setFilterEventOptions([]);
           setEventOptions([]);
         }
       }
@@ -198,6 +214,11 @@ export function FinancePage() {
   }, [canViewTreasury, refreshKey]);
 
   useEffect(() => {
+    if (!canViewTreasury) {
+      setExpenseCategoryState({ status: "loading" });
+      return;
+    }
+
     let cancelled = false;
 
     async function loadExpenseCategories() {
@@ -236,7 +257,7 @@ export function FinancePage() {
     return () => {
       cancelled = true;
     };
-  }, [semester, refreshKey]);
+  }, [semester, refreshKey, canViewTreasury]);
 
   useEffect(() => {
     let cancelled = false;
@@ -325,6 +346,48 @@ export function FinancePage() {
   const updatedLabel = lastUpdated ? formatUpdatedLabel(lastUpdated) : "—";
   const duesSemester =
     semester === "all" ? getCurrentSemesterSlug() : semester;
+  const overBudgetEvents =
+    budgetState.status === "ready"
+      ? budgetState.events.filter((event) => event.over_budget)
+      : [];
+
+  const booksFilterOptions =
+    booksEventId != null &&
+    !filterEventOptions.some((event) => event.id === booksEventId)
+      ? [{ id: booksEventId, name: `Event #${booksEventId}` }, ...filterEventOptions]
+      : filterEventOptions;
+
+  const charts = (
+    <div className="grid gap-6 lg:grid-cols-2">
+      <ExpenseCategoryChart
+        categories={
+          expenseCategoryState.status === "ready"
+            ? expenseCategoryState.categories
+            : []
+        }
+        totalExpense={
+          expenseCategoryState.status === "ready"
+            ? expenseCategoryState.totalExpense
+            : "0.00"
+        }
+        isLoading={expenseCategoryState.status === "loading"}
+        errorMessage={
+          expenseCategoryState.status === "error"
+            ? expenseCategoryState.message
+            : null
+        }
+      />
+
+      <EventBudgetBreakdown
+        events={budgetState.status === "ready" ? budgetState.events : []}
+        isLoading={budgetState.status === "loading"}
+        errorMessage={
+          budgetState.status === "error" ? budgetState.message : null
+        }
+        onEventClick={canViewTreasury ? openBooksForEvent : undefined}
+      />
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -340,7 +403,6 @@ export function FinancePage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {canViewTreasury ? <FinancePageMenuButton /> : null}
             <select
               aria-label="Semester"
               value={semester}
@@ -362,7 +424,7 @@ export function FinancePage() {
           <nav aria-label="Finance sections" className="mt-6 flex gap-2 overflow-x-auto">
             {FINANCE_TABS.map((tab) => {
               const isActive = activeTab === tab.id;
-              const showBadge = tab.id === "approvals" && pendingApprovalCount > 0;
+              const showBadge = tab.id === "inbox" && pendingApprovalCount > 0;
 
               return (
                 <button
@@ -384,73 +446,109 @@ export function FinancePage() {
         ) : null}
       </header>
 
-      {(!canViewTreasury || activeTab === "overview") && (
+      {!canViewTreasury ? (
         <div className="space-y-6">
-          {canViewTreasury ? (
-            <FinanceSummaryMetrics
-              isLoading={summaryState.status === "loading"}
-              errorMessage={
-                summaryState.status === "error" ? summaryState.message : null
-              }
-              summary={summary}
-              pendingCount={pendingApprovalCount}
-            />
-          ) : null}
-
-          <div className="grid gap-6 lg:grid-cols-2">
-            <ExpenseCategoryChart
-              categories={
-                expenseCategoryState.status === "ready"
-                  ? expenseCategoryState.categories
-                  : []
-              }
-              totalExpense={
-                expenseCategoryState.status === "ready"
-                  ? expenseCategoryState.totalExpense
-                  : "0.00"
-              }
-              isLoading={expenseCategoryState.status === "loading"}
-              errorMessage={
-                expenseCategoryState.status === "error"
-                  ? expenseCategoryState.message
-                  : null
-              }
-            />
-
-            <EventBudgetBreakdown
-              events={budgetState.status === "ready" ? budgetState.events : []}
-              isLoading={budgetState.status === "loading"}
-              errorMessage={
-                budgetState.status === "error" ? budgetState.message : null
-              }
-            />
-          </div>
+          <EventBudgetBreakdown
+            events={budgetState.status === "ready" ? budgetState.events : []}
+            isLoading={budgetState.status === "loading"}
+            errorMessage={
+              budgetState.status === "error" ? budgetState.message : null
+            }
+          />
         </div>
-      )}
+      ) : null}
 
-      {canViewTreasury && activeTab === "transactions" ? (
+      {canViewTreasury && activeTab === "pulse" ? (
+        <div className="space-y-6">
+          <FinanceSummaryMetrics
+            isLoading={summaryState.status === "loading"}
+            errorMessage={
+              summaryState.status === "error" ? summaryState.message : null
+            }
+            summary={summary}
+          />
+
+          <details className="group rounded-card border border-gray-200 bg-surface-card shadow-card">
+            <summary className="cursor-pointer list-none px-5 py-4 text-sm font-medium text-foreground marker:content-none [&::-webkit-details-marker]:hidden">
+              <span className="inline-flex items-center gap-2">
+                Insights
+                <span className="text-xs font-normal text-label group-open:hidden">
+                  Spend by category · Event budgets
+                </span>
+              </span>
+            </summary>
+            <div className="border-t border-gray-100 px-5 pb-5 pt-4">{charts}</div>
+          </details>
+        </div>
+      ) : null}
+
+      {canViewTreasury && activeTab === "inbox" ? (
+        <FinanceInbox
+          duesSemester={duesSemester}
+          overBudgetEvents={overBudgetEvents}
+          refreshKey={refreshKey}
+          onChanged={handleApprovalsChanged}
+          onOpenDues={() => switchTab("dues")}
+          onOpenPulse={() => switchTab("pulse")}
+          onOpenBooksForEvent={openBooksForEvent}
+        />
+      ) : null}
+
+      {canViewTreasury && activeTab === "books" ? (
         <div className="space-y-6">
           <LogFinanceEntryForm
             eventOptions={eventOptions}
             onCreated={handleFinanceEntryCreated}
           />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <label className="flex min-w-[14rem] flex-1 flex-col gap-1 text-sm">
+              <span className="text-label">Event</span>
+              <select
+                aria-label="Filter by event"
+                value={booksEventId ?? ""}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setBooksEventFilter(value ? Number.parseInt(value, 10) : null);
+                }}
+                className="rounded-lg border border-gray-200 bg-surface-card px-3 py-2 text-sm text-foreground shadow-sm"
+              >
+                <option value="">All events</option>
+                {booksFilterOptions.map((event) => (
+                  <option key={event.id} value={event.id}>
+                    {event.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {booksEventId != null ? (
+              <button
+                type="button"
+                onClick={() => setBooksEventFilter(null)}
+                className="text-sm font-medium text-label underline-offset-2 hover:text-foreground hover:underline"
+              >
+                Clear event filter
+              </button>
+            ) : null}
+          </div>
           <FinanceEntryList
             semester={semester}
             refreshKey={refreshKey}
+            eventId={booksEventId ?? undefined}
             canManage={canViewTreasury}
             onChanged={() => setRefreshKey((current) => current + 1)}
           />
-          <FinanceTransactionBreakdown summary={summary} />
-        </div>
-      ) : null}
-
-      {canViewTreasury && activeTab === "approvals" ? (
-        <div className="space-y-6">
-          <FinancePendingApprovals
-            refreshKey={refreshKey}
-            onChanged={handleApprovalsChanged}
-          />
-          <FinanceMyChangeRequests refreshKey={refreshKey} />
+          <details className="rounded-card border border-gray-200 bg-surface-card shadow-card">
+            <summary className="cursor-pointer list-none px-5 py-4 text-sm font-medium text-foreground marker:content-none [&::-webkit-details-marker]:hidden">
+              Transaction breakdown
+            </summary>
+            <div className="border-t border-gray-100 px-5 pb-5 pt-4">
+              <FinanceTransactionBreakdown
+                summary={summary}
+                embedded
+                onEventClick={openBooksForEvent}
+              />
+            </div>
+          </details>
         </div>
       ) : null}
 

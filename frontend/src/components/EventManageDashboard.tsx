@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 
 import { EventAttendanceSummaryPanel } from "./EventAttendanceSummaryPanel";
 import { EventCheckInPanel } from "./EventCheckInPanel";
@@ -20,6 +21,7 @@ import {
 import { EventTaskManager } from "./EventTaskManager";
 import { EventVolunteersSection } from "./EventVolunteersSection";
 import { FinanceEntryList } from "./FinanceEntryList";
+import { LogFinanceEntryForm } from "./LogFinanceEntryForm";
 import { MeetingRecordSection } from "./MeetingRecordSection";
 import { ArrowAction } from "./ui/ArrowLink";
 import { HomeCard } from "./ui/HomeCard";
@@ -50,6 +52,7 @@ import {
   EVENT_MANAGE_LOADING,
   EVENT_MANAGE_SECONDARY_BTN,
 } from "../lib/event-manage-ui";
+import { financeBooksPath } from "../lib/finance-routes";
 
 type ManageModal =
   | "volunteers"
@@ -666,14 +669,33 @@ export function EventManageDashboard({
           <EventFinanceCloseoutBanner event={event} />
           {budget ? <EventManageBudgetSummaryCard budget={budget} /> : null}
           {canViewTreasury ? (
-            <FinanceEntryList
-              semester="all"
-              refreshKey={refreshKey}
-              eventId={event.id}
-              canManage={!event.is_finance_locked}
-              financeLocked={event.is_finance_locked}
-              onChanged={onRefresh}
-            />
+            <>
+              <div className="flex flex-wrap items-center justify-end gap-3">
+                <Link
+                  to={financeBooksPath(event.id)}
+                  className={EVENT_MANAGE_ACTION_LINK}
+                >
+                  Open in Books
+                </Link>
+              </div>
+              {!event.is_finance_locked ? (
+                <LogFinanceEntryForm
+                  eventOptions={[{ id: event.id, name: event.name }]}
+                  lockedEventId={event.id}
+                  lockedEventName={event.name}
+                  idPrefix={`event-${event.id}-finance`}
+                  onCreated={() => onRefresh()}
+                />
+              ) : null}
+              <FinanceEntryList
+                semester="all"
+                refreshKey={refreshKey}
+                eventId={event.id}
+                canManage={!event.is_finance_locked}
+                financeLocked={event.is_finance_locked}
+                onChanged={onRefresh}
+              />
+            </>
           ) : null}
         </div>
       </Modal>

@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import { FinanceCategoryField } from "./FinanceCategoryField";
 import { Button } from "./ui/Button";
@@ -34,7 +34,21 @@ type LogFinanceEntryFormProps = {
   presentation?: "collapsible" | "standalone";
   onDismiss?: () => void;
   idPrefix?: string;
+  /** Locks the entry to this event and hides the event picker. */
+  lockedEventId?: number;
+  lockedEventName?: string;
 };
+
+function initialValuesForEvent(lockedEventId?: number): LogFinanceEntryFormValues {
+  if (lockedEventId == null) {
+    return initialLogFinanceEntryValues;
+  }
+
+  return {
+    ...initialLogFinanceEntryValues,
+    event_id: String(lockedEventId),
+  };
+}
 
 const RECEIPT_IMAGE_ACCEPT = "image/jpeg,image/png,image/webp";
 const RECEIPT_FILE_ACCEPT = `${RECEIPT_IMAGE_ACCEPT},application/pdf`;
@@ -83,9 +97,11 @@ export function LogFinanceEntryForm({
   presentation = "collapsible",
   onDismiss,
   idPrefix,
+  lockedEventId,
+  lockedEventName,
 }: LogFinanceEntryFormProps) {
-  const [values, setValues] = useState<LogFinanceEntryFormValues>(
-    initialLogFinanceEntryValues,
+  const [values, setValues] = useState<LogFinanceEntryFormValues>(() =>
+    initialValuesForEvent(lockedEventId),
   );
   const [fieldErrors, setFieldErrors] = useState<LogFinanceEntryFormErrors>({});
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
@@ -97,6 +113,17 @@ export function LogFinanceEntryForm({
   const [isExpanded, setIsExpanded] = useState(presentation === "standalone");
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
+  const eventLocked = lockedEventId != null;
+
+  useEffect(() => {
+    if (lockedEventId == null) {
+      return;
+    }
+    setValues((current) => ({
+      ...current,
+      event_id: String(lockedEventId),
+    }));
+  }, [lockedEventId]);
 
   function updateField<K extends keyof LogFinanceEntryFormValues>(
     field: K,
@@ -182,10 +209,12 @@ export function LogFinanceEntryForm({
         amount: formatAmountForSubmit(values.amount),
         description: values.description.trim(),
         receipt_url: receiptUrl,
-        event_id: values.event_id ? Number(values.event_id) : null,
+        event_id:
+          lockedEventId ??
+          (values.event_id ? Number(values.event_id) : null),
       });
 
-      setValues(initialLogFinanceEntryValues);
+      setValues(initialValuesForEvent(lockedEventId));
       setReceiptFile(null);
       setScanNotice(null);
       if (cameraInputRef.current) {
@@ -291,24 +320,36 @@ export function LogFinanceEntryForm({
           ) : null}
         </div>
 
-        <div>
-          <label htmlFor={fieldId(idPrefix, "event_id")} className={labelClassName}>
-            Linked event
-          </label>
-          <select
-            id={fieldId(idPrefix, "event_id")}
-            value={values.event_id}
-            onChange={(event) => updateField("event_id", event.target.value)}
-            className={inputClassName}
-          >
-            <option value="">None (general)</option>
-            {eventOptions.map((eventOption) => (
-              <option key={eventOption.id} value={eventOption.id}>
-                {eventOption.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        {eventLocked ? (
+          <div>
+            <p className={labelClassName}>Linked event</p>
+            <p
+              className="mt-1 rounded-lg border border-gray-200 bg-surface-muted px-3 py-2 text-sm text-foreground"
+              data-testid="log-finance-locked-event"
+            >
+              {lockedEventName ?? `Event #${lockedEventId}`}
+            </p>
+          </div>
+        ) : (
+          <div>
+            <label htmlFor={fieldId(idPrefix, "event_id")} className={labelClassName}>
+              Linked event
+            </label>
+            <select
+              id={fieldId(idPrefix, "event_id")}
+              value={values.event_id}
+              onChange={(event) => updateField("event_id", event.target.value)}
+              className={inputClassName}
+            >
+              <option value="">None (general)</option>
+              {eventOptions.map((eventOption) => (
+                <option key={eventOption.id} value={eventOption.id}>
+                  {eventOption.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="md:col-span-2">
           <label htmlFor={fieldId(idPrefix, "description")} className={labelClassName}>

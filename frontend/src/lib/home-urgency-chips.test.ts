@@ -62,4 +62,25 @@ describe("buildHomeUrgencyChips", () => {
       },
     ]);
   });
+
+  it("adds a notes-needed chip when a meeting still needs minutes", () => {
+    expect(
+      buildHomeUrgencyChips({
+        tasksSummary: emptySummary,
+        tasksPath: "/events/tasks",
+        pendingMemberApprovals: 0,
+        financePendingCount: 0,
+        canReviewMembers: true,
+        canReviewFinance: true,
+        notesNeededPath: "/events/meetings/4#meeting-minutes",
+      }),
+    ).toEqual([
+      {
+        id: "notes-needed",
+        label: "Notes needed",
+        to: "/events/meetings/4#meeting-minutes",
+        tone: "info",
+      },
+    ]);
+  });
 });

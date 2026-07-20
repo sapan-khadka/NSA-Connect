@@ -204,20 +204,8 @@ describe("HomePage", () => {
       within(featured).queryByText("Confirmed attendance"),
     ).not.toBeInTheDocument();
 
-    const actionCenter = screen.getByLabelText("Action Center");
-    expect(within(actionCenter).getByText("Do next")).toBeInTheDocument();
-    expect(
-      within(actionCenter).getByRole("link", { name: /New Event/i }),
-    ).toBeInTheDocument();
-    expect(
-      within(actionCenter).getByRole("link", { name: /Ask AI/i }),
-    ).toHaveAttribute("href", "/assistant");
-    expect(
-      within(actionCenter).queryByPlaceholderText("Ask AI…"),
-    ).not.toBeInTheDocument();
-    expect(
-      within(actionCenter).queryByRole("link", { name: /Meeting Minutes/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Action Center")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Meeting Minutes")).not.toBeInTheDocument();
 
     const work = await screen.findByLabelText("Work Center");
     expect(within(work).getByRole("tab", { name: "Mine" })).toBeInTheDocument();
@@ -234,12 +222,6 @@ describe("HomePage", () => {
     expect(screen.queryByLabelText("Organization Health")).not.toBeInTheDocument();
 
     expect(await screen.findByLabelText("Discussions")).toBeInTheDocument();
-    expect(screen.getByLabelText("Meeting Minutes")).toBeInTheDocument();
-    expect(
-      within(screen.getByLabelText("Meeting Minutes")).getByRole("link", {
-        name: /All meetings/i,
-      }),
-    ).toHaveAttribute("href", "/events/meetings");
   });
 
   it("shows urgency chips only when counts are non-zero", async () => {
@@ -323,7 +305,7 @@ describe("HomePage", () => {
     expect(within(work).queryByText("High")).not.toBeInTheDocument();
   });
 
-  it("surfaces pending reviews in Action Center for treasurer", async () => {
+  it("surfaces pending reviews in urgency chips for treasurer", async () => {
     mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
     mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
     mockSummary({ members_pending: 2, finance_pending: 1 });
@@ -336,18 +318,51 @@ describe("HomePage", () => {
       </MemoryRouter>,
     );
 
-    const actionCenter = await screen.findByLabelText("Action Center");
+    const chips = await screen.findByLabelText("Needs attention");
     expect(
-      within(actionCenter).getByRole("link", {
-        name: /2 member approvals pending/i,
-      }),
+      within(chips).getByRole("link", { name: /3 reviews/i }),
     ).toHaveAttribute("href", "/members?tab=pending");
-    expect(
-      within(actionCenter).getByRole("link", {
-        name: /1 finance review required/i,
-      }),
-    ).toHaveAttribute("href", "/finance?tab=approvals");
     expect(screen.getByLabelText("My Tasks")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Action Center")).not.toBeInTheDocument();
+  });
+
+  it("surfaces notes-needed chip when a meeting still needs minutes", async () => {
+    mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
+    mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
+    mockedMeetings.mockResolvedValue({
+      meetings: [
+        {
+          event_id: 4,
+          event_name: "March Board Meeting",
+          starts_at: "2030-03-10T18:00:00+00:00",
+          is_past: false,
+          agenda: "",
+          has_attendance: false,
+          has_minutes: false,
+          has_summary: false,
+          present_count: 0,
+          absent_count: 0,
+          excused_count: 0,
+          unmarked_count: 0,
+          minutes_updated_at: null,
+        },
+      ],
+      total: 1,
+    });
+
+    render(
+      <MemoryRouter>
+        <MockAuthProvider value={{ member: createMockMember("board") }}>
+          <HomePage />
+        </MockAuthProvider>
+      </MemoryRouter>,
+    );
+
+    const chips = await screen.findByLabelText("Needs attention");
+    expect(
+      within(chips).getByRole("link", { name: /Notes needed/i }),
+    ).toHaveAttribute("href", "/events/meetings/4#meeting-minutes");
+    expect(screen.queryByLabelText("Meeting Minutes")).not.toBeInTheDocument();
   });
 
   it("cycles featured upcoming events with carousel controls", async () => {
@@ -401,16 +416,7 @@ describe("HomePage", () => {
 
     await screen.findByLabelText("Featured Event");
     expect(screen.queryByRole("link", { name: /^Manage$/i })).not.toBeInTheDocument();
-    const actionCenter = screen.getByLabelText("Action Center");
-    expect(
-      within(actionCenter).queryByRole("link", { name: /New Event/i }),
-    ).not.toBeInTheDocument();
-    expect(
-      within(actionCenter).getByRole("link", { name: /New Task/i }),
-    ).toBeInTheDocument();
-    expect(
-      within(actionCenter).queryByRole("link", { name: /Ask AI/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Action Center")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Discussions")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Meeting Minutes")).not.toBeInTheDocument();
   });
@@ -442,7 +448,8 @@ describe("HomePage", () => {
       );
 
       expect(await screen.findByLabelText("Discussions")).toBeInTheDocument();
-      expect(screen.getByLabelText("Meeting Minutes")).toBeInTheDocument();
+      expect(screen.queryByLabelText("Meeting Minutes")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("Action Center")).not.toBeInTheDocument();
     },
   );
 
@@ -470,7 +477,7 @@ describe("HomePage", () => {
     );
 
     expect(await screen.findByLabelText("Discussions")).toBeInTheDocument();
-    expect(screen.getByLabelText("Meeting Minutes")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Meeting Minutes")).not.toBeInTheDocument();
   });
 
   it("shows View calendar empty state for general members with no events", async () => {

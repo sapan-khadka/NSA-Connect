@@ -16,15 +16,19 @@ type FinanceSummaryMetricsProps = {
   isLoading: boolean;
   errorMessage: string | null;
   summary: FinanceSummaryResponse | null;
-  pendingCount?: number;
 };
 
 type FinanceTransactionBreakdownProps = {
   summary: FinanceSummaryResponse | null;
+  /** Skip outer card + heading when nested under a disclosure. */
+  embedded?: boolean;
+  /** Fired for event rows (not pre-event / general). */
+  onEventClick?: (eventId: number) => void;
 };
 
 type BreakdownRow = {
   id: string;
+  eventId: number | null;
   category: string;
   income: string;
   expense: string;
@@ -36,6 +40,7 @@ function buildBreakdownRows(summary: FinanceSummaryResponse): BreakdownRow[] {
   return [
     {
       id: "pre-event",
+      eventId: null,
       category: "Pre-event / general",
       income: summary.pre_event.income,
       expense: summary.pre_event.expense,
@@ -44,6 +49,7 @@ function buildBreakdownRows(summary: FinanceSummaryResponse): BreakdownRow[] {
     },
     ...summary.events.map((eventSummary) => ({
       id: String(eventSummary.event_id),
+      eventId: eventSummary.event_id,
       category: eventSummary.event_name,
       income: eventSummary.income,
       expense: eventSummary.expense,
@@ -53,41 +59,54 @@ function buildBreakdownRows(summary: FinanceSummaryResponse): BreakdownRow[] {
   ];
 }
 
-const breakdownColumns: DataTableColumn<BreakdownRow>[] = [
-  {
-    id: "category",
-    header: "Category",
-    cell: (row) => (
-      <span className="font-medium text-foreground">{row.category}</span>
-    ),
-  },
-  {
-    id: "income",
-    header: "Income",
-    cell: (row) => (
-      <span className="text-accent">{formatCurrency(row.income)}</span>
-    ),
-  },
-  {
-    id: "expense",
-    header: "Expense",
-    cell: (row) => <span>{formatCurrency(row.expense)}</span>,
-  },
-  {
-    id: "balance",
-    header: "Balance",
-    cell: (row) => (
-      <span className={`font-medium ${currencyBalanceToneClass(row.balance)}`}>
-        {formatCurrency(row.balance)}
-      </span>
-    ),
-  },
-  {
-    id: "entries",
-    header: "Entries",
-    cell: (row) => <span className="text-label">{row.entryCount}</span>,
-  },
-];
+function buildBreakdownColumns(
+  onEventClick?: (eventId: number) => void,
+): DataTableColumn<BreakdownRow>[] {
+  return [
+    {
+      id: "category",
+      header: "Category",
+      cell: (row) =>
+        onEventClick && row.eventId != null ? (
+          <button
+            type="button"
+            onClick={() => onEventClick(row.eventId!)}
+            className="text-left font-medium text-foreground underline-offset-2 hover:underline"
+          >
+            {row.category}
+          </button>
+        ) : (
+          <span className="font-medium text-foreground">{row.category}</span>
+        ),
+    },
+    {
+      id: "income",
+      header: "Income",
+      cell: (row) => (
+        <span className="text-accent">{formatCurrency(row.income)}</span>
+      ),
+    },
+    {
+      id: "expense",
+      header: "Expense",
+      cell: (row) => <span>{formatCurrency(row.expense)}</span>,
+    },
+    {
+      id: "balance",
+      header: "Balance",
+      cell: (row) => (
+        <span className={`font-medium ${currencyBalanceToneClass(row.balance)}`}>
+          {formatCurrency(row.balance)}
+        </span>
+      ),
+    },
+    {
+      id: "entries",
+      header: "Entries",
+      cell: (row) => <span className="text-label">{row.entryCount}</span>,
+    },
+  ];
+}
 
 type MetricCardProps = {
   title: string;
@@ -175,7 +194,6 @@ export function FinanceSummaryMetrics({
   isLoading,
   errorMessage,
   summary,
-  pendingCount = 0,
 }: FinanceSummaryMetricsProps) {
   if (isLoading) {
     return (
@@ -206,7 +224,10 @@ export function FinanceSummaryMetrics({
         : "text-foreground";
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div
+      className="grid gap-4 sm:grid-cols-3"
+      data-testid="finance-pulse-strip"
+    >
       <MetricCard
         title="Net balance"
         testId="finance-net-balance"
@@ -238,24 +259,33 @@ export function FinanceSummaryMetrics({
           {formatCurrency(summary.total_expense)}
         </p>
       </MetricCard>
-
-      <MetricCard title="Pending" testId="finance-pending-count">
-        <p className="text-3xl font-light tracking-headline text-foreground">
-          <span>{pendingCount}</span>{" "}
-          <span className="text-sm font-light text-label">
-            {pendingCount === 1 ? "request" : "requests"}
-          </span>
-        </p>
-      </MetricCard>
     </div>
   );
 }
 
 export function FinanceTransactionBreakdown({
   summary,
+  embedded = false,
+  onEventClick,
 }: FinanceTransactionBreakdownProps) {
   if (!summary) {
     return null;
+  }
+
+  const table = (
+    <DataTable
+      columns={buildBreakdownColumns(onEventClick)}
+      rows={buildBreakdownRows(summary)}
+      getRowId={(row) => row.id}
+      emptyTitle="No finance entries yet for this period."
+      emptyDescription=""
+      caption="Finance transaction breakdown by category"
+      className="border-0 bg-transparent shadow-none rounded-none"
+    />
+  );
+
+  if (embedded) {
+    return table;
   }
 
   return (
@@ -263,18 +293,7 @@ export function FinanceTransactionBreakdown({
       <h2 className="text-base font-medium text-foreground">
         Transaction breakdown
       </h2>
-
-      <div className="mt-6">
-        <DataTable
-          columns={breakdownColumns}
-          rows={buildBreakdownRows(summary)}
-          getRowId={(row) => row.id}
-          emptyTitle="No finance entries yet for this period."
-          emptyDescription=""
-          caption="Finance transaction breakdown by category"
-          className="border-0 bg-transparent shadow-none rounded-none"
-        />
-      </div>
+      <div className="mt-6">{table}</div>
     </Card>
   );
 }
@@ -284,7 +303,6 @@ export function FinanceSummaryCard({
   isLoading,
   errorMessage,
   summary,
-  pendingCount,
 }: FinanceSummaryMetricsProps) {
   return (
     <>
@@ -292,7 +310,6 @@ export function FinanceSummaryCard({
         isLoading={isLoading}
         errorMessage={errorMessage}
         summary={summary}
-        pendingCount={pendingCount}
       />
       <FinanceTransactionBreakdown summary={summary} />
     </>

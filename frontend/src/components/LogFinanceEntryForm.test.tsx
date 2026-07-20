@@ -62,6 +62,53 @@ describe("LogFinanceEntryForm", () => {
     expect(onCreated).toHaveBeenCalled();
   });
 
+  it("locks the event picker and submits with lockedEventId", async () => {
+    const user = userEvent.setup();
+    const { createFinanceEntry } = await import("../lib/finance-api");
+    const onCreated = vi.fn();
+    vi.mocked(createFinanceEntry).mockResolvedValue({
+      id: 2,
+      entry_type: "expense",
+      category: "venue",
+      amount: "40.00",
+      description: "Hall deposit",
+      receipt_url: null,
+      event_id: 9,
+      created_by_id: 1,
+      created_at: "2030-01-01T00:00:00Z",
+    });
+
+    render(
+      <LogFinanceEntryForm
+        eventOptions={[{ id: 9, name: "Dashain Celebration" }]}
+        lockedEventId={9}
+        lockedEventName="Dashain Celebration"
+        onCreated={onCreated}
+        presentation="standalone"
+        idPrefix="locked"
+      />,
+    );
+
+    expect(screen.getByTestId("log-finance-locked-event")).toHaveTextContent(
+      "Dashain Celebration",
+    );
+    expect(screen.queryByLabelText("Linked event")).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("Category"), "venue");
+    await user.type(screen.getByLabelText("Amount"), "40");
+    await user.type(screen.getByLabelText("Description"), "Hall deposit");
+    await user.click(screen.getByRole("button", { name: "Log transaction" }));
+
+    expect(createFinanceEntry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event_id: 9,
+        amount: "40.00",
+        category: "venue",
+      }),
+    );
+    expect(onCreated).toHaveBeenCalled();
+  });
+
   it("submits from standalone presentation without expand step", async () => {
     const user = userEvent.setup();
     const { createFinanceEntry } = await import("../lib/finance-api");

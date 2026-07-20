@@ -11,6 +11,8 @@ type EventBudgetBreakdownProps = {
   events: EventBudgetRow[];
   isLoading: boolean;
   errorMessage: string | null;
+  /** When set, each event row opens that event's Books ledger. */
+  onEventClick?: (eventId: number) => void;
 };
 
 function percentPillClass(event: EventBudgetRow): string {
@@ -41,6 +43,7 @@ export function EventBudgetBreakdown({
   events,
   isLoading,
   errorMessage,
+  onEventClick,
 }: EventBudgetBreakdownProps) {
   if (isLoading) {
     return (
@@ -63,6 +66,9 @@ export function EventBudgetBreakdown({
       <h2 className="text-base font-medium text-foreground">
         Event budgets
       </h2>
+      {onEventClick ? (
+        <p className="mt-1 text-xs text-label">Open an event to view its Books.</p>
+      ) : null}
 
       <div
         data-testid="event-budget-list"
@@ -73,12 +79,36 @@ export function EventBudgetBreakdown({
             event.planned_budget,
             event.actual_expense,
           );
+          const interactive = Boolean(onEventClick);
 
           return (
             <div
               key={event.event_id}
               data-testid={`event-budget-row-${event.event_id}`}
-              className="flex items-start gap-4"
+              className={[
+                "flex items-start gap-4 rounded-xl",
+                interactive
+                  ? "cursor-pointer p-2 -mx-2 transition-colors hover:bg-surface-muted"
+                  : "",
+              ].join(" ")}
+              role={interactive ? "button" : undefined}
+              tabIndex={interactive ? 0 : undefined}
+              onClick={
+                interactive ? () => onEventClick?.(event.event_id) : undefined
+              }
+              onKeyDown={
+                interactive
+                  ? (keyboardEvent) => {
+                      if (
+                        keyboardEvent.key === "Enter" ||
+                        keyboardEvent.key === " "
+                      ) {
+                        keyboardEvent.preventDefault();
+                        onEventClick?.(event.event_id);
+                      }
+                    }
+                  : undefined
+              }
             >
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-medium text-foreground">{event.event_name}</p>

@@ -3,6 +3,7 @@ import type { MemberResponse } from "./auth-api";
 import { calendarDeepLink, eventDetailPath } from "./event-links";
 import type { EventResponse } from "./events-api";
 import type { FinanceEntryResponse } from "./finance-api";
+import { financeBooksPath } from "./finance-routes";
 import { memberMatchesSearch } from "./member-search";
 
 export type GlobalSearchCategory =
@@ -118,7 +119,7 @@ export function filterGlobalSearch(
       category: "transaction" as const,
       title: entry.description?.trim() || entry.category,
       subtitle: `${entry.entry_type} · ${entry.amount}`,
-      to: "/finance",
+      to: financeBooksPath(entry.event_id),
     }));
 
   return [...members, ...events, ...announcements, ...transactions];

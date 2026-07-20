@@ -9,6 +9,7 @@ import {
   duesStatusLabel,
   duesStatusToneClass,
   paymentMethodLabel,
+  type DuesStatusFilter,
 } from "../lib/dues";
 import {
   fetchDuesDashboard,
@@ -255,13 +256,15 @@ export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboard
   const [dashboardState, setDashboardState] = useState<DashboardState>({
     status: "loading",
   });
-  const [statusFilter, setStatusFilter] = useState<"all" | DuesStatus>("all");
+  const [statusFilter, setStatusFilter] =
+    useState<DuesStatusFilter>("outstanding");
   const [search, setSearch] = useState("");
   const [defaultAmount, setDefaultAmount] = useState("");
   const [settingsMessage, setSettingsMessage] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [isSavingDefault, setIsSavingDefault] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [setupOpen, setSetupOpen] = useState(false);
   const [markPaidState, setMarkPaidState] = useState<MarkPaidState | null>(null);
   const [editAmountState, setEditAmountState] = useState<EditAmountState | null>(null);
   const [busyRecordId, setBusyRecordId] = useState<number | null>(null);
@@ -275,19 +278,35 @@ export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboard
       setDashboardState({ status: "loading" });
 
       try {
+        const statusParam =
+          statusFilter === "all" || statusFilter === "outstanding"
+            ? undefined
+            : statusFilter;
         const [dashboard, settings] = await Promise.all([
           fetchDuesDashboard({
             semester,
-            status: statusFilter === "all" ? undefined : statusFilter,
+            status: statusParam,
             search: search.trim() || undefined,
           }),
           fetchSemesterDuesSettings(semester),
         ]);
 
         if (!cancelled) {
-          setDashboardState({ status: "ready", data: dashboard });
+          const records =
+            statusFilter === "outstanding"
+              ? dashboard.records.filter(
+                  (record) =>
+                    record.status === "unpaid" || record.status === "partial",
+                )
+              : dashboard.records;
+          setDashboardState({
+            status: "ready",
+            data: { ...dashboard, records },
+          });
           if (settings) {
             setDefaultAmount(settings.default_amount);
+          } else if (dashboard.summary.member_count === 0) {
+            setSetupOpen(true);
           }
         }
       } catch (error) {
@@ -458,64 +477,76 @@ export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboard
 
   return (
     <div className="space-y-6">
-      <section className="rounded-card border border-gray-200 bg-surface-card p-5 shadow-card">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-light tracking-subhead text-foreground">
-              Semester setup
-            </h2>
-            <p className="mt-1 text-sm text-label">
+      <details
+        className="rounded-card border border-gray-200 bg-surface-card shadow-card"
+        open={setupOpen}
+        onToggle={(event) =>
+          setSetupOpen((event.currentTarget as HTMLDetailsElement).open)
+        }
+      >
+        <summary className="cursor-pointer list-none px-5 py-4 marker:content-none [&::-webkit-details-marker]:hidden">
+          <span className="text-sm font-medium text-foreground">
+            Semester setup
+          </span>
+          <span className="mt-0.5 block text-xs text-label">
+            Default amount · generate records for {semesterLabel}
+          </span>
+        </summary>
+
+        <div className="space-y-4 border-t border-gray-100 px-5 pb-5 pt-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <p className="text-sm text-label">
               Set the default amount, then generate unpaid records for all approved members.
             </p>
+            <Button
+              type="button"
+              onClick={() => void handleGenerate()}
+              disabled={isGenerating}
+              loading={isGenerating}
+            >
+              {isGenerating ? "Generating…" : `Generate for ${semesterLabel}`}
+            </Button>
           </div>
-          <Button
-            type="button"
-            onClick={() => void handleGenerate()}
-            disabled={isGenerating}
-            loading={isGenerating}
-          >
-            {isGenerating ? "Generating…" : `Generate for ${semesterLabel}`}
-          </Button>
-        </div>
 
-        <form
-          className="mt-4 flex flex-wrap items-end gap-3"
-          onSubmit={(event) => void handleSaveDefault(event)}
-        >
-          <label className="block min-w-[10rem] flex-1 space-y-1 text-sm">
-            <span className="text-label">Default dues amount</span>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={defaultAmount}
-              onChange={(event) => setDefaultAmount(event.target.value)}
-              placeholder="20.00"
-              className={inputClassName}
-            />
-          </label>
-          <Button
-            type="submit"
-            variant="outline"
-            disabled={isSavingDefault || !defaultAmount.trim()}
-            loading={isSavingDefault}
+          <form
+            className="flex flex-wrap items-end gap-3"
+            onSubmit={(event) => void handleSaveDefault(event)}
           >
-            Save default
-          </Button>
-        </form>
+            <label className="block min-w-[10rem] flex-1 space-y-1 text-sm">
+              <span className="text-label">Default dues amount</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={defaultAmount}
+                onChange={(event) => setDefaultAmount(event.target.value)}
+                placeholder="20.00"
+                className={inputClassName}
+              />
+            </label>
+            <Button
+              type="submit"
+              variant="outline"
+              disabled={isSavingDefault || !defaultAmount.trim()}
+              loading={isSavingDefault}
+            >
+              Save default
+            </Button>
+          </form>
 
-        {settingsMessage ? (
-          <p className="mt-3 text-sm text-label">{settingsMessage}</p>
-        ) : null}
-        {actionMessage ? (
-          <p className="mt-3 text-sm text-label" role="status">
-            {actionMessage}
+          {settingsMessage ? (
+            <p className="text-sm text-label">{settingsMessage}</p>
+          ) : null}
+          {actionMessage ? (
+            <p className="text-sm text-label" role="status">
+              {actionMessage}
+            </p>
+          ) : null}
+
+          <p className="text-xs text-label">
+            Marking dues paid automatically logs a membership-dues income entry in Books — do not log the same payment again.
           </p>
-        ) : null}
-
-        <p className="mt-4 text-xs text-label">
-          Marking dues paid automatically logs a membership-dues income entry in Transactions — do not log the same payment again.
-        </p>
-      </section>
+        </div>
+      </details>
 
       {dashboardState.status === "loading" ? (
         <p className="text-sm text-label">Loading dues dashboard…</p>
@@ -567,7 +598,7 @@ export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboard
                   aria-label="Filter by status"
                   value={statusFilter}
                   onChange={(event) =>
-                    setStatusFilter(event.target.value as "all" | DuesStatus)
+                    setStatusFilter(event.target.value as DuesStatusFilter)
                   }
                   className={inputFieldClassName}
                 >

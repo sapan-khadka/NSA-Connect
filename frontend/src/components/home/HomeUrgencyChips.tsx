@@ -17,6 +17,7 @@ export function buildHomeUrgencyChips({
   financePendingCount,
   canReviewMembers,
   canReviewFinance,
+  notesNeededPath = null,
 }: {
   tasksSummary: MyTasksSummary;
   tasksPath: string;
@@ -24,6 +25,8 @@ export function buildHomeUrgencyChips({
   financePendingCount: number;
   canReviewMembers: boolean;
   canReviewFinance: boolean;
+  /** Deep link when a board meeting still needs minutes. */
+  notesNeededPath?: string | null;
 }): UrgencyChip[] {
   const chips: UrgencyChip[] = [];
 
@@ -55,6 +58,15 @@ export function buildHomeUrgencyChips({
       to:
         memberReviews > 0 ? "/members?tab=pending" : FINANCE_APPROVALS_PATH,
       tone: "warn",
+    });
+  }
+
+  if (notesNeededPath) {
+    chips.push({
+      id: "notes-needed",
+      label: "Notes needed",
+      to: notesNeededPath,
+      tone: "info",
     });
   }
 

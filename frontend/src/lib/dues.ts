@@ -8,7 +8,13 @@ export const DUES_PAYMENT_METHODS: { value: DuesPaymentMethod; label: string }[]
   { value: "other", label: "Other" },
 ];
 
-export const DUES_STATUS_FILTERS: { value: "all" | DuesStatus; label: string }[] = [
+export type DuesStatusFilter = "outstanding" | "all" | DuesStatus;
+
+export const DUES_STATUS_FILTERS: {
+  value: DuesStatusFilter;
+  label: string;
+}[] = [
+  { value: "outstanding", label: "Needs collection" },
   { value: "all", label: "All statuses" },
   { value: "unpaid", label: "Unpaid" },
   { value: "partial", label: "Partial" },

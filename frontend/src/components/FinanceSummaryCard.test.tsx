@@ -40,7 +40,6 @@ describe("FinanceSummaryCard", () => {
         isLoading={false}
         errorMessage={null}
         summary={mockSummary}
-        pendingCount={2}
       />,
     );
 
@@ -53,7 +52,7 @@ describe("FinanceSummaryCard", () => {
     expect(screen.getByTestId("finance-total-expense-amount")).toHaveTextContent(
       "$40.00",
     );
-    expect(screen.getByTestId("finance-pending-count")).toHaveTextContent("2 requests");
+    expect(screen.queryByTestId("finance-pending-count")).not.toBeInTheDocument();
     expect(screen.getByText("Transaction breakdown")).toBeInTheDocument();
     expect(screen.getByText("Dashain Celebration")).toBeInTheDocument();
   });

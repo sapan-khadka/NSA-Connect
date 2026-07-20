@@ -7,9 +7,8 @@ import {
   buildWelcomeUrgency,
   HomeWelcomeBanner,
 } from "../components/home/HomeMemberSections";
-import { HomeActionCenter } from "../components/home/HomeActionCenter";
 import { HomeFeaturedEvent } from "../components/home/HomeFeaturedEvent";
-import { HomeMeetingMinutesCard } from "../components/home/HomeMeetingMinutesCard";
+import { pickFocusMeeting } from "../components/home/HomeMeetingMinutesCard";
 import {
   HomeTodayTimeline,
   getTodayTimelineItems,
@@ -37,6 +36,7 @@ import {
   summarizeMyTasks,
 } from "../lib/home-tasks";
 import { findNextNonMeetingEvent } from "../lib/calendar-upcoming";
+import { fetchMeetings } from "../lib/meetings-api";
 import {
   canManageTreasury,
   canViewMemberDirectory,
@@ -84,6 +84,7 @@ type MemberHomeLayoutProps = {
   loadError: string | null;
   financePendingCount: number;
   pendingMemberApprovals: number;
+  notesNeededPath: string | null;
   showAssistant: boolean;
   showTaskOversight: boolean;
   tasksPath: string;
@@ -104,6 +105,7 @@ function MemberHomeLayout({
   loadError,
   financePendingCount,
   pendingMemberApprovals,
+  notesNeededPath,
   showAssistant,
   showTaskOversight,
   tasksPath,
@@ -120,6 +122,7 @@ function MemberHomeLayout({
     financePendingCount,
     canReviewMembers,
     canReviewFinance,
+    notesNeededPath,
   });
   const calmLine =
     urgencyChips.length === 0
@@ -147,31 +150,14 @@ function MemberHomeLayout({
         <HomeUrgencyChips chips={urgencyChips} />
       </div>
 
-      <div
-        className={[
-          "grid grid-cols-1",
-          DASHBOARD_GAP,
-          "xl:grid-cols-12 xl:items-stretch",
-        ].join(" ")}
-      >
-        <div className="min-w-0 xl:col-span-8 [&_>_*]:h-full">
-          <HomeFeaturedEvent
-            events={upcomingEvents}
-            canManage={showAssistant}
-            canCreateEvent={showAssistant}
-            isLoading={isLoading}
-          />
-        </div>
-        <div className="min-w-0 xl:col-span-4 [&_>_*]:h-full">
-          <HomeActionCenter
-            member={member}
-            featuredEventId={nextEvent?.id ?? null}
-            pendingMemberApprovals={pendingMemberApprovals}
-            financePendingCount={financePendingCount}
-            showAssistant={showAssistant}
-          />
-        </div>
-      </div>
+      <HomeFeaturedEvent
+        events={upcomingEvents}
+        canManage={showAssistant}
+        canCreateEvent={showAssistant}
+        isLoading={isLoading}
+      />
+
+      {showAssistant ? <HomeDiscussionSection previewLimit={3} /> : null}
 
       <div
         className={[
@@ -207,23 +193,6 @@ function MemberHomeLayout({
           </div>
         ) : null}
       </div>
-
-      {showAssistant ? (
-        <div
-          className={[
-            "grid grid-cols-1",
-            DASHBOARD_GAP,
-            "xl:grid-cols-12 xl:items-stretch",
-          ].join(" ")}
-        >
-          <div className="min-h-0 xl:col-span-7 [&_>_*]:h-full">
-            <HomeDiscussionSection previewLimit={3} />
-          </div>
-          <div className="min-h-0 xl:col-span-5 [&_>_*]:h-full">
-            <HomeMeetingMinutesCard />
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -233,6 +202,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
   const [upcomingEvents, setUpcomingEvents] = useState<EventResponse[]>([]);
   const [timelineEvents, setTimelineEvents] = useState<EventResponse[]>([]);
   const [myTasks, setMyTasks] = useState<EventTaskResponse[]>([]);
+  const [notesNeededPath, setNotesNeededPath] = useState<string | null>(null);
   const [completingTaskId, setCompletingTaskId] = useState<number | null>(null);
   const [taskCompleteError, setTaskCompleteError] = useState<string | null>(
     null,
@@ -326,6 +296,39 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
     };
   }, [member]);
 
+  useEffect(() => {
+    if (!showAssistant) {
+      setNotesNeededPath(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    void fetchMeetings()
+      .then((response) => {
+        if (cancelled) {
+          return;
+        }
+        const focus = pickFocusMeeting(response.meetings);
+        if (focus && !focus.has_minutes) {
+          setNotesNeededPath(
+            `/events/meetings/${focus.event_id}#meeting-minutes`,
+          );
+        } else {
+          setNotesNeededPath(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setNotesNeededPath(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showAssistant, member.id]);
+
   return (
     <MemberHomeLayout
       member={member}
@@ -337,6 +340,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
       loadError={loadError}
       financePendingCount={financePendingCount}
       pendingMemberApprovals={pendingMemberApprovals}
+      notesNeededPath={notesNeededPath}
       showAssistant={showAssistant}
       showTaskOversight={showTaskOversight}
       tasksPath={tasksPath}
