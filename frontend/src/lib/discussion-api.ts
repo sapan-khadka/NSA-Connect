@@ -85,8 +85,17 @@ export type DiscussionInboxRoom = {
   pinned_at: string | null;
 };
 
+export type DiscussionArchivedRoom = {
+  room_id: string;
+  label: string;
+  href: string;
+  kind: "board" | "event" | "room";
+  archived_at: string | null;
+};
+
 export type DiscussionInboxResponse = {
   rooms: DiscussionInboxRoom[];
+  archived_rooms?: DiscussionArchivedRoom[];
 };
 
 export function discussionRoomIdFromScope(
@@ -240,6 +249,32 @@ export async function archiveDiscussionRoom(
 ): Promise<DiscussionRoom> {
   const response = await api.post<DiscussionRoom>(
     `/v1/discussions/rooms/${roomId}/archive`,
+  );
+  return response.data;
+}
+
+export type DiscussionArchiveResponse = {
+  room_id: string;
+  archived: boolean;
+};
+
+/** Archive board, event, or custom room by string room_id (`board`, `event:1`, `room:2`). */
+export async function archiveDiscussionInboxRoom(
+  roomId: string,
+): Promise<DiscussionArchiveResponse> {
+  const response = await api.post<DiscussionArchiveResponse>(
+    "/v1/discussions/archive",
+    { room_id: roomId },
+  );
+  return response.data;
+}
+
+export async function unarchiveDiscussionInboxRoom(
+  roomId: string,
+): Promise<DiscussionArchiveResponse> {
+  const response = await api.post<DiscussionArchiveResponse>(
+    "/v1/discussions/unarchive",
+    { room_id: roomId },
   );
   return response.data;
 }

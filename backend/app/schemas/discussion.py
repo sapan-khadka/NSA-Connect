@@ -94,6 +94,19 @@ class DiscussionPinToggleResponse(BaseModel):
     pinned: bool
 
 
+class DiscussionArchiveResponse(BaseModel):
+    room_id: str
+    archived: bool
+
+
+class DiscussionArchivedRoomResponse(BaseModel):
+    room_id: str
+    label: str
+    href: str
+    kind: Literal["board", "event", "room"]
+    archived_at: datetime | None = None
+
+
 class DiscussionInboxRoomResponse(BaseModel):
     room_id: str
     label: str
@@ -111,3 +124,5 @@ class DiscussionInboxRoomResponse(BaseModel):
 
 class DiscussionInboxResponse(BaseModel):
     rooms: list[DiscussionInboxRoomResponse]
+    # Pres/VP only — archived rooms available for restore.
+    archived_rooms: list[DiscussionArchivedRoomResponse] = Field(default_factory=list)

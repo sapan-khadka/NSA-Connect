@@ -198,8 +198,6 @@ def create_discussion_room(
             ).all()
         )
         for invitee in invited:
-            if not invitee.has_role_at_least(MemberRole.BOARD):
-                continue
             db.add(
                 DiscussionRoomMember(
                     room_id=room.id,
@@ -335,13 +333,10 @@ def archive_discussion_room(
     room_id: int,
     actor: Member,
 ) -> DiscussionRoom:
-    room = _load_room(db, room_id)
-    is_owner = any(
-        row.member_id == actor.id and row.role == DiscussionRoomMemberRole.OWNER
-        for row in room.members
-    )
-    if not is_owner and not can_review_discussion_rooms(actor):
+    if not can_review_discussion_rooms(actor):
         raise DiscussionForbiddenError
+
+    room = _load_room(db, room_id)
     if room.status not in {DiscussionRoomStatus.LIVE, DiscussionRoomStatus.PENDING}:
         raise DiscussionRoomInvalidStateError("Only live or pending rooms can be archived")
 
@@ -350,6 +345,44 @@ def archive_discussion_room(
     room.reviewed_at = datetime.now(UTC)
     db.commit()
     return _load_room(db, room_id)
+
+
+def unarchive_discussion_room(
+    db: Session,
+    *,
+    room_id: int,
+    actor: Member,
+) -> DiscussionRoom:
+    if not can_review_discussion_rooms(actor):
+        raise DiscussionForbiddenError
+
+    room = _load_room(db, room_id)
+    if room.status != DiscussionRoomStatus.ARCHIVED:
+        raise DiscussionRoomInvalidStateError("Only archived rooms can be restored")
+
+    room.status = DiscussionRoomStatus.LIVE
+    room.reviewed_by_id = actor.id
+    room.reviewed_at = datetime.now(UTC)
+    room.review_note = None
+    db.commit()
+    return _load_room(db, room_id)
+
+
+def list_archived_custom_rooms(db: Session) -> list[DiscussionRoom]:
+    return list(
+        db.scalars(
+            select(DiscussionRoom)
+            .options(
+                joinedload(DiscussionRoom.created_by),
+                joinedload(DiscussionRoom.reviewed_by),
+                joinedload(DiscussionRoom.members).joinedload(
+                    DiscussionRoomMember.member
+                ),
+            )
+            .where(DiscussionRoom.status == DiscussionRoomStatus.ARCHIVED)
+            .order_by(DiscussionRoom.reviewed_at.desc().nulls_last())
+        ).unique().all()
+    )
 
 
 def list_live_rooms_for_member(db: Session, *, member: Member) -> list[DiscussionRoom]:

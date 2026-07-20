@@ -223,7 +223,11 @@ def create_event_discussion_message(
     member: Member,
     content: str,
 ) -> DiscussionMessage:
+    from app.services.discussion_inbox_service import assert_system_room_not_archived
+    from app.services.discussion_ws_manager import event_room_key
+
     assert_can_access_event_discussion(db, event_id=event_id, member=member)
+    assert_system_room_not_archived(db, event_room_key(event_id))
     return _create_message(
         db,
         author=member,
@@ -239,7 +243,11 @@ def create_board_discussion_message(
     member: Member,
     content: str,
 ) -> DiscussionMessage:
+    from app.services.discussion_inbox_service import assert_system_room_not_archived
+    from app.services.discussion_ws_manager import BOARD_ROOM_KEY
+
     assert_can_access_board_discussion(member)
+    assert_system_room_not_archived(db, BOARD_ROOM_KEY)
     return _create_message(
         db,
         author=member,

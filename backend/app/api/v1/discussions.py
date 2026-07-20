@@ -11,6 +11,7 @@ from app.core.dependencies import (
 )
 from app.models.member import Member
 from app.schemas.discussion import (
+    DiscussionArchiveResponse,
     DiscussionInboxResponse,
     DiscussionMessageCreateRequest,
     DiscussionMessageListResponse,
@@ -26,9 +27,11 @@ from app.schemas.discussion_room import (
     DiscussionRoomResponse,
 )
 from app.services.discussion_inbox_service import (
+    archive_inbox_room,
     list_discussion_inbox,
     mark_discussion_room_read,
     toggle_discussion_room_pin,
+    unarchive_inbox_room,
 )
 from app.services.discussion_room_service import (
     DiscussionRoomInvalidStateError,
@@ -89,8 +92,7 @@ def list_discussion_inbox_endpoint(
     db: Session = Depends(get_db),
     current_member: Member = Depends(get_current_member),
 ):
-    rooms = list_discussion_inbox(db, member=current_member)
-    return DiscussionInboxResponse(rooms=rooms)
+    return list_discussion_inbox(db, member=current_member)
 
 
 @router.post(
@@ -128,6 +130,60 @@ def toggle_discussion_room_pin_endpoint(
             room_id=data.room_id,
         )
     except (EventNotFoundError, DiscussionForbiddenError, DiscussionValidationError) as exc:
+        _handle_room_access_errors(exc)
+
+
+@router.post(
+    "/discussions/archive",
+    response_model=DiscussionArchiveResponse,
+)
+def archive_discussion_inbox_room_endpoint(
+    data: DiscussionRoomIdRequest,
+    db: Session = Depends(get_db),
+    current_member: Member = Depends(require_task_oversight),
+):
+    try:
+        return archive_inbox_room(
+            db,
+            member=current_member,
+            room_id=data.room_id,
+        )
+    except (
+        EventNotFoundError,
+        DiscussionForbiddenError,
+        DiscussionValidationError,
+        DiscussionRoomNotFoundError,
+        DiscussionRoomInvalidStateError,
+    ) as exc:
+        if isinstance(exc, (DiscussionRoomNotFoundError, DiscussionRoomInvalidStateError)):
+            _handle_room_admin_errors(exc)
+        _handle_room_access_errors(exc)
+
+
+@router.post(
+    "/discussions/unarchive",
+    response_model=DiscussionArchiveResponse,
+)
+def unarchive_discussion_inbox_room_endpoint(
+    data: DiscussionRoomIdRequest,
+    db: Session = Depends(get_db),
+    current_member: Member = Depends(require_task_oversight),
+):
+    try:
+        return unarchive_inbox_room(
+            db,
+            member=current_member,
+            room_id=data.room_id,
+        )
+    except (
+        EventNotFoundError,
+        DiscussionForbiddenError,
+        DiscussionValidationError,
+        DiscussionRoomNotFoundError,
+        DiscussionRoomInvalidStateError,
+    ) as exc:
+        if isinstance(exc, (DiscussionRoomNotFoundError, DiscussionRoomInvalidStateError)):
+            _handle_room_admin_errors(exc)
         _handle_room_access_errors(exc)
 
 
@@ -413,7 +469,7 @@ def reject_discussion_room_endpoint(
 def archive_discussion_room_endpoint(
     room_id: int,
     db: Session = Depends(get_db),
-    current_member: Member = Depends(require_board),
+    current_member: Member = Depends(require_task_oversight),
 ):
     try:
         room = archive_discussion_room(

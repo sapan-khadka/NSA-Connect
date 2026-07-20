@@ -1,4 +1,4 @@
-import { MessagesSquare, Pin, Plus, Users } from "lucide-react";
+import { Archive, MessagesSquare, Pin, Plus, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { MouseEvent } from "react";
 
@@ -7,6 +7,7 @@ import {
   type EventType,
 } from "../../lib/event-types";
 import type {
+  DiscussionArchivedRoom,
   DiscussionInboxRoom,
   DiscussionRoom,
 } from "../../lib/discussion-api";
@@ -205,6 +206,50 @@ function PendingReviewRow({
   );
 }
 
+function ArchivedRoomRow({
+  room,
+  busy,
+  onRestore,
+  onOpen,
+}: {
+  room: DiscussionArchivedRoom;
+  busy: boolean;
+  onRestore: (roomId: string) => void;
+  onOpen: (roomId: string) => void;
+}) {
+  return (
+    <div className="border-b border-gray-100 px-3 py-2.5 last:border-b-0">
+      <button
+        type="button"
+        onClick={() => onOpen(room.room_id)}
+        className="block w-full truncate text-left text-sm font-medium text-foreground hover:text-primary"
+      >
+        {room.label}
+      </button>
+      <p className="mt-0.5 text-xs text-gray-500">
+        {room.kind === "board"
+          ? "Board Discussion"
+          : room.kind === "event"
+            ? "Event discussion"
+            : "Group"}
+        {room.archived_at
+          ? ` · archived ${formatRelativeTimestamp(room.archived_at)}`
+          : ""}
+      </p>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="mt-2"
+        disabled={busy}
+        onClick={() => onRestore(room.room_id)}
+      >
+        Unarchive
+      </Button>
+    </div>
+  );
+}
+
 export function DiscussionRoomSidebar({
   rooms,
   selectedRoomId,
@@ -219,6 +264,12 @@ export function DiscussionRoomSidebar({
   onApprovePending,
   onRejectPending,
   awaitingRooms,
+  canManageArchive,
+  showArchived,
+  onToggleArchived,
+  archivedRooms,
+  unarchivingId,
+  onUnarchive,
 }: {
   rooms: DiscussionInboxRoom[];
   selectedRoomId: string | null;
@@ -233,12 +284,19 @@ export function DiscussionRoomSidebar({
   onApprovePending?: (roomId: number) => void;
   onRejectPending?: (roomId: number) => void;
   awaitingRooms?: DiscussionRoom[];
+  canManageArchive?: boolean;
+  showArchived?: boolean;
+  onToggleArchived?: () => void;
+  archivedRooms?: DiscussionArchivedRoom[];
+  unarchivingId?: string | null;
+  onUnarchive?: (roomId: string) => void;
 }) {
   const navigate = useNavigate();
   const pinned = rooms.filter((room) => room.pinned);
   const unpinned = rooms.filter((room) => !room.pinned);
   const reviewQueue = pendingRooms ?? [];
   const awaiting = awaitingRooms ?? [];
+  const archived = archivedRooms ?? [];
 
   function handleSelect(roomId: string) {
     navigate(discussionRoomPath(roomId));
@@ -249,26 +307,48 @@ export function DiscussionRoomSidebar({
       className="flex h-full w-full flex-col border-r border-gray-200 bg-white md:w-[320px] md:shrink-0"
       aria-label="Discussion rooms"
     >
-      <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-gray-200 px-4">
-        <h1 className="text-base font-medium text-foreground">Discussions</h1>
-        {canCreateGroup && onCreateGroup ? (
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={onCreateGroup}
-            aria-label="New discussion group"
-          >
-            <AppIcon icon={Plus} size="xs" />
-            New group
-          </Button>
-        ) : null}
+      <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-gray-200 px-3">
+        <h1 className="truncate text-base font-medium text-foreground">
+          {showArchived ? "Archived" : "Discussions"}
+        </h1>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {canManageArchive && onToggleArchived ? (
+            <Button
+              type="button"
+              variant={showArchived ? "secondary" : "ghost"}
+              size="sm"
+              onClick={onToggleArchived}
+              aria-pressed={showArchived}
+              aria-label={
+                showArchived ? "Back to active discussions" : "View archived"
+              }
+            >
+              <AppIcon icon={Archive} size="xs" />
+              {showArchived ? "Active" : "Archived"}
+              {!showArchived && archived.length > 0 ? (
+                <span className="tabular-nums">{archived.length}</span>
+              ) : null}
+            </Button>
+          ) : null}
+          {!showArchived && canCreateGroup && onCreateGroup ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={onCreateGroup}
+              aria-label="New discussion group"
+            >
+              <AppIcon icon={Plus} size="xs" />
+              New group
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       <div
         className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain"
         role="listbox"
-        aria-label="Rooms"
+        aria-label={showArchived ? "Archived rooms" : "Rooms"}
       >
         {loading ? (
           <p className="px-4 py-3 text-sm text-gray-500">Loading…</p>
@@ -279,77 +359,98 @@ export function DiscussionRoomSidebar({
           </p>
         ) : null}
 
-        {reviewQueue.length > 0 &&
-        onApprovePending &&
-        onRejectPending ? (
-          <div className="border-b border-gray-200 pt-3">
-            <p className="px-4 pb-1 text-xs font-medium tracking-wide text-gray-400">
-              PENDING REVIEW
-            </p>
-            {reviewQueue.map((room) => (
-              <PendingReviewRow
-                key={room.id}
+        {showArchived ? (
+          <>
+            {!loading && archived.length === 0 ? (
+              <p className="px-4 py-3 text-sm text-gray-500">
+                No archived discussions
+              </p>
+            ) : null}
+            {archived.map((room) => (
+              <ArchivedRoomRow
+                key={room.room_id}
                 room={room}
-                busy={pendingBusyId === room.id}
-                onApprove={onApprovePending}
-                onReject={onRejectPending}
+                busy={unarchivingId === room.room_id}
+                onRestore={(roomId) => onUnarchive?.(roomId)}
+                onOpen={handleSelect}
               />
             ))}
-          </div>
-        ) : null}
-
-        {awaiting.length > 0 ? (
-          <div className="border-b border-gray-200 pt-3">
-            <p className="px-4 pb-1 text-xs font-medium tracking-wide text-gray-400">
-              AWAITING APPROVAL
-            </p>
-            {awaiting.map((room) => (
-              <div key={room.id} className="px-3 py-2.5">
-                <p className="truncate text-sm text-foreground">{room.name}</p>
-                <p className="mt-0.5 text-xs text-gray-500">
-                  Waiting for President or VP
+          </>
+        ) : (
+          <>
+            {reviewQueue.length > 0 &&
+            onApprovePending &&
+            onRejectPending ? (
+              <div className="border-b border-gray-200 pt-3">
+                <p className="px-4 pb-1 text-xs font-medium tracking-wide text-gray-400">
+                  PENDING REVIEW
                 </p>
+                {reviewQueue.map((room) => (
+                  <PendingReviewRow
+                    key={room.id}
+                    room={room}
+                    busy={pendingBusyId === room.id}
+                    onApprove={onApprovePending}
+                    onReject={onRejectPending}
+                  />
+                ))}
               </div>
-            ))}
-          </div>
-        ) : null}
+            ) : null}
 
-        {!loading && !error && rooms.length === 0 && reviewQueue.length === 0 ? (
-          <p className="px-4 py-3 text-sm text-gray-500">No discussions yet</p>
-        ) : null}
+            {awaiting.length > 0 ? (
+              <div className="border-b border-gray-200 pt-3">
+                <p className="px-4 pb-1 text-xs font-medium tracking-wide text-gray-400">
+                  AWAITING APPROVAL
+                </p>
+                {awaiting.map((room) => (
+                  <div key={room.id} className="px-3 py-2.5">
+                    <p className="truncate text-sm text-foreground">{room.name}</p>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      Waiting for President or VP
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
 
-        {pinned.length > 0 ? (
-          <div className="pt-3">
-            <p className="px-4 pb-1 text-xs font-medium tracking-wide text-gray-400">
-              PINNED
-            </p>
-            {pinned.map((room) => (
-              <DiscussionSidebarRow
-                key={room.room_id}
-                room={room}
-                selected={selectedRoomId === room.room_id}
-                onSelect={handleSelect}
-                onTogglePin={onTogglePin}
-                pinDisabled={pinDisabled}
-              />
-            ))}
-          </div>
-        ) : null}
+            {!loading && !error && rooms.length === 0 && reviewQueue.length === 0 ? (
+              <p className="px-4 py-3 text-sm text-gray-500">No discussions yet</p>
+            ) : null}
 
-        {unpinned.length > 0 ? (
-          <div className={pinned.length > 0 ? "pt-2" : "pt-1"}>
-            {unpinned.map((room) => (
-              <DiscussionSidebarRow
-                key={room.room_id}
-                room={room}
-                selected={selectedRoomId === room.room_id}
-                onSelect={handleSelect}
-                onTogglePin={onTogglePin}
-                pinDisabled={pinDisabled}
-              />
-            ))}
-          </div>
-        ) : null}
+            {pinned.length > 0 ? (
+              <div className="pt-3">
+                <p className="px-4 pb-1 text-xs font-medium tracking-wide text-gray-400">
+                  PINNED
+                </p>
+                {pinned.map((room) => (
+                  <DiscussionSidebarRow
+                    key={room.room_id}
+                    room={room}
+                    selected={selectedRoomId === room.room_id}
+                    onSelect={handleSelect}
+                    onTogglePin={onTogglePin}
+                    pinDisabled={pinDisabled}
+                  />
+                ))}
+              </div>
+            ) : null}
+
+            {unpinned.length > 0 ? (
+              <div className={pinned.length > 0 ? "pt-2" : "pt-1"}>
+                {unpinned.map((room) => (
+                  <DiscussionSidebarRow
+                    key={room.room_id}
+                    room={room}
+                    selected={selectedRoomId === room.room_id}
+                    onSelect={handleSelect}
+                    onTogglePin={onTogglePin}
+                    pinDisabled={pinDisabled}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </>
+        )}
       </div>
     </aside>
   );

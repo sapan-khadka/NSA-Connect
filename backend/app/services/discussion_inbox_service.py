@@ -8,12 +8,16 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.discussion_message import DiscussionMessage
+from app.models.discussion_room_archive import DiscussionRoomArchive
 from app.models.discussion_room_pin import DiscussionRoomPin
 from app.models.discussion_room_read import DiscussionRoomRead
 from app.models.event import Event
 from app.models.event_volunteer_signup import EventVolunteerSignup
 from app.models.member import Member, MemberRole
 from app.schemas.discussion import (
+    DiscussionArchiveResponse,
+    DiscussionArchivedRoomResponse,
+    DiscussionInboxResponse,
     DiscussionInboxRoomResponse,
     DiscussionPinToggleResponse,
     DiscussionRoomReadResponse,
@@ -87,6 +91,173 @@ def assert_can_access_room(
     if not member_can_access_event_discussion(db, event, member):
         raise DiscussionForbiddenError
     return kind, ref_id
+
+
+def is_system_room_archived(db: Session, room_id: str) -> bool:
+    cleaned = room_id.strip()
+    return (
+        db.scalars(
+            select(DiscussionRoomArchive.id).where(
+                DiscussionRoomArchive.room_id == cleaned
+            )
+        ).first()
+        is not None
+    )
+
+
+def assert_system_room_not_archived(db: Session, room_id: str) -> None:
+    if is_system_room_archived(db, room_id):
+        raise DiscussionValidationError("This discussion has been archived")
+
+
+def _archived_system_room_ids(db: Session) -> set[str]:
+    return set(db.scalars(select(DiscussionRoomArchive.room_id)).all())
+
+
+def archive_inbox_room(
+    db: Session,
+    *,
+    member: Member,
+    room_id: str,
+) -> DiscussionArchiveResponse:
+    """Archive board, event, or custom discussion (President / VP only)."""
+    from app.services.discussion_room_service import can_review_discussion_rooms
+
+    if not can_review_discussion_rooms(member):
+        raise DiscussionForbiddenError
+
+    cleaned = room_id.strip()
+    kind, ref_id = assert_can_access_room(db, member=member, room_id=cleaned)
+
+    if kind == "room":
+        from app.services.discussion_room_service import archive_discussion_room
+
+        assert ref_id is not None
+        archive_discussion_room(db, room_id=ref_id, actor=member)
+        return DiscussionArchiveResponse(room_id=cleaned, archived=True)
+
+    if is_system_room_archived(db, cleaned):
+        return DiscussionArchiveResponse(room_id=cleaned, archived=True)
+
+    db.add(
+        DiscussionRoomArchive(
+            room_id=cleaned,
+            archived_by_id=member.id,
+            archived_at=datetime.now(UTC),
+        )
+    )
+    db.commit()
+    return DiscussionArchiveResponse(room_id=cleaned, archived=True)
+
+
+def unarchive_inbox_room(
+    db: Session,
+    *,
+    member: Member,
+    room_id: str,
+) -> DiscussionArchiveResponse:
+    """Restore an archived discussion to the inbox (President / VP only)."""
+    from app.services.discussion_room_service import (
+        can_review_discussion_rooms,
+        unarchive_discussion_room,
+    )
+
+    if not can_review_discussion_rooms(member):
+        raise DiscussionForbiddenError
+
+    cleaned = room_id.strip()
+    kind, ref_id = parse_discussion_room_id(cleaned)
+
+    if kind == "room":
+        assert ref_id is not None
+        unarchive_discussion_room(db, room_id=ref_id, actor=member)
+        return DiscussionArchiveResponse(room_id=cleaned, archived=False)
+
+    assert_can_access_room(db, member=member, room_id=cleaned)
+    existing = db.scalars(
+        select(DiscussionRoomArchive).where(DiscussionRoomArchive.room_id == cleaned)
+    ).first()
+    if existing is not None:
+        db.delete(existing)
+        db.commit()
+    return DiscussionArchiveResponse(room_id=cleaned, archived=False)
+
+
+def list_archived_rooms_for_oversight(
+    db: Session,
+    *,
+    member: Member,
+) -> list[DiscussionArchivedRoomResponse]:
+    from app.services.discussion_room_service import (
+        can_review_discussion_rooms,
+        list_archived_custom_rooms,
+    )
+
+    if not can_review_discussion_rooms(member):
+        return []
+
+    archived: list[DiscussionArchivedRoomResponse] = []
+    system_rows = list(
+        db.scalars(
+            select(DiscussionRoomArchive).order_by(
+                DiscussionRoomArchive.archived_at.desc()
+            )
+        ).all()
+    )
+    event_ids = [
+        ref
+        for kind, ref in (
+            parse_discussion_room_id(row.room_id) for row in system_rows
+        )
+        if kind == "event" and ref is not None
+    ]
+    events = {
+        event.id: event
+        for event in db.scalars(select(Event).where(Event.id.in_(event_ids))).all()
+    } if event_ids else {}
+
+    for row in system_rows:
+        kind, ref_id = parse_discussion_room_id(row.room_id)
+        if kind == "board":
+            archived.append(
+                DiscussionArchivedRoomResponse(
+                    room_id=row.room_id,
+                    label=BOARD_ROOM_LABEL,
+                    href="/discussions/board",
+                    kind="board",
+                    archived_at=row.archived_at,
+                )
+            )
+        elif kind == "event" and ref_id is not None:
+            event = events.get(ref_id)
+            archived.append(
+                DiscussionArchivedRoomResponse(
+                    room_id=row.room_id,
+                    label=event.title if event else f"Event {ref_id}",
+                    href=f"/discussions/event/{ref_id}",
+                    kind="event",
+                    archived_at=row.archived_at,
+                )
+            )
+
+    for custom in list_archived_custom_rooms(db):
+        archived.append(
+            DiscussionArchivedRoomResponse(
+                room_id=custom_room_key(custom.id),
+                label=custom.name,
+                href=f"/discussions/room/{custom.id}",
+                kind="room",
+                archived_at=custom.reviewed_at or custom.created_at,
+            )
+        )
+
+    archived.sort(
+        key=lambda room: (
+            -(room.archived_at.timestamp() if room.archived_at else 0.0),
+            room.label.lower(),
+        )
+    )
+    return archived
 
 
 def _preview_text(content: str) -> str:
@@ -250,7 +421,7 @@ def list_discussion_inbox(
     db: Session,
     *,
     member: Member,
-) -> list[DiscussionInboxRoomResponse]:
+) -> DiscussionInboxResponse:
     reads = {
         row.room_id: row.last_read_at
         for row in db.scalars(
@@ -265,10 +436,11 @@ def list_discussion_inbox(
     }
 
     rooms: list[DiscussionInboxRoomResponse] = []
+    archived_ids = _archived_system_room_ids(db)
 
     if member.has_role_at_least(MemberRole.BOARD):
         latest = _latest_message(db, event_id=None)
-        if latest is not None:
+        if latest is not None and BOARD_ROOM_KEY not in archived_ids:
             room_id = BOARD_ROOM_KEY
             unread = _count_unread(
                 db,
@@ -333,10 +505,12 @@ def list_discussion_inbox(
                 continue
             if not member_can_access_event_discussion(db, event, member):
                 continue
+            room_id = event_room_key(event_id)
+            if room_id in archived_ids:
+                continue
             latest = _latest_message(db, event_id=event_id)
             if latest is None:
                 continue
-            room_id = event_room_key(event_id)
             unread = _count_unread(
                 db,
                 event_id=event_id,
@@ -405,4 +579,7 @@ def list_discussion_inbox(
         return (1, 0, -last_ts, room.label.lower())
 
     rooms.sort(key=sort_key)
-    return rooms
+    return DiscussionInboxResponse(
+        rooms=rooms,
+        archived_rooms=list_archived_rooms_for_oversight(db, member=member),
+    )

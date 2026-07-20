@@ -10,6 +10,7 @@ from app.models.discussion_room import (
     DiscussionRoomMemberRole,
     DiscussionRoomStatus,
 )
+from app.models.discussion_room_archive import DiscussionRoomArchive
 from app.models.discussion_room_pin import DiscussionRoomPin
 from app.models.discussion_room_read import DiscussionRoomRead
 from app.models.event import Event, EventType, MeetingVisibility
@@ -65,6 +66,7 @@ __all__ = [
     "DiscussionRoomMember",
     "DiscussionRoomMemberRole",
     "DiscussionRoomStatus",
+    "DiscussionRoomArchive",
     "DiscussionRoomPin",
     "DiscussionRoomRead",
     "Event",

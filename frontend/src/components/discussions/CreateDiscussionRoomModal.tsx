@@ -99,8 +99,9 @@ export function CreateDiscussionRoomModal({
     <Modal open={open} title="New discussion group" onClose={onClose} size="md">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <p className="text-sm text-gray-600">
-          Board members can propose groups. President or VP approval is required
-          before the room goes live (auto-approved if you are Pres/VP).
+          Only people you add can see this group (plus Pres/VP for oversight).
+          Board proposes; Pres/VP approve before it goes live (auto-approved if
+          you are Pres/VP).
         </p>
 
         <label className="flex flex-col gap-1.5">

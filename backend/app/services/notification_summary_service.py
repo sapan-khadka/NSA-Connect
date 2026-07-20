@@ -76,7 +76,8 @@ def get_notification_summary(
         finance_pending = len(list_pending_for_reviewer(db, member))
 
     discussions_unread = sum(
-        room.unread_count for room in list_discussion_inbox(db, member=member)
+        room.unread_count
+        for room in list_discussion_inbox(db, member=member).rooms
     )
 
     now = datetime.now(UTC)

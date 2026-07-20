@@ -9,12 +9,14 @@ import { useAuth } from "../context/useAuth";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import {
   approveDiscussionRoom,
-  archiveDiscussionRoom,
+  archiveDiscussionInboxRoom,
   fetchDiscussionInbox,
   fetchMyDiscussionRooms,
   fetchPendingDiscussionRooms,
   rejectDiscussionRoom,
   toggleDiscussionRoomPin,
+  unarchiveDiscussionInboxRoom,
+  type DiscussionArchivedRoom,
   type DiscussionInboxRoom,
   type DiscussionRoom,
 } from "../lib/discussion-api";
@@ -65,6 +67,7 @@ export function DiscussionsPage() {
   const canReviewGroups = member
     ? canViewTaskOversight(member.role, member.position)
     : false;
+  const canManageArchive = canReviewGroups;
 
   const [rooms, setRooms] = useState<DiscussionInboxRoom[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,6 +78,11 @@ export function DiscussionsPage() {
   const [awaitingRooms, setAwaitingRooms] = useState<DiscussionRoom[]>([]);
   const [pendingBusyId, setPendingBusyId] = useState<number | null>(null);
   const [archiving, setArchiving] = useState(false);
+  const [unarchivingId, setUnarchivingId] = useState<string | null>(null);
+  const [archivedRooms, setArchivedRooms] = useState<DiscussionArchivedRoom[]>(
+    [],
+  );
+  const [showArchived, setShowArchived] = useState(false);
   const [queuesVersion, setQueuesVersion] = useState(0);
 
   useEffect(() => {
@@ -89,10 +97,12 @@ export function DiscussionsPage() {
         const response = await fetchDiscussionInbox();
         if (!cancelled) {
           setRooms(sortRooms(response.rooms));
+          setArchivedRooms(response.archived_rooms ?? []);
         }
       } catch {
         if (!cancelled && !opts?.silent) {
           setRooms([]);
+          setArchivedRooms([]);
           setError("Could not load discussions.");
         }
       } finally {
@@ -193,8 +203,26 @@ export function DiscussionsPage() {
     try {
       const response = await fetchDiscussionInbox();
       setRooms(sortRooms(response.rooms));
+      setArchivedRooms(response.archived_rooms ?? []);
     } catch {
       // Keep existing list on silent refresh failure.
+    }
+  }
+
+  async function handleUnarchiveRoom(roomId: string) {
+    if (unarchivingId) {
+      return;
+    }
+    setUnarchivingId(roomId);
+    try {
+      await unarchiveDiscussionInboxRoom(roomId);
+      await reloadInboxSilent();
+      setShowArchived(false);
+      navigate(discussionRoomPath(roomId));
+    } catch {
+      // Keep archived list on failure.
+    } finally {
+      setUnarchivingId(null);
     }
   }
 
@@ -267,19 +295,23 @@ export function DiscussionsPage() {
     }
   }
 
-  async function handleArchiveRoom(roomId: number) {
+  async function handleArchiveRoom(roomId: string) {
     if (archiving) {
       return;
     }
-    const confirmed = window.confirm(
-      "Archive this group? Members will no longer see it in Discussions.",
-    );
+    const confirmText =
+      roomId === "board"
+        ? "Archive Board Discussion? It will leave the Discussions list for everyone. You can unarchive it later if needed."
+        : roomId.startsWith("event:")
+          ? "Archive this event discussion? It will leave the Discussions list for everyone."
+          : "Archive this group? Members will no longer see it in Discussions.";
+    const confirmed = window.confirm(confirmText);
     if (!confirmed) {
       return;
     }
     setArchiving(true);
     try {
-      await archiveDiscussionRoom(roomId);
+      await archiveDiscussionInboxRoom(roomId);
       await reloadInboxSilent();
       navigate("/discussions");
     } catch {
@@ -299,24 +331,29 @@ export function DiscussionsPage() {
   }
 
   const selectedRoom = rooms.find((room) => room.room_id === selectedRoomId);
+  const selectedArchived = archivedRooms.find(
+    (room) => room.room_id === selectedRoomId,
+  );
   const showList = isMdUp || !selectedRoomId;
   const showThread = isMdUp || Boolean(selectedRoomId);
 
   const feedTitle =
     selectedRoom?.label ??
+    selectedArchived?.label ??
     (scope?.type === "board"
       ? "Board Discussion"
       : scope?.type === "room"
         ? "Group"
         : "Discussion");
-  const feedDescription =
-    scope?.type === "board"
+  const feedDescription = selectedArchived
+    ? "Archived — messaging is closed until restored"
+    : scope?.type === "board"
       ? "Visible to board members and above"
       : scope?.type === "room"
         ? "Private group"
         : undefined;
 
-  const canArchiveSelected = canCreateGroup && scope?.type === "room";
+  const canArchiveSelected = canManageArchive && Boolean(selectedRoomId);
 
   if (isInvalidDiscussionsDeepLink(location.pathname)) {
     return <Navigate to="/discussions" replace />;
@@ -339,6 +376,12 @@ export function DiscussionsPage() {
           onApprovePending={handleApprovePending}
           onRejectPending={handleRejectPending}
           awaitingRooms={awaitingRooms}
+          canManageArchive={canManageArchive}
+          showArchived={showArchived}
+          onToggleArchived={() => setShowArchived((value) => !value)}
+          archivedRooms={archivedRooms}
+          unarchivingId={unarchivingId}
+          onUnarchive={(roomId) => void handleUnarchiveRoom(roomId)}
         />
       ) : null}
 
@@ -354,13 +397,23 @@ export function DiscussionsPage() {
               onBack={() => navigate("/discussions")}
               className="h-full"
               headerAction={
-                canArchiveSelected && scope.type === "room" ? (
+                canManageArchive && selectedRoomId && selectedArchived ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    loading={unarchivingId === selectedRoomId}
+                    onClick={() => void handleUnarchiveRoom(selectedRoomId)}
+                  >
+                    Unarchive
+                  </Button>
+                ) : canArchiveSelected && selectedRoomId && !selectedArchived ? (
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     loading={archiving}
-                    onClick={() => void handleArchiveRoom(scope.roomId)}
+                    onClick={() => void handleArchiveRoom(selectedRoomId)}
                   >
                     Archive
                   </Button>
