@@ -16,9 +16,12 @@ import { MembersPage } from "./MembersPage";
 vi.mock("../lib/members-api", () => ({
   fetchMembers: vi.fn(),
   fetchPendingMembers: vi.fn(),
+  fetchMembersEngagement: vi.fn(),
   downloadMembersCsv: vi.fn(),
   importMembersCsv: vi.fn(),
   inviteMember: vi.fn(),
+  approveMember: vi.fn(),
+  rejectMember: vi.fn(),
   fetchMemberPositionCatalog: vi.fn().mockResolvedValue({
     built_in: [],
     custom: [],
@@ -44,11 +47,24 @@ const directoryMember: MemberResponse = {
   position: "member",
 };
 
+const pendingMember: MemberResponse = {
+  ...directoryMember,
+  id: 9,
+  full_name: "Pending Person",
+  email: "pending@semo.edu",
+  student_id: "S99999999",
+  status: "pending",
+  role: "general",
+};
+
 async function mockDirectoryApis(options?: {
   members?: MemberResponse[];
   total?: number;
   approvedTotal?: number;
   pendingTotal?: number;
+  pendingMembers?: MemberResponse[];
+  activeCount?: number;
+  idleCount?: number;
   unpaidCount?: number;
   partialCount?: number;
   duesRecords?: Array<{
@@ -58,36 +74,49 @@ async function mockDirectoryApis(options?: {
     status: "paid" | "unpaid" | "partial" | "exempt";
   }>;
 }) {
-  const { fetchMembers, fetchPendingMembers } = await import(
-    "../lib/members-api"
-  );
+  const { fetchMembers, fetchPendingMembers, fetchMembersEngagement } =
+    await import("../lib/members-api");
   const { fetchDuesDashboard } = await import("../lib/dues-api");
 
   const members = options?.members ?? [];
   const total = options?.total ?? members.length;
+  const pendingMembers = options?.pendingMembers ?? [];
+  const approvedMembers = members.filter((m) => m.status === "approved");
+  const activeCount =
+    options?.activeCount ??
+    options?.approvedTotal ??
+    approvedMembers.length;
+  const idleCount = options?.idleCount ?? 0;
 
-  vi.mocked(fetchMembers).mockImplementation(async (params = {}) => {
-    if (params.status === "approved") {
-      return {
-        members: [],
-        total: options?.approvedTotal ?? members.filter((m) => m.status === "approved").length,
-        page: 1,
-        page_size: 1,
-        total_pages: 1,
-      };
-    }
-    return {
-      members,
-      total,
-      page: 1,
-      page_size: 100,
-      total_pages: 1,
-    };
+  vi.mocked(fetchMembers).mockResolvedValue({
+    members,
+    total,
+    page: 1,
+    page_size: 100,
+    total_pages: 1,
   });
 
   vi.mocked(fetchPendingMembers).mockResolvedValue({
-    members: [],
-    total: options?.pendingTotal ?? 0,
+    members: pendingMembers,
+    total: options?.pendingTotal ?? pendingMembers.length,
+  });
+
+  vi.mocked(fetchMembersEngagement).mockResolvedValue({
+    semester: "2026-summer",
+    window_days: 90,
+    active_count: activeCount,
+    idle_count: idleCount,
+    members: approvedMembers.map((member, index) => ({
+      member_id: member.id,
+      status: index < activeCount ? "active" : "idle",
+      signals: {
+        attended_event: index < activeCount,
+        paid_dues: false,
+        completed_task: false,
+        in_progress_task: false,
+        shared_suggestion: false,
+      },
+    })),
   });
 
   vi.mocked(fetchDuesDashboard).mockResolvedValue({
@@ -148,6 +177,10 @@ function renderMembersPage(
   );
 }
 
+async function openManageMenu(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: /Manage/i }));
+}
+
 async function submitValidInvite(
   user: ReturnType<typeof userEvent.setup>,
   setupEmailSent: boolean,
@@ -186,7 +219,8 @@ describe("MembersPage", () => {
     vi.clearAllMocks();
   });
 
-  it("renders the header with subtitle and actions", async () => {
+  it("renders a quiet header with invite and manage menu", async () => {
+    const user = userEvent.setup();
     await mockDirectoryApis();
     renderMembersPage();
 
@@ -194,28 +228,34 @@ describe("MembersPage", () => {
       screen.getByRole("heading", { level: 1, name: "Members" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Manage everyone in your organization."),
+      screen.getByText("Review signups, follow up on dues, and browse people."),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Invite Member" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Import CSV" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Export" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "Import CSV" })).not.toBeInTheDocument();
+
+    await openManageMenu(user);
+    expect(screen.getByRole("menuitem", { name: "Import CSV" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Export CSV" })).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Manage board positions" }),
+      screen.getByRole("menuitem", { name: "Board positions" }),
     ).toBeInTheDocument();
   });
 
-  it("hides manage board positions for non-presidents", async () => {
+  it("hides board positions manage item for non-presidents", async () => {
+    const user = userEvent.setup();
     await mockDirectoryApis();
     renderMembersPage("board");
 
+    await openManageMenu(user);
     expect(
-      screen.queryByRole("button", { name: "Manage board positions" }),
+      screen.queryByRole("menuitem", { name: "Board positions" }),
     ).not.toBeInTheDocument();
   });
 
-  it("imports a CSV file and shows a summary modal", async () => {
+  it("imports a CSV file from the manage menu and shows a summary modal", async () => {
+    const user = userEvent.setup();
     await mockDirectoryApis();
     vi.mocked(importMembersCsv).mockResolvedValue({
       rows_created: 2,
@@ -229,6 +269,9 @@ describe("MembersPage", () => {
       ],
     });
     renderMembersPage();
+
+    await openManageMenu(user);
+    await user.click(screen.getByRole("menuitem", { name: "Import CSV" }));
 
     const fileInput = document.querySelector(
       'input[type="file"][accept=".csv,text/csv"]',
@@ -264,87 +307,44 @@ describe("MembersPage", () => {
     expect(within(dialog).getByText(/Forgot Password/i)).toBeInTheDocument();
   });
 
-  it("shows a loading state while importing members", async () => {
+  it("exports members from the manage menu", async () => {
+    const user = userEvent.setup();
     await mockDirectoryApis();
-    let finishImport: (() => void) | undefined;
-    vi.mocked(importMembersCsv).mockReturnValue(
-      new Promise((resolve) => {
-        finishImport = () =>
-          resolve({
-            rows_created: 1,
-            rows_skipped: 0,
-            skipped_rows: [],
-          });
-      }),
-    );
+    vi.mocked(downloadMembersCsv).mockResolvedValue(undefined);
     renderMembersPage();
 
-    const importButton = screen.getByRole("button", { name: "Import CSV" });
-    const fileInput = document.querySelector(
-      'input[type="file"][accept=".csv,text/csv"]',
-    ) as HTMLInputElement;
-    const file = new File(["csv"], "members.csv", { type: "text/csv" });
-    await userEvent.upload(fileInput, file);
+    await openManageMenu(user);
+    await user.click(screen.getByRole("menuitem", { name: "Export CSV" }));
 
     await waitFor(() => {
-      expect(importButton).toBeDisabled();
-      expect(importButton).toHaveAttribute("aria-busy", "true");
-    });
-
-    finishImport?.();
-    await waitFor(() => {
-      expect(importButton).toBeEnabled();
-      expect(importButton).not.toHaveAttribute("aria-busy");
+      expect(downloadMembersCsv).toHaveBeenCalledOnce();
     });
   });
 
-  it("shows a loading state while exporting members", async () => {
-    await mockDirectoryApis();
-    let finishDownload: (() => void) | undefined;
-    vi.mocked(downloadMembersCsv).mockReturnValue(
-      new Promise<void>((resolve) => {
-        finishDownload = resolve;
-      }),
-    );
-    renderMembersPage();
-
-    const exportButton = screen.getByRole("button", { name: "Export" });
-    await userEvent.click(exportButton);
-
-    expect(downloadMembersCsv).toHaveBeenCalledOnce();
-    expect(exportButton).toBeDisabled();
-    expect(exportButton).toHaveAttribute("aria-busy", "true");
-
-    finishDownload?.();
-    await waitFor(() => {
-      expect(exportButton).toBeEnabled();
-      expect(exportButton).not.toHaveAttribute("aria-busy");
-    });
-  });
-
-  it("renders KPI cards from live member and dues totals", async () => {
+  it("renders a compact status strip with engagement-based active/idle", async () => {
     await mockDirectoryApis({
       members: [directoryMember],
       total: 12,
-      approvedTotal: 10,
+      activeCount: 7,
+      idleCount: 3,
       pendingTotal: 2,
       unpaidCount: 3,
       partialCount: 1,
     });
     renderMembersPage("president");
 
-    const stats = screen.getByLabelText("Statistics");
+    const summary = screen.getByLabelText("Members summary");
     await waitFor(() => {
-      expect(within(stats).getByLabelText("Members: 12")).toBeInTheDocument();
+      expect(summary).toHaveTextContent("12 members");
     });
-    expect(within(stats).getByLabelText("Active: 10")).toBeInTheDocument();
-    expect(within(stats).getByLabelText("Pending: 2")).toBeInTheDocument();
-    expect(
-      within(stats).getByLabelText("Outstanding Dues: 4"),
-    ).toBeInTheDocument();
+    expect(summary).toHaveTextContent("7 active");
+    expect(summary).toHaveTextContent("3 idle");
+    expect(summary).toHaveTextContent("2 pending");
+    expect(summary).toHaveTextContent("4 outstanding dues");
+    expect(screen.queryByLabelText("Statistics")).not.toBeInTheDocument();
   });
 
-  it("hides outstanding dues count when treasury access is unavailable", async () => {
+  it("hides outstanding dues in the strip without treasury access", async () => {
     await mockDirectoryApis({
       members: [directoryMember],
       total: 5,
@@ -353,19 +353,15 @@ describe("MembersPage", () => {
     });
     renderMembersPage("board");
 
-    const stats = screen.getByLabelText("Statistics");
+    const summary = await screen.findByLabelText("Members summary");
     await waitFor(() => {
-      expect(within(stats).getByLabelText("Members: 5")).toBeInTheDocument();
+      expect(summary).toHaveTextContent("5 members");
     });
-    expect(
-      within(stats).getByLabelText("Outstanding Dues: —"),
-    ).toBeInTheDocument();
-    expect(
-      within(stats).getByText("Treasury access required"),
-    ).toBeInTheDocument();
+    expect(summary).toHaveTextContent("5 active");
+    expect(summary).not.toHaveTextContent("outstanding dues");
   });
 
-  it("renders the Linear-style search and filter toolbar", async () => {
+  it("renders People filters without hollow committee/attendance controls", async () => {
     const user = userEvent.setup();
     await mockDirectoryApis();
     renderMembersPage();
@@ -373,6 +369,8 @@ describe("MembersPage", () => {
     expect(screen.getByLabelText("Search members")).toBeInTheDocument();
     expect(screen.getByLabelText("Role")).toBeInTheDocument();
     expect(screen.getByLabelText("Member Status")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Committee")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Attendance")).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Reset Filters" }),
     ).toBeDisabled();
@@ -383,36 +381,76 @@ describe("MembersPage", () => {
     ).toBeEnabled();
   });
 
-  it("applies pending status filter from ?tab=pending", async () => {
+  it("auto-opens Needs attention when pending signups exist", async () => {
     await mockDirectoryApis({
-      members: [
-        directoryMember,
-        {
-          ...directoryMember,
-          id: 9,
-          full_name: "Pending Person",
-          email: "pending@semo.edu",
-          student_id: "S99999999",
-          status: "pending",
-          role: "general",
-        },
-      ],
+      members: [directoryMember, pendingMember],
       total: 2,
       approvedTotal: 1,
       pendingTotal: 1,
+      pendingMembers: [pendingMember],
+    });
+
+    renderMembersPage("board");
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("tab", { name: /Needs attention/i }),
+      ).toHaveAttribute("aria-selected", "true");
+    });
+    expect(await screen.findByText("Pending Person")).toBeInTheDocument();
+  });
+
+  it("opens Needs attention from ?tab=pending with approval queue", async () => {
+    await mockDirectoryApis({
+      members: [directoryMember, pendingMember],
+      total: 2,
+      approvedTotal: 1,
+      pendingTotal: 1,
+      pendingMembers: [pendingMember],
     });
 
     renderMembersPage("board", "/members?tab=pending");
 
     await waitFor(() => {
-      expect(screen.getByLabelText("Member Status")).toHaveValue("pending");
+      expect(
+        screen.getByRole("tab", { name: /Needs attention/i }),
+      ).toHaveAttribute("aria-selected", "true");
     });
 
     expect(screen.getByText("Pending Person")).toBeInTheDocument();
-    expect(screen.queryByText("Alex Member")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Approve Pending Person/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Reject Pending Person/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Member table")).not.toBeInTheDocument();
   });
 
-  it("renders the members table with redesigned columns", async () => {
+  it("switches to People directory from Needs attention", async () => {
+    const user = userEvent.setup();
+    await mockDirectoryApis({
+      members: [directoryMember],
+      total: 1,
+      approvedTotal: 1,
+      pendingTotal: 1,
+      pendingMembers: [pendingMember],
+    });
+
+    renderMembersPage("board", "/members?tab=pending");
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("tab", { name: /Needs attention/i }),
+      ).toHaveAttribute("aria-selected", "true");
+    });
+
+    await user.click(screen.getByRole("tab", { name: "People" }));
+    expect(await screen.findByLabelText("Member table")).toBeInTheDocument();
+    expect(await screen.findByText("Alex Member")).toBeInTheDocument();
+  });
+
+  it("renders the members table without attendance or bulk checkboxes", async () => {
     await mockDirectoryApis({
       members: [directoryMember],
       total: 1,
@@ -429,9 +467,7 @@ describe("MembersPage", () => {
 
     renderMembersPage("treasurer");
 
-    const tableRegion = await screen.findByRole("region", {
-      name: "Member table",
-    });
+    const tableRegion = await screen.findByLabelText("Member table");
     const table = within(tableRegion).getByRole("table", {
       name: "Organization members",
     });
@@ -439,25 +475,29 @@ describe("MembersPage", () => {
     expect(
       within(table).getByRole("button", { name: /Sort by Name/i }),
     ).toBeInTheDocument();
-    expect(
-      within(table).getByRole("button", { name: /Sort by Role/i }),
-    ).toBeInTheDocument();
-    expect(
-      within(table).getByRole("button", { name: /Sort by Status/i }),
-    ).toBeInTheDocument();
-    expect(
-      within(table).getByRole("button", { name: /Sort by Graduation Year/i }),
-    ).toBeInTheDocument();
     expect(within(table).getByText("Outstanding Dues")).toBeInTheDocument();
-    expect(within(table).getByText("Attendance")).toBeInTheDocument();
-    expect(within(table).getByText("Actions")).toBeInTheDocument();
-    expect(within(tableRegion).getByText("Alex Member")).toBeInTheDocument();
-    expect(within(tableRegion).getByText("Active")).toBeInTheDocument();
-    expect(within(tableRegion).getByText("2028")).toBeInTheDocument();
-    expect(within(tableRegion).getByText("$15.00")).toBeInTheDocument();
+    expect(within(table).queryByText("Attendance")).not.toBeInTheDocument();
     expect(
-      within(tableRegion).getByLabelText("View Alex Member"),
-    ).toBeInTheDocument();
+      within(table).queryByLabelText("Select all members"),
+    ).not.toBeInTheDocument();
+    expect(within(tableRegion).getByText("Alex Member")).toBeInTheDocument();
+    expect(within(tableRegion).getByText("$15.00")).toBeInTheDocument();
+    expect(within(tableRegion).getByText("Active")).toBeInTheDocument();
+  });
+
+  it("shows Idle status for approved members without engagement", async () => {
+    await mockDirectoryApis({
+      members: [directoryMember],
+      total: 1,
+      activeCount: 0,
+      idleCount: 1,
+    });
+
+    renderMembersPage("board");
+
+    await userEvent.click(screen.getByRole("tab", { name: "People" }));
+    const tableRegion = await screen.findByLabelText("Member table");
+    expect(within(tableRegion).getByText("Idle")).toBeInTheDocument();
   });
 
   it("opens Member Quick View when a table row is clicked", async () => {

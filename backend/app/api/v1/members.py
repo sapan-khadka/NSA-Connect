@@ -26,6 +26,10 @@ from app.integrations.cloudinary_client import CloudinaryUploadError
 from app.lib.member_talents import ALL_MEMBER_TALENTS, MEMBER_TALENT_LABELS
 from app.lib.semester import get_current_semester_slug
 from app.models.member import Member, MemberRole, MemberStatus
+from app.services.member_engagement_service import (
+    DEFAULT_ENGAGEMENT_WINDOW_DAYS,
+    build_members_engagement,
+)
 from app.models.member_document import MemberDocumentType
 from app.schemas.auth import TokenResponse
 from app.schemas.custom_board_position import MemberPositionUpdateRequest
@@ -46,6 +50,7 @@ from app.schemas.member_document import (
     MemberDocumentListResponse,
     MemberDocumentResponse,
 )
+from app.schemas.member_engagement import MembersEngagementResponse
 from app.schemas.member_insights import MemberMeetingAttendanceStreakResponse
 from app.schemas.member_note import (
     MemberNoteCreateRequest,
@@ -268,6 +273,26 @@ def list_pending_members(
         ],
         total=len(members),
     )
+
+
+@router.get("/engagement", response_model=MembersEngagementResponse)
+def get_members_engagement(
+    window_days: int = Query(
+        DEFAULT_ENGAGEMENT_WINDOW_DAYS,
+        ge=7,
+        le=365,
+        description="Activity lookback window in days for check-ins, tasks, and suggestions.",
+    ),
+    _: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    """
+    Activity-based active vs idle for approved members.
+
+    Active signals: recent event attendance, paid/exempt dues this semester,
+    completed or in-progress tasks, or a recent event suggestion.
+    """
+    return build_members_engagement(db, window_days=window_days)
 
 
 @router.get("/export")

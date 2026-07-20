@@ -27,6 +27,7 @@ type BoardTaskKanbanProps = {
   movingTaskId?: number | null;
   onOpenTask?: (taskId: number) => void;
   onAddTask?: (columnId: KanbanColumnId) => void;
+  hideAssignee?: boolean;
 };
 
 function resolveDropColumn(
@@ -56,6 +57,7 @@ export function BoardTaskKanban({
   movingTaskId = null,
   onOpenTask,
   onAddTask,
+  hideAssignee = false,
 }: BoardTaskKanbanProps) {
   const grouped = groupTasksByKanbanColumn(tasks);
   const [activeTaskId, setActiveTaskId] = useState<number | null>(null);
@@ -102,7 +104,7 @@ export function BoardTaskKanban({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="grid gap-5 overflow-x-hidden xl:grid-cols-3">
+      <div className="grid gap-4 overflow-x-hidden xl:grid-cols-3">
         {KANBAN_COLUMNS.map((column) => (
           <KanbanColumn
             key={column.id}
@@ -111,6 +113,7 @@ export function BoardTaskKanban({
             activeTaskId={movingTaskId ?? activeTaskId}
             onOpenTask={onOpenTask}
             onAddTask={onAddTask}
+            hideAssignee={hideAssignee}
           />
         ))}
       </div>
@@ -122,6 +125,7 @@ export function BoardTaskKanban({
               task={overlayTask}
               columnId={getKanbanColumn(overlayTask)}
               isDragging
+              hideAssignee={hideAssignee}
             />
           </div>
         ) : null}

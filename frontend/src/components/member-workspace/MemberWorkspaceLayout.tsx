@@ -1,20 +1,9 @@
 /**
  * Member Workspace layout shell — Linear / GitHub / Stripe / Notion inspired.
- * Spacing, hierarchy, and responsive grid only. Section slots can replace placeholders.
+ * Only renders real section slots; no hollow “coming soon” placeholders.
  */
 
 import type { ReactNode } from "react";
-import {
-  Activity,
-  CalendarDays,
-  FileText,
-  HeartPulse,
-  LayoutDashboard,
-  Sparkles,
-  Wallet,
-} from "lucide-react";
-
-import { MemberWorkspacePlaceholderCard } from "./MemberWorkspacePlaceholderCard";
 
 type MemberWorkspaceLayoutProps = {
   /** Workspace header (identity, back nav, badges). */
@@ -25,8 +14,7 @@ type MemberWorkspaceLayoutProps = {
    */
   overview?: ReactNode;
   /**
-   * Replaces the Tasks placeholder in the primary column.
-   * When omitted, the Tasks placeholder card is shown.
+   * Primary-column responsibilities / tasks section.
    */
   responsibilities?: ReactNode;
   /**
@@ -38,7 +26,7 @@ type MemberWorkspaceLayoutProps = {
    */
   recentActivity?: ReactNode;
   /**
-   * Rendered directly under Recent Activity (replaces Payments placeholder).
+   * Rendered directly under Recent Activity.
    */
   financialStatus?: ReactNode;
   /**
@@ -47,11 +35,11 @@ type MemberWorkspaceLayoutProps = {
    */
   privateNotes?: ReactNode;
   /**
-   * Rendered in the aside directly under Private Notes (replaces Documents placeholder).
+   * Rendered in the aside directly under Private Notes.
    */
   documents?: ReactNode;
   /**
-   * Final aside section (replaces AI Insights placeholder).
+   * Final aside section.
    */
   insights?: ReactNode;
 };
@@ -67,6 +55,14 @@ export function MemberWorkspaceLayout({
   documents,
   insights,
 }: MemberWorkspaceLayoutProps) {
+  const hasMain =
+    Boolean(responsibilities) ||
+    Boolean(schedule) ||
+    Boolean(recentActivity) ||
+    Boolean(financialStatus);
+  const hasAside =
+    Boolean(privateNotes) || Boolean(documents) || Boolean(insights);
+
   return (
     <div className="member-workspace">
       <div className="member-workspace-shell">
@@ -74,80 +70,26 @@ export function MemberWorkspaceLayout({
 
         {overview}
 
-        <div className="member-workspace-grid" aria-label="Member workspace">
-          {/* Primary column — spans 7 on desktop, 6 on tablet, full on mobile */}
-          <div className="member-workspace-main">
-            <MemberWorkspacePlaceholderCard
-              title="Overview"
-              description="Profile summary, talents, and contact."
-              icon={LayoutDashboard}
-              density="tall"
-            />
-            <MemberWorkspacePlaceholderCard
-              title="Attendance"
-              description="Recent event attendance and trends."
-              icon={CalendarDays}
-              density="default"
-            />
-            {responsibilities ?? (
-              <MemberWorkspacePlaceholderCard
-                title="Tasks"
-                description="Assigned and completed work."
-                density="default"
-              />
-            )}
-            {schedule}
-            {recentActivity ?? (
-              <MemberWorkspacePlaceholderCard
-                title="Activity Timeline"
-                description="Latest member activity."
-                icon={Activity}
-                density="tall"
-              />
-            )}
-            {financialStatus ?? (
-              <MemberWorkspacePlaceholderCard
-                title="Payments"
-                description="Dues status and payment history."
-                icon={Wallet}
-                density="default"
-              />
-            )}
-            <MemberWorkspacePlaceholderCard
-              title="Upcoming Events"
-              description="Events this member is involved in."
-              icon={CalendarDays}
-              density="compact"
-            />
-          </div>
+        {hasMain || hasAside ? (
+          <div className="member-workspace-grid" aria-label="Member workspace">
+            {hasMain ? (
+              <div className="member-workspace-main">
+                {responsibilities}
+                {schedule}
+                {recentActivity}
+                {financialStatus}
+              </div>
+            ) : null}
 
-          {/* Secondary column — spans 5 on desktop, 6 on tablet, full on mobile */}
-          <aside className="member-workspace-aside" aria-label="Sidebar">
-            <MemberWorkspacePlaceholderCard
-              title="Health"
-              description="Engagement and standing signals."
-              icon={HeartPulse}
-              density="default"
-            />
-            {privateNotes}
-            {documents ?? (
-              <MemberWorkspacePlaceholderCard
-                title="Documents"
-                description="Files linked to this member."
-                icon={FileText}
-                density="compact"
-              />
-            )}
-            {insights ?? (
-              <MemberWorkspacePlaceholderCard
-                title="AI Insights"
-                description="Suggested actions and patterns."
-                icon={Sparkles}
-                density="default"
-              />
-            )}
-          </aside>
-        </div>
+            {hasAside ? (
+              <aside className="member-workspace-aside" aria-label="Sidebar">
+                {privateNotes}
+                {documents}
+                {insights}
+              </aside>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </div>
   );

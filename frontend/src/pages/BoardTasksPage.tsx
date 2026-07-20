@@ -10,10 +10,12 @@ import {
   updateEventTask,
   updateEventTaskChecklistItem,
 } from "../lib/event-tasks-api";
+import { formatEventDateTime } from "../lib/format-datetime";
 import {
   applyKanbanMoveLocally,
   getKanbanColumn,
   getKanbanMoveAction,
+  isSimpleKanbanTask,
   toKanbanTask,
   type KanbanColumnId,
   type KanbanTask,
@@ -66,6 +68,74 @@ export function calcBoardTasksStats(
     completedPercent:
       assigned === 0 ? 0 : Math.round((completed / assigned) * 100),
   };
+}
+
+export function getFocusTasks(
+  tasks: KanbanTask[],
+  now: Date = new Date(),
+): KanbanTask[] {
+  const overdue: KanbanTask[] = [];
+  const dueToday: KanbanTask[] = [];
+
+  for (const task of tasks) {
+    if (getKanbanColumn(task) === "done") {
+      continue;
+    }
+    if (task.is_overdue) {
+      overdue.push(task);
+      continue;
+    }
+    if (task.due_date && isToday(new Date(task.due_date), now)) {
+      dueToday.push(task);
+    }
+  }
+
+  return [...overdue, ...dueToday];
+}
+
+function taskDisplayTitle(task: KanbanTask): string {
+  return isSimpleKanbanTask(task) ? task.title : (task.group_name ?? task.title);
+}
+
+function FocusTaskRow({
+  task,
+  onOpen,
+}: {
+  task: KanbanTask;
+  onOpen: (taskId: number) => void;
+}) {
+  const dueLabel = task.is_overdue
+    ? "Overdue"
+    : task.due_date
+      ? `Due today · ${formatEventDateTime(task.due_date)}`
+      : "Due today";
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(task.id)}
+      className="flex w-full items-start justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+    >
+      <span className="min-w-0">
+        <span className="block text-[11px] font-semibold uppercase tracking-wider text-label">
+          {task.eventName}
+        </span>
+        <span className="mt-0.5 block truncate text-sm font-medium text-foreground">
+          {taskDisplayTitle(task)}
+        </span>
+      </span>
+      <span
+        className={[
+          "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium",
+          task.is_overdue
+            ? "bg-overdue-surface text-overdue"
+            : "bg-badge-teal-bg text-primary",
+        ].join(" ")}
+      >
+        {dueLabel}
+      </span>
+    </button>
+  );
 }
 
 export function BoardTasksPage() {
@@ -166,6 +236,7 @@ export function BoardTasksPage() {
 
   const tasks = loadState.status === "ready" ? loadState.tasks : [];
   const stats = useMemo(() => calcBoardTasksStats(tasks), [tasks]);
+  const focusTasks = useMemo(() => getFocusTasks(tasks), [tasks]);
   const selectedTask =
     selectedTaskId !== null
       ? tasks.find((task) => task.id === selectedTaskId) ?? null
@@ -176,50 +247,66 @@ export function BoardTasksPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <section
         aria-label="My tasks summary"
-        className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+        className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-label"
       >
-        <Card padding="md" className="text-center">
-          <p className="home-stat-value">{stats.assigned}</p>
-          <p className="mt-1 text-xs uppercase tracking-wide text-label">
-            Assigned
-          </p>
-        </Card>
-        <Card padding="md" className="text-center">
-          <p className="home-stat-value">{stats.dueToday}</p>
-          <p className="mt-1 text-xs uppercase tracking-wide text-label">
-            Due today
-          </p>
-        </Card>
-        <Card padding="md" className="text-center">
-          <p
-            className={[
-              "home-stat-value",
-              stats.overdue > 0 ? "text-overdue" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-          >
+        <span>
+          <span className="font-semibold tabular-nums text-foreground">
+            {stats.assigned}
+          </span>{" "}
+          assigned
+        </span>
+        <span aria-hidden="true" className="text-label/40">
+          ·
+        </span>
+        <span className={stats.overdue > 0 ? "text-overdue" : undefined}>
+          <span className="font-semibold tabular-nums">
             {stats.overdue}
-          </p>
-          <p className="mt-1 text-xs uppercase tracking-wide text-label">
-            Overdue
-          </p>
-        </Card>
-        <Card padding="md" className="text-center">
-          <p className="home-stat-value">
-            {stats.completed}
-            <span className="ml-1 text-base font-normal text-label">
-              ({stats.completedPercent}%)
-            </span>
-          </p>
-          <p className="mt-1 text-xs uppercase tracking-wide text-label">
-            Completed
-          </p>
-        </Card>
+          </span>{" "}
+          overdue
+        </span>
+        <span aria-hidden="true" className="text-label/40">
+          ·
+        </span>
+        <span>
+          <span className="font-semibold tabular-nums text-foreground">
+            {stats.dueToday}
+          </span>{" "}
+          due today
+        </span>
+        <span aria-hidden="true" className="text-label/40">
+          ·
+        </span>
+        <span>
+          <span className="font-semibold tabular-nums text-foreground">
+            {stats.completedPercent}%
+          </span>{" "}
+          done
+        </span>
       </section>
+
+      {focusTasks.length > 0 ? (
+        <section
+          aria-label="Focus"
+          className="rounded-2xl border border-gray-200 bg-surface-card"
+        >
+          <div className="border-b border-gray-100 px-4 py-3">
+            <h2 className="text-sm font-semibold text-foreground">Focus</h2>
+            <p className="mt-0.5 text-xs text-label">
+              Overdue and due today — start here
+            </p>
+          </div>
+          <ul className="divide-y divide-gray-100 px-1 py-1">
+            {focusTasks.map((task) => (
+              <li key={task.id}>
+                <FocusTaskRow task={task} onOpen={setSelectedTaskId} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {moveError ? (
         <div role="alert" className="ds-alert-banner">
@@ -256,9 +343,10 @@ export function BoardTasksPage() {
         </Card>
       ) : null}
 
-      {loadState.status === "ready" ? (
+      {loadState.status === "ready" && tasks.length > 0 ? (
         <BoardTaskKanban
           tasks={tasks}
+          hideAssignee
           onMoveTask={(taskId, targetColumn) => {
             void handleMoveTask(taskId, targetColumn);
           }}

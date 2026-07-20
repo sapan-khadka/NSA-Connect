@@ -132,6 +132,7 @@ describe("deriveMembersDirectoryKpis", () => {
     ).toEqual({
       totalMembers: 10,
       activeCount: 8,
+      idleCount: 0,
       pendingCount: 2,
       outstandingDuesCount: 4,
     });

@@ -28,27 +28,12 @@ const ROLE_OPTIONS = [
   })),
 ];
 
-const COMMITTEE_OPTIONS = [
-  { value: EMPTY, label: "All committees" },
-  { value: "events", label: "Events" },
-  { value: "finance", label: "Finance" },
-  { value: "outreach", label: "Outreach" },
-  { value: "academic", label: "Academic" },
-];
-
 const GRADUATION_YEAR_OPTIONS = [
   { value: EMPTY, label: "All years" },
   ...[2026, 2027, 2028, 2029, 2030].map((year) => ({
     value: String(year),
     label: String(year),
   })),
-];
-
-const ATTENDANCE_OPTIONS = [
-  { value: EMPTY, label: "All attendance" },
-  { value: "high", label: "High" },
-  { value: "average", label: "Average" },
-  { value: "low", label: "Low" },
 ];
 
 const PAYMENT_STATUS_OPTIONS = [
@@ -97,18 +82,6 @@ function FilterFields({
         className="members-filters-control"
       />
       <Select
-        id={`${idPrefix}-committee`}
-        label="Committee"
-        name="committee"
-        options={COMMITTEE_OPTIONS}
-        value={values.committee}
-        onChange={(event) => updateField("committee", event.target.value)}
-        className="members-filters-control"
-        disabled
-        title="Coming soon — committee data is not on the members API yet"
-        aria-disabled="true"
-      />
-      <Select
         id={`${idPrefix}-graduation-year`}
         label="Graduation Year"
         name="graduationYear"
@@ -116,18 +89,6 @@ function FilterFields({
         value={values.graduationYear}
         onChange={(event) => updateField("graduationYear", event.target.value)}
         className="members-filters-control"
-      />
-      <Select
-        id={`${idPrefix}-attendance`}
-        label="Attendance"
-        name="attendance"
-        options={ATTENDANCE_OPTIONS}
-        value={values.attendance}
-        onChange={(event) => updateField("attendance", event.target.value)}
-        className="members-filters-control"
-        disabled
-        title="Coming soon — attendance data is not on the members API yet"
-        aria-disabled="true"
       />
       <Select
         id={`${idPrefix}-payment-status`}

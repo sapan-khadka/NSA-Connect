@@ -96,6 +96,41 @@ export async function fetchMemberMeetingAttendanceStreak(
   return response.data;
 }
 
+export type MemberEngagementStatus = "active" | "idle";
+
+export type MemberEngagementSignals = {
+  attended_event: boolean;
+  paid_dues: boolean;
+  completed_task: boolean;
+  in_progress_task: boolean;
+  shared_suggestion: boolean;
+};
+
+export type MemberEngagementEntry = {
+  member_id: number;
+  status: MemberEngagementStatus;
+  signals: MemberEngagementSignals;
+};
+
+export type MembersEngagementResponse = {
+  semester: string;
+  window_days: number;
+  active_count: number;
+  idle_count: number;
+  members: MemberEngagementEntry[];
+};
+
+/** Activity-based active vs idle for approved members (board+). */
+export async function fetchMembersEngagement(params?: {
+  window_days?: number;
+}): Promise<MembersEngagementResponse> {
+  const response = await api.get<MembersEngagementResponse>(
+    "/v1/members/engagement",
+    { params },
+  );
+  return response.data;
+}
+
 export async function fetchPendingMembers(): Promise<PendingMembersResponse> {
   const response = await api.get<PendingMembersResponse>("/v1/members/pending");
   return response.data;

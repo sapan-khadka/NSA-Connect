@@ -30,6 +30,7 @@ import { memberMailtoHref } from "../lib/member-mailto";
 import {
   formatOutstandingDuesCell,
   type MemberDuesLookup,
+  type MemberEngagementLookup,
 } from "../lib/members-directory";
 import { fetchMembers } from "../lib/members-api";
 import {
@@ -59,8 +60,12 @@ type MembersTableProps = {
   error?: string | null;
   /** Real dues rows from the finance API; omitted cells show "—". */
   duesByMemberId?: MemberDuesLookup;
+  /** Activity-based active/idle for approved members. */
+  engagementByMemberId?: MemberEngagementLookup;
   /** True when filters exclude every member but the org is not empty. */
   isFilterEmpty?: boolean;
+  /** Bulk selection chrome is hidden until bulk APIs ship. */
+  enableBulkSelection?: boolean;
   onInvite?: () => void;
   /** Keep parent directory state in sync after Edit Member saves. */
   onMemberUpdated?: (
@@ -100,13 +105,41 @@ function duesCellFromRecord(
   return { label, tone: "overdue" };
 }
 
-function MembersDirectoryStatusPill({ status }: { status: string }) {
+function MembersDirectoryStatusPill({
+  status,
+  engagement,
+}: {
+  status: string;
+  engagement?: "active" | "idle" | null;
+}) {
   const normalized = status.trim().toLowerCase();
+
+  if (normalized === "approved") {
+    const engaged = engagement === "active";
+    const idle = engagement === "idle";
+    const tone = engaged ? "active" : idle ? "inactive" : "alumni";
+    const label = engaged ? "Active" : idle ? "Idle" : "Approved";
+    return (
+      <span
+        className={`members-table-status-pill members-table-status-pill--${tone}`}
+        title={
+          engaged
+            ? "Recent attendance, dues, tasks, or suggestions"
+            : idle
+              ? "No recent engagement signals"
+              : "Membership approved"
+        }
+      >
+        <span className="members-table-status-dot" aria-hidden="true" />
+        {label}
+      </span>
+    );
+  }
+
   const map: Record<
     string,
     { label: string; tone: "active" | "pending" | "alumni" | "inactive" }
   > = {
-    approved: { label: "Active", tone: "active" },
     pending: { label: "Pending", tone: "pending" },
     alumni: { label: "Alumni", tone: "alumni" },
     inactive: { label: "Inactive", tone: "inactive" },
@@ -459,7 +492,9 @@ export function MembersTable({
   isLoading: controlledLoading,
   error: controlledError,
   duesByMemberId,
+  engagementByMemberId,
   isFilterEmpty = false,
+  enableBulkSelection = false,
   onInvite,
   onMemberUpdated,
 }: MembersTableProps) {
@@ -710,17 +745,19 @@ export function MembersTable({
     <>
       <div
         className={
-          selectedCount > 0
+          enableBulkSelection && selectedCount > 0
             ? "members-table-shell is-bulk-active"
             : "members-table-shell"
         }
       >
-        <MembersBulkActionBar
-          selectedCount={selectedCount}
-          allVisibleSelected={allVisibleSelected}
-          onClear={clearSelection}
-          onSelectAll={selectAllVisible}
-        />
+        {enableBulkSelection ? (
+          <MembersBulkActionBar
+            selectedCount={selectedCount}
+            allVisibleSelected={allVisibleSelected}
+            onClear={clearSelection}
+            onSelectAll={selectAllVisible}
+          />
+        ) : null}
 
         {isMobile ? (
           <ul className="members-table-mobile-list">
@@ -731,23 +768,27 @@ export function MembersTable({
                 <li key={member.id}>
                   <article
                     className="members-table-card"
-                    data-selected={selected ? "true" : undefined}
+                    data-selected={
+                      enableBulkSelection && selected ? "true" : undefined
+                    }
                     tabIndex={0}
                     aria-label={`Quick view ${member.full_name}`}
                     onClick={() => openQuickView(member)}
                     onKeyDown={(event) => handleRowKeyDown(event, member)}
                   >
                     <div className="members-table-card-top">
-                      <input
-                        type="checkbox"
-                        className="members-table-checkbox"
-                        checked={selected}
-                        onChange={() => undefined}
-                        onClick={(event) =>
-                          handleSelectClick(event, member.id, index)
-                        }
-                        aria-label={`Select ${member.full_name}`}
-                      />
+                      {enableBulkSelection ? (
+                        <input
+                          type="checkbox"
+                          className="members-table-checkbox"
+                          checked={selected}
+                          onChange={() => undefined}
+                          onClick={(event) =>
+                            handleSelectClick(event, member.id, index)
+                          }
+                          aria-label={`Select ${member.full_name}`}
+                        />
+                      ) : null}
                       <Avatar
                         name={member.full_name}
                         size="md"
@@ -762,8 +803,19 @@ export function MembersTable({
                             <p className="members-table-meta">
                               {member.email?.trim() || member.major}
                             </p>
+                            {member.position !== "member" ||
+                            member.custom_board_position ? (
+                              <p className="mt-0.5 truncate text-[11px] font-medium text-primary/80">
+                                {formatMemberPositionLabel(member)}
+                              </p>
+                            ) : null}
                           </div>
-                          <MembersDirectoryStatusPill status={member.status} />
+                          <MembersDirectoryStatusPill
+                            status={member.status}
+                            engagement={
+                              engagementByMemberId?.get(member.id) ?? null
+                            }
+                          />
                         </div>
                       </div>
                     </div>
@@ -783,14 +835,6 @@ export function MembersTable({
                         <dt>Dues</dt>
                         <dd>
                           <MembersDuesCell view={dues} />
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Attendance</dt>
-                        <dd>
-                          <span className="members-table-cell-muted">
-                            {MISSING}
-                          </span>
                         </dd>
                       </div>
                     </dl>
@@ -814,22 +858,24 @@ export function MembersTable({
               <caption className="sr-only">Organization members</caption>
               <thead>
                 <tr>
-                  <th scope="col" className="members-table-check-col">
-                    <input
-                      id={selectAllId}
-                      type="checkbox"
-                      className="members-table-checkbox"
-                      checked={allVisibleSelected}
-                      ref={(element) => {
-                        if (element) {
-                          element.indeterminate =
-                            someSelected && !allVisibleSelected;
-                        }
-                      }}
-                      onChange={toggleAll}
-                      aria-label="Select all members"
-                    />
-                  </th>
+                  {enableBulkSelection ? (
+                    <th scope="col" className="members-table-check-col">
+                      <input
+                        id={selectAllId}
+                        type="checkbox"
+                        className="members-table-checkbox"
+                        checked={allVisibleSelected}
+                        ref={(element) => {
+                          if (element) {
+                            element.indeterminate =
+                              someSelected && !allVisibleSelected;
+                          }
+                        }}
+                        onChange={toggleAll}
+                        aria-label="Select all members"
+                      />
+                    </th>
+                  ) : null}
                   <th scope="col" className="members-table-avatar-col">
                     <span className="sr-only">Avatar</span>
                   </th>
@@ -865,9 +911,6 @@ export function MembersTable({
                   <th scope="col" className="members-table-col-dues">
                     Outstanding Dues
                   </th>
-                  <th scope="col" className="members-table-col-attendance">
-                    Attendance
-                  </th>
                   <th scope="col" className="members-table-actions-col">
                     Actions
                   </th>
@@ -882,25 +925,29 @@ export function MembersTable({
                   return (
                     <tr
                       key={member.id}
-                      data-selected={selected ? "true" : undefined}
+                      data-selected={
+                        enableBulkSelection && selected ? "true" : undefined
+                      }
                       tabIndex={0}
                       aria-label={`Quick view ${member.full_name}`}
                       onClick={() => openQuickView(member)}
                       onKeyDown={(event) => handleRowKeyDown(event, member)}
                       className="members-table-row"
                     >
-                      <td className="members-table-check-col">
-                        <input
-                          type="checkbox"
-                          className="members-table-checkbox"
-                          checked={selected}
-                          onChange={() => undefined}
-                          onClick={(event) =>
-                            handleSelectClick(event, member.id, index)
-                          }
-                          aria-label={`Select ${member.full_name}`}
-                        />
-                      </td>
+                      {enableBulkSelection ? (
+                        <td className="members-table-check-col">
+                          <input
+                            type="checkbox"
+                            className="members-table-checkbox"
+                            checked={selected}
+                            onChange={() => undefined}
+                            onClick={(event) =>
+                              handleSelectClick(event, member.id, index)
+                            }
+                            aria-label={`Select ${member.full_name}`}
+                          />
+                        </td>
+                      ) : null}
                       <td className="members-table-avatar-col">
                         <Avatar
                           name={member.full_name}
@@ -916,13 +963,24 @@ export function MembersTable({
                           <p className="members-table-meta">
                             {member.email?.trim() || member.major}
                           </p>
+                          {member.position !== "member" ||
+                          member.custom_board_position ? (
+                            <p className="mt-0.5 truncate text-[11px] font-medium text-primary/80">
+                              {formatMemberPositionLabel(member)}
+                            </p>
+                          ) : null}
                         </div>
                       </td>
                       <td>
                         <MembersRoleBadge member={member} />
                       </td>
                       <td>
-                        <MembersDirectoryStatusPill status={member.status} />
+                        <MembersDirectoryStatusPill
+                          status={member.status}
+                          engagement={
+                            engagementByMemberId?.get(member.id) ?? null
+                          }
+                        />
                       </td>
                       <td className="members-table-col-grad">
                         <span className="members-table-cell-text tabular-nums">
@@ -931,11 +989,6 @@ export function MembersTable({
                       </td>
                       <td className="members-table-col-dues">
                         <MembersDuesCell view={dues} />
-                      </td>
-                      <td className="members-table-col-attendance">
-                        <span className="members-table-cell-muted">
-                          {MISSING}
-                        </span>
                       </td>
                       <td className="members-table-actions-col">
                         <MembersRowActions

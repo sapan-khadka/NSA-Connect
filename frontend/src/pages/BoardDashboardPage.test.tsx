@@ -120,7 +120,7 @@ describe("BoardDashboardPage", () => {
     await screen.findByText("Pending User");
 
     expect(
-      screen.queryByRole("button", { name: "Reject" }),
+      screen.queryByRole("button", { name: /Reject/i }),
     ).not.toBeInTheDocument();
   });
 });

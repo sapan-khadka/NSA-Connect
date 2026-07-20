@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { KanbanTask } from "../lib/kanban-status";
-import { calcBoardTasksStats } from "./BoardTasksPage";
+import { calcBoardTasksStats, getFocusTasks } from "./BoardTasksPage";
 
 function task(overrides: Partial<KanbanTask> = {}): KanbanTask {
   return {
@@ -96,5 +96,66 @@ describe("calcBoardTasksStats", () => {
     expect(stats.overdue).toBe(0);
     expect(stats.completed).toBe(1);
     expect(stats.completedPercent).toBe(100);
+  });
+});
+
+describe("getFocusTasks", () => {
+  const now = new Date(2030, 4, 20, 15, 0, 0);
+
+  it("returns overdue tasks before due-today tasks and skips done", () => {
+    const dueTodayIso = new Date(2030, 4, 20, 18, 0, 0).toISOString();
+    const overdueIso = new Date(2030, 4, 18, 12, 0, 0).toISOString();
+
+    const focus = getFocusTasks(
+      [
+        task({
+          id: 1,
+          title: "Due today task",
+          status: "todo",
+          due_date: dueTodayIso,
+          is_overdue: false,
+        }),
+        task({
+          id: 2,
+          title: "Overdue task",
+          status: "in_progress",
+          due_date: overdueIso,
+          is_overdue: true,
+        }),
+        task({
+          id: 3,
+          title: "Done overdue",
+          status: "done",
+          is_complete: true,
+          due_date: overdueIso,
+          is_overdue: true,
+        }),
+        task({
+          id: 4,
+          title: "Later",
+          status: "todo",
+          due_date: new Date(2030, 4, 25, 12, 0, 0).toISOString(),
+          is_overdue: false,
+        }),
+      ],
+      now,
+    );
+
+    expect(focus.map((entry) => entry.id)).toEqual([2, 1]);
+  });
+
+  it("returns an empty list when nothing is urgent", () => {
+    expect(
+      getFocusTasks(
+        [
+          task({
+            id: 1,
+            status: "todo",
+            due_date: new Date(2030, 4, 25, 12, 0, 0).toISOString(),
+          }),
+        ],
+        now,
+      ),
+    ).toEqual([]);
   });
 });

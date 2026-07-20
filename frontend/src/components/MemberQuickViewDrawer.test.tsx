@@ -58,14 +58,14 @@ describe("MemberQuickViewDrawer", () => {
     expect(within(dialog).getByText("Active")).toBeInTheDocument();
 
     const overview = within(dialog).getByLabelText("Quick stats");
-    expect(within(overview).getByText("Attendance")).toBeInTheDocument();
     expect(within(overview).getByText("Outstanding Dues")).toBeInTheDocument();
     expect(within(overview).getByText("$15.00")).toBeInTheDocument();
-    expect(within(overview).getByText("Active Tasks")).toBeInTheDocument();
-    expect(within(overview).getByText("Committee")).toBeInTheDocument();
     expect(within(overview).getByText("Graduation Year")).toBeInTheDocument();
     expect(within(overview).getByText("2028")).toBeInTheDocument();
-    expect(within(overview).getAllByText("—").length).toBeGreaterThanOrEqual(3);
+    expect(within(overview).getByText("Major")).toBeInTheDocument();
+    expect(within(overview).getByText("Computer Science")).toBeInTheDocument();
+    expect(within(overview).queryByText("Attendance")).not.toBeInTheDocument();
+    expect(within(overview).queryByText("Committee")).not.toBeInTheDocument();
 
     expect(
       within(dialog).getByRole("heading", { name: "Recent Activity" }),

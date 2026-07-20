@@ -29,11 +29,26 @@ export const EMPTY_MEMBERS_DIRECTORY_FILTERS: MembersDirectoryFilters = {
 
 export type MembersDirectoryKpis = {
   totalMembers: number;
+  /** Activity-engaged approved members (attended, paid, tasks, suggestions). */
   activeCount: number;
+  /** Approved members with no recent engagement signals. */
+  idleCount: number;
   pendingCount: number;
   /** Members with unpaid/partial dues; null when treasury data is unavailable. */
   outstandingDuesCount: number | null;
 };
+
+export type MemberEngagementLookup = Map<number, "active" | "idle">;
+
+export function buildEngagementLookup(
+  entries: Array<{ member_id: number; status: "active" | "idle" }>,
+): MemberEngagementLookup {
+  const map: MemberEngagementLookup = new Map();
+  for (const entry of entries) {
+    map.set(entry.member_id, entry.status);
+  }
+  return map;
+}
 
 export type MemberDuesLookup = Map<number, MemberDuesRecord>;
 
@@ -139,6 +154,7 @@ export function filterDirectoryMembers(
 export function deriveMembersDirectoryKpis(input: {
   totalMembers: number;
   activeCount: number;
+  idleCount?: number;
   pendingCount: number;
   unpaidCount?: number | null;
   partialCount?: number | null;
@@ -147,6 +163,7 @@ export function deriveMembersDirectoryKpis(input: {
   return {
     totalMembers: input.totalMembers,
     activeCount: input.activeCount,
+    idleCount: input.idleCount ?? 0,
     pendingCount: input.pendingCount,
     outstandingDuesCount: input.duesAvailable
       ? (input.unpaidCount ?? 0) + (input.partialCount ?? 0)

@@ -1,5 +1,6 @@
 /**
- * Compact kanban card: title, due state, assignee avatar, checklist X/Y.
+ * Compact kanban card: title, due state, optional assignee avatar, checklist X/Y.
+ * Whole card opens details; drag uses PointerSensor distance threshold.
  */
 
 import { useDraggable } from "@dnd-kit/core";
@@ -21,6 +22,7 @@ type KanbanTaskCardProps = {
   task: KanbanTask;
   columnId: KanbanColumnId;
   isDragging?: boolean;
+  hideAssignee?: boolean;
   onOpenTask?: (taskId: number) => void;
 };
 
@@ -57,6 +59,7 @@ export function KanbanTaskCard({
   task,
   columnId,
   isDragging = false,
+  hideAssignee = false,
   onOpenTask,
 }: KanbanTaskCardProps) {
   const theme = getKanbanColumnTheme(columnId);
@@ -92,34 +95,55 @@ export function KanbanTaskCard({
       data-kanban-column={columnId}
       {...attributes}
       {...listeners}
+      role={onOpenTask ? "button" : undefined}
+      tabIndex={onOpenTask ? 0 : undefined}
+      aria-label={onOpenTask ? `Open ${title}` : undefined}
+      onClick={() => {
+        if (onOpenTask && !isActivelyDragging) {
+          onOpenTask(task.id);
+        }
+      }}
+      onKeyDown={(event) => {
+        if (!onOpenTask) {
+          return;
+        }
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpenTask(task.id);
+        }
+      }}
       className={[
-        "group cursor-grab touch-none rounded-kanban p-4 outline-none transition-all duration-200",
-        "focus:outline-none focus-visible:outline-none active:cursor-grabbing",
+        "group touch-none rounded-kanban p-3 outline-none transition-all duration-200",
+        onOpenTask ? "cursor-pointer" : "cursor-grab",
+        "focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
+        "active:cursor-grabbing",
         isActivelyDragging || isDragging
           ? "z-50 scale-[1.02]"
           : "hover:-translate-y-0.5",
       ].join(" ")}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-2.5">
         <div className="min-w-0 flex-1">
           <p
-            className="text-[11px] font-bold uppercase tracking-wider"
+            className="text-[10px] font-bold uppercase tracking-wider"
             style={{ color: theme.eventLabel }}
           >
             {task.eventName}
           </p>
-          <h3 className="mt-1 line-clamp-2 text-sm leading-snug text-foreground">
+          <h3 className="mt-0.5 line-clamp-2 text-sm font-medium leading-snug text-foreground">
             {title}
           </h3>
         </div>
-        <AssigneeAvatar name={task.assignee_name} />
+        {!hideAssignee ? (
+          <AssigneeAvatar name={task.assignee_name} />
+        ) : null}
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
         {due ? (
           <span
             className={[
-              "rounded-full px-2.5 py-1 font-medium",
+              "rounded-full px-2 py-0.5 font-medium",
               due.warning
                 ? "bg-overdue-surface text-overdue"
                 : "bg-white",
@@ -131,7 +155,7 @@ export function KanbanTaskCard({
         ) : null}
         {checklistProgress && checklistProgress.total > 0 ? (
           <span
-            className="rounded-full bg-white px-2.5 py-1 font-medium"
+            className="rounded-full bg-white px-2 py-0.5 font-medium"
             style={{ color: theme.pillText }}
             aria-label={`${checklistProgress.completed} of ${checklistProgress.total} checklist items complete`}
           >
@@ -139,24 +163,6 @@ export function KanbanTaskCard({
           </span>
         ) : null}
       </div>
-
-      {onOpenTask ? (
-        <button
-          type="button"
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={() => onOpenTask(task.id)}
-          className="mt-3 w-full rounded-md px-3 py-1.5 text-xs font-medium text-white transition-colors"
-          style={{ backgroundColor: theme.buttonBg }}
-          onMouseEnter={(event) => {
-            event.currentTarget.style.backgroundColor = theme.buttonHoverBg;
-          }}
-          onMouseLeave={(event) => {
-            event.currentTarget.style.backgroundColor = theme.buttonBg;
-          }}
-        >
-          Open details
-        </button>
-      ) : null}
     </article>
   );
 }

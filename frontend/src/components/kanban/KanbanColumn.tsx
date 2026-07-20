@@ -43,6 +43,7 @@ type KanbanColumnProps = {
   activeTaskId: number | null;
   onOpenTask?: (taskId: number) => void;
   onAddTask?: (columnId: KanbanColumnId) => void;
+  hideAssignee?: boolean;
 };
 
 export function KanbanColumn({
@@ -51,12 +52,14 @@ export function KanbanColumn({
   activeTaskId,
   onOpenTask,
   onAddTask,
+  hideAssignee = false,
 }: KanbanColumnProps) {
   const theme = getKanbanColumnTheme(column.id);
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
   });
   const statusLabel = TASK_STATUS_LABELS[column.id];
+  const isEmpty = tasks.length === 0;
 
   return (
     <section
@@ -64,9 +67,10 @@ export function KanbanColumn({
       className={[
         "flex flex-col overflow-hidden rounded-kanban border border-kanban-border bg-white transition-colors duration-200",
         isOver ? "ring-2 ring-accent/20" : "",
+        isEmpty ? "min-h-[10rem]" : "",
       ].join(" ")}
     >
-      <header className="border-b border-kanban-border bg-white px-4 py-3">
+      <header className="border-b border-kanban-border bg-white px-3 py-2.5">
         <div className="flex items-center gap-2">
           <span
             aria-hidden="true"
@@ -81,14 +85,14 @@ export function KanbanColumn({
       <div
         ref={setNodeRef}
         className={[
-          "flex flex-1 flex-col gap-3 p-3 transition-colors duration-200",
+          "flex flex-1 flex-col gap-2 p-2.5 transition-colors duration-200",
           isOver ? "bg-accent/[0.03]" : "bg-white",
         ].join(" ")}
       >
-        {tasks.length === 0 ? (
+        {isEmpty ? (
           <div
             className={[
-              "rounded-kanban px-4 py-6 text-center",
+              "rounded-kanban px-3 py-4 text-center",
               column.id === "todo"
                 ? "border border-dashed border-kanban-border"
                 : "",
@@ -99,8 +103,8 @@ export function KanbanColumn({
                 : undefined
             }
           >
-            <p className="text-sm text-label">
-              {isOver ? "Drop task here" : "No tasks in this column"}
+            <p className="text-xs text-label/80">
+              {isOver ? "Drop task here" : "Empty"}
             </p>
           </div>
         ) : (
@@ -110,6 +114,7 @@ export function KanbanColumn({
               task={task}
               columnId={column.id}
               isDragging={activeTaskId === task.id}
+              hideAssignee={hideAssignee}
               onOpenTask={onOpenTask}
             />
           ))
@@ -118,7 +123,7 @@ export function KanbanColumn({
         <button
           type="button"
           onClick={() => onAddTask?.(column.id)}
-          className="mt-auto rounded-kanban border border-dashed border-kanban-border px-3 py-2.5 text-left text-sm font-medium text-label transition-colors hover:border-accent/40 hover:bg-accent/[0.03] hover:text-foreground"
+          className="mt-auto rounded-kanban border border-dashed border-kanban-border px-3 py-2 text-left text-xs font-medium text-label transition-colors hover:border-accent/40 hover:bg-accent/[0.03] hover:text-foreground"
         >
           + Add task
         </button>

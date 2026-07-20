@@ -1,24 +1,27 @@
 /**
- * Members page — live directory stats from members + dues APIs.
- * Header + KPI cards + filters + members table (no hard-coded KPI demo numbers).
+ * Members — premium people directory + board attention queue.
+ * Segments: Needs attention (board+) · People (everyone).
  */
 
-import type { LucideIcon } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import {
-  BadgeDollarSign,
-  UserCheck,
-  UserPlus,
-  Users,
-} from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { Button } from "../components/ui/Button";
 import { AppIcon } from "../components/ui/AppIcon";
 import { InviteMemberDrawer } from "../components/InviteMemberDrawer";
 import { ManageBoardPositionsDrawer } from "../components/ManageBoardPositionsDrawer";
+import { MembersDuesFollowUps } from "../components/MembersDuesFollowUps";
 import { MembersFiltersToolbar } from "../components/MembersFiltersToolbar";
 import { MembersTable } from "../components/MembersTable";
+import { PendingApprovals } from "../components/PendingApprovals";
 import { Modal } from "../components/ui/Modal";
 import { useAuth } from "../context/useAuth";
 import type { MemberResponse } from "../lib/auth-api";
@@ -26,82 +29,32 @@ import { getApiErrorMessage } from "../lib/api-error";
 import { fetchDuesDashboard } from "../lib/dues-api";
 import {
   buildDuesLookup,
+  buildEngagementLookup,
   deriveMembersDirectoryKpis,
   EMPTY_MEMBERS_DIRECTORY_FILTERS,
   filterDirectoryMembers,
   type MemberDuesLookup,
+  type MemberEngagementLookup,
   type MembersDirectoryFilters,
   type MembersDirectoryKpis,
 } from "../lib/members-directory";
 import {
   downloadMembersCsv,
   fetchMembers,
+  fetchMembersEngagement,
   fetchPendingMembers,
   importMembersCsv,
   type MemberImportResponse,
 } from "../lib/members-api";
-import { canManageTreasury } from "../lib/roles";
+import {
+  canManageTreasury,
+  canViewMemberDirectory,
+} from "../lib/roles";
 import { getCurrentSemesterSlug } from "../lib/semester";
 
-type MembersKpi = {
-  id: string;
-  label: string;
-  value: string;
-  subtitle: string;
-  icon: LucideIcon;
-};
+type MembersSegment = "attention" | "people";
 
-function formatKpiCount(value: number | null | undefined, loading: boolean): string {
-  if (loading) {
-    return "…";
-  }
-  if (value === null || value === undefined) {
-    return "—";
-  }
-  return String(value);
-}
-
-function buildKpiCards(
-  kpis: MembersDirectoryKpis | null,
-  loading: boolean,
-): MembersKpi[] {
-  return [
-    {
-      id: "members",
-      label: "Members",
-      value: formatKpiCount(kpis?.totalMembers, loading),
-      subtitle: "Total in the organization",
-      icon: Users,
-    },
-    {
-      id: "active",
-      label: "Active",
-      value: formatKpiCount(kpis?.activeCount, loading),
-      subtitle: "Approved and in good standing",
-      icon: UserCheck,
-    },
-    {
-      id: "pending",
-      label: "Pending",
-      value: formatKpiCount(kpis?.pendingCount, loading),
-      subtitle: "Awaiting approval",
-      icon: UserPlus,
-    },
-    {
-      id: "dues",
-      label: "Outstanding Dues",
-      value: formatKpiCount(kpis?.outstandingDuesCount, loading),
-      subtitle:
-        kpis?.outstandingDuesCount === null && !loading
-          ? "Treasury access required"
-          : "Members with unpaid balances",
-      icon: BadgeDollarSign,
-    },
-  ];
-}
-
-function MembersPageHeader({
-  onInvite,
+function MembersManageMenu({
   onImportClick,
   importLoading,
   onExport,
@@ -109,7 +62,6 @@ function MembersPageHeader({
   canManagePositions,
   onManagePositions,
 }: {
-  onInvite: () => void;
   onImportClick: () => void;
   importLoading: boolean;
   onExport: () => void;
@@ -117,93 +69,239 @@ function MembersPageHeader({
   canManagePositions: boolean;
   onManagePositions: () => void;
 }) {
-  return (
-    <header
-      aria-label="Members page header"
-      className="members-page-section members-page-header"
-    >
-      <div className="members-page-header-inner">
-        <div className="members-page-header-copy">
-          <h1 className="members-page-title">Members</h1>
-          <p className="members-page-subtitle">
-            Manage everyone in your organization.
-          </p>
-        </div>
+  const rootRef = useRef<HTMLDivElement>(null);
+  const menuId = useId();
+  const [open, setOpen] = useState(false);
 
-        <div className="members-page-header-actions">
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handlePointerDown(event: MouseEvent) {
+      if (
+        rootRef.current &&
+        event.target instanceof Node &&
+        !rootRef.current.contains(event.target)
+      ) {
+        setOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={rootRef} className="relative">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-controls={menuId}
+        onClick={() => setOpen((current) => !current)}
+      >
+        Manage
+        <AppIcon icon={ChevronDown} size="xs" className="text-current opacity-80" />
+      </Button>
+      {open ? (
+        <div
+          id={menuId}
+          role="menu"
+          className="absolute right-0 top-full z-50 mt-2 min-w-[12.5rem] rounded-xl border border-gray-200 bg-surface-card py-1 shadow-sm"
+        >
           {canManagePositions ? (
-            <Button
+            <button
               type="button"
-              variant="outline"
-              size="sm"
-              onClick={onManagePositions}
+              role="menuitem"
+              className="block w-full px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-surface-muted"
+              onClick={() => {
+                setOpen(false);
+                onManagePositions();
+              }}
             >
-              Manage board positions
-            </Button>
+              Board positions
+            </button>
           ) : null}
-          <Button type="button" variant="primary" size="sm" onClick={onInvite}>
-            Invite Member
-          </Button>
-          <Button
+          <button
             type="button"
-            variant="outline"
-            size="sm"
-            onClick={onImportClick}
-            loading={importLoading}
+            role="menuitem"
+            className="block w-full px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-surface-muted disabled:opacity-60"
             disabled={importLoading}
+            onClick={() => {
+              setOpen(false);
+              onImportClick();
+            }}
           >
-            Import CSV
-          </Button>
-          <Button
+            {importLoading ? "Importing…" : "Import CSV"}
+          </button>
+          <button
             type="button"
-            variant="outline"
-            size="sm"
-            onClick={onExport}
-            loading={exportLoading}
+            role="menuitem"
+            className="block w-full px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-surface-muted disabled:opacity-60"
             disabled={exportLoading}
+            onClick={() => {
+              setOpen(false);
+              onExport();
+            }}
           >
-            Export
-          </Button>
+            {exportLoading ? "Exporting…" : "Export CSV"}
+          </button>
         </div>
-      </div>
-    </header>
+      ) : null}
+    </div>
   );
 }
 
-function MembersStatistics({
+function SummaryChip({
+  count,
+  label,
+  tone = "default",
+  active = false,
+  onClick,
+  disabled,
+  title,
+}: {
+  count: string;
+  label: string;
+  tone?: "default" | "pending" | "dues";
+  active?: boolean;
+  onClick?: () => void;
+  disabled?: boolean;
+  title?: string;
+}) {
+  const toneClass =
+    tone === "pending"
+      ? "text-overdue"
+      : tone === "dues"
+        ? "text-primary"
+        : "text-foreground";
+
+  const className = [
+    "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors",
+    active
+      ? "border-primary/30 bg-badge-teal-bg"
+      : "border-gray-200 bg-surface-card hover:border-primary/25 hover:bg-surface-muted/60",
+    disabled ? "cursor-default opacity-70" : "cursor-pointer",
+  ].join(" ");
+
+  if (!onClick || disabled) {
+    return (
+      <span className={className} title={title}>
+        <span className={`font-semibold tabular-nums ${toneClass}`}>{count}</span>{" "}
+        <span className="text-label">{label}</span>
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className={className}
+      onClick={onClick}
+      title={title}
+    >
+      <span className={`font-semibold tabular-nums ${toneClass}`}>{count}</span>{" "}
+      <span className="text-label">{label}</span>
+    </button>
+  );
+}
+
+function MembersStatusStrip({
   kpis,
   loading,
+  showDues,
+  showEngagement,
+  canReview,
+  activeFocus,
+  onFocusPeople,
+  onFocusActive,
+  onFocusIdle,
+  onFocusPending,
+  onFocusDues,
 }: {
   kpis: MembersDirectoryKpis | null;
   loading: boolean;
+  showDues: boolean;
+  showEngagement: boolean;
+  canReview: boolean;
+  activeFocus: "people" | "active" | "idle" | "pending" | "dues" | null;
+  onFocusPeople: () => void;
+  onFocusActive: () => void;
+  onFocusIdle: () => void;
+  onFocusPending: () => void;
+  onFocusDues: () => void;
 }) {
-  const cards = buildKpiCards(kpis, loading);
+  const value = (n: number | null | undefined) => {
+    if (loading) return "…";
+    if (n === null || n === undefined) return "—";
+    return String(n);
+  };
+
+  const pending = kpis?.pendingCount ?? 0;
+  const idle = kpis?.idleCount ?? 0;
+  const dues = kpis?.outstandingDuesCount ?? 0;
 
   return (
     <section
-      aria-label="Statistics"
-      className="members-page-section members-page-stats"
+      aria-label="Members summary"
+      className="flex flex-wrap items-center gap-2"
     >
-      <div className="members-page-kpi-grid">
-        {cards.map((kpi) => (
-          <article
-            key={kpi.id}
-            className="members-page-kpi-card"
-            aria-label={`${kpi.label}: ${kpi.value}`}
-          >
-            <div className="members-page-kpi-card-top">
-              <p className="members-page-kpi-label">{kpi.label}</p>
-              <span className="members-page-kpi-icon" aria-hidden="true">
-                <AppIcon icon={kpi.icon} size="sm" className="text-current" />
-              </span>
-            </div>
-            <p className="members-page-kpi-value tabular-nums">{kpi.value}</p>
-            <div className="members-page-kpi-footer">
-              <p className="members-page-kpi-subtitle">{kpi.subtitle}</p>
-            </div>
-          </article>
-        ))}
-      </div>
+      <SummaryChip
+        count={value(kpis?.totalMembers)}
+        label="members"
+        active={activeFocus === "people"}
+        onClick={onFocusPeople}
+      />
+      {showEngagement ? (
+        <>
+          <SummaryChip
+            count={value(kpis?.activeCount)}
+            label="active"
+            tone="dues"
+            active={activeFocus === "active"}
+            onClick={onFocusActive}
+            title="Attended events, paid dues, completed tasks, or shared suggestions recently"
+          />
+          <SummaryChip
+            count={value(kpis?.idleCount)}
+            label="idle"
+            tone={idle > 0 ? "pending" : "default"}
+            active={activeFocus === "idle"}
+            onClick={onFocusIdle}
+            title="Approved members with no recent attendance, dues, tasks, or suggestions"
+          />
+        </>
+      ) : null}
+      <SummaryChip
+        count={value(kpis?.pendingCount)}
+        label="pending"
+        tone={pending > 0 ? "pending" : "default"}
+        active={activeFocus === "pending"}
+        onClick={canReview ? onFocusPending : undefined}
+        disabled={!canReview}
+      />
+      {showDues ? (
+        <SummaryChip
+          count={value(kpis?.outstandingDuesCount)}
+          label="outstanding dues"
+          tone={dues > 0 ? "dues" : "default"}
+          active={activeFocus === "dues"}
+          onClick={onFocusDues}
+        />
+      ) : null}
     </section>
   );
 }
@@ -225,18 +323,31 @@ export function MembersPage() {
   const [importSummary, setImportSummary] =
     useState<MemberImportResponse | null>(null);
   const [directoryRefreshKey, setDirectoryRefreshKey] = useState(0);
-  const [filters, setFilters] = useState<MembersDirectoryFilters>(() => {
-    if (searchParams.get("tab") === "pending") {
-      return { ...EMPTY_MEMBERS_DIRECTORY_FILTERS, memberStatus: "pending" };
-    }
-    return EMPTY_MEMBERS_DIRECTORY_FILTERS;
-  });
+  const [filters, setFilters] = useState<MembersDirectoryFilters>(
+    EMPTY_MEMBERS_DIRECTORY_FILTERS,
+  );
+  const userChoseSegment = useRef(false);
+  const autoFocusedPending = useRef(false);
+
+  const canReviewMembers = Boolean(
+    currentMember && canViewMemberDirectory(currentMember.role),
+  );
+  const [segment, setSegment] = useState<MembersSegment>(() =>
+    searchParams.get("tab") === "pending" && canReviewMembers
+      ? "attention"
+      : "people",
+  );
 
   const [members, setMembers] = useState<MemberResponse[]>([]);
   const [kpis, setKpis] = useState<MembersDirectoryKpis | null>(null);
   const [duesByMemberId, setDuesByMemberId] = useState<MemberDuesLookup>(
     () => new Map(),
   );
+  const [engagementByMemberId, setEngagementByMemberId] =
+    useState<MemberEngagementLookup>(() => new Map());
+  const [engagementFilter, setEngagementFilter] = useState<
+    "active" | "idle" | ""
+  >("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -245,22 +356,37 @@ export function MembersPage() {
       canManageTreasury(currentMember.role, currentMember.position),
   );
   const canManagePositions = currentMember?.role === "president";
+  const canManageDirectory = canReviewMembers;
 
   useEffect(() => {
     if (searchParams.get("tab") !== "pending") {
       return;
     }
 
-    setFilters((current) =>
-      current.memberStatus === "pending"
-        ? current
-        : { ...current, memberStatus: "pending" },
-    );
+    if (canReviewMembers) {
+      userChoseSegment.current = true;
+      setSegment("attention");
+    }
 
     const next = new URLSearchParams(searchParams);
     next.delete("tab");
     setSearchParams(next, { replace: true });
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, canReviewMembers]);
+
+  useEffect(() => {
+    if (
+      !canReviewMembers ||
+      isLoading ||
+      userChoseSegment.current ||
+      autoFocusedPending.current
+    ) {
+      return;
+    }
+    if ((kpis?.pendingCount ?? 0) > 0) {
+      autoFocusedPending.current = true;
+      setSegment("attention");
+    }
+  }, [canReviewMembers, isLoading, kpis?.pendingCount]);
 
   useEffect(() => {
     let cancelled = false;
@@ -271,13 +397,17 @@ export function MembersPage() {
 
     void (async () => {
       try {
-        const [directory, approvedPage, pendingPage, duesResult] =
+        const [directory, pendingPage, duesResult, engagementResult] =
           await Promise.all([
             fetchMembers({ page: 1, page_size: 100 }),
-            fetchMembers({ page: 1, page_size: 1, status: "approved" }),
-            fetchPendingMembers(),
+            canReviewMembers
+              ? fetchPendingMembers()
+              : Promise.resolve({ members: [], total: 0 }),
             canFetchDues
               ? fetchDuesDashboard({ semester }).catch(() => null)
+              : Promise.resolve(null),
+            canReviewMembers
+              ? fetchMembersEngagement().catch(() => null)
               : Promise.resolve(null),
           ]);
 
@@ -286,10 +416,14 @@ export function MembersPage() {
         }
 
         setMembers(directory.members);
+        setEngagementByMemberId(
+          buildEngagementLookup(engagementResult?.members ?? []),
+        );
         setKpis(
           deriveMembersDirectoryKpis({
             totalMembers: directory.total,
-            activeCount: approvedPage.total,
+            activeCount: engagementResult?.active_count ?? 0,
+            idleCount: engagementResult?.idle_count ?? 0,
             pendingCount: pendingPage.total,
             unpaidCount: duesResult?.summary.unpaid_count,
             partialCount: duesResult?.summary.partial_count,
@@ -303,6 +437,7 @@ export function MembersPage() {
           setMembers([]);
           setKpis(null);
           setDuesByMemberId(new Map());
+          setEngagementByMemberId(new Map());
         }
       } finally {
         if (!cancelled) {
@@ -314,12 +449,24 @@ export function MembersPage() {
     return () => {
       cancelled = true;
     };
-  }, [canFetchDues, directoryRefreshKey]);
+  }, [canFetchDues, canReviewMembers, directoryRefreshKey]);
 
-  const displayedMembers = useMemo(
-    () => filterDirectoryMembers(members, filters, duesByMemberId),
-    [members, filters, duesByMemberId],
-  );
+  const displayedMembers = useMemo(() => {
+    const filtered = filterDirectoryMembers(members, filters, duesByMemberId);
+    if (!engagementFilter) {
+      return filtered;
+    }
+    return filtered.filter((member) => {
+      if (member.status !== "approved") {
+        return false;
+      }
+      return engagementByMemberId.get(member.id) === engagementFilter;
+    });
+  }, [members, filters, duesByMemberId, engagementFilter, engagementByMemberId]);
+
+  function refreshDirectory() {
+    setDirectoryRefreshKey((value) => value + 1);
+  }
 
   async function handleExport() {
     setExportLoading(true);
@@ -345,12 +492,75 @@ export function MembersPage() {
     try {
       const summary = await importMembersCsv(file);
       setImportSummary(summary);
-      setDirectoryRefreshKey((value) => value + 1);
+      refreshDirectory();
     } catch (caught) {
       setImportError(getApiErrorMessage(caught));
     } finally {
       setImportLoading(false);
     }
+  }
+
+  const pendingCount = kpis?.pendingCount ?? 0;
+  const activeSegment: MembersSegment =
+    canReviewMembers && segment === "attention" ? "attention" : "people";
+  const duesFilterActive = filters.paymentStatus === "outstanding";
+  const activeFocus: "people" | "active" | "idle" | "pending" | "dues" | null =
+    activeSegment === "attention"
+      ? "pending"
+      : duesFilterActive
+        ? "dues"
+        : engagementFilter === "active"
+          ? "active"
+          : engagementFilter === "idle"
+            ? "idle"
+            : "people";
+
+  function selectSegment(next: MembersSegment) {
+    userChoseSegment.current = true;
+    setSegment(next);
+  }
+
+  function focusPeopleDirectory() {
+    userChoseSegment.current = true;
+    setSegment("people");
+    setEngagementFilter("");
+    setFilters(EMPTY_MEMBERS_DIRECTORY_FILTERS);
+  }
+
+  function focusActiveMembers() {
+    userChoseSegment.current = true;
+    setSegment("people");
+    setEngagementFilter("active");
+    setFilters({
+      ...EMPTY_MEMBERS_DIRECTORY_FILTERS,
+      memberStatus: "approved",
+    });
+  }
+
+  function focusIdleMembers() {
+    userChoseSegment.current = true;
+    setSegment("people");
+    setEngagementFilter("idle");
+    setFilters({
+      ...EMPTY_MEMBERS_DIRECTORY_FILTERS,
+      memberStatus: "approved",
+    });
+  }
+
+  function focusPendingQueue() {
+    userChoseSegment.current = true;
+    setSegment("attention");
+  }
+
+  function focusOutstandingDues() {
+    userChoseSegment.current = true;
+    setSegment("people");
+    setEngagementFilter("");
+    setFilters({
+      ...EMPTY_MEMBERS_DIRECTORY_FILTERS,
+      paymentStatus: "outstanding",
+      memberStatus: "approved",
+    });
   }
 
   return (
@@ -367,17 +577,45 @@ export function MembersPage() {
         }}
       />
       <div className="members-page-grid">
-        <MembersPageHeader
-          onInvite={() => setInviteOpen(true)}
-          onImportClick={() => importInputRef.current?.click()}
-          importLoading={importLoading}
-          onExport={() => {
-            void handleExport();
-          }}
-          exportLoading={exportLoading}
-          canManagePositions={canManagePositions}
-          onManagePositions={() => setManagePositionsOpen(true)}
-        />
+        <header
+          aria-label="Members page header"
+          className="members-page-section members-page-header"
+        >
+          <div className="members-page-header-inner">
+            <div className="members-page-header-copy">
+              <h1 className="members-page-title">Members</h1>
+              <p className="members-page-subtitle">
+                {canReviewMembers
+                  ? "Review signups, follow up on dues, and browse people."
+                  : "Browse everyone in the organization."}
+              </p>
+            </div>
+
+            {canManageDirectory ? (
+              <div className="members-page-header-actions">
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setInviteOpen(true)}
+                >
+                  Invite Member
+                </Button>
+                <MembersManageMenu
+                  onImportClick={() => importInputRef.current?.click()}
+                  importLoading={importLoading}
+                  onExport={() => {
+                    void handleExport();
+                  }}
+                  exportLoading={exportLoading}
+                  canManagePositions={canManagePositions}
+                  onManagePositions={() => setManagePositionsOpen(true)}
+                />
+              </div>
+            ) : null}
+          </div>
+        </header>
+
         {exportError ? (
           <p role="alert" className="ds-field-error members-page-section">
             {exportError}
@@ -399,67 +637,197 @@ export function MembersPage() {
             {inviteNotice.message}
           </p>
         ) : null}
-        <MembersStatistics kpis={kpis} loading={isLoading} />
-        <section
-          aria-label="Search and filters"
-          className="members-page-section members-page-filters"
-        >
-          <MembersFiltersToolbar values={filters} onChange={setFilters} />
-        </section>
-        <section
-          aria-label="Member table"
-          className="members-page-section members-page-table"
-        >
-          <MembersTable
-            members={displayedMembers}
-            positionSourceMembers={members}
-            isLoading={isLoading}
-            error={error}
-            duesByMemberId={duesByMemberId}
-            isFilterEmpty={members.length > 0 && displayedMembers.length === 0}
-            onInvite={() => setInviteOpen(true)}
-            onMemberUpdated={(updated, previousHolder) => {
-              setMembers((prev) =>
-                prev.map((row) => {
-                  if (row.id === updated.id) {
-                    return updated;
-                  }
-                  if (previousHolder && row.id === previousHolder.id) {
-                    return previousHolder;
-                  }
-                  // Clear stale custom occupancy when a seat transfers.
-                  if (
-                    updated.custom_board_position &&
-                    row.custom_board_position?.id ===
-                      updated.custom_board_position.id &&
-                    row.id !== updated.id
-                  ) {
-                    return { ...row, custom_board_position: null };
-                  }
-                  if (
-                    updated.position !== "member" &&
-                    row.position === updated.position &&
-                    row.id !== updated.id
-                  ) {
-                    return {
-                      ...row,
-                      position: "member",
-                      custom_board_position: null,
-                    };
-                  }
-                  return row;
-                }),
-              );
-            }}
+
+        <div className="members-page-section space-y-4">
+          <MembersStatusStrip
+            kpis={kpis}
+            loading={isLoading}
+            showDues={canFetchDues}
+            showEngagement={canReviewMembers}
+            canReview={canReviewMembers}
+            activeFocus={activeFocus}
+            onFocusPeople={focusPeopleDirectory}
+            onFocusActive={focusActiveMembers}
+            onFocusIdle={focusIdleMembers}
+            onFocusPending={focusPendingQueue}
+            onFocusDues={focusOutstandingDues}
           />
-        </section>
+
+          {canReviewMembers ? (
+            <div
+              role="tablist"
+              aria-label="Members sections"
+              className="inline-flex rounded-xl border border-gray-200 bg-surface-muted/40 p-1"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeSegment === "attention"}
+                className={[
+                  "rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors",
+                  activeSegment === "attention"
+                    ? "bg-surface-card text-foreground shadow-sm"
+                    : "text-label hover:text-foreground",
+                ].join(" ")}
+                onClick={() => selectSegment("attention")}
+              >
+                Needs attention
+                {pendingCount > 0 ? (
+                  <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-overdue-surface px-1.5 text-[11px] font-semibold tabular-nums text-overdue">
+                    {pendingCount}
+                  </span>
+                ) : null}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeSegment === "people"}
+                className={[
+                  "rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors",
+                  activeSegment === "people"
+                    ? "bg-surface-card text-foreground shadow-sm"
+                    : "text-label hover:text-foreground",
+                ].join(" ")}
+                onClick={() => selectSegment("people")}
+              >
+                People
+              </button>
+            </div>
+          ) : null}
+        </div>
+
+        {activeSegment === "attention" && canReviewMembers ? (
+          <section
+            aria-label="Needs attention"
+            className="members-page-section space-y-4"
+            role="tabpanel"
+          >
+            <PendingApprovals
+              showReject
+              onCountChange={(count) => {
+                setKpis((current) =>
+                  current
+                    ? { ...current, pendingCount: count }
+                    : current,
+                );
+              }}
+              onQueueChanged={refreshDirectory}
+            />
+            {canFetchDues ? (
+              <MembersDuesFollowUps
+                members={members}
+                duesByMemberId={duesByMemberId}
+                onReviewInDirectory={focusOutstandingDues}
+              />
+            ) : null}
+          </section>
+        ) : (
+          <>
+            <section
+              aria-label="Search and filters"
+              className="members-page-section members-page-filters"
+            >
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm text-label">
+                  {isLoading ? (
+                    "Loading people…"
+                  ) : (
+                    <>
+                      <span className="font-semibold tabular-nums text-foreground">
+                        {displayedMembers.length}
+                      </span>{" "}
+                      {displayedMembers.length === 1 ? "person" : "people"}
+                      {engagementFilter === "active"
+                        ? " active recently"
+                        : engagementFilter === "idle"
+                          ? " idle"
+                          : duesFilterActive
+                            ? " with outstanding dues"
+                            : ""}
+                      {filters.search.trim() ||
+                      filters.role ||
+                      filters.graduationYear ||
+                      (filters.memberStatus && !engagementFilter) ||
+                      filters.paymentStatus
+                        ? " matching filters"
+                        : ""}
+                    </>
+                  )}
+                </p>
+                {duesFilterActive || engagementFilter ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={focusPeopleDirectory}
+                  >
+                    Clear filter
+                  </Button>
+                ) : null}
+              </div>
+              <MembersFiltersToolbar values={filters} onChange={setFilters} />
+            </section>
+            <section
+              aria-label="Member table"
+              className="members-page-section members-page-table"
+              role={canReviewMembers ? "tabpanel" : undefined}
+            >
+              <MembersTable
+                members={displayedMembers}
+                positionSourceMembers={members}
+                isLoading={isLoading}
+                error={error}
+                duesByMemberId={duesByMemberId}
+                engagementByMemberId={engagementByMemberId}
+                isFilterEmpty={
+                  members.length > 0 && displayedMembers.length === 0
+                }
+                onInvite={
+                  canManageDirectory ? () => setInviteOpen(true) : undefined
+                }
+                onMemberUpdated={(updated, previousHolder) => {
+                  setMembers((prev) =>
+                    prev.map((row) => {
+                      if (row.id === updated.id) {
+                        return updated;
+                      }
+                      if (previousHolder && row.id === previousHolder.id) {
+                        return previousHolder;
+                      }
+                      if (
+                        updated.custom_board_position &&
+                        row.custom_board_position?.id ===
+                          updated.custom_board_position.id &&
+                        row.id !== updated.id
+                      ) {
+                        return { ...row, custom_board_position: null };
+                      }
+                      if (
+                        updated.position !== "member" &&
+                        row.position === updated.position &&
+                        row.id !== updated.id
+                      ) {
+                        return {
+                          ...row,
+                          position: "member",
+                          custom_board_position: null,
+                        };
+                      }
+                      return row;
+                    }),
+                  );
+                }}
+              />
+            </section>
+          </>
+        )}
       </div>
 
       <InviteMemberDrawer
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}
         onInvited={(result) => {
-          setDirectoryRefreshKey((value) => value + 1);
+          refreshDirectory();
           setInviteNotice({
             emailSent: result.setup_email_sent,
             message: result.setup_email_sent
@@ -472,9 +840,7 @@ export function MembersPage() {
       <ManageBoardPositionsDrawer
         open={managePositionsOpen}
         onClose={() => setManagePositionsOpen(false)}
-        onCatalogChanged={() => {
-          setDirectoryRefreshKey((value) => value + 1);
-        }}
+        onCatalogChanged={refreshDirectory}
       />
 
       <Modal

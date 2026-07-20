@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { MemberResponse } from "../../lib/auth-api";
 import { buildMemberWorkspaceSnapshot } from "../../lib/member-workspace-snapshot";
+import { MockAuthProvider } from "../../test/test-utils";
 import { MemberWorkspaceHeader } from "./MemberWorkspaceHeader";
 import { MemberWorkspaceLayout } from "./MemberWorkspaceLayout";
 import { MemberWorkspaceTodaysSnapshot } from "./MemberWorkspaceTodaysSnapshot";
@@ -20,80 +21,72 @@ const member: MemberResponse = {
   position: "member",
 };
 
+function renderLayout(ui: React.ReactNode) {
+  return render(
+    <MockAuthProvider
+      value={{
+        member: {
+          id: 1,
+          full_name: "Board User",
+          email: "board@semo.edu",
+          student_id: "1",
+          major: "Admin",
+          graduation_year: 2028,
+          role: "board",
+          status: "approved",
+          position: "member",
+        },
+        isAuthenticated: true,
+      }}
+    >
+      <MemoryRouter>{ui}</MemoryRouter>
+    </MockAuthProvider>,
+  );
+}
+
 describe("MemberWorkspaceLayout", () => {
   afterEach(() => {
     cleanup();
   });
 
-  it("renders header, today's snapshot, and section placeholders", () => {
-    render(
-      <MemoryRouter>
-        <MemberWorkspaceLayout
-          header={<MemberWorkspaceHeader member={member} />}
-          overview={
-            <MemberWorkspaceTodaysSnapshot
-              chips={buildMemberWorkspaceSnapshot({
-                member,
-                openTaskCount: null,
-              })}
-            />
-          }
-        />
-      </MemoryRouter>,
+  it("renders header and snapshot without hollow placeholders", () => {
+    renderLayout(
+      <MemberWorkspaceLayout
+        header={<MemberWorkspaceHeader member={member} />}
+        overview={
+          <MemberWorkspaceTodaysSnapshot
+            chips={buildMemberWorkspaceSnapshot({
+              member,
+              openTaskCount: null,
+            })}
+          />
+        }
+      />,
     );
 
     expect(
       screen.getByRole("heading", { level: 1, name: "Alex Member" }),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Today's Snapshot")).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Today's Snapshot" }),
-    ).toBeInTheDocument();
-
-    const workspace = screen.getByLabelText("Member workspace");
-    for (const title of [
-      "Overview",
-      "Health",
-      "Attendance",
-      "Tasks",
-      "Payments",
-      "Upcoming Events",
-      "Activity Timeline",
-      "Documents",
-      "AI Insights",
-    ]) {
-      expect(
-        within(workspace).getByRole("region", { name: title }),
-      ).toBeInTheDocument();
-    }
-    expect(
-      within(workspace).queryByRole("region", { name: "Notes" }),
-    ).not.toBeInTheDocument();
-    expect(
-      within(workspace).queryByRole("region", { name: "Private Notes" }),
-    ).not.toBeInTheDocument();
-    expect(within(workspace).getAllByText("Coming soon").length).toBeGreaterThan(
-      0,
-    );
+    expect(screen.queryByLabelText("Member workspace")).not.toBeInTheDocument();
+    expect(screen.queryByText("Coming soon")).not.toBeInTheDocument();
   });
 
   it("renders Private Notes only when the privateNotes slot is provided", () => {
-    render(
-      <MemoryRouter>
-        <MemberWorkspaceLayout
-          header={<MemberWorkspaceHeader member={member} />}
-          privateNotes={
-            <section aria-label="Private Notes">
-              <h2>Private Notes</h2>
-            </section>
-          }
-          documents={
-            <section aria-label="Documents">
-              <h2>Documents</h2>
-            </section>
-          }
-        />
-      </MemoryRouter>,
+    renderLayout(
+      <MemberWorkspaceLayout
+        header={<MemberWorkspaceHeader member={member} />}
+        privateNotes={
+          <section aria-label="Private Notes">
+            <h2>Private Notes</h2>
+          </section>
+        }
+        documents={
+          <section aria-label="Documents">
+            <h2>Documents</h2>
+          </section>
+        }
+      />,
     );
 
     const aside = screen.getByLabelText("Sidebar");
@@ -102,43 +95,41 @@ describe("MemberWorkspaceLayout", () => {
     ).toBeInTheDocument();
   });
 
-  it("replaces Tasks, Activity Timeline, and Payments when real sections are provided", () => {
-    render(
-      <MemoryRouter>
-        <MemberWorkspaceLayout
-          header={<MemberWorkspaceHeader member={member} />}
-          responsibilities={
-            <section aria-label="Current Responsibilities">
-              <h2>Current Responsibilities</h2>
-            </section>
-          }
-          schedule={
-            <section aria-label="Upcoming Schedule">
-              <h2>Upcoming Schedule</h2>
-            </section>
-          }
-          recentActivity={
-            <section aria-label="Recent Activity">
-              <h2>Recent Activity</h2>
-            </section>
-          }
-          financialStatus={
-            <section aria-label="Financial Status">
-              <h2>Financial Status</h2>
-            </section>
-          }
-          documents={
-            <section aria-label="Documents">
-              <h2>Documents</h2>
-            </section>
-          }
-          insights={
-            <section aria-label="AI Insights">
-              <h2>AI Insights</h2>
-            </section>
-          }
-        />
-      </MemoryRouter>,
+  it("renders only provided workspace sections", () => {
+    renderLayout(
+      <MemberWorkspaceLayout
+        header={<MemberWorkspaceHeader member={member} />}
+        responsibilities={
+          <section aria-label="Current Responsibilities">
+            <h2>Current Responsibilities</h2>
+          </section>
+        }
+        schedule={
+          <section aria-label="Upcoming Schedule">
+            <h2>Upcoming Schedule</h2>
+          </section>
+        }
+        recentActivity={
+          <section aria-label="Recent Activity">
+            <h2>Recent Activity</h2>
+          </section>
+        }
+        financialStatus={
+          <section aria-label="Financial Status">
+            <h2>Financial Status</h2>
+          </section>
+        }
+        documents={
+          <section aria-label="Documents">
+            <h2>Documents</h2>
+          </section>
+        }
+        insights={
+          <section aria-label="AI Insights">
+            <h2>AI Insights</h2>
+          </section>
+        }
+      />,
     );
 
     const workspace = screen.getByLabelText("Member workspace");
@@ -163,26 +154,13 @@ describe("MemberWorkspaceLayout", () => {
       within(workspace).getByRole("region", { name: "AI Insights" }),
     ).toBeInTheDocument();
     expect(
-      within(workspace).queryByRole("region", { name: "Tasks" }),
+      within(workspace).queryByRole("region", { name: "Overview" }),
     ).not.toBeInTheDocument();
     expect(
-      within(workspace).queryByRole("region", { name: "Activity Timeline" }),
+      within(workspace).queryByRole("region", { name: "Attendance" }),
     ).not.toBeInTheDocument();
     expect(
-      within(workspace).queryByRole("region", { name: "Payments" }),
+      within(workspace).queryByRole("region", { name: "Health" }),
     ).not.toBeInTheDocument();
-
-    const aside = within(workspace).getByLabelText("Sidebar");
-    const docs = within(aside).getByRole("region", { name: "Documents" });
-    const aiInsights = within(aside).getByRole("region", {
-      name: "AI Insights",
-    });
-    expect(
-      within(aside).queryByRole("region", { name: "Notes" }),
-    ).not.toBeInTheDocument();
-    expect(
-      docs.compareDocumentPosition(aiInsights) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
   });
 });

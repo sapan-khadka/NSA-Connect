@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -50,7 +50,7 @@ const tasks: KanbanTask[] = [
     group_name: null,
     description: "",
     assignee_id: 3,
-    assignee_name: null,
+    assignee_name: "Alex",
     status: "in_progress",
     due_date: "2030-05-21T12:00:00+00:00",
     is_overdue: false,
@@ -130,18 +130,42 @@ describe("BoardTaskKanban", () => {
     expect(card).toHaveClass("focus-visible:outline-none");
   });
 
-  it("renders filled open-details buttons on task cards", () => {
+  it("opens task details when the card is clicked", () => {
+    const onOpenTask = vi.fn();
     render(
       <MemoryRouter>
-        <BoardTaskKanban tasks={tasks} onMoveTask={vi.fn()} onOpenTask={vi.fn()} />
+        <BoardTaskKanban tasks={tasks} onMoveTask={vi.fn()} onOpenTask={onOpenTask} />
       </MemoryRouter>,
     );
 
-    const buttons = screen.getAllByRole("button", { name: "Open details" });
-    expect(buttons.length).toBeGreaterThan(0);
-    for (const button of buttons) {
-      expect(button).toHaveClass("text-white");
-      expect(button).not.toHaveClass("border");
-    }
+    expect(screen.queryByRole("button", { name: "Open details" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Open Order catering" }));
+    expect(onOpenTask).toHaveBeenCalledWith(2);
+  });
+
+  it("hides assignee avatar when hideAssignee is set", () => {
+    render(
+      <MemoryRouter>
+        <BoardTaskKanban
+          tasks={tasks}
+          onMoveTask={vi.fn()}
+          hideAssignee
+          onOpenTask={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText("A")).not.toBeInTheDocument();
+  });
+
+  it("shows quiet empty copy for empty columns", () => {
+    render(
+      <MemoryRouter>
+        <BoardTaskKanban tasks={[tasks[0]]} onMoveTask={vi.fn()} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getAllByText("Empty")).toHaveLength(2);
+    expect(screen.queryByText("No tasks in this column")).not.toBeInTheDocument();
   });
 });

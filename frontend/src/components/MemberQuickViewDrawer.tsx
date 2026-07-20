@@ -6,13 +6,10 @@
 
 import {
   Banknote,
-  CalendarCheck2,
   GraduationCap,
-  ListTodo,
   Mail,
   Pencil,
   UserRound,
-  UsersRound,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
@@ -201,12 +198,6 @@ export function MemberQuickViewDrawer({
 
   const stats: QuickStat[] = [
     {
-      label: "Attendance",
-      value: MISSING,
-      icon: CalendarCheck2,
-      muted: true,
-    },
-    {
       label: "Outstanding Dues",
       value: (
         <span className={dues.toneClass ?? undefined}>{dues.label}</span>
@@ -215,22 +206,16 @@ export function MemberQuickViewDrawer({
       muted: dues.muted,
     },
     {
-      label: "Active Tasks",
-      value: MISSING,
-      icon: ListTodo,
-      muted: true,
-    },
-    {
-      label: "Committee",
-      value: MISSING,
-      icon: UsersRound,
-      muted: true,
-    },
-    {
       label: "Graduation Year",
       value: member.graduation_year ? String(member.graduation_year) : MISSING,
       icon: GraduationCap,
       muted: !member.graduation_year,
+    },
+    {
+      label: "Major",
+      value: member.major?.trim() || MISSING,
+      icon: UserRound,
+      muted: !member.major?.trim(),
     },
   ];
 
@@ -264,6 +249,11 @@ export function MemberQuickViewDrawer({
               {member.email?.trim() ? (
                 <span className="members-quick-view-title-email">
                   {member.email.trim()}
+                </span>
+              ) : null}
+              {member.position !== "member" || member.custom_board_position ? (
+                <span className="mt-0.5 block text-xs font-medium text-primary">
+                  {formatMemberPositionLabel(member)}
                 </span>
               ) : null}
             </span>
