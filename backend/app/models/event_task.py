@@ -64,7 +64,7 @@ class EventTask(Base):
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=False, default="")
     group_id = Column(Integer, ForeignKey("prep_task_groups.id"), nullable=True)
-    assignee_id = Column(Integer, ForeignKey("members.id"), nullable=True)
+    assignee_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     status = Column(
         SqlEnum(
             EventTaskStatus,
@@ -78,7 +78,7 @@ class EventTask(Base):
     completion_note = Column(Text, nullable=True)
     completion_photo_url = Column(String(2048), nullable=True)
     completed_at = Column(DateTime(timezone=True), nullable=True)
-    created_by_id = Column(Integer, ForeignKey("members.id"), nullable=True)
+    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,

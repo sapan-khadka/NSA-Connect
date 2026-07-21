@@ -8,6 +8,7 @@ from app.models.volunteer import VolunteerSignup, VolunteerSlot
 from app.schemas.volunteer import (
     MemberVolunteerSignupResponse,
     VolunteerSlotCreateRequest,
+    VolunteerSlotPatchRequest,
 )
 from app.services.event_service import (
     EventNotFoundError,
@@ -27,14 +28,44 @@ class AlreadySignedUpError(Exception):
     pass
 
 
+class NotSignedUpError(Exception):
+    pass
+
+
+class VolunteerSlotCapacityTooLowError(Exception):
+    pass
+
+
 def _get_slot_with_signups(db: Session, slot_id: int) -> VolunteerSlot | None:
     return db.scalar(
         select(VolunteerSlot)
         .where(VolunteerSlot.id == slot_id)
         .options(
-            selectinload(VolunteerSlot.signups),
+            selectinload(VolunteerSlot.signups).selectinload(VolunteerSignup.member),
             selectinload(VolunteerSlot.event),
         ),
+    )
+
+
+def list_volunteer_slots_for_event(
+    db: Session,
+    event_id: int,
+) -> list[VolunteerSlot]:
+    event = db.get(Event, event_id)
+    if event is None:
+        raise EventNotFoundError
+
+    return list(
+        db.scalars(
+            select(VolunteerSlot)
+            .where(VolunteerSlot.event_id == event_id)
+            .options(
+                selectinload(VolunteerSlot.signups).selectinload(
+                    VolunteerSignup.member
+                ),
+            )
+            .order_by(VolunteerSlot.created_at.asc()),
+        ).all(),
     )
 
 
@@ -50,14 +81,44 @@ def create_volunteer_slot_for_event(
     slot = VolunteerSlot(
         event_id=event_id,
         title=data.task_name,
-        description="",
+        description=(data.description or "").strip(),
         capacity=data.max_signup_count,
         created_at=datetime.now(UTC),
     )
     db.add(slot)
     db.commit()
     db.refresh(slot)
-    return slot
+    return _get_slot_with_signups(db, slot.id) or slot
+
+
+def update_volunteer_slot(
+    db: Session,
+    slot_id: int,
+    data: VolunteerSlotPatchRequest,
+) -> VolunteerSlot:
+    slot = _get_slot_with_signups(db, slot_id)
+    if slot is None:
+        raise VolunteerSlotNotFoundError
+
+    if data.task_name is not None:
+        slot.title = data.task_name
+    if "description" in data.model_fields_set:
+        slot.description = (data.description or "").strip()
+    if data.max_signup_count is not None:
+        if data.max_signup_count < slot.signup_count:
+            raise VolunteerSlotCapacityTooLowError
+        slot.capacity = data.max_signup_count
+
+    db.commit()
+    return _get_slot_with_signups(db, slot_id) or slot
+
+
+def delete_volunteer_slot(db: Session, slot_id: int) -> None:
+    slot = db.get(VolunteerSlot, slot_id)
+    if slot is None:
+        raise VolunteerSlotNotFoundError
+    db.delete(slot)
+    db.commit()
 
 
 def signup_for_volunteer_slot(
@@ -103,6 +164,33 @@ def signup_for_volunteer_slot(
     slot = _get_slot_with_signups(db, slot_id)
     assert slot is not None
     return signup, slot
+
+
+def withdraw_from_volunteer_slot(
+    db: Session,
+    slot_id: int,
+    member_id: int,
+) -> VolunteerSlot:
+    slot = _get_slot_with_signups(db, slot_id)
+    if slot is None:
+        raise VolunteerSlotNotFoundError
+
+    ensure_member_can_access_event(db, slot.event_id, member_id)
+
+    signup = db.scalar(
+        select(VolunteerSignup).where(
+            VolunteerSignup.slot_id == slot_id,
+            VolunteerSignup.member_id == member_id,
+        ),
+    )
+    if signup is None:
+        raise NotSignedUpError
+
+    db.delete(signup)
+    db.commit()
+    refreshed = _get_slot_with_signups(db, slot_id)
+    assert refreshed is not None
+    return refreshed
 
 
 def list_volunteer_signups_for_member(

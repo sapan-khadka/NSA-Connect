@@ -1,11 +1,10 @@
 import logging
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.announcement import Announcement
-from app.models.member import Member, MemberStatus
 from app.models.notification_sent_log import NotificationType
+from app.services.announcement_recipients import list_announcement_recipients
 from app.services.notification_email_service import (
     deliver_notification_email,
     send_announcement_email,
@@ -18,11 +17,7 @@ logger = logging.getLogger(__name__)
 def notify_announcement_broadcast(
     db: Session, announcement: Announcement
 ) -> dict[str, int]:
-    members = list(
-        db.scalars(
-            select(Member).where(Member.status == MemberStatus.APPROVED),
-        ).all(),
-    )
+    members = list_announcement_recipients(db, announcement)
 
     stats = {"candidates": len(members), "sent": 0, "skipped": 0}
     author_name = announcement.author.full_name

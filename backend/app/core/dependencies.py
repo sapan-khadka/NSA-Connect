@@ -3,8 +3,10 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import InvalidTokenError, decode_access_token
+from app.core.security import InvalidTokenError, decode_access_token, resolve_user_id
 from app.models.member import Member, MemberPosition, MemberRole
+from app.models.organization import Organization
+from app.services.organization_context import ensure_membership_for_member
 
 security = HTTPBearer()
 
@@ -22,15 +24,15 @@ def get_current_member(
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
 
-    member_id = payload.get("member_id")
-    if member_id is None:
+    user_id = resolve_user_id(payload)
+    if user_id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token payload",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    member = db.get(Member, member_id)
+    member = db.get(Member, user_id)
     if member is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -60,7 +62,31 @@ def get_current_member(
             detail="Member account is not approved",
         )
 
+    membership = ensure_membership_for_member(db, member)
+    # Request-scoped only; not persisted on the Member row.
+    member._active_organization_id = membership.organization_id
+    member._active_membership = membership
+
     return member
+
+
+def get_current_organization(
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+) -> Organization:
+    organization_id = getattr(current_member, "_active_organization_id", None)
+    if organization_id is None:
+        from app.services.organization_context import get_default_organization_id
+
+        organization_id = get_default_organization_id(db)
+
+    organization = db.get(Organization, organization_id)
+    if organization is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found",
+        )
+    return organization
 
 
 def _require_role(minimum_role: MemberRole):

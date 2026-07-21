@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.dependencies import get_current_member
+from app.core.dependencies import get_current_member, get_current_organization
 from app.core.password_validation import WeakPasswordError
 from app.core.rate_limit import (
     AppRateLimitExceeded,
@@ -13,8 +13,14 @@ from app.core.rate_limit import (
     limit,
     record_login_failure,
 )
-from app.core.security import InvalidTokenError, create_token_pair, decode_refresh_token
+from app.core.security import (
+    InvalidTokenError,
+    create_token_pair,
+    decode_refresh_token,
+    resolve_user_id,
+)
 from app.models.member import Member
+from app.models.organization import Organization
 from app.schemas.auth import (
     PasswordResetConfirmRequest,
     PasswordResetRequest,
@@ -31,6 +37,7 @@ from app.services.member_service import (
     authenticate_member,
     create_member,
 )
+from app.services.organization_context import get_default_organization
 from app.services.password_reset_service import (
     PASSWORD_RESET_INVALID_TOKEN_MESSAGE,
     PASSWORD_RESET_REQUEST_MESSAGE,
@@ -71,7 +78,8 @@ def register(
             detail=str(exc),
         ) from None
 
-    return MemberResponse.from_member(member, viewer=member)
+    organization = get_default_organization(db)
+    return MemberResponse.from_member(member, viewer=member, organization=organization)
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -136,15 +144,15 @@ def refresh_tokens(data: RefreshTokenRequest, db: Session = Depends(get_db)):
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
 
-    member_id = payload.get("member_id")
-    if member_id is None:
+    user_id = resolve_user_id(payload)
+    if user_id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token payload",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    member = db.get(Member, member_id)
+    member = db.get(Member, user_id)
     if member is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -193,8 +201,15 @@ def refresh_tokens(data: RefreshTokenRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/me", response_model=MemberResponse)
-def me(current_member: Member = Depends(get_current_member)):
-    return MemberResponse.from_member(current_member, viewer=current_member)
+def me(
+    current_member: Member = Depends(get_current_member),
+    current_organization: Organization = Depends(get_current_organization),
+):
+    return MemberResponse.from_member(
+        current_member,
+        viewer=current_member,
+        organization=current_organization,
+    )
 
 
 @router.post("/password-reset/request", response_model=PasswordResetRequestResponse)

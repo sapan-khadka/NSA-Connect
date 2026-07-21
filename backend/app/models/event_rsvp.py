@@ -12,6 +12,7 @@ class RsvpStatus(StrEnum):
     GOING = "going"
     MAYBE = "maybe"
     NOT_GOING = "not_going"
+    WAITLISTED = "waitlisted"
 
 
 class EventRsvp(Base):
@@ -22,7 +23,7 @@ class EventRsvp(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     event_id = Column(Integer, ForeignKey("events.id"), nullable=False)
-    member_id = Column(Integer, ForeignKey("members.id"), nullable=False)
+    member_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     status = Column(
         SqlEnum(
             RsvpStatus, values_callable=lambda statuses: [s.value for s in statuses]

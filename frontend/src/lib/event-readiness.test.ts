@@ -8,6 +8,8 @@ describe("computeEventReadiness", () => {
     const result = computeEventReadiness({
       event: createMockEventDetailResponse({
         event_photo_url: "https://example.com/cover.jpg",
+        location: "University Center",
+        capacity: 120,
         budget: "500.00",
         is_past: false,
       }),
@@ -29,15 +31,16 @@ describe("computeEventReadiness", () => {
     expect(result.checks.find((c) => c.id === "volunteers")?.status).toBe(
       "pass",
     );
-    expect(result.checks.find((c) => c.id === "reminder")?.status).toBe(
-      "unknown",
-    );
+    expect(result.checks.find((c) => c.id === "capacity")?.status).toBe("pass");
+    expect(result.checks.find((c) => c.id === "reminder")).toBeUndefined();
   });
 
   it("suggests inviting volunteers when none are signed up", () => {
     const result = computeEventReadiness({
       event: createMockEventDetailResponse({
         event_photo_url: "https://example.com/cover.jpg",
+        location: "Hall",
+        capacity: 50,
         budget: "500.00",
       }),
       budget: {
@@ -56,7 +59,7 @@ describe("computeEventReadiness", () => {
     expect(result.checks.find((c) => c.id === "volunteers")?.status).toBe(
       "warn",
     );
-    expect(result.suggestedNextStep).toMatch(/volunteers/i);
+    expect(result.suggestedNextStep).toMatch(/volunteer/i);
     expect(result.resolveTarget).toBe("volunteers");
   });
 

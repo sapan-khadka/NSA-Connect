@@ -13,6 +13,7 @@ from app.schemas.custom_board_position import (
     CustomBoardPositionResponse,
     MemberPositionCatalogResponse,
 )
+from app.services.organization_context import get_default_organization_id
 
 BUILT_IN_POSITION_LABELS: dict[MemberPosition, str] = {
     MemberPosition.PRESIDENT: "President",
@@ -108,7 +109,7 @@ def list_custom_board_positions(
 ) -> list[CustomBoardPosition]:
     query = select(CustomBoardPosition).options(
         joinedload(CustomBoardPosition.holder),
-    )
+    ).where(CustomBoardPosition.organization_id == get_default_organization_id(db))
     if not include_archived:
         query = query.where(CustomBoardPosition.is_active.is_(True))
     query = query.order_by(CustomBoardPosition.name.asc())
@@ -151,9 +152,11 @@ def create_custom_board_position(
     created_by: Member,
 ) -> CustomBoardPosition:
     cleaned, normalized = _validate_name(name)
+    org_id = get_default_organization_id(db)
     existing = db.scalar(
         select(CustomBoardPosition).where(
             CustomBoardPosition.name_normalized == normalized,
+            CustomBoardPosition.organization_id == org_id,
         ),
     )
     if existing is not None:
@@ -166,6 +169,7 @@ def create_custom_board_position(
         name_normalized=normalized,
         is_active=True,
         created_by_id=created_by.id,
+        organization_id=org_id,
     )
     db.add(position)
     try:
@@ -191,6 +195,7 @@ def rename_custom_board_position(
     duplicate = db.scalar(
         select(CustomBoardPosition).where(
             CustomBoardPosition.name_normalized == normalized,
+            CustomBoardPosition.organization_id == get_default_organization_id(db),
             CustomBoardPosition.id != position_id,
         ),
     )

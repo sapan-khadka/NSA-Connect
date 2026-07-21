@@ -3,6 +3,7 @@ import {
   Calendar,
   CheckSquare,
   ClipboardCheck,
+  Copy,
   ExternalLink,
   ListTodo,
   MapPin,
@@ -13,10 +14,16 @@ import {
   Wallet,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
+import { getApiErrorMessage } from "../lib/api-error";
 import { EVENT_TYPE_BADGE_CLASS, EVENT_TYPE_LABELS } from "../lib/event-types";
-import { eventDetailPath } from "../lib/event-links";
+import {
+  combineDateAndTime,
+  getMinEventDate,
+  splitEventDateTime,
+} from "../lib/event-form";
+import { eventDetailPath, publicEventPath } from "../lib/event-links";
 import {
   EVENT_MANAGE_EYEBROW,
   EVENT_MANAGE_PRIMARY_BTN,
@@ -24,6 +31,7 @@ import {
   EVENT_MANAGE_SECONDARY_BTN,
 } from "../lib/event-manage-ui";
 import {
+  duplicateEvent,
   fetchEventAttendees,
   fetchEventVolunteerSignups,
   type EventDetailResponse,
@@ -33,7 +41,10 @@ import type { FinanceEventBudgetSummary } from "../lib/finance-api";
 import { formatCurrency } from "../lib/format-currency";
 import { formatCountdownBadge } from "../lib/format-datetime";
 import { AppIcon } from "./ui/AppIcon";
+import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
+import { inputFieldClassName } from "./ui/Input";
+import { Modal } from "./ui/Modal";
 
 type EventManageHeroProps = {
   event: EventDetailResponse;
@@ -42,6 +53,9 @@ type EventManageHeroProps = {
   backTo: string;
   onEditEvent: () => void;
   onCheckIn: () => void;
+  /** When provided, skips redundant attendee/volunteer fetches. */
+  attendeeCount?: number | null;
+  volunteerCount?: number | null;
 };
 
 function formatEventWhen(isoDate: string): string {
@@ -113,44 +127,72 @@ export function EventManageHero({
   backTo,
   onEditEvent,
   onCheckIn,
+  attendeeCount: attendeeCountProp,
+  volunteerCount: volunteerCountProp,
 }: EventManageHeroProps) {
-  const [attendeeCount, setAttendeeCount] = useState<number | null>(null);
-  const [volunteerCount, setVolunteerCount] = useState<number | null>(null);
+  const navigate = useNavigate();
+  const metricsProvided =
+    attendeeCountProp !== undefined || volunteerCountProp !== undefined;
+  const [attendeeCountLocal, setAttendeeCountLocal] = useState<number | null>(
+    null,
+  );
+  const [volunteerCountLocal, setVolunteerCountLocal] = useState<number | null>(
+    null,
+  );
   const [shareCopied, setShareCopied] = useState(false);
+  const [duplicateOpen, setDuplicateOpen] = useState(false);
+  const initialSchedule = splitEventDateTime(event.starts_at);
+  const [duplicateName, setDuplicateName] = useState(`${event.name} (Copy)`);
+  const [duplicateDate, setDuplicateDate] = useState(initialSchedule.event_date);
+  const [duplicateTime, setDuplicateTime] = useState(initialSchedule.event_time);
+  const [duplicating, setDuplicating] = useState(false);
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (metricsProvided) {
+      return;
+    }
+
     let cancelled = false;
 
     void fetchEventAttendees(event.id)
       .then((response) => {
         if (!cancelled) {
-          setAttendeeCount(response.going_count);
+          setAttendeeCountLocal(response.going_count);
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setAttendeeCount(null);
+          setAttendeeCountLocal(null);
         }
       });
 
     void fetchEventVolunteerSignups(event.id)
       .then((response) => {
         if (!cancelled) {
-          setVolunteerCount(response.total);
+          setVolunteerCountLocal(response.total);
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setVolunteerCount(null);
+          setVolunteerCountLocal(null);
         }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [event.id]);
+  }, [event.id, metricsProvided]);
 
-  const publicPath = eventDetailPath(event.id);
+  const attendeeCount =
+    attendeeCountProp !== undefined ? attendeeCountProp : attendeeCountLocal;
+  const volunteerCount =
+    volunteerCountProp !== undefined ? volunteerCountProp : volunteerCountLocal;
+
+  const memberPath = eventDetailPath(event.id);
+  const canSharePublicly =
+    event.event_type !== "meeting" || event.meeting_visibility === "public";
+  const sharePath = canSharePublicly ? publicEventPath(event.id) : memberPath;
   const location = event.location?.trim() || "Location TBA";
   const when = formatEventWhen(event.starts_at);
   const countdown = formatCountdownBadge(event.starts_at);
@@ -161,13 +203,44 @@ export function EventManageHero({
     : "—";
 
   async function handleShare(): Promise<void> {
-    const url = `${window.location.origin}${publicPath}`;
+    const url = `${window.location.origin}${sharePath}`;
     try {
       await navigator.clipboard.writeText(url);
       setShareCopied(true);
       window.setTimeout(() => setShareCopied(false), 2000);
     } catch {
       setShareCopied(false);
+    }
+  }
+
+  function openDuplicateModal() {
+    const next = splitEventDateTime(event.starts_at);
+    setDuplicateName(`${event.name} (Copy)`);
+    setDuplicateDate(next.event_date);
+    setDuplicateTime(next.event_time);
+    setDuplicateError(null);
+    setDuplicateOpen(true);
+  }
+
+  async function handleDuplicate(): Promise<void> {
+    if (!duplicateDate || !duplicateTime) {
+      setDuplicateError("Date and time are required.");
+      return;
+    }
+
+    setDuplicating(true);
+    setDuplicateError(null);
+    try {
+      const created = await duplicateEvent(event.id, {
+        starts_at: combineDateAndTime(duplicateDate, duplicateTime),
+        name: duplicateName.trim() || undefined,
+      });
+      setDuplicateOpen(false);
+      void navigate(`/events/${created.id}/manage`);
+    } catch (caught) {
+      setDuplicateError(getApiErrorMessage(caught));
+    } finally {
+      setDuplicating(false);
     }
   }
 
@@ -255,9 +328,12 @@ export function EventManageHero({
             <AppIcon icon={Pencil} size="xs" className="text-current" />
             Edit Event
           </button>
-          <Link to={publicPath} className={secondaryActionClassName()}>
+          <Link
+            to={canSharePublicly ? sharePath : memberPath}
+            className={secondaryActionClassName()}
+          >
             <AppIcon icon={ExternalLink} size="xs" className="text-gray-500" />
-            View Public Page
+            {canSharePublicly ? "View Public Page" : "View Event Page"}
           </Link>
           <button
             type="button"
@@ -268,7 +344,11 @@ export function EventManageHero({
             aria-live="polite"
           >
             <AppIcon icon={Share2} size="xs" className="text-current" />
-            {shareCopied ? "Link copied" : "Share Event"}
+            {shareCopied
+              ? "Link copied"
+              : canSharePublicly
+                ? "Share Public Link"
+                : "Copy Member Link"}
           </button>
           <button
             type="button"
@@ -282,8 +362,109 @@ export function EventManageHero({
             />
             Check In
           </button>
+          <button
+            type="button"
+            onClick={openDuplicateModal}
+            className={secondaryActionClassName()}
+          >
+            <AppIcon icon={Copy} size="xs" className="text-gray-500" />
+            Duplicate Event
+          </button>
         </div>
       </div>
+
+      <Modal
+        open={duplicateOpen}
+        title="Duplicate event"
+        onClose={() => {
+          if (!duplicating) {
+            setDuplicateOpen(false);
+          }
+        }}
+      >
+        <p className="text-sm text-gray-600">
+          Creates a new event with the same details, volunteer roles, and simple
+          tasks. RSVPs and check-ins are not copied.
+        </p>
+        <div className="mt-4 space-y-3">
+          <div>
+            <label
+              htmlFor="duplicate-event-name"
+              className="block text-xs font-medium text-gray-500"
+            >
+              Name
+            </label>
+            <input
+              id="duplicate-event-name"
+              type="text"
+              value={duplicateName}
+              onChange={(changeEvent) =>
+                setDuplicateName(changeEvent.target.value)
+              }
+              className={`${inputFieldClassName} mt-1`}
+            />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor="duplicate-event-date"
+                className="block text-xs font-medium text-gray-500"
+              >
+                Date
+              </label>
+              <input
+                id="duplicate-event-date"
+                type="date"
+                min={getMinEventDate()}
+                value={duplicateDate}
+                onChange={(changeEvent) =>
+                  setDuplicateDate(changeEvent.target.value)
+                }
+                className={`${inputFieldClassName} mt-1`}
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="duplicate-event-time"
+                className="block text-xs font-medium text-gray-500"
+              >
+                Time
+              </label>
+              <input
+                id="duplicate-event-time"
+                type="time"
+                value={duplicateTime}
+                onChange={(changeEvent) =>
+                  setDuplicateTime(changeEvent.target.value)
+                }
+                className={`${inputFieldClassName} mt-1`}
+              />
+            </div>
+          </div>
+          {duplicateError ? (
+            <p className="text-sm text-red-700" role="alert">
+              {duplicateError}
+            </p>
+          ) : null}
+          <div className="flex justify-end gap-2 pt-1">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setDuplicateOpen(false)}
+              disabled={duplicating}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleDuplicate()}
+              disabled={duplicating}
+            >
+              {duplicating ? "Duplicating…" : "Create copy"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <div className="mt-8 grid grid-cols-2 gap-3 border-t border-gray-100 pt-6 sm:grid-cols-4">
         <HeroMetric

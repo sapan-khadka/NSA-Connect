@@ -181,15 +181,15 @@ def _optional_member_id(request: Request) -> int | None:
         return None
 
     try:
-        from app.core.security import decode_access_token
+        from app.core.security import decode_access_token, resolve_user_id
 
         payload = decode_access_token(token)
     except Exception:
         return None
 
-    member_id = payload.get("member_id")
-    if isinstance(member_id, int):
-        return member_id
+    user_id = resolve_user_id(payload)
+    if isinstance(user_id, int):
+        return user_id
     return None
 
 

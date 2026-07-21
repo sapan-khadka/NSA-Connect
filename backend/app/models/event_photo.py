@@ -15,7 +15,7 @@ class EventPhoto(Base):
         index=True,
     )
     uploaded_by_id = Column(
-        Integer, ForeignKey("members.id"), nullable=False, index=True
+        Integer, ForeignKey("users.id"), nullable=False, index=True
     )
     image_url = Column(String(2048), nullable=False)
     thumbnail_url = Column(String(2048), nullable=False)

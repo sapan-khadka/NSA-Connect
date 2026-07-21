@@ -63,6 +63,7 @@ export type MemberResponse = {
   email_visibility?: ProfileFieldVisibility;
   phone_visibility?: ProfileFieldVisibility;
   social_handle_visibility?: ProfileFieldVisibility;
+  organization?: { id: number; slug: string; name: string } | null;
 };
 
 export async function fetchCurrentMember(): Promise<MemberResponse> {

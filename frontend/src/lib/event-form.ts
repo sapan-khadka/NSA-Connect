@@ -35,6 +35,8 @@ export function splitEventDateTime(startsAt: string): {
 export type CreateEventFormValues = {
   name: string;
   description: string;
+  location: string;
+  capacity: string;
   event_type: EventType;
   event_date: string;
   event_time: string;
@@ -51,6 +53,8 @@ export const MAX_EVENT_BUDGET = 999_999.99;
 export const initialCreateEventValues: CreateEventFormValues = {
   name: "",
   description: "",
+  location: "",
+  capacity: "",
   event_type: "cultural",
   event_date: "",
   event_time: "18:00",
@@ -141,6 +145,24 @@ export function validateCreateEventField(
       }
       return null;
     }
+    case "location":
+      if (value.trim().length > 255) {
+        return "Location must be 255 characters or fewer";
+      }
+      return null;
+    case "capacity": {
+      if (!value.trim()) {
+        return null;
+      }
+      if (!/^\d+$/.test(value.trim())) {
+        return "Capacity must be a whole number";
+      }
+      const amount = Number(value);
+      if (amount < 1) {
+        return "Capacity must be at least 1";
+      }
+      return null;
+    }
     default:
       return null;
   }
@@ -169,12 +191,17 @@ export function formatBudgetForSubmit(value: string): string {
 }
 
 export function buildCreateEventPayload(values: CreateEventFormValues) {
+  const location = values.location.trim();
+  const capacityRaw = values.capacity.trim();
+  const capacity = capacityRaw ? Number(capacityRaw) : null;
   return {
     name: values.name.trim(),
     description: values.description.trim(),
     event_type: values.event_type,
     starts_at: combineDateAndTime(values.event_date, values.event_time),
     budget: formatBudgetForSubmit(values.budget),
+    ...(location ? { location } : {}),
+    ...(capacity !== null ? { capacity } : {}),
     ...(values.event_type === "meeting"
       ? { meeting_visibility: values.meeting_visibility }
       : {}),

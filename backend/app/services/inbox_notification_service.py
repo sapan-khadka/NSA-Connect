@@ -1,5 +1,5 @@
-from datetime import UTC, datetime
 from collections.abc import Callable
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -12,6 +12,7 @@ from app.schemas.inbox_notification import (
     MarkAllInboxReadResponse,
     MarkInboxReadResponse,
 )
+from app.services.organization_context import get_default_organization_id
 
 
 class InboxNotificationNotFoundError(Exception):
@@ -83,6 +84,7 @@ def create_inbox_notification(
         body=body,
         href=href,
         dedupe_key=dedupe_key,
+        organization_id=get_default_organization_id(db),
     )
     db.add(notification)
     if commit:
@@ -290,8 +292,18 @@ def notify_announcement_published(
     title: str,
     author: Member,
     category_label: str | None = None,
+    announcement=None,
 ) -> int:
-    recipients = [m for m in _approved_recipients(db) if m.id != author.id]
+    if announcement is not None:
+        from app.services.announcement_recipients import list_announcement_recipients
+
+        recipients = [
+            member
+            for member in list_announcement_recipients(db, announcement)
+            if member.id != author.id
+        ]
+    else:
+        recipients = [m for m in _approved_recipients(db) if m.id != author.id]
     category = category_label or "Announcement"
     return notify_many(
         db,

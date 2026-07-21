@@ -31,7 +31,7 @@ class NotificationSentLog(Base):
     __tablename__ = "notification_sent_logs"
 
     id = Column(Integer, primary_key=True, index=True)
-    member_id = Column(Integer, ForeignKey("members.id"), nullable=False, index=True)
+    member_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     notification_type = Column(
         SqlEnum(
             NotificationType,

@@ -18,8 +18,8 @@ class EventParticipantInvitation(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     event_id = Column(Integer, ForeignKey("events.id"), nullable=False)
-    member_id = Column(Integer, ForeignKey("members.id"), nullable=False)
-    invited_by_id = Column(Integer, ForeignKey("members.id"), nullable=False)
+    member_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    invited_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,

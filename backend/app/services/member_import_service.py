@@ -9,12 +9,14 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.models.member import Member
+from app.models.organization_membership import OrganizationMembership
 from app.schemas.member import (
     MemberImportResponse,
     MemberImportSkippedRow,
     MemberInviteRequest,
 )
 from app.services.member_service import create_invited_member
+from app.services.organization_context import get_default_organization_id
 from app.services.password_reset_service import issue_password_token
 
 IMPORT_CHUNK_SIZE = 50
@@ -185,6 +187,16 @@ def import_members_csv(db: Session, file_bytes: bytes) -> MemberImportResponse:
             member = create_invited_member(db, data, commit=False)
             seen_emails.add(email)
             seen_student_ids.add(student_id)
+            db.add(
+                OrganizationMembership(
+                    user_id=member.id,
+                    organization_id=get_default_organization_id(db),
+                    role=member.role,
+                    status=member.status,
+                    position=member.position,
+                    custom_board_position_id=member.custom_board_position_id,
+                )
+            )
             issue_password_token(db, member, commit=False)
         except SQLAlchemyError:
             # Flush failures poison the same transaction as commit failures;

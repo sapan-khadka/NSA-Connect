@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.models.constitutional_chunk import ConstitutionalChunk
 from app.services.embedding_service import generate_embeddings
+from app.services.organization_context import get_default_organization_id
 
 
 @dataclass(frozen=True)
@@ -36,7 +37,12 @@ def _search_with_pgvector(
         "distance",
     )
     rows = db.execute(
-        select(ConstitutionalChunk, distance).order_by(distance).limit(limit),
+        select(ConstitutionalChunk, distance)
+        .where(
+            ConstitutionalChunk.organization_id == get_default_organization_id(db)
+        )
+        .order_by(distance)
+        .limit(limit),
     ).all()
 
     return [
@@ -56,7 +62,11 @@ def _search_in_memory(
     query_embedding: list[float],
     limit: int,
 ) -> list[ConstitutionSearchHit]:
-    chunks = db.scalars(select(ConstitutionalChunk)).all()
+    chunks = db.scalars(
+        select(ConstitutionalChunk).where(
+            ConstitutionalChunk.organization_id == get_default_organization_id(db)
+        )
+    ).all()
     ranked = sorted(
         chunks,
         key=lambda chunk: _cosine_similarity(query_embedding, list(chunk.embedding)),

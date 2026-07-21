@@ -7,6 +7,7 @@ import { DiscussionFeed } from "../components/DiscussionFeed";
 import { canCreateEventTasks } from "../lib/event-finance";
 import { EventFinanceCloseoutBanner } from "../components/EventFinanceCloseoutBanner";
 import { EventRsvpButton } from "../components/EventRsvpButton";
+import { EventVolunteerRolesPanel } from "../components/EventVolunteerRolesPanel";
 import { EventVolunteerSignupPanel } from "../components/EventVolunteerSignupPanel";
 import { EventFeedbackPanel } from "../components/EventFeedbackPanel";
 import { EventTaskManager } from "../components/EventTaskManager";
@@ -230,8 +231,24 @@ export function EventDetailPage() {
       if (canViewBoard) {
         void loadAttendees();
       }
-    } catch {
+    } catch (caught) {
       setEvent(snapshot);
+      const detail = (caught as { response?: { data?: { detail?: unknown } } })
+        ?.response?.data?.detail;
+      const atCapacity =
+        typeof detail === "object" &&
+        detail !== null &&
+        "code" in detail &&
+        (detail as { code?: string }).code === "event_at_capacity";
+      if (atCapacity && status === "going") {
+        const joinWaitlist = window.confirm(
+          "This event is at capacity. Join the waitlist instead?",
+        );
+        if (joinWaitlist) {
+          void handleRsvpStatusChange("waitlisted");
+          return;
+        }
+      }
     } finally {
       setRsvpLoading(false);
     }
@@ -315,9 +332,14 @@ export function EventDetailPage() {
             currentStatus={event.current_member_rsvp_status}
             canRsvp={isEventUpcoming(event.starts_at)}
             loading={rsvpLoading}
+            atCapacity={event.current_member_rsvp_status === "waitlisted"}
             onStatusChange={(status) => void handleRsvpStatusChange(status)}
           />
-          <div className="mt-3">
+          <div className="mt-3 space-y-3">
+            <EventVolunteerRolesPanel
+              eventId={event.id}
+              canVolunteer={isEventUpcoming(event.starts_at)}
+            />
             <EventVolunteerSignupPanel
               eventId={event.id}
               canVolunteer={isEventUpcoming(event.starts_at)}

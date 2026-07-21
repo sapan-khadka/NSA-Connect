@@ -29,6 +29,8 @@ class EventCreateRequest(BaseModel):
     starts_at: datetime
     event_type: EventType
     description: str = Field(min_length=1, max_length=5000)
+    location: str | None = Field(default=None, max_length=255)
+    capacity: int | None = Field(default=None, ge=1)
     budget: Decimal = Field(ge=Decimal("0"), le=MAX_EVENT_BUDGET)
     meeting_visibility: MeetingVisibility | None = None
 
@@ -40,6 +42,15 @@ class EventCreateRequest(BaseModel):
         if not value:
             raise ValueError("Must not be empty")
         return value
+
+    @field_validator("location", mode="before")
+    @classmethod
+    def strip_optional_location(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            value = value.strip()
+        return value or None
 
     @field_validator("starts_at")
     @classmethod
@@ -71,6 +82,7 @@ class EventResponse(BaseModel):
     event_type: EventType
     description: str
     location: str | None = None
+    capacity: int | None = None
     budget: Decimal
     created_by_id: int
     current_member_rsvp_status: RsvpStatus | None = None
@@ -99,6 +111,7 @@ class EventResponse(BaseModel):
             event_type=event.event_type,
             description=event.description,
             location=event.location,
+            capacity=event.capacity,
             budget=Decimal(event.budget),
             created_by_id=event.created_by_id,
             current_member_rsvp_status=current_member_rsvp_status,
@@ -114,9 +127,34 @@ class EventResponse(BaseModel):
 
 
 class EventPatchRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, min_length=1, max_length=5000)
+    location: str | None = Field(default=None, max_length=255)
+    capacity: int | None = Field(default=None, ge=1)
     show_in_photo_archive: bool | None = None
     starts_at: datetime | None = None
+    ends_at: datetime | None = None
     meeting_visibility: MeetingVisibility | None = None
+
+    @field_validator("name", "description", mode="before")
+    @classmethod
+    def strip_optional_required_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            value = value.strip()
+        if not value:
+            raise ValueError("Must not be empty")
+        return value
+
+    @field_validator("location", mode="before")
+    @classmethod
+    def strip_optional_location(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            value = value.strip()
+        return value or None
 
     @field_validator("starts_at")
     @classmethod
@@ -130,13 +168,40 @@ class EventPatchRequest(BaseModel):
 
     @model_validator(mode="after")
     def at_least_one_field(self) -> "EventPatchRequest":
+        # `location` / `capacity` / `ends_at` may be explicitly set to null to clear.
         if (
-            self.show_in_photo_archive is None
+            self.name is None
+            and self.description is None
+            and "location" not in self.model_fields_set
+            and "capacity" not in self.model_fields_set
+            and "ends_at" not in self.model_fields_set
+            and self.show_in_photo_archive is None
             and self.starts_at is None
             and self.meeting_visibility is None
         ):
             raise ValueError("At least one field must be provided")
         return self
+
+
+class EventDuplicateRequest(BaseModel):
+    starts_at: datetime
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def strip_optional_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            value = value.strip()
+        if not value:
+            raise ValueError("Must not be empty")
+        return value
+
+    @field_validator("starts_at")
+    @classmethod
+    def starts_at_must_not_be_before_today(cls, value: datetime) -> datetime:
+        return validate_starts_at_not_before_today(value)
 
 
 class EventRsvpUpdateRequest(BaseModel):
@@ -160,6 +225,7 @@ class EventAttendeesResponse(BaseModel):
     maybe_count: int
     not_going_count: int
     no_response_count: int
+    waitlisted_count: int = 0
     attendees: list[EventRsvpAttendeeResponse]
 
 

@@ -14,6 +14,7 @@ from app.services.constitution_pdf_service import (
     extract_text_from_constitution_pdf,
 )
 from app.services.embedding_service import generate_embeddings
+from app.services.organization_context import get_default_organization_id
 
 
 @dataclass(frozen=True)
@@ -49,8 +50,11 @@ def store_constitution_chunks(
     text_chunks: list[ConstitutionTextChunk],
 ) -> list[StoredConstitutionChunk]:
     embeddings = generate_embeddings([chunk.content for chunk in text_chunks])
+    org_id = get_default_organization_id(db)
 
-    db.execute(delete(ConstitutionalChunk))
+    db.execute(delete(ConstitutionalChunk).where(
+        ConstitutionalChunk.organization_id == org_id
+    ))
     stored: list[StoredConstitutionChunk] = []
     for text_chunk, embedding in zip(text_chunks, embeddings, strict=True):
         row = ConstitutionalChunk(
@@ -58,6 +62,7 @@ def store_constitution_chunks(
             chunk_index=text_chunk.chunk_index,
             content=text_chunk.content,
             embedding=embedding,
+            organization_id=org_id,
         )
         db.add(row)
         db.flush()

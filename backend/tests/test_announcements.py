@@ -135,6 +135,65 @@ def test_create_announcement_sends_email_to_opted_in_members(
     assert len(logs) >= 1
 
 
+def test_board_can_create_event_targeted_announcement(client, board_headers):
+    event = client.post(
+        "/api/v1/events",
+        headers=board_headers,
+        json={
+            "name": "Holi Night",
+            "starts_at": "2030-03-15T18:00:00+00:00",
+            "event_type": "cultural",
+            "description": "Colors and music.",
+            "budget": "100.00",
+        },
+    )
+    assert event.status_code == 201
+    event_id = event.json()["id"]
+
+    with patch(
+        "app.services.announcement_service.notify_announcement_broadcast",
+        return_value={"candidates": 0, "sent": 0, "skipped": 0},
+    ):
+        response = client.post(
+            "/api/v1/announcements",
+            headers=board_headers,
+            json={
+                "title": "Reminder for Going",
+                "body": "See you there.",
+                "category": "event_related",
+                "audience": "going",
+                "event_id": event_id,
+            },
+        )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["audience"] == "going"
+    assert body["event_id"] == event_id
+
+    listing = client.get(
+        f"/api/v1/announcements?event_id={event_id}",
+        headers=board_headers,
+    )
+    assert listing.status_code == 200
+    assert listing.json()["total"] == 1
+    assert listing.json()["announcements"][0]["title"] == "Reminder for Going"
+
+
+def test_targeted_announcement_requires_event_id(client, board_headers):
+    response = client.post(
+        "/api/v1/announcements",
+        headers=board_headers,
+        json={
+            "title": "Missing event",
+            "body": "Should fail validation.",
+            "audience": "going",
+        },
+    )
+
+    assert response.status_code == 422
+
+
 def test_board_can_update_and_delete_announcement(client, board_headers, db_session):
     board_member = db_session.scalar(
         select(Member).where(Member.email == "board@semo.edu")

@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -35,6 +35,9 @@ vi.mock("../components/EventAttendanceSummaryPanel", () => ({
 vi.mock("../lib/events-api", () => ({
   fetchEvent: vi.fn(),
   fetchEventVolunteerSignups: vi.fn().mockResolvedValue({ total: 0, signups: [] }),
+  fetchEventVolunteerSlots: vi.fn().mockResolvedValue({ slots: [], total: 0 }),
+  createEventVolunteerSlot: vi.fn(),
+  duplicateEvent: vi.fn(),
   fetchEventInvitedParticipants: vi.fn().mockResolvedValue({ invitations: [] }),
   fetchEventAttendees: vi.fn().mockResolvedValue({
     going_count: 84,
@@ -44,6 +47,41 @@ vi.mock("../lib/events-api", () => ({
     attendees: [],
   }),
   patchEvent: vi.fn(),
+  inviteEventParticipants: vi.fn(),
+  fetchEventNotificationStatus: vi.fn().mockResolvedValue({
+    event_id: 1,
+    reminder_state: "scheduled",
+    reminder_sent_count: 0,
+    last_reminder_sent_at: null,
+    nudge_state: "scheduled",
+    nudge_sent_count: 0,
+    hours_until_start: 72,
+  }),
+  sendEventRemindersNow: vi.fn(),
+  fetchEventActivity: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+  patchVolunteerSlot: vi.fn(),
+  deleteVolunteerSlot: vi.fn(),
+}));
+
+vi.mock("../lib/announcements-api", () => ({
+  ANNOUNCEMENT_AUDIENCE_LABELS: {
+    all_approved: "All approved members",
+    going: "Going RSVPs",
+    maybe: "Maybe RSVPs",
+    no_rsvp: "No RSVP yet",
+  },
+  fetchAnnouncements: vi.fn().mockResolvedValue({ announcements: [], total: 0 }),
+  fetchAnnouncementRecipientPreview: vi.fn().mockResolvedValue({
+    audience: "all_approved",
+    event_id: 1,
+    total: 10,
+    emailable: 8,
+  }),
+  createAnnouncement: vi.fn(),
+}));
+
+vi.mock("../lib/ai-api", () => ({
+  draftAnnouncementEmail: vi.fn(),
 }));
 
 vi.mock("../lib/event-tasks-api", () => ({
@@ -73,6 +111,7 @@ vi.mock("../lib/finance-api", () => ({
 
 vi.mock("../lib/members-api", () => ({
   fetchAssignableMembers: vi.fn(),
+  fetchMembers: vi.fn().mockResolvedValue({ members: [], total: 0 }),
 }));
 
 vi.mock("../components/MeetingRecordSection", () => ({
@@ -187,13 +226,17 @@ async function mockBoardEventLoad(overrides: Partial<typeof mockEvent> = {}) {
   });
 }
 
+async function selectTab(user: ReturnType<typeof userEvent.setup>, name: string) {
+  await user.click(screen.getByRole("tab", { name }));
+}
+
 describe("EventManagePage", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
   });
 
-  it("renders a Home-style card grid with schedule and photo on the page", async () => {
+  it("renders a tabbed manage workspace with overview snapshot tiles", async () => {
     await mockBoardEventLoad();
     renderPage("board");
 
@@ -204,72 +247,47 @@ describe("EventManagePage", () => {
     expect(screen.getByRole("button", { name: "Edit Event" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View Public Page" })).toHaveAttribute(
       "href",
-      "/events/1",
+      "/e/1",
     );
-    expect(screen.getByRole("button", { name: "Share Event" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Share Public Link" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Check In" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Duplicate Event" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Attendees")).toBeInTheDocument();
     expect(screen.getByText("Published")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Event Details" })).toBeInTheDocument();
+
+    expect(screen.getByRole("tab", { name: "Overview" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByRole("tab", { name: "Details" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "People" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Ops" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Record" })).toBeInTheDocument();
+
     expect(screen.getByRole("heading", { name: "Event Readiness" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Resolve Issues" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Volunteers")).toBeInTheDocument();
+    expect(screen.getByLabelText("Event snapshot")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Attending/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Volunteers/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Open tasks/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Budget left/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Checked in/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Invited/i })).toBeInTheDocument();
     expect(
-      await screen.findByRole("button", { name: "Invite Volunteers" }),
+      screen.getByRole("button", { name: /Share & announce/i }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Assign Roles" })).toBeInTheDocument();
-    expect(screen.getByText("Needed roles")).toBeInTheDocument();
-    expect(screen.getByText("No volunteers yet")).toBeInTheDocument();
-    expect(screen.getByText("General Information")).toBeInTheDocument();
-    expect(screen.getAllByText("Date & Time").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText(/Cover Image/).length).toBeGreaterThanOrEqual(1);
-    expect(screen.queryByRole("heading", { name: "Schedule" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Event photo" })).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Tasks" })).toBeInTheDocument();
-    const budgetCard = screen.getByLabelText("Budget");
-    expect(budgetCard).toBeInTheDocument();
-    expect(within(budgetCard).getByText("Budget Health")).toBeInTheDocument();
-    expect(
-      within(budgetCard).getByText(/Healthy|Warning|Over Budget/),
-    ).toBeInTheDocument();
-    expect(within(budgetCard).getAllByText("Remaining").length).toBeGreaterThan(0);
-    expect(within(budgetCard).getAllByText("Spent").length).toBeGreaterThan(0);
-    expect(within(budgetCard).getByText("Planned")).toBeInTheDocument();
-    expect(within(budgetCard).getByText("Net Balance")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Check-in" })).toBeInTheDocument();
-    expect(
-      await screen.findByLabelText("RSVP Analytics"),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Attendance Prediction")).toBeInTheDocument();
-    expect(
-      await screen.findByRole("button", { name: "Open Check-in" }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Generate QR" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Download QR" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Event Communications")).toBeInTheDocument();
-    expect(screen.getByText("Invitation Email")).toBeInTheDocument();
-    expect(screen.getByText("Reminder Email")).toBeInTheDocument();
-    expect(screen.getByText("No messages sent yet")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Send Reminder" })).toHaveAttribute(
-      "href",
-      "/board/announcement-email",
-    );
-    expect(screen.getByRole("link", { name: "Create Announcement" })).toHaveAttribute(
-      "href",
-      "/announcements",
-    );
-    expect(
-      await screen.findByLabelText("Event Activity Timeline"),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Activity Timeline")).toBeInTheDocument();
-    expect(screen.getByText("Budget updated")).toBeInTheDocument();
-    expect(
-      screen.getByRole("checkbox", { name: /Show in photo archive/i }),
-    ).toBeChecked();
-    expect(
-      screen.getByRole("button", { name: "Delete event" }),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Overview" })).not.toBeInTheDocument();
+
+    expect(screen.queryByLabelText("Volunteers")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Tasks" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Budget")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Check-in" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Event Communications")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Event Activity Timeline")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Event Details" })).not.toBeInTheDocument();
 
     const backLink = screen.getByRole("link", { name: /Back to Events/i });
     expect(backLink.getAttribute("href")).toMatch(
@@ -277,23 +295,36 @@ describe("EventManagePage", () => {
     );
   });
 
-  it("opens the tasks modal from View all tasks", async () => {
+  it("opens details tab for editing core fields", async () => {
     const user = userEvent.setup();
     await mockBoardEventLoad();
     renderPage("board");
 
     await screen.findByRole("heading", { name: "Dashain Celebration" });
-    expect(screen.getByText("50%")).toBeInTheDocument();
-    expect(screen.getByText("1/2 done")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /View all/i }),
-    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Edit Event" }));
 
-    await user.click(screen.getByRole("button", { name: /View all/i }));
+    expect(await screen.findByRole("heading", { name: "Event Details" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Event name")).toBeInTheDocument();
+    expect(screen.getByLabelText("Venue")).toBeInTheDocument();
+    expect(screen.getByLabelText("Max attendees (optional)")).toBeInTheDocument();
+    expect(screen.getByLabelText("About this event")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("checkbox", { name: /Show in photo archive/i }),
+    ).toBeChecked();
+  });
+
+  it("opens the tasks modal from overview open-tasks tile", async () => {
+    const user = userEvent.setup();
+    await mockBoardEventLoad();
+    renderPage("board");
+
+    await screen.findByRole("heading", { name: "Dashain Celebration" });
+    await user.click(screen.getByRole("button", { name: /Open tasks/i }));
     expect(screen.getByTestId("event-task-manager")).toBeInTheDocument();
   });
 
-  it("opens transactions modal for treasurer", async () => {
+  it("opens transactions modal for treasurer from overview budget tile", async () => {
     const user = userEvent.setup();
     await mockBoardEventLoad();
     const { fetchEventTasks } = await import("../lib/event-tasks-api");
@@ -302,7 +333,7 @@ describe("EventManagePage", () => {
     renderPage("treasurer");
 
     await screen.findByRole("heading", { name: "Dashain Celebration" });
-    await user.click(screen.getByRole("button", { name: /View transactions/i }));
+    await user.click(screen.getByRole("button", { name: /Budget left/i }));
 
     await waitFor(() =>
       expect(screen.getByTestId("finance-entry-list")).toBeInTheDocument(),
@@ -335,7 +366,7 @@ describe("EventManagePage", () => {
     renderPage("board");
 
     await screen.findByRole("heading", { name: "Dashain Celebration" });
-    await user.click(screen.getByRole("button", { name: "Open Check-in" }));
+    await user.click(screen.getByRole("button", { name: /Checked in/i }));
     expect(screen.getByTestId("event-checkin-panel")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Close" }));
@@ -350,9 +381,8 @@ describe("EventManagePage", () => {
       expect(screen.queryByTestId("event-checkin-panel")).not.toBeInTheDocument(),
     );
 
-    await user.click(
-      screen.getByRole("button", { name: /View details/i }),
-    );
+    await selectTab(user, "Overview");
+    await user.click(screen.getByRole("button", { name: /Attending/i }));
     expect(screen.getByTestId("event-attendance-summary")).toBeInTheDocument();
   });
 
@@ -367,8 +397,52 @@ describe("EventManagePage", () => {
 
     renderPage("board");
 
-    expect(await screen.findByRole("heading", { name: "Meeting record" })).toBeInTheDocument();
+    await screen.findByRole("heading", { name: "March Board Meeting" });
+    await selectTab(user, "Record");
+    expect(
+      await screen.findByRole("heading", { name: "Meeting record" }),
+    ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /Open meeting record/i }));
     expect(screen.getByTestId("meeting-record-section")).toBeInTheDocument();
+  });
+
+  it("lets board invite participants from the People tab", async () => {
+    const user = userEvent.setup();
+    await mockBoardEventLoad();
+    renderPage("board");
+
+    await screen.findByRole("heading", { name: "Dashain Celebration" });
+    await selectTab(user, "People");
+    expect(
+      await screen.findByRole("button", { name: "Invite members" }),
+    ).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Add role" })).toBeInTheDocument();
+    expect(screen.getByText("Going RSVPs")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Invite members" }));
+    expect(
+      await screen.findByRole("heading", { name: "Invite participants" }),
+    ).toBeInTheDocument();
+  });
+
+  it("opens real communications tools from the Record tab", async () => {
+    const user = userEvent.setup();
+    await mockBoardEventLoad();
+    renderPage("board");
+
+    await screen.findByRole("heading", { name: "Dashain Celebration" });
+    await user.click(screen.getByRole("button", { name: /Share & announce/i }));
+    expect(
+      await screen.findByLabelText("Event Communications"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Copy public link" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Compose update" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/^Reminders$/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Send reminder now" }),
+    ).toBeInTheDocument();
   });
 });

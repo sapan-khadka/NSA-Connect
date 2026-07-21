@@ -31,7 +31,7 @@ class MeetingRecord(Base):
     summary = Column(Text, nullable=True)
     key_decisions = Column(JSON, nullable=False, default=list)
     action_items = Column(JSON, nullable=False, default=list)
-    updated_by_id = Column(Integer, ForeignKey("members.id"), nullable=True)
+    updated_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     updated_at = Column(
         DateTime(timezone=True),
         nullable=False,
@@ -53,7 +53,7 @@ class MeetingAttendance(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     event_id = Column(Integer, ForeignKey("events.id"), nullable=False)
-    member_id = Column(Integer, ForeignKey("members.id"), nullable=False)
+    member_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     status = Column(
         SqlEnum(
             MeetingAttendanceStatus,
@@ -61,7 +61,7 @@ class MeetingAttendance(Base):
         ),
         nullable=False,
     )
-    updated_by_id = Column(Integer, ForeignKey("members.id"), nullable=True)
+    updated_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     updated_at = Column(
         DateTime(timezone=True),
         nullable=False,

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAuth } from "../context/useAuth";
 import { Button } from "../components/ui/Button";
@@ -26,8 +26,14 @@ export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const nextParam = searchParams.get("next");
+  const safeNext =
+    nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//")
+      ? nextParam
+      : null;
   const redirectPath =
-    (location.state as { from?: string } | null)?.from ?? null;
+    (location.state as { from?: string } | null)?.from ?? safeNext;
   const [values, setValues] = useState<LoginFormValues>(initialValues);
   const [fieldErrors, setFieldErrors] = useState<LoginFormErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);

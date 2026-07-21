@@ -10,6 +10,13 @@ class PrepTaskGroup(Base):
     __tablename__ = "prep_task_groups"
 
     id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(
+        Integer,
+        ForeignKey("organizations.id"),
+        nullable=False,
+        server_default="1",
+        index=True,
+    )
     group_name = Column(String(255), nullable=False, unique=True)
     items = relationship(
         "PrepTaskGroupItem",

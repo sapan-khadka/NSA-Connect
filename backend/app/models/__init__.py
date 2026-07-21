@@ -36,7 +36,14 @@ from app.models.finance_change_request import (
 from app.models.finance_entry import FinanceCategory, FinanceEntry, FinanceEntryType
 from app.models.meeting import MeetingAttendance, MeetingRecord
 from app.models.custom_board_position import CustomBoardPosition
-from app.models.member import Member, MemberPosition, MemberRole, MemberStatus
+from app.models.member import (
+    Member,
+    MemberPosition,
+    MemberRole,
+    MemberStatus,
+    PlatformRole,
+    User,
+)
 from app.models.member_document import MemberDocument, MemberDocumentType
 from app.models.member_note import MemberNote
 from app.models.member_dues import (
@@ -47,10 +54,13 @@ from app.models.member_dues import (
 )
 from app.models.notification_sent_log import NotificationSentLog, NotificationType
 from app.models.inbox_notification import InboxNotification, InboxNotificationType
+from app.models.organization import Organization, OrganizationStatus
+from app.models.organization_membership import OrganizationMembership
 from app.models.password_reset_token import PasswordResetToken
 from app.models.preptask import PrepTaskGroup, PrepTaskGroupItem
 from app.models.reminder import PrepTaskReminder, ReminderType
 from app.models.semester_report import ReportRangeType, SemesterReport
+from app.models.university import University
 from app.models.volunteer import VolunteerSignup, VolunteerSlot
 
 __all__ = [
@@ -107,7 +117,11 @@ __all__ = [
     "MemberPosition",
     "MemberRole",
     "MemberStatus",
+    "Organization",
+    "OrganizationMembership",
+    "OrganizationStatus",
     "PasswordResetToken",
+    "PlatformRole",
     "MeetingAttendance",
     "MeetingRecord",
     "PrepTaskGroup",
@@ -116,6 +130,8 @@ __all__ = [
     "ReminderType",
     "ReportRangeType",
     "SemesterReport",
+    "University",
+    "User",
     "VolunteerSignup",
     "VolunteerSlot",
 ]

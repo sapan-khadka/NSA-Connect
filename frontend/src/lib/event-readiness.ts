@@ -6,10 +6,11 @@ export type ReadinessStatus = "pass" | "warn" | "fail" | "unknown";
 export type ReadinessCheckId =
   | "cover"
   | "schedule"
+  | "location"
   | "budget"
   | "rsvp"
   | "volunteers"
-  | "reminder";
+  | "capacity";
 
 export type ReadinessCheck = {
   id: ReadinessCheckId;
@@ -18,7 +19,12 @@ export type ReadinessCheck = {
   /** Shown when this check is the top unresolved issue. */
   nextStep: string;
   /** Where Resolve Issues should navigate. */
-  resolveTarget: "cover" | "schedule" | "budget" | "volunteers" | "details";
+  resolveTarget:
+    | "cover"
+    | "schedule"
+    | "budget"
+    | "volunteers"
+    | "details";
 };
 
 export type EventReadinessResult = {
@@ -46,7 +52,6 @@ function hasPositiveBudget(
 
 /**
  * Client-side readiness score from data already loaded on Event Manage.
- * Reminder delivery is not exposed by the API — shown as a warn placeholder.
  */
 export function computeEventReadiness(
   input: EventReadinessInput,
@@ -55,11 +60,12 @@ export function computeEventReadiness(
 
   const coverPass = Boolean(event.event_photo_url?.trim());
   const schedulePass = Boolean(event.starts_at);
+  const locationPass = Boolean(event.location?.trim());
   const budgetPass = hasPositiveBudget(event, budget);
-  // RSVP is always available for upcoming events in this product.
   const rsvpPass = !event.is_past;
   const volunteersPass =
     volunteerCount !== null && !volunteersLoading ? volunteerCount > 0 : null;
+  const capacityPass = event.capacity != null && event.capacity > 0;
 
   const checks: ReadinessCheck[] = [
     {
@@ -77,6 +83,13 @@ export function computeEventReadiness(
       resolveTarget: "schedule",
     },
     {
+      id: "location",
+      label: locationPass ? "Location Set" : "Location Missing",
+      status: locationPass ? "pass" : "warn",
+      nextStep: "Add a venue so members know where to go.",
+      resolveTarget: "details",
+    },
+    {
       id: "budget",
       label: budgetPass ? "Budget Assigned" : "Budget Not Assigned",
       status: budgetPass ? "pass" : "warn",
@@ -87,7 +100,7 @@ export function computeEventReadiness(
       id: "rsvp",
       label: rsvpPass ? "RSVP Enabled" : "RSVP Closed",
       status: rsvpPass ? "pass" : "warn",
-      nextStep: "Review RSVP settings on the public event page.",
+      nextStep: "Review RSVP settings on the event page.",
       resolveTarget: "details",
     },
     {
@@ -100,14 +113,14 @@ export function computeEventReadiness(
             : "Volunteers Missing",
       status:
         volunteersPass === null ? "unknown" : volunteersPass ? "pass" : "warn",
-      nextStep: "Invite volunteers for setup.",
+      nextStep: "Add volunteer roles or invite helpers.",
       resolveTarget: "volunteers",
     },
     {
-      id: "reminder",
-      label: "Reminder Not Sent",
-      status: "unknown",
-      nextStep: "Send a reminder once announcement tools are ready.",
+      id: "capacity",
+      label: capacityPass ? "Capacity Set" : "Capacity Optional",
+      status: capacityPass ? "pass" : "warn",
+      nextStep: "Set a max attendance if the venue has a limit.",
       resolveTarget: "details",
     },
   ];

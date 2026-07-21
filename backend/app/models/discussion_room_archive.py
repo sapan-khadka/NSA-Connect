@@ -21,7 +21,7 @@ class DiscussionRoomArchive(Base):
     )
     archived_by_id = Column(
         Integer,
-        ForeignKey("members.id", ondelete="SET NULL"),
+        ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )

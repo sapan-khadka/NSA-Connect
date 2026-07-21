@@ -37,7 +37,7 @@ def _decode_token(token: str, *, expected_type: TokenType) -> dict:
             token,
             settings.SECRET_KEY,
             algorithms=[JWT_ALGORITHM],
-            options={"require": ["exp", "member_id", "email", "role", "tv", "typ"]},
+            options={"require": ["exp", "email", "role", "tv", "typ"]},
         )
     except jwt.InvalidTokenError as exc:
         raise InvalidTokenError from exc
@@ -45,7 +45,23 @@ def _decode_token(token: str, *, expected_type: TokenType) -> dict:
     if payload.get("typ") != expected_type.value:
         raise InvalidTokenError
 
+    if resolve_user_id(payload) is None:
+        raise InvalidTokenError
+
     return payload
+
+
+def resolve_user_id(payload: dict) -> int | None:
+    """Read the authenticated user id from a decoded token payload.
+
+    Tokens always set `user_id` and `member_id` to the same int (Phase 1
+    compat while `Member`/`User` are the same ORM class); prefer `user_id`
+    but fall back to `member_id` for tokens minted before this field existed.
+    """
+    user_id = payload.get("user_id")
+    if user_id is not None:
+        return user_id
+    return payload.get("member_id")
 
 
 def create_access_token(
@@ -60,6 +76,7 @@ def create_access_token(
     )
     payload = {
         "member_id": member_id,
+        "user_id": member_id,
         "email": email,
         "role": role,
         "tv": token_version,
@@ -79,6 +96,7 @@ def create_refresh_token(
     expires_at = datetime.now(UTC) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     payload = {
         "member_id": member_id,
+        "user_id": member_id,
         "email": email,
         "role": role,
         "tv": token_version,

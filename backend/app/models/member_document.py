@@ -24,13 +24,13 @@ class MemberDocument(Base):
     id = Column(Integer, primary_key=True, index=True)
     member_id = Column(
         Integer,
-        ForeignKey("members.id", ondelete="CASCADE"),
+        ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     uploaded_by_id = Column(
         Integer,
-        ForeignKey("members.id"),
+        ForeignKey("users.id"),
         nullable=False,
         index=True,
     )

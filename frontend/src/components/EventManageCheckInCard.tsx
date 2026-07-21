@@ -21,8 +21,10 @@ type QrStatus = "loading" | "active" | "inactive" | "error";
 type EventManageCheckInCardProps = {
   eventId: number;
   checkedInCount: number;
-  /** Expected capacity (typically Going RSVPs). */
-  capacity: number | null;
+  /** Optional venue capacity from event details. */
+  eventCapacity: number | null;
+  /** Going RSVP count — used when event capacity is unset. */
+  goingCount: number | null;
   onOpenCheckIn: () => void;
 };
 
@@ -70,7 +72,8 @@ async function downloadQrSvg(eventId: number): Promise<void> {
 export function EventManageCheckInCard({
   eventId,
   checkedInCount,
-  capacity,
+  eventCapacity,
+  goingCount,
   onOpenCheckIn,
 }: EventManageCheckInCardProps) {
   const [qrStatus, setQrStatus] = useState<QrStatus>("loading");
@@ -105,16 +108,28 @@ export function EventManageCheckInCard({
     };
   }, [eventId]);
 
+  const usingEventCapacity = eventCapacity !== null && eventCapacity > 0;
+  const capacity = usingEventCapacity
+    ? eventCapacity
+    : goingCount !== null && goingCount > 0
+      ? goingCount
+      : null;
+  const capacityLabel = usingEventCapacity ? "Capacity" : "Expected";
+  const capacityHint = usingEventCapacity ? "Event capacity" : "Going RSVPs";
+
   const progressPercent =
     capacity !== null && capacity > 0
       ? Math.min(100, Math.round((checkedInCount / capacity) * 100))
       : null;
   const badge = statusBadge(qrStatus);
 
+  const hasActiveQr = qrStatus === "active" && Boolean(qrInfo);
+
   async function handleGenerate(): Promise<void> {
     if (
+      hasActiveQr &&
       !window.confirm(
-        "Generate a new QR code? The old link will stop working immediately.",
+        "Regenerate this QR code? The old link will stop working immediately.",
       )
     ) {
       return;
@@ -123,7 +138,9 @@ export function EventManageCheckInCard({
     setGenerating(true);
     setErrorMessage(null);
     try {
-      const response = await regenerateEventCheckInQr(eventId);
+      const response = hasActiveQr
+        ? await regenerateEventCheckInQr(eventId)
+        : await fetchEventCheckInQr(eventId);
       setQrInfo(response);
       setQrStatus("active");
     } catch (error) {
@@ -180,11 +197,11 @@ export function EventManageCheckInCard({
           </p>
         </div>
         <div className="rounded-xl border border-gray-100 bg-white px-3 py-2.5">
-          <p className={EVENT_MANAGE_EYEBROW}>Capacity</p>
+          <p className={EVENT_MANAGE_EYEBROW}>{capacityLabel}</p>
           <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-foreground">
             {capacity === null ? "—" : capacity}
           </p>
-          <p className="mt-0.5 text-[11px] text-gray-500">Going RSVPs</p>
+          <p className="mt-0.5 text-[11px] text-gray-500">{capacityHint}</p>
         </div>
       </div>
 
@@ -210,8 +227,8 @@ export function EventManageCheckInCard({
         </div>
         <p className="mt-1.5 text-[11px] text-gray-500">
           {capacity === null
-            ? "Capacity appears when Going RSVPs are available."
-            : `${checkedInCount} of ${capacity} expected`}
+            ? "Set capacity in Details, or wait for Going RSVPs."
+            : `${checkedInCount} of ${capacity} ${usingEventCapacity ? "capacity" : "expected"}`}
         </p>
       </div>
 
@@ -240,7 +257,13 @@ export function EventManageCheckInCard({
             disabled={generating}
             className={EVENT_MANAGE_PRIMARY_BTN_FLEX}
           >
-            {generating ? "Generating…" : "Generate QR"}
+            {generating
+              ? hasActiveQr
+                ? "Regenerating…"
+                : "Generating…"
+              : hasActiveQr
+                ? "Regenerate QR"
+                : "Generate QR"}
           </button>
           <button
             type="button"

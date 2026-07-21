@@ -20,7 +20,7 @@ class DiscussionMessage(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     content = Column(Text, nullable=False)
-    author_id = Column(Integer, ForeignKey("members.id"), nullable=False, index=True)
+    author_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     event_id = Column(
         Integer,
         ForeignKey("events.id", ondelete="CASCADE"),

@@ -49,9 +49,16 @@ class DiscussionRoom(Base):
         server_default=DiscussionRoomStatus.PENDING.value,
         index=True,
     )
-    created_by_id = Column(Integer, ForeignKey("members.id"), nullable=False, index=True)
-    reviewed_by_id = Column(Integer, ForeignKey("members.id"), nullable=True)
+    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    reviewed_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     review_note = Column(Text, nullable=True)
+    organization_id = Column(
+        Integer,
+        ForeignKey("organizations.id"),
+        nullable=False,
+        server_default="1",
+        index=True,
+    )
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,
@@ -83,7 +90,7 @@ class DiscussionRoomMember(Base):
     )
     member_id = Column(
         Integer,
-        ForeignKey("members.id", ondelete="CASCADE"),
+        ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
@@ -97,7 +104,7 @@ class DiscussionRoomMember(Base):
         default=DiscussionRoomMemberRole.MEMBER,
         server_default=DiscussionRoomMemberRole.MEMBER.value,
     )
-    added_by_id = Column(Integer, ForeignKey("members.id"), nullable=True)
+    added_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,

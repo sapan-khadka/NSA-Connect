@@ -1,17 +1,21 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_member, require_board
 from app.models.member import Member
 from app.schemas.announcement import (
+    AnnouncementAudienceLiteral,
     AnnouncementAuthorResponse,
     AnnouncementCreateRequest,
     AnnouncementListResponse,
+    AnnouncementRecipientPreviewResponse,
     AnnouncementResponse,
     AnnouncementUpdateRequest,
 )
+from app.services.announcement_recipients import count_emailable_recipients
 from app.services.announcement_service import (
+    AnnouncementEventInvalidError,
     AnnouncementNotFoundError,
     create_announcement,
     delete_announcement,
@@ -29,6 +33,8 @@ def _to_response(announcement) -> AnnouncementResponse:
         title=announcement.title,
         body=announcement.body,
         category=announcement.category.value,
+        audience=announcement.audience,
+        event_id=announcement.event_id,
         author=AnnouncementAuthorResponse.model_validate(announcement.author),
         created_at=announcement.created_at,
         updated_at=announcement.updated_at,
@@ -37,13 +43,42 @@ def _to_response(announcement) -> AnnouncementResponse:
 
 @router.get("", response_model=AnnouncementListResponse)
 def list_announcements_endpoint(
+    event_id: int | None = Query(default=None),
     _: Member = Depends(get_current_member),
     db: Session = Depends(get_db),
 ):
-    rows = list_announcements(db)
+    rows = list_announcements(db, event_id=event_id)
     return AnnouncementListResponse(
         announcements=[_to_response(row) for row in rows],
         total=len(rows),
+    )
+
+
+@router.get(
+    "/recipient-preview",
+    response_model=AnnouncementRecipientPreviewResponse,
+)
+def recipient_preview_endpoint(
+    audience: AnnouncementAudienceLiteral = Query(default="all_approved"),
+    event_id: int | None = Query(default=None),
+    _: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    if audience != "all_approved" and event_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="event_id is required when audience is not all_approved",
+        )
+    counts = count_emailable_recipients(
+        db,
+        audience=audience,
+        event_id=event_id,
+    )
+    return AnnouncementRecipientPreviewResponse(
+        audience=audience,
+        event_id=event_id,
+        total=counts["total"],
+        emailable=counts["emailable"],
     )
 
 
@@ -74,7 +109,13 @@ def create_announcement_endpoint(
     current_member: Member = Depends(require_board),
     db: Session = Depends(get_db),
 ):
-    announcement = create_announcement(db, author=current_member, data=data)
+    try:
+        announcement = create_announcement(db, author=current_member, data=data)
+    except AnnouncementEventInvalidError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        ) from None
     return _to_response(announcement)
 
 

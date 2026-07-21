@@ -19,8 +19,12 @@ from app.schemas.discussion_room import (
     DiscussionRoomMemberResponse,
     DiscussionRoomResponse,
 )
-from app.services.discussion_service import DiscussionForbiddenError, DiscussionValidationError
+from app.services.discussion_service import (
+    DiscussionForbiddenError,
+    DiscussionValidationError,
+)
 from app.services.discussion_ws_manager import custom_room_key
+from app.services.organization_context import get_default_organization_id
 
 
 class DiscussionRoomNotFoundError(Exception):
@@ -170,6 +174,7 @@ def create_discussion_room(
         reviewed_by_id=creator.id if auto_live else None,
         reviewed_at=now if auto_live else None,
         created_at=now,
+        organization_id=get_default_organization_id(db),
     )
     db.add(room)
     db.flush()
@@ -222,7 +227,10 @@ def list_pending_discussion_rooms(db: Session) -> list[DiscussionRoom]:
                     DiscussionRoomMember.member
                 ),
             )
-            .where(DiscussionRoom.status == DiscussionRoomStatus.PENDING)
+            .where(
+                DiscussionRoom.status == DiscussionRoomStatus.PENDING,
+                DiscussionRoom.organization_id == get_default_organization_id(db),
+            )
             .order_by(DiscussionRoom.created_at.asc())
         ).unique().all()
     )
@@ -230,6 +238,7 @@ def list_pending_discussion_rooms(db: Session) -> list[DiscussionRoom]:
 
 def list_my_discussion_rooms(db: Session, *, member: Member) -> list[DiscussionRoom]:
     """Rooms the member created (any status) or belongs to while live."""
+    org_id = get_default_organization_id(db)
     membership_room_ids = set(
         db.scalars(
             select(DiscussionRoomMember.room_id).where(
@@ -248,7 +257,10 @@ def list_my_discussion_rooms(db: Session, *, member: Member) -> list[DiscussionR
                         DiscussionRoomMember.member
                     ),
                 )
-                .where(DiscussionRoom.created_by_id == member.id)
+                .where(
+                    DiscussionRoom.created_by_id == member.id,
+                    DiscussionRoom.organization_id == org_id,
+                )
                 .order_by(DiscussionRoom.created_at.desc())
             ).unique().all()
         )
@@ -265,8 +277,11 @@ def list_my_discussion_rooms(db: Session, *, member: Member) -> list[DiscussionR
                 ),
             )
             .where(
-                (DiscussionRoom.created_by_id == member.id)
-                | (DiscussionRoom.id.in_(membership_room_ids))
+                (
+                    (DiscussionRoom.created_by_id == member.id)
+                    | (DiscussionRoom.id.in_(membership_room_ids))
+                ),
+                DiscussionRoom.organization_id == org_id,
             )
             .order_by(DiscussionRoom.created_at.desc())
         ).unique().all()
@@ -379,7 +394,10 @@ def list_archived_custom_rooms(db: Session) -> list[DiscussionRoom]:
                     DiscussionRoomMember.member
                 ),
             )
-            .where(DiscussionRoom.status == DiscussionRoomStatus.ARCHIVED)
+            .where(
+                DiscussionRoom.status == DiscussionRoomStatus.ARCHIVED,
+                DiscussionRoom.organization_id == get_default_organization_id(db),
+            )
             .order_by(DiscussionRoom.reviewed_at.desc().nulls_last())
         ).unique().all()
     )
@@ -407,6 +425,7 @@ def list_live_rooms_for_member(db: Session, *, member: Member) -> list[Discussio
             .where(
                 DiscussionRoom.id.in_(room_ids),
                 DiscussionRoom.status == DiscussionRoomStatus.LIVE,
+                DiscussionRoom.organization_id == get_default_organization_id(db),
             )
         ).unique().all()
     )

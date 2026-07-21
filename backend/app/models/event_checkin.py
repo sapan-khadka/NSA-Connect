@@ -14,7 +14,7 @@ class EventCheckIn(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     event_id = Column(Integer, ForeignKey("events.id"), nullable=False, index=True)
-    member_id = Column(Integer, ForeignKey("members.id"), nullable=False, index=True)
+    member_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     checked_in_at = Column(DateTime(timezone=True), nullable=False)
 
     event = relationship("Event", back_populates="check_ins")

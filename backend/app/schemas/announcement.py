@@ -1,9 +1,15 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 AnnouncementCategoryLiteral = Literal["general", "urgent", "event_related"]
+AnnouncementAudienceLiteral = Literal[
+    "all_approved",
+    "going",
+    "maybe",
+    "no_rsvp",
+]
 
 
 class AnnouncementAuthorResponse(BaseModel):
@@ -20,6 +26,8 @@ class AnnouncementResponse(BaseModel):
     title: str
     body: str
     category: AnnouncementCategoryLiteral
+    audience: AnnouncementAudienceLiteral
+    event_id: int | None = None
     author: AnnouncementAuthorResponse
     created_at: datetime
     updated_at: datetime
@@ -30,10 +38,25 @@ class AnnouncementListResponse(BaseModel):
     total: int
 
 
+class AnnouncementRecipientPreviewResponse(BaseModel):
+    audience: AnnouncementAudienceLiteral
+    event_id: int | None = None
+    total: int
+    emailable: int
+
+
 class AnnouncementCreateRequest(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     body: str = Field(min_length=1)
     category: AnnouncementCategoryLiteral = "general"
+    audience: AnnouncementAudienceLiteral = "all_approved"
+    event_id: int | None = None
+
+    @model_validator(mode="after")
+    def audience_requires_event(self) -> "AnnouncementCreateRequest":
+        if self.audience != "all_approved" and self.event_id is None:
+            raise ValueError("event_id is required when audience is not all_approved")
+        return self
 
 
 class AnnouncementUpdateRequest(BaseModel):

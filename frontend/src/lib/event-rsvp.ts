@@ -8,6 +8,7 @@ export const RSVP_STATUS_LABELS: Record<RsvpStatus, string> = {
   going: "Going",
   maybe: "Maybe",
   not_going: "Not going",
+  waitlisted: "Waitlisted",
 };
 
 export const RSVP_NO_RESPONSE_LABEL = "Not yet responded";

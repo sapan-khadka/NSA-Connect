@@ -67,6 +67,12 @@ class Settings(BaseSettings):
 
     PASSWORD_RESET_EXPIRE_MINUTES: int = 45
 
+    DEFAULT_UNIVERSITY_SLUG: str = "semo"
+    DEFAULT_UNIVERSITY_NAME: str = "Southeast Missouri State University"
+    DEFAULT_UNIVERSITY_EMAIL_DOMAIN: str = "semo.edu"
+    DEFAULT_ORGANIZATION_SLUG: str = "nsa"
+    DEFAULT_ORGANIZATION_NAME: str = "Nepalese Student Association"
+
     EMAIL_ENABLED: bool = False
     EMAIL_FROM: str = "NSA Connect <noreply@semo.edu>"
     FRONTEND_URL: str = Field(

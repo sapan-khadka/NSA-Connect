@@ -24,6 +24,8 @@ type EventManageReadinessCardProps = {
   volunteerCount: number | null;
   volunteersLoading?: boolean;
   onResolve: (target: ResolveTarget) => void;
+  /** Dense overview layout: open issues only + stronger next-step CTA. */
+  compact?: boolean;
 };
 
 function scoreTone(scorePercent: number): {
@@ -116,6 +118,7 @@ export function EventManageReadinessCard({
   volunteerCount,
   volunteersLoading = false,
   onResolve,
+  compact = false,
 }: EventManageReadinessCardProps) {
   const readiness = computeEventReadiness({
     event,
@@ -125,6 +128,79 @@ export function EventManageReadinessCard({
   });
   const tone = scoreTone(readiness.scorePercent);
   const canResolve = readiness.resolveTarget !== null;
+  const visibleChecks = compact
+    ? readiness.checks.filter((check) => check.status !== "pass")
+    : readiness.checks;
+
+  if (compact) {
+    return (
+      <HomeCard
+        padding="sm"
+        className={EVENT_MANAGE_SECTION_CARD_CLASS}
+        aria-label="Event Readiness"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className={EVENT_MANAGE_SECTION_TITLE}>Event Readiness</h2>
+            <p className="mt-1 text-xs text-gray-500">
+              {readiness.suggestedNextStep ??
+                "You're clear — no open readiness issues."}
+            </p>
+          </div>
+          <div className="text-right">
+            <p
+              className={`text-2xl font-semibold tabular-nums tracking-tight ${tone.text}`}
+              aria-live="polite"
+            >
+              {readiness.scorePercent}%
+            </p>
+            <p className={`mt-0.5 text-xs font-medium ${tone.text}`}>
+              {tone.label}
+            </p>
+          </div>
+        </div>
+
+        <div
+          className="mt-3 h-1.5 overflow-hidden rounded-full bg-gray-100"
+          role="progressbar"
+          aria-valuenow={readiness.scorePercent}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Overall readiness score"
+        >
+          <div
+            className={`h-full rounded-full transition-all duration-200 ease-out ${tone.bar}`}
+            style={{ width: `${readiness.scorePercent}%` }}
+          />
+        </div>
+
+        {visibleChecks.length > 0 ? (
+          <ul className="mt-4 grid gap-2 sm:grid-cols-2" aria-label="Open readiness issues">
+            {visibleChecks.map((check) => (
+              <ReadinessCheckRow key={check.id} check={check} />
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-4 text-sm text-emerald-700">All readiness checks passed.</p>
+        )}
+
+        <div className="mt-4 flex justify-end">
+          <button
+            type="button"
+            disabled={!canResolve}
+            onClick={() => {
+              if (readiness.resolveTarget) {
+                onResolve(readiness.resolveTarget);
+              }
+            }}
+            className={EVENT_MANAGE_PRIMARY_BTN}
+          >
+            Resolve Issues
+          </button>
+        </div>
+      </HomeCard>
+    );
+  }
 
   return (
     <HomeCard

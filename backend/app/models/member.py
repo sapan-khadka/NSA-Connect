@@ -43,6 +43,19 @@ class MemberPosition(StrEnum):
     MEMBER = "member"
 
 
+class PlatformRole(StrEnum):
+    """Cross-tenant role, orthogonal to the org-scoped `MemberRole`/`MemberPosition`.
+
+    Most users are STUDENT; platform/university staff roles are for Phase 2+
+    admin tooling that spans universities or organizations.
+    """
+
+    SUPER_ADMIN = "super_admin"
+    UNIVERSITY_ADMIN = "university_admin"
+    UNIVERSITY_STAFF = "university_staff"
+    STUDENT = "student"
+
+
 EXCLUSIVE_MEMBER_POSITIONS = frozenset(
     position for position in MemberPosition if position != MemberPosition.MEMBER
 )
@@ -64,9 +77,26 @@ _ROLE_LEVELS: dict[MemberRole, int] = {
 
 
 class Member(Base):
-    __tablename__ = "members"
+    __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
+    university_id = Column(
+        Integer,
+        ForeignKey("universities.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    platform_role = Column(
+        SqlEnum(
+            PlatformRole,
+            values_callable=lambda roles: [r.value for r in roles],
+            native_enum=False,
+            length=32,
+        ),
+        default=PlatformRole.STUDENT,
+        server_default=PlatformRole.STUDENT.value,
+        nullable=False,
+    )
     full_name = Column(String(255), nullable=False)
     email = Column(String(255), unique=True, nullable=False)
     student_id = Column(String(20), unique=True, nullable=False)
@@ -183,6 +213,13 @@ class Member(Base):
         back_populates="holder",
         uselist=False,
     )
+    university = relationship("University", foreign_keys=[university_id])
+    memberships = relationship(
+        "OrganizationMembership",
+        back_populates="user",
+        foreign_keys="OrganizationMembership.user_id",
+        cascade="all, delete-orphan",
+    )
 
     @property
     def is_approved(self) -> bool:
@@ -197,3 +234,9 @@ class Member(Base):
 
     def can_authenticate(self) -> bool:
         return self.is_approved
+
+
+# Phase 1: `members` was renamed to `users` and the ORM class is being evolved
+# in place. `User` is the forward-looking name for this same mapped class;
+# new code should prefer importing `User` over `Member`.
+User = Member

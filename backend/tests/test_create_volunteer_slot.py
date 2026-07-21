@@ -74,6 +74,27 @@ def test_board_member_can_create_volunteer_slot(client, board_member_headers):
     assert "created_at" in body
 
 
+def test_board_member_can_list_volunteer_slots(client, board_member_headers):
+    event_id = _create_event(client, board_member_headers)
+    created = client.post(
+        f"/api/v1/events/{event_id}/slots",
+        json=_slot_payload(description="Arrive early"),
+        headers=board_member_headers,
+    )
+    assert created.status_code == 201
+
+    response = client.get(
+        f"/api/v1/events/{event_id}/slots",
+        headers=board_member_headers,
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["slots"][0]["task_name"] == "Setup crew"
+    assert body["slots"][0]["description"] == "Arrive early"
+
+
 def test_unauthenticated_request_gets_401(client, board_member_headers):
     event_id = _create_event(client, board_member_headers)
 

@@ -22,6 +22,7 @@ from app.models.member import (
     MemberStatus,
 )
 from app.models.member_dues import DuesStatus, MemberDues
+from app.models.organization_membership import OrganizationMembership
 from app.schemas.member import (
     MemberCreateRequest,
     MemberInviteRequest,
@@ -30,6 +31,12 @@ from app.schemas.member import (
 from app.services.custom_board_position_service import (
     CustomBoardPositionConflictError,
     CustomBoardPositionNotFoundError,
+)
+from app.services.organization_context import (
+    ensure_membership_for_member,
+    get_default_organization_id,
+    get_default_university_id,
+    sync_membership_from_member,
 )
 
 
@@ -100,10 +107,12 @@ def create_member(db: Session, data: MemberCreateRequest) -> Member:
         role=MemberRole.GENERAL,
         status=MemberStatus.PENDING,
         talents=[],
+        university_id=get_default_university_id(db),
     )
     db.add(member)
     db.commit()
     db.refresh(member)
+    ensure_membership_for_member(db, member)
 
     from app.services.inbox_notification_service import notify_board_of_pending_member
 
@@ -144,12 +153,16 @@ def create_invited_member(
         position=MemberPosition.MEMBER,
         status=MemberStatus.APPROVED,
         talents=[],
+        university_id=get_default_university_id(db),
     )
     db.add(member)
     if commit:
         db.commit()
         db.refresh(member)
+        ensure_membership_for_member(db, member)
     else:
+        # Bulk import: caller flushes/commits+checkpoints many rows at once;
+        # membership sync happens once for the whole batch (see caller).
         db.flush()
     return member
 
@@ -177,10 +190,23 @@ def get_member_by_id(db: Session, member_id: int) -> Member:
     return member
 
 
+def _org_member_ids_subquery(db: Session):
+    org_id = get_default_organization_id(db)
+    return (
+        select(OrganizationMembership.user_id)
+        .where(OrganizationMembership.organization_id == org_id)
+        .scalar_subquery()
+    )
+
+
 def list_members_by_status(
     db: Session, status: MemberStatus | None = None
 ) -> list[Member]:
-    query = select(Member).options(joinedload(Member.custom_board_position))
+    query = (
+        select(Member)
+        .options(joinedload(Member.custom_board_position))
+        .where(Member.id.in_(_org_member_ids_subquery(db)))
+    )
     if status is not None:
         query = query.where(Member.status == status)
     return list(db.scalars(query.order_by(Member.id)).unique().all())
@@ -201,7 +227,7 @@ def list_members_paginated(
     status: MemberStatus | None = None,
     talents: list[str] | None = None,
 ) -> tuple[list[Member], int]:
-    filters = []
+    filters = [Member.id.in_(_org_member_ids_subquery(db))]
     if status is not None:
         filters.append(Member.status == status)
 
@@ -231,6 +257,7 @@ def list_assignable_board_members(db: Session) -> list[Member]:
         db.scalars(
             select(Member)
             .options(joinedload(Member.custom_board_position))
+            .where(Member.id.in_(_org_member_ids_subquery(db)))
             .where(Member.status == MemberStatus.APPROVED)
             .where(
                 Member.role.in_(
@@ -249,6 +276,7 @@ def list_assignable_approved_members(db: Session) -> list[Member]:
     return list(
         db.scalars(
             select(Member)
+            .where(Member.id.in_(_org_member_ids_subquery(db)))
             .where(Member.status == MemberStatus.APPROVED)
             .order_by(Member.full_name.asc()),
         ).all(),
@@ -258,7 +286,11 @@ def list_assignable_approved_members(db: Session) -> list[Member]:
 def build_members_export_csv(db: Session, *, semester: str) -> str:
     """CSV of all members with current-semester outstanding dues."""
     members = list(
-        db.scalars(select(Member).order_by(Member.full_name.asc())).all(),
+        db.scalars(
+            select(Member)
+            .where(Member.id.in_(_org_member_ids_subquery(db)))
+            .order_by(Member.full_name.asc())
+        ).all(),
     )
     dues_rows = list(
         db.scalars(select(MemberDues).where(MemberDues.semester == semester)).all(),
@@ -312,6 +344,7 @@ def approve_member(db: Session, member_id: int) -> Member:
     if member.status != MemberStatus.PENDING:
         raise InvalidMemberStatusError("Only pending members can be approved")
     member.status = MemberStatus.APPROVED
+    sync_membership_from_member(db, member)
     db.commit()
     db.refresh(member)
 
@@ -327,6 +360,7 @@ def reject_member(db: Session, member_id: int) -> Member:
         raise InvalidMemberStatusError("Only pending members can be rejected")
     member.status = MemberStatus.REJECTED
     member.token_version = (member.token_version or 1) + 1
+    sync_membership_from_member(db, member)
     db.commit()
     db.refresh(member)
     return member
@@ -365,9 +399,9 @@ def update_member_board_role(db: Session, member_id: int, role: MemberRole) -> M
         member.custom_board_position_id = None
 
     member.role = role
+    sync_membership_from_member(db, member)
     db.commit()
     return get_member_by_id(db, member.id)
-    return member
 
 
 def _clear_exclusive_position_holder(
@@ -387,6 +421,7 @@ def _clear_exclusive_position_holder(
     if previous_holder is not None:
         previous_holder.position = MemberPosition.MEMBER
         _sync_auth_role_from_position(previous_holder)
+        sync_membership_from_member(db, previous_holder)
 
 
 def _clear_exclusive_auth_role_holder(
@@ -407,6 +442,7 @@ def _clear_exclusive_auth_role_holder(
         previous_holder.role = MemberRole.BOARD
         if previous_holder.position in POSITION_AUTH_ROLES:
             previous_holder.position = MemberPosition.MEMBER
+        sync_membership_from_member(db, previous_holder)
 
 
 def _sync_auth_role_from_position(member: Member) -> None:
@@ -443,6 +479,7 @@ def _clear_custom_position_holder(
     if previous_holder is not None:
         previous_holder.custom_board_position_id = None
         _sync_auth_role_from_position(previous_holder)
+        sync_membership_from_member(db, previous_holder)
 
 
 def update_member_position(
@@ -503,6 +540,7 @@ def _assign_fixed_position(
     member.custom_board_position_id = None
     member.position = position
     _sync_auth_role_from_position(member)
+    sync_membership_from_member(db, member)
 
     try:
         db.commit()
@@ -542,6 +580,7 @@ def _assign_custom_position(
     member.custom_board_position_id = custom_board_position_id
     member.position = MemberPosition.MEMBER
     _sync_auth_role_from_position(member)
+    sync_membership_from_member(db, member)
 
     try:
         db.commit()

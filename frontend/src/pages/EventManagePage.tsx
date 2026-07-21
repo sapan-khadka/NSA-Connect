@@ -52,6 +52,13 @@ export function EventManagePage() {
   const [taskDraft, setTaskDraft] = useState<EventTaskDraft | null>(null);
   const [openTasksModalToken, setOpenTasksModalToken] = useState(0);
   const [openCheckInModalToken, setOpenCheckInModalToken] = useState(0);
+  const [editDetailsToken, setEditDetailsToken] = useState(0);
+  const [heroAttendeeCount, setHeroAttendeeCount] = useState<number | null>(
+    null,
+  );
+  const [heroVolunteerCount, setHeroVolunteerCount] = useState<number | null>(
+    null,
+  );
   const hasLoadedOnceRef = useRef(false);
 
   const canViewBoard = member ? isRoleAtLeast(member.role, "board") : false;
@@ -233,12 +240,7 @@ export function EventManagePage() {
   }
 
   function handleEditEvent() {
-    const schedule = document.getElementById("event-manage-schedule");
-    schedule?.scrollIntoView({ behavior: "smooth", block: "start" });
-    const dateInput = document.getElementById("manage-event-date");
-    if (dateInput instanceof HTMLElement) {
-      window.setTimeout(() => dateInput.focus(), 280);
-    }
+    setEditDetailsToken((current) => current + 1);
   }
 
   return (
@@ -250,6 +252,8 @@ export function EventManagePage() {
         backTo={calendarBackTo}
         onEditEvent={handleEditEvent}
         onCheckIn={() => setOpenCheckInModalToken((current) => current + 1)}
+        attendeeCount={heroAttendeeCount}
+        volunteerCount={heroVolunteerCount}
       />
 
       <EventManageDashboard
@@ -268,8 +272,13 @@ export function EventManagePage() {
         onRefresh={handleRefresh}
         onTaskDraftApplied={() => setTaskDraft(null)}
         onConvertVolunteerToTask={handleConvertVolunteerToTask}
+        onMetricsChange={(metrics) => {
+          setHeroAttendeeCount(metrics.attendeeCount);
+          setHeroVolunteerCount(metrics.volunteerCount);
+        }}
         openTasksModalToken={openTasksModalToken}
         openCheckInModalToken={openCheckInModalToken}
+        editDetailsToken={editDetailsToken}
         initialOpenModal={initialOpenModal}
         onDismissOpenTokens={() => {
           setOpenTasksModalToken(0);

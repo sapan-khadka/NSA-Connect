@@ -14,6 +14,7 @@ from app.api.v1.me import router as me_router
 from app.api.v1.member_positions import router as member_positions_router
 from app.api.v1.members import router as members_router
 from app.api.v1.notifications import router as notifications_router
+from app.api.v1.public_events import router as public_events_router
 from app.api.v1.reports import router as reports_router
 from app.api.v1.slots import router as slots_router
 from app.api.v1.tasks import router as tasks_router
@@ -28,6 +29,7 @@ api_router.include_router(discussions_router)
 api_router.include_router(me_router)
 api_router.include_router(member_positions_router)
 api_router.include_router(members_router)
+api_router.include_router(public_events_router)
 api_router.include_router(events_router)
 api_router.include_router(event_suggestions_router)
 api_router.include_router(event_tasks_router)

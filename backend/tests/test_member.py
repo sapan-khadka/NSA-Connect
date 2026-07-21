@@ -2,7 +2,9 @@ from app.models.member import Member, MemberRole, MemberStatus
 
 
 def test_member_table_name():
-    assert Member.__tablename__ == "members"
+    # Phase 1 multi-tenant foundation renamed `members` -> `users`; the ORM
+    # class is still named `Member` (also exported as `User`) for now.
+    assert Member.__tablename__ == "users"
 
 
 def test_member_role_values():

@@ -31,7 +31,7 @@ class EventFeedback(Base):
     event_id = Column(
         Integer, ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    member_id = Column(Integer, ForeignKey("members.id"), nullable=False, index=True)
+    member_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     rating = Column(Integer, nullable=False)
     comment = Column(Text, nullable=True)
     created_at = Column(

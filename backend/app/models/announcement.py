@@ -14,6 +14,13 @@ class AnnouncementCategory(StrEnum):
     EVENT_RELATED = "event_related"
 
 
+class AnnouncementAudience(StrEnum):
+    ALL_APPROVED = "all_approved"
+    GOING = "going"
+    MAYBE = "maybe"
+    NO_RSVP = "no_rsvp"
+
+
 class Announcement(Base):
     __tablename__ = "announcements"
 
@@ -29,7 +36,26 @@ class Announcement(Base):
         default=AnnouncementCategory.GENERAL,
         server_default=AnnouncementCategory.GENERAL.value,
     )
-    author_id = Column(Integer, ForeignKey("members.id"), nullable=False, index=True)
+    audience = Column(
+        String(32),
+        nullable=False,
+        default=AnnouncementAudience.ALL_APPROVED.value,
+        server_default=AnnouncementAudience.ALL_APPROVED.value,
+    )
+    event_id = Column(
+        Integer,
+        ForeignKey("events.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    author_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    organization_id = Column(
+        Integer,
+        ForeignKey("organizations.id"),
+        nullable=False,
+        server_default="1",
+        index=True,
+    )
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,
@@ -43,3 +69,4 @@ class Announcement(Base):
     )
 
     author = relationship("Member")
+    event = relationship("Event")

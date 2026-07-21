@@ -41,8 +41,8 @@ class FinanceChangeRequest(Base):
         server_default=FinanceChangeStatus.PENDING.value,
     )
     payload = Column(Text, nullable=True)
-    requested_by_id = Column(Integer, ForeignKey("members.id"), nullable=False)
-    reviewed_by_id = Column(Integer, ForeignKey("members.id"), nullable=True)
+    requested_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    reviewed_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     review_note = Column(Text, nullable=True)
     created_at = Column(
         DateTime(timezone=True),

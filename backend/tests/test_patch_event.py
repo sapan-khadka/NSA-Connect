@@ -139,3 +139,46 @@ def test_patch_event_allows_today_start_date(
 
     assert response.status_code == 200
     assert response.json()["starts_at"].startswith(today_start.isoformat()[:13])
+
+
+def test_board_member_can_patch_event_details(
+    client,
+    board_member_headers,
+    past_event,
+):
+    response = client.patch(
+        f"/api/v1/events/{past_event.id}",
+        json={
+            "name": "Updated Dashain",
+            "description": "Updated description for the event.",
+            "location": "University Center",
+        },
+        headers=board_member_headers,
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["name"] == "Updated Dashain"
+    assert body["description"] == "Updated description for the event."
+    assert body["location"] == "University Center"
+
+
+def test_board_member_can_clear_event_location(
+    client,
+    board_member_headers,
+    past_event,
+):
+    client.patch(
+        f"/api/v1/events/{past_event.id}",
+        json={"location": "Student Center"},
+        headers=board_member_headers,
+    )
+
+    response = client.patch(
+        f"/api/v1/events/{past_event.id}",
+        json={"location": ""},
+        headers=board_member_headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["location"] is None

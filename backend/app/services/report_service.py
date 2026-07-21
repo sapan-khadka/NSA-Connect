@@ -29,6 +29,7 @@ from app.schemas.report import (
 )
 from app.services.dues_service import get_dues_dashboard
 from app.services.event_checkin_service import get_attendance_summary
+from app.services.organization_context import get_default_organization_id
 
 
 class ReportNotFoundError(Exception):
@@ -100,6 +101,7 @@ def _build_finance_section(
     filters = [
         FinanceEntry.created_at >= period_start,
         FinanceEntry.created_at < period_end,
+        FinanceEntry.organization_id == get_default_organization_id(db),
     ]
     row = db.execute(
         select(
@@ -199,6 +201,8 @@ def _build_feedback_section(
 
 
 def _build_membership_section(db: Session) -> ReportMembershipSection:
+    # Phase 1: `users` is still global (no per-org membership query needed
+    # while every approved user belongs to the single default organization).
     rows = db.execute(
         select(Member.role, func.count())
         .where(Member.status == MemberStatus.APPROVED)
@@ -229,7 +233,11 @@ def _build_events_and_attendance(
     events = list(
         db.scalars(
             select(Event)
-            .where(Event.starts_at >= period_start, Event.starts_at < period_end)
+            .where(
+                Event.starts_at >= period_start,
+                Event.starts_at < period_end,
+                Event.organization_id == get_default_organization_id(db),
+            )
             .order_by(Event.starts_at.asc()),
         ).all(),
     )
@@ -349,6 +357,7 @@ def generate_report(
         period_end=period_end,
         data_json=data.model_dump_json(),
         generated_by_id=generated_by_id,
+        organization_id=get_default_organization_id(db),
     )
     db.add(report)
     db.commit()
@@ -361,6 +370,9 @@ def list_reports(db: Session) -> list[SemesterReport]:
         db.scalars(
             select(SemesterReport)
             .options(joinedload(SemesterReport.generated_by))
+            .where(
+                SemesterReport.organization_id == get_default_organization_id(db)
+            )
             .order_by(SemesterReport.created_at.desc()),
         )
         .unique()

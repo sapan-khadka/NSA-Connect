@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.models.event_suggestion import EventSuggestion, EventSuggestionStatus
 from app.models.member import Member
 from app.schemas.event_suggestion import EventSuggestionCreateRequest
+from app.services.organization_context import get_default_organization_id
 
 
 class EventSuggestionNotFoundError(Exception):
@@ -31,6 +32,9 @@ def list_event_suggestions(db: Session) -> list[EventSuggestion]:
                 joinedload(EventSuggestion.suggested_by),
                 joinedload(EventSuggestion.noted_by),
             )
+            .where(
+                EventSuggestion.organization_id == get_default_organization_id(db)
+            )
             .order_by(EventSuggestion.created_at.desc()),
         ).all(),
     )
@@ -54,6 +58,7 @@ def create_event_suggestion(
         status=EventSuggestionStatus.SUBMITTED,
         suggested_by_id=member.id,
         created_at=now,
+        organization_id=get_default_organization_id(db),
     )
     db.add(suggestion)
     db.commit()

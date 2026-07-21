@@ -255,6 +255,52 @@ export function CreateEventForm({
             ) : null}
           </div>
 
+          <div>
+            <label
+              htmlFor="event-location"
+              className="block text-sm font-medium text-foreground"
+            >
+              Location{" "}
+              <span className="font-normal text-label">(optional)</span>
+            </label>
+            <input
+              id="event-location"
+              type="text"
+              value={values.location}
+              onChange={(event) => updateField("location", event.target.value)}
+              onBlur={() => validateField("location")}
+              placeholder="e.g. University Center Ballroom"
+              className={inputClassName}
+            />
+            {fieldErrors.location ? (
+              <p className="mt-1 ds-field-error">{fieldErrors.location}</p>
+            ) : null}
+          </div>
+
+          <div>
+            <label
+              htmlFor="event-capacity"
+              className="block text-sm font-medium text-foreground"
+            >
+              Capacity{" "}
+              <span className="font-normal text-label">(optional)</span>
+            </label>
+            <input
+              id="event-capacity"
+              type="number"
+              min={1}
+              step={1}
+              value={values.capacity}
+              onChange={(event) => updateField("capacity", event.target.value)}
+              onBlur={() => validateField("capacity")}
+              placeholder="e.g. 120"
+              className={inputClassName}
+            />
+            {fieldErrors.capacity ? (
+              <p className="mt-1 ds-field-error">{fieldErrors.capacity}</p>
+            ) : null}
+          </div>
+
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
               <label

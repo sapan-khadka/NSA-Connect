@@ -3,6 +3,7 @@ from enum import StrEnum
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Column,
     DateTime,
     ForeignKey,
@@ -32,6 +33,12 @@ class MeetingVisibility(StrEnum):
 
 class Event(Base):
     __tablename__ = "events"
+    __table_args__ = (
+        CheckConstraint(
+            "capacity IS NULL OR capacity > 0",
+            name="ck_events_capacity_positive",
+        ),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), nullable=False)
@@ -46,6 +53,7 @@ class Event(Base):
     starts_at = Column(DateTime(timezone=True), nullable=False)
     ends_at = Column(DateTime(timezone=True), nullable=True)
     location = Column(String(255), nullable=True)
+    capacity = Column(Integer, nullable=True)
     budget = Column(Numeric(10, 2), nullable=False)
     event_photo_url = Column(String(2048), nullable=True)
     show_in_photo_archive = Column(Boolean, nullable=False, default=True)
@@ -57,7 +65,14 @@ class Event(Base):
         nullable=True,
     )
     checkin_token = Column(String(64), nullable=True)
-    created_by_id = Column(Integer, ForeignKey("members.id"), nullable=False)
+    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    organization_id = Column(
+        Integer,
+        ForeignKey("organizations.id"),
+        nullable=False,
+        server_default="1",
+        index=True,
+    )
     rsvps = relationship(
         "EventRsvp",
         back_populates="event",

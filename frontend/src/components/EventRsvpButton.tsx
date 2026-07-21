@@ -37,6 +37,10 @@ const RSVP_CONFIRMATIONS: Record<
     message: "Aww, we'll miss you. See you next time.",
     className: "text-gray-500",
   },
+  waitlisted: {
+    message: "You're on the waitlist. We'll notify you if a spot opens.",
+    className: "text-gray-500",
+  },
 };
 
 type EventRsvpButtonProps = {
@@ -44,6 +48,8 @@ type EventRsvpButtonProps = {
   canRsvp: boolean;
   loading: boolean;
   onStatusChange: (status: RsvpStatus) => void;
+  /** When true, show Join waitlist instead of / in addition to Going. */
+  atCapacity?: boolean;
   embedded?: boolean;
   /**
    * default — pill buttons
@@ -98,6 +104,7 @@ export function EventRsvpButton({
   canRsvp,
   loading,
   onStatusChange,
+  atCapacity = false,
   embedded = false,
   variant = "default",
   menuHeading = "Your RSVP",
@@ -118,12 +125,22 @@ export function EventRsvpButton({
   const isMenu = variant === "menu";
   const useSegmentedControl = isSegmented || isMenu;
   const showConfirmation = Boolean(displayStatus) && !embedded && !isMenu;
+  const options = atCapacity
+    ? [
+        ...RSVP_OPTIONS.filter((option) => option.value !== "going"),
+        {
+          value: "waitlisted" as const,
+          label: RSVP_STATUS_LABELS.waitlisted,
+          icon: Circle,
+        },
+      ]
+    : RSVP_OPTIONS;
 
   function handleOptionClick(status: RsvpStatus): void {
     setDisplayStatus(status);
 
     const anchor = buttonRefs.current[status];
-    if (anchor) {
+    if (anchor && status !== "waitlisted") {
       playReaction(status, anchor);
     }
     onStatusChange(status);
@@ -138,7 +155,7 @@ export function EventRsvpButton({
   function renderSegmentedControl() {
     return (
       <div role="group" aria-label="RSVP options" className="rsvp-segmented">
-        {RSVP_OPTIONS.map((option) => {
+        {options.map((option) => {
           const isSelected = displayStatus === option.value;
           return (
             <button
@@ -221,7 +238,7 @@ export function EventRsvpButton({
               aria-label="RSVP options"
               className="mt-3 flex flex-wrap gap-2"
             >
-              {RSVP_OPTIONS.map((option) => {
+              {options.map((option) => {
                 const isSelected = displayStatus === option.value;
                 return (
                   <div

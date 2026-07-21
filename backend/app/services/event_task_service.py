@@ -26,6 +26,7 @@ from app.schemas.event_task import (
 )
 from app.services.event_service import EventNotFoundError
 from app.services.notification_scan_service import notify_task_assigned_if_enabled
+from app.services.organization_context import get_default_organization_id
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +108,10 @@ def _get_or_create_group(db: Session, group_name: str) -> PrepTaskGroup:
         select(PrepTaskGroup).where(PrepTaskGroup.group_name == group_name),
     )
     if group is None:
-        group = PrepTaskGroup(group_name=group_name)
+        group = PrepTaskGroup(
+            group_name=group_name,
+            organization_id=get_default_organization_id(db),
+        )
         db.add(group)
         db.flush()
     return group

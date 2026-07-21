@@ -6,6 +6,7 @@ import {
   EVENT_MANAGE_EYEBROW,
   EVENT_MANAGE_LOADING,
 } from "../lib/event-manage-ui";
+import { downloadAttendeesCsv } from "../lib/event-attendees-export";
 import type { EventAttendeesResponse } from "../lib/events-api";
 import {
   computeRsvpAnalytics,
@@ -18,6 +19,8 @@ type EventManageRsvpAnalyticsCardProps = {
   attendees: EventAttendeesResponse | null;
   attendeesLoading: boolean;
   attendanceSummary: EventAttendanceSummary | null;
+  eventCapacity?: number | null;
+  eventName?: string;
   onViewDetails?: () => void;
 };
 
@@ -179,9 +182,15 @@ export function EventManageRsvpAnalyticsCard({
   attendees,
   attendeesLoading,
   attendanceSummary,
+  eventCapacity = null,
+  eventName = "event",
   onViewDetails,
 }: EventManageRsvpAnalyticsCardProps) {
-  const snapshot = computeRsvpAnalytics(attendees, attendanceSummary);
+  const snapshot = computeRsvpAnalytics(
+    attendees,
+    attendanceSummary,
+    eventCapacity,
+  );
 
   return (
     <HomeCard
@@ -196,15 +205,28 @@ export function EventManageRsvpAnalyticsCard({
             Response mix and expected turnout
           </p>
         </div>
-        {attendanceSummary && onViewDetails ? (
-          <button
-            type="button"
-            onClick={onViewDetails}
-            className={EVENT_MANAGE_ACTION_LINK}
-          >
-            View details
-          </button>
-        ) : null}
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          {attendees && attendees.attendees.length > 0 ? (
+            <button
+              type="button"
+              onClick={() =>
+                downloadAttendeesCsv(attendees.attendees, eventName)
+              }
+              className={EVENT_MANAGE_ACTION_LINK}
+            >
+              Export CSV
+            </button>
+          ) : null}
+          {attendanceSummary && onViewDetails ? (
+            <button
+              type="button"
+              onClick={onViewDetails}
+              className={EVENT_MANAGE_ACTION_LINK}
+            >
+              View details
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {attendeesLoading ? (
@@ -268,6 +290,19 @@ export function EventManageRsvpAnalyticsCard({
                 snapshot.capacityFilledPercent === null
                   ? "—"
                   : `${snapshot.capacityFilledPercent}%`
+              }
+              hint={
+                eventCapacity
+                  ? `${snapshot.going} of ${eventCapacity} capacity`
+                  : "Set capacity in Details"
+              }
+            />
+            <InsightStat
+              label="Going share"
+              value={
+                snapshot.responseGoingPercent === null
+                  ? "—"
+                  : `${snapshot.responseGoingPercent}%`
               }
               hint="Going among responses"
             />

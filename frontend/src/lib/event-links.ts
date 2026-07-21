@@ -4,6 +4,11 @@ export function eventDetailPath(eventId: number): string {
   return `/events/${eventId}`;
 }
 
+/** Unauthenticated shareable landing page for an event. */
+export function publicEventPath(eventId: number): string {
+  return `/e/${eventId}`;
+}
+
 export function photoArchivePath(): string {
   return "/events/photos";
 }

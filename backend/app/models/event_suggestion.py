@@ -17,6 +17,13 @@ class EventSuggestion(Base):
     __tablename__ = "event_suggestions"
 
     id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(
+        Integer,
+        ForeignKey("organizations.id"),
+        nullable=False,
+        server_default="1",
+        index=True,
+    )
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=False)
     preferred_timing = Column(String(255), nullable=True)
@@ -30,10 +37,10 @@ class EventSuggestion(Base):
         server_default=EventSuggestionStatus.SUBMITTED.value,
     )
     suggested_by_id = Column(
-        Integer, ForeignKey("members.id"), nullable=False, index=True
+        Integer, ForeignKey("users.id"), nullable=False, index=True
     )
     noted_at = Column(DateTime(timezone=True), nullable=True)
-    noted_by_id = Column(Integer, ForeignKey("members.id"), nullable=True, index=True)
+    noted_by_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,

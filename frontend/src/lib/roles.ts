@@ -7,6 +7,16 @@ export const MEMBER_ROLES = [
 
 export type MemberRole = (typeof MEMBER_ROLES)[number];
 
+/** Cross-tenant platform roles (orthogonal to org MemberRole). */
+export const PLATFORM_ROLES = [
+  "super_admin",
+  "university_admin",
+  "university_staff",
+  "student",
+] as const;
+
+export type PlatformRole = (typeof PLATFORM_ROLES)[number];
+
 const ROLE_LEVELS: Record<MemberRole, number> = {
   general: 1,
   board: 2,

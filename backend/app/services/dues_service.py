@@ -24,6 +24,7 @@ from app.schemas.dues import (
     SemesterDuesSettingsResponse,
 )
 from app.services.member_service import MemberNotFoundError, get_member_by_id
+from app.services.organization_context import get_default_organization_id
 
 
 class DuesNotFoundError(Exception):
@@ -106,6 +107,7 @@ def _sync_finance_entry(
         description=description,
         created_by_id=actor.id,
         created_at=timestamp,
+        organization_id=get_default_organization_id(db),
     )
     db.add(entry)
     db.flush()
@@ -118,7 +120,10 @@ def get_semester_settings(
 ) -> SemesterDuesSettings | None:
     _validate_semester(semester)
     return db.scalar(
-        select(SemesterDuesSettings).where(SemesterDuesSettings.semester == semester),
+        select(SemesterDuesSettings).where(
+            SemesterDuesSettings.semester == semester,
+            SemesterDuesSettings.organization_id == get_default_organization_id(db),
+        ),
     )
 
 
@@ -137,6 +142,7 @@ def upsert_semester_settings(
             semester=semester,
             default_amount=default_amount,
             updated_by_id=updated_by.id,
+            organization_id=get_default_organization_id(db),
         )
         db.add(settings)
     else:
@@ -169,9 +175,13 @@ def generate_dues_records(
         ).all(),
     )
 
+    org_id = get_default_organization_id(db)
     existing_member_ids = set(
         db.scalars(
-            select(MemberDues.member_id).where(MemberDues.semester == semester),
+            select(MemberDues.member_id).where(
+                MemberDues.semester == semester,
+                MemberDues.organization_id == org_id,
+            ),
         ).all(),
     )
 
@@ -189,6 +199,7 @@ def generate_dues_records(
                 semester=semester,
                 amount_owed=default_amount,
                 amount_paid=Decimal("0"),
+                organization_id=org_id,
             ),
         )
         created_count += 1
@@ -218,7 +229,10 @@ def get_dues_dashboard(
     query = (
         select(MemberDues)
         .options(joinedload(MemberDues.member))
-        .where(MemberDues.semester == semester)
+        .where(
+            MemberDues.semester == semester,
+            MemberDues.organization_id == get_default_organization_id(db),
+        )
     )
 
     if search:
@@ -466,7 +480,10 @@ def get_member_dues_history(
 
     rows = db.scalars(
         select(MemberDues)
-        .where(MemberDues.member_id == member_id)
+        .where(
+            MemberDues.member_id == member_id,
+            MemberDues.organization_id == get_default_organization_id(db),
+        )
         .order_by(MemberDues.semester.asc(), MemberDues.id.asc()),
     ).all()
 

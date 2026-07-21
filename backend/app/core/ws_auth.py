@@ -2,7 +2,7 @@
 
 from sqlalchemy.orm import Session
 
-from app.core.security import InvalidTokenError, decode_access_token
+from app.core.security import InvalidTokenError, decode_access_token, resolve_user_id
 from app.models.member import Member
 
 
@@ -24,11 +24,11 @@ def authenticate_member_from_token(db: Session, token: str | None) -> Member:
     except InvalidTokenError as exc:
         raise TokenAuthenticationError("Invalid or expired token") from exc
 
-    member_id = payload.get("member_id")
-    if member_id is None:
+    user_id = resolve_user_id(payload)
+    if user_id is None:
         raise TokenAuthenticationError("Invalid token payload")
 
-    member = db.get(Member, member_id)
+    member = db.get(Member, user_id)
     if member is None:
         raise TokenAuthenticationError("Member not found")
 

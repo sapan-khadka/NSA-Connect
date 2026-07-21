@@ -29,6 +29,7 @@ import { BoardMeetingsPage } from "./pages/BoardMeetingsPage";
 import { MeetingDetailPage } from "./pages/MeetingDetailPage";
 import { PhotoArchivePage } from "./pages/PhotoArchivePage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { PublicEventPage } from "./pages/PublicEventPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { ReportDetailPage } from "./pages/ReportDetailPage";
@@ -200,6 +201,10 @@ export const appRoutes: RouteObject[] = [
       {
         path: "events/:eventId/checkin",
         element: <EventCheckInPage />,
+      },
+      {
+        path: "e/:eventId",
+        element: <PublicEventPage />,
       },
       {
         path: "events",

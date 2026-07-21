@@ -12,7 +12,7 @@ class PasswordResetToken(Base):
     id = Column(Integer, primary_key=True, index=True)
     member_id = Column(
         Integer,
-        ForeignKey("members.id", ondelete="CASCADE"),
+        ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )

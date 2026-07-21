@@ -24,7 +24,7 @@ class PrepTaskReminder(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     event_task_id = Column(Integer, ForeignKey("event_tasks.id"), nullable=False)
-    assignee_id = Column(Integer, ForeignKey("members.id"), nullable=False)
+    assignee_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     reminder_type = Column(
         SqlEnum(
             ReminderType,

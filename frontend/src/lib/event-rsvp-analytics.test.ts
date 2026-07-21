@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { computeRsvpAnalytics } from "./event-rsvp-analytics";
 
 describe("computeRsvpAnalytics", () => {
-  it("derives prediction and capacity from RSVP counts", () => {
+  it("derives prediction and response-going share from RSVP counts", () => {
     const result = computeRsvpAnalytics(
       {
         going_count: 80,
@@ -18,8 +18,25 @@ describe("computeRsvpAnalytics", () => {
     expect(result?.maybe).toBe(20);
     expect(result?.declined).toBe(10);
     expect(result?.attendancePrediction).toBe(90);
-    expect(result?.capacityFilledPercent).toBe(73);
+    expect(result?.responseGoingPercent).toBe(73);
+    expect(result?.capacityFilledPercent).toBeNull();
     expect(result?.noShowRatePercent).toBeNull();
+  });
+
+  it("uses event capacity for capacity filled percent", () => {
+    const result = computeRsvpAnalytics(
+      {
+        going_count: 60,
+        maybe_count: 10,
+        not_going_count: 0,
+        no_response_count: 0,
+      },
+      null,
+      100,
+    );
+
+    expect(result?.capacityFilledPercent).toBe(60);
+    expect(result?.responseGoingPercent).toBe(86);
   });
 
   it("computes no-show rate from attendance summary", () => {

@@ -43,7 +43,14 @@ class FinanceEntry(Base):
     description = Column(Text, nullable=False, default="")
     receipt_url = Column(String(2048), nullable=True)
     event_id = Column(Integer, ForeignKey("events.id"), nullable=True)
-    created_by_id = Column(Integer, ForeignKey("members.id"), nullable=False)
+    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    organization_id = Column(
+        Integer,
+        ForeignKey("organizations.id"),
+        nullable=False,
+        server_default="1",
+        index=True,
+    )
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,

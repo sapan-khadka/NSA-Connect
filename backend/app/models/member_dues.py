@@ -33,11 +33,25 @@ class DuesStatus(StrEnum):
 
 class SemesterDuesSettings(Base):
     __tablename__ = "semester_dues_settings"
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id",
+            "semester",
+            name="uq_semester_dues_settings_org_semester",
+        ),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
-    semester = Column(String(16), nullable=False, unique=True)
+    organization_id = Column(
+        Integer,
+        ForeignKey("organizations.id"),
+        nullable=False,
+        server_default="1",
+        index=True,
+    )
+    semester = Column(String(16), nullable=False)
     default_amount = Column(Numeric(10, 2), nullable=False)
-    updated_by_id = Column(Integer, ForeignKey("members.id"), nullable=True)
+    updated_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,
@@ -62,7 +76,14 @@ class MemberDues(Base):
     )
 
     id = Column(Integer, primary_key=True, index=True)
-    member_id = Column(Integer, ForeignKey("members.id"), nullable=False, index=True)
+    organization_id = Column(
+        Integer,
+        ForeignKey("organizations.id"),
+        nullable=False,
+        server_default="1",
+        index=True,
+    )
+    member_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     semester = Column(String(16), nullable=False, index=True)
     amount_owed = Column(Numeric(10, 2), nullable=False)
     amount_paid = Column(Numeric(10, 2), nullable=False, default=0)

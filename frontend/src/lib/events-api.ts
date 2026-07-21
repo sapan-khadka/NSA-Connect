@@ -18,7 +18,7 @@ export type PrepTaskResponse = {
   checklist_items: PrepTaskChecklistItemResponse[];
 };
 
-export type RsvpStatus = "going" | "maybe" | "not_going";
+export type RsvpStatus = "going" | "maybe" | "not_going" | "waitlisted";
 
 export type { MeetingVisibility } from "./event-types";
 
@@ -30,6 +30,7 @@ export type EventResponse = {
   event_type: EventType;
   description: string;
   location: string | null;
+  capacity: number | null;
   budget: string;
   created_by_id: number;
   current_member_rsvp_status: RsvpStatus | null;
@@ -110,6 +111,7 @@ export type EventAttendeesResponse = {
   maybe_count: number;
   not_going_count: number;
   no_response_count: number;
+  waitlisted_count?: number;
   attendees: EventRsvpAttendee[];
 };
 
@@ -150,8 +152,15 @@ export type CreateEventRequest = {
   starts_at: string;
   event_type: EventType;
   description: string;
+  location?: string | null;
+  capacity?: number | null;
   budget: string;
   meeting_visibility?: MeetingVisibility | null;
+};
+
+export type EventDuplicateRequest = {
+  starts_at: string;
+  name?: string;
 };
 
 export async function createEvent(
@@ -185,16 +194,167 @@ export async function fetchEvent(eventId: number): Promise<EventDetailResponse> 
 }
 
 export type EventPatchRequest = {
+  name?: string;
+  description?: string;
+  location?: string | null;
+  capacity?: number | null;
   show_in_photo_archive?: boolean;
   starts_at?: string;
+  ends_at?: string | null;
   meeting_visibility?: MeetingVisibility;
 };
+
+export type EventActivityItem = {
+  id: string;
+  kind: "budget" | "volunteer" | "reminder" | "photo" | "schedule" | "invite";
+  title: string;
+  detail?: string | null;
+  occurred_at: string;
+};
+
+export async function fetchEventActivity(
+  eventId: number,
+): Promise<{ items: EventActivityItem[]; total: number }> {
+  const response = await api.get<{ items: EventActivityItem[]; total: number }>(
+    `/v1/events/${eventId}/activity`,
+  );
+  return response.data;
+}
 
 export async function patchEvent(
   eventId: number,
   data: EventPatchRequest,
 ): Promise<EventResponse> {
   const response = await api.patch<EventResponse>(`/v1/events/${eventId}`, data);
+  return response.data;
+}
+
+export async function duplicateEvent(
+  eventId: number,
+  data: EventDuplicateRequest,
+): Promise<EventResponse> {
+  const response = await api.post<EventResponse>(
+    `/v1/events/${eventId}/duplicate`,
+    data,
+  );
+  return response.data;
+}
+
+export type EventNotificationStatus = {
+  event_id: number;
+  reminder_state: "sent" | "scheduled" | "due_soon" | "none" | "past";
+  reminder_sent_count: number;
+  last_reminder_sent_at: string | null;
+  nudge_state: "sent" | "scheduled" | "due_soon" | "none" | "past";
+  nudge_sent_count: number;
+  hours_until_start: number | null;
+};
+
+export type EventReminderSendResult = {
+  candidates: number;
+  sent: number;
+  skipped: number;
+};
+
+export async function fetchEventNotificationStatus(
+  eventId: number,
+): Promise<EventNotificationStatus> {
+  const response = await api.get<EventNotificationStatus>(
+    `/v1/events/${eventId}/notification-status`,
+  );
+  return response.data;
+}
+
+export async function sendEventRemindersNow(
+  eventId: number,
+): Promise<EventReminderSendResult> {
+  const response = await api.post<EventReminderSendResult>(
+    `/v1/events/${eventId}/reminders/send`,
+  );
+  return response.data;
+}
+
+export type VolunteerSlotFiller = {
+  member_id: number;
+  full_name: string;
+};
+
+export type VolunteerSlotResponse = {
+  id: number;
+  event_id: number;
+  task_name: string;
+  description: string;
+  max_signup_count: number;
+  signup_count: number;
+  spots_remaining: number;
+  is_full: boolean;
+  created_at: string;
+  current_member_signed_up?: boolean;
+  filled_by?: VolunteerSlotFiller[];
+};
+
+export type VolunteerSlotListResponse = {
+  slots: VolunteerSlotResponse[];
+  total: number;
+};
+
+export type CreateVolunteerSlotRequest = {
+  task_name: string;
+  max_signup_count: number;
+  description?: string | null;
+};
+
+export type PatchVolunteerSlotRequest = {
+  task_name?: string;
+  max_signup_count?: number;
+  description?: string | null;
+};
+
+export async function fetchEventVolunteerSlots(
+  eventId: number,
+): Promise<VolunteerSlotListResponse> {
+  const response = await api.get<VolunteerSlotListResponse>(
+    `/v1/events/${eventId}/slots`,
+  );
+  return response.data;
+}
+
+export async function createEventVolunteerSlot(
+  eventId: number,
+  data: CreateVolunteerSlotRequest,
+): Promise<VolunteerSlotResponse> {
+  const response = await api.post<VolunteerSlotResponse>(
+    `/v1/events/${eventId}/slots`,
+    data,
+  );
+  return response.data;
+}
+
+export async function patchVolunteerSlot(
+  slotId: number,
+  data: PatchVolunteerSlotRequest,
+): Promise<VolunteerSlotResponse> {
+  const response = await api.patch<VolunteerSlotResponse>(
+    `/v1/slots/${slotId}`,
+    data,
+  );
+  return response.data;
+}
+
+export async function deleteVolunteerSlot(slotId: number): Promise<void> {
+  await api.delete(`/v1/slots/${slotId}`);
+}
+
+export async function signupForVolunteerSlot(slotId: number): Promise<void> {
+  await api.post(`/v1/slots/${slotId}/signup`);
+}
+
+export async function withdrawFromVolunteerSlot(
+  slotId: number,
+): Promise<VolunteerSlotResponse> {
+  const response = await api.delete<VolunteerSlotResponse>(
+    `/v1/slots/${slotId}/signup`,
+  );
   return response.data;
 }
 

@@ -7,11 +7,12 @@ from app.api.v1.event_photos import router as event_photos_router
 from app.core.database import get_db
 from app.core.dependencies import get_current_member, require_board
 from app.models.event import EventType
-from app.models.member import Member
+from app.models.member import Member, MemberRole
 from app.schemas.event import (
     EventAttendeesResponse,
     EventCreateRequest,
     EventDetailResponse,
+    EventDuplicateRequest,
     EventListResponse,
     EventPatchRequest,
     EventResponse,
@@ -35,7 +36,19 @@ from app.schemas.member import (
     EventParticipantInvitationResponse,
 )
 from app.schemas.preptask import PrepTaskCreateRequest, PrepTaskResponse
-from app.schemas.volunteer import VolunteerSlotCreateRequest, VolunteerSlotResponse
+from app.schemas.event_activity import (
+    EventActivityItemResponse,
+    EventActivityListResponse,
+)
+from app.schemas.event_notification import (
+    EventNotificationStatusResponse,
+    EventReminderSendResponse,
+)
+from app.schemas.volunteer import (
+    VolunteerSlotCreateRequest,
+    VolunteerSlotListResponse,
+    VolunteerSlotResponse,
+)
 from app.services.event_feedback_service import (
     EventNotPastError,
     get_member_event_feedback,
@@ -55,6 +68,7 @@ from app.services.event_service import (
     EventNotFoundError,
     create_event,
     delete_event,
+    duplicate_event,
     get_event_with_prep_tasks_for_member,
     list_events,
     list_past_events,
@@ -78,6 +92,7 @@ from app.services.event_volunteer_signup_service import (
 from app.services.member_service import MemberNotFoundError
 from app.services.rsvp_service import (
     AlreadyRsvpedError,
+    EventAtCapacityError,
     EventNotUpcomingError,
     NotRsvpedError,
     cancel_event_rsvp,
@@ -86,7 +101,16 @@ from app.services.rsvp_service import (
     rsvp_to_event,
     set_event_rsvp_status,
 )
-from app.services.volunteer_service import create_volunteer_slot_for_event
+from app.services.event_activity_service import list_event_activity
+from app.services.event_notification_service import (
+    EventReminderNotNeededError,
+    get_event_notification_status,
+    send_event_reminders_now,
+)
+from app.services.volunteer_service import (
+    create_volunteer_slot_for_event,
+    list_volunteer_slots_for_event,
+)
 
 router = APIRouter(prefix="/events", tags=["events"])
 router.include_router(event_photos_router)
@@ -262,6 +286,16 @@ def update_event_rsvp_endpoint(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Cannot RSVP to a past event",
         ) from None
+    except EventAtCapacityError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "event_at_capacity",
+                "message": "Event is at capacity. You can join the waitlist.",
+                "capacity": exc.capacity,
+                "going_count": exc.going_count,
+            },
+        ) from None
 
     return EventRsvpStatusResponse(
         event_id=event_id,
@@ -295,6 +329,16 @@ def rsvp_to_event_endpoint(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Already RSVPed to this event",
+        ) from None
+    except EventAtCapacityError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "event_at_capacity",
+                "message": "Event is at capacity. You can join the waitlist.",
+                "capacity": exc.capacity,
+                "going_count": exc.going_count,
+            },
         ) from None
 
     return EventRsvpStatusResponse(
@@ -569,6 +613,7 @@ def list_event_attendees_endpoint(
         maybe_count=counts.maybe_count,
         not_going_count=counts.not_going_count,
         no_response_count=counts.no_response_count,
+        waitlisted_count=counts.waitlisted_count,
         attendees=[
             EventRsvpAttendeeResponse(
                 member_id=attendee.member_id,
@@ -629,6 +674,37 @@ def add_prep_task_endpoint(
     return PrepTaskResponse.from_event_task(task)
 
 
+@router.get(
+    "/{event_id}/slots",
+    response_model=VolunteerSlotListResponse,
+)
+def list_volunteer_slots_endpoint(
+    event_id: int,
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    try:
+        slots = list_volunteer_slots_for_event(db, event_id)
+    except EventNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        ) from None
+
+    include_roster = current_member.role.is_at_least(MemberRole.BOARD)
+    return VolunteerSlotListResponse(
+        slots=[
+            VolunteerSlotResponse.from_slot(
+                slot,
+                member_id=current_member.id,
+                include_roster=include_roster,
+            )
+            for slot in slots
+        ],
+        total=len(slots),
+    )
+
+
 @router.post(
     "/{event_id}/slots",
     response_model=VolunteerSlotResponse,
@@ -637,7 +713,7 @@ def add_prep_task_endpoint(
 def create_volunteer_slot_endpoint(
     event_id: int,
     data: VolunteerSlotCreateRequest,
-    _: Member = Depends(require_board),
+    current_member: Member = Depends(require_board),
     db: Session = Depends(get_db),
 ):
     try:
@@ -648,7 +724,109 @@ def create_volunteer_slot_endpoint(
             detail="Event not found",
         ) from None
 
-    return VolunteerSlotResponse.from_slot(slot)
+    return VolunteerSlotResponse.from_slot(
+        slot,
+        member_id=current_member.id,
+        include_roster=True,
+    )
+
+
+@router.get(
+    "/{event_id}/activity",
+    response_model=EventActivityListResponse,
+)
+def event_activity_endpoint(
+    event_id: int,
+    _: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    try:
+        rows = list_event_activity(db, event_id)
+    except EventNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        ) from None
+    items = [
+        EventActivityItemResponse(
+            id=row["id"],
+            kind=row["kind"],
+            title=row["title"],
+            detail=row.get("detail"),
+            occurred_at=row["occurred_at"],
+        )
+        for row in rows
+    ]
+    return EventActivityListResponse(items=items, total=len(items))
+
+
+@router.get(
+    "/{event_id}/notification-status",
+    response_model=EventNotificationStatusResponse,
+)
+def event_notification_status_endpoint(
+    event_id: int,
+    _: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    try:
+        return EventNotificationStatusResponse(**get_event_notification_status(db, event_id))
+    except EventNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        ) from None
+
+
+@router.post(
+    "/{event_id}/reminders/send",
+    response_model=EventReminderSendResponse,
+)
+def send_event_reminders_endpoint(
+    event_id: int,
+    _: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    try:
+        stats = send_event_reminders_now(db, event_id)
+    except EventNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        ) from None
+    except EventReminderNotNeededError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Reminders can only be sent for upcoming events",
+        ) from None
+    return EventReminderSendResponse(**stats)
+
+
+@router.post(
+    "/{event_id}/duplicate",
+    response_model=EventResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def duplicate_event_endpoint(
+    event_id: int,
+    data: EventDuplicateRequest,
+    current_member: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    try:
+        event = duplicate_event(
+            db,
+            event_id,
+            data,
+            created_by_id=current_member.id,
+        )
+    except EventNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        ) from None
+
+    return _build_event_response(db, event, member_id=current_member.id)
 
 
 @router.post(

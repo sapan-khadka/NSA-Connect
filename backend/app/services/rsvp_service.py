@@ -25,12 +25,22 @@ class NotRsvpedError(Exception):
     pass
 
 
+class EventAtCapacityError(Exception):
+    """Raised when Going is full; waitlist is available when capacity is set."""
+
+    def __init__(self, *, capacity: int, going_count: int):
+        self.capacity = capacity
+        self.going_count = going_count
+        super().__init__("Event is at capacity")
+
+
 @dataclass(frozen=True)
 class EventRsvpCounts:
     going_count: int
     maybe_count: int
     not_going_count: int
     no_response_count: int
+    waitlisted_count: int
 
 
 @dataclass(frozen=True)
@@ -60,6 +70,16 @@ def get_member_rsvp_status(
     )
 
 
+def _going_count(db: Session, event_id: int, *, exclude_member_id: int | None) -> int:
+    query = select(EventRsvp.id).where(
+        EventRsvp.event_id == event_id,
+        EventRsvp.status == RsvpStatus.GOING,
+    )
+    if exclude_member_id is not None:
+        query = query.where(EventRsvp.member_id != exclude_member_id)
+    return len(list(db.scalars(query).all()))
+
+
 def set_event_rsvp_status(
     db: Session,
     event_id: int,
@@ -79,6 +99,18 @@ def set_event_rsvp_status(
             EventRsvp.member_id == member_id,
         ),
     )
+
+    if status == RsvpStatus.GOING and event.capacity is not None:
+        current_going = _going_count(
+            db,
+            event_id,
+            exclude_member_id=existing.member_id if existing else None,
+        )
+        if current_going >= event.capacity:
+            raise EventAtCapacityError(
+                capacity=event.capacity,
+                going_count=current_going,
+            )
 
     if existing is None:
         db.add(
@@ -155,6 +187,7 @@ def list_event_attendees(
     maybe_count = 0
     not_going_count = 0
     no_response_count = 0
+    waitlisted_count = 0
     attendees: list[EventRsvpAttendee] = []
 
     for member, status in rows:
@@ -166,6 +199,8 @@ def list_event_attendees(
             maybe_count += 1
         elif status == RsvpStatus.NOT_GOING:
             not_going_count += 1
+        elif status == RsvpStatus.WAITLISTED:
+            waitlisted_count += 1
 
         attendees.append(
             EventRsvpAttendee(
@@ -181,5 +216,6 @@ def list_event_attendees(
         maybe_count=maybe_count,
         not_going_count=not_going_count,
         no_response_count=no_response_count,
+        waitlisted_count=waitlisted_count,
     )
     return counts, attendees

@@ -19,6 +19,7 @@ from app.schemas.finance import (
     FinanceSummaryResponse,
 )
 from app.services.event_service import EventNotFoundError
+from app.services.organization_context import get_default_organization_id
 
 
 class FinanceEntryNotFoundError(Exception):
@@ -87,7 +88,11 @@ def get_event_budget_breakdown(
     *,
     semester: str | None = None,
 ) -> list[FinanceEventBudgetSummary]:
-    event_filters = _event_starts_at_filters(semester)
+    org_id = get_default_organization_id(db)
+    event_filters = [
+        *_event_starts_at_filters(semester),
+        Event.organization_id == org_id,
+    ]
     events = list(
         db.scalars(
             select(Event)
@@ -160,6 +165,7 @@ def get_expense_by_category(
 ) -> FinanceExpenseCategoryListResponse:
     filters = _semester_filters(semester)
     filters.append(FinanceEntry.entry_type == FinanceEntryType.EXPENSE)
+    filters.append(FinanceEntry.organization_id == get_default_organization_id(db))
 
     rows = db.execute(
         select(
@@ -196,6 +202,7 @@ def get_finance_summary(
     semester: str | None = None,
 ) -> FinanceSummaryResponse:
     filters = _semester_filters(semester)
+    filters.append(FinanceEntry.organization_id == get_default_organization_id(db))
 
     overall = db.execute(
         select(
@@ -289,6 +296,7 @@ def create_finance_entry(
         receipt_url=data.receipt_url,
         event_id=data.event_id,
         created_by_id=created_by.id,
+        organization_id=get_default_organization_id(db),
     )
     db.add(entry)
     db.commit()
@@ -339,7 +347,9 @@ def list_finance_entries(
     entry_type: FinanceEntryType | None = None,
     event_id: int | None = None,
 ) -> tuple[list[FinanceEntry], int]:
-    query = select(FinanceEntry)
+    query = select(FinanceEntry).where(
+        FinanceEntry.organization_id == get_default_organization_id(db)
+    )
 
     if semester is not None:
         start, end = semester_date_range(semester)

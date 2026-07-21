@@ -48,6 +48,7 @@ export function createMockEventResponse(
     event_type: "cultural",
     description: "Test description",
     location: null,
+    capacity: null,
     budget: "250.00",
     created_by_id: 1,
     current_member_rsvp_status: null,

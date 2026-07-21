@@ -58,6 +58,55 @@ def test_board_member_can_create_event(client, board_member_headers):
     assert body["budget"] == "250.00"
     assert body["starts_at"].startswith("2030-06-01T18:00:00")
     assert body["created_by_id"] == 2
+    assert body["location"] is None
+
+
+def test_board_member_can_create_event_with_location(client, board_member_headers):
+    response = client.post(
+        "/api/v1/events",
+        json=_event_payload(location="  University Center  "),
+        headers=board_member_headers,
+    )
+
+    assert response.status_code == 201
+    assert response.json()["location"] == "University Center"
+
+
+def test_board_member_can_create_event_with_capacity(client, board_member_headers):
+    response = client.post(
+        "/api/v1/events",
+        json=_event_payload(capacity=120),
+        headers=board_member_headers,
+    )
+
+    assert response.status_code == 201
+    assert response.json()["capacity"] == 120
+
+
+def test_board_member_can_patch_event_capacity(client, board_member_headers):
+    created = client.post(
+        "/api/v1/events",
+        json=_event_payload(),
+        headers=board_member_headers,
+    )
+    assert created.status_code == 201
+    event_id = created.json()["id"]
+
+    patched = client.patch(
+        f"/api/v1/events/{event_id}",
+        json={"capacity": 80},
+        headers=board_member_headers,
+    )
+    assert patched.status_code == 200
+    assert patched.json()["capacity"] == 80
+
+    cleared = client.patch(
+        f"/api/v1/events/{event_id}",
+        json={"capacity": None},
+        headers=board_member_headers,
+    )
+    assert cleared.status_code == 200
+    assert cleared.json()["capacity"] is None
 
 
 def test_unauthenticated_request_gets_401(client):

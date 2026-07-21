@@ -62,7 +62,7 @@ class VolunteerSignup(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     slot_id = Column(Integer, ForeignKey("volunteer_slots.id"), nullable=False)
-    member_id = Column(Integer, ForeignKey("members.id"), nullable=False)
+    member_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,

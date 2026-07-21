@@ -13,12 +13,21 @@ import app.models.discussion_room_read  # noqa: F401 — register table for crea
 import app.models.member_document  # noqa: F401 — register table for create_all
 import app.models.custom_board_position  # noqa: F401 — register table for create_all
 import app.models.member_note  # noqa: F401 — register table for create_all
+import app.models.organization  # noqa: F401 — register table for create_all
+import app.models.organization_membership  # noqa: F401 — register table for create_all
 import app.models.password_reset_token  # noqa: F401 — register table for create_all
+import app.models.university  # noqa: F401 — register table for create_all
 from app.core.config import settings
 from app.core.database import engine, get_db
 from app.main import app
 from app.models.base import Base
 from app.models.member import Member, MemberStatus
+from app.services.organization_context import (
+    ensure_default_university_and_org,
+    ensure_membership_for_member,
+    get_default_university_id,
+    sync_membership_from_member,
+)
 
 VALID_PASSWORD = "securepass123"
 VALID_EMAIL = "sapan@semo.edu"
@@ -220,6 +229,7 @@ def register_member(
 def set_member_approved(db_session: Session, email=VALID_EMAIL):
     member = db_session.scalar(select(Member).where(Member.email == email))
     member.status = MemberStatus.APPROVED
+    sync_membership_from_member(db_session, member)
     db_session.commit()
 
 
@@ -240,10 +250,12 @@ def create_board_member(
         hashed_password=hash_password(password),
         role=MemberRole.BOARD,
         status=MemberStatus.APPROVED,
+        university_id=get_default_university_id(db_session),
     )
     db_session.add(member)
     db_session.commit()
     db_session.refresh(member)
+    ensure_membership_for_member(db_session, member)
     return member
 
 
@@ -266,10 +278,12 @@ def create_vice_president_member(
         role=MemberRole.BOARD,
         position=MemberPosition.VICE_PRESIDENT,
         status=MemberStatus.APPROVED,
+        university_id=get_default_university_id(db_session),
     )
     db_session.add(member)
     db_session.commit()
     db_session.refresh(member)
+    ensure_membership_for_member(db_session, member)
     return member
 
 
@@ -291,10 +305,12 @@ def create_president_member(
         hashed_password=hash_password(password),
         role=MemberRole.PRESIDENT,
         status=MemberStatus.APPROVED,
+        university_id=get_default_university_id(db_session),
     )
     db_session.add(member)
     db_session.commit()
     db_session.refresh(member)
+    ensure_membership_for_member(db_session, member)
     return member
 
 
@@ -316,10 +332,12 @@ def create_treasurer_member(
         hashed_password=hash_password(password),
         role=MemberRole.TREASURER,
         status=MemberStatus.APPROVED,
+        university_id=get_default_university_id(db_session),
     )
     db_session.add(member)
     db_session.commit()
     db_session.refresh(member)
+    ensure_membership_for_member(db_session, member)
     return member
 
 
@@ -345,6 +363,11 @@ def db_session() -> Session:
     )
     Base.metadata.create_all(bind=test_engine)
     session = sessionmaker(bind=test_engine)()
+
+    # Every tenant-scoped table defaults `organization_id` to 1 (matching the
+    # production migration's backfill), so seed the row it actually points to
+    # — mirrors `ensure_default_university_and_org` running once in prod.
+    ensure_default_university_and_org(session)
 
     try:
         yield session

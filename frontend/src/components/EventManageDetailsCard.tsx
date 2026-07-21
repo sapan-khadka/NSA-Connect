@@ -49,31 +49,6 @@ function DetailsGroup({
   );
 }
 
-function ReadOnlyField({
-  label,
-  value,
-  multiline = false,
-}: {
-  label: string;
-  value: string;
-  multiline?: boolean;
-}) {
-  return (
-    <div>
-      <p className="text-xs font-medium text-gray-500">{label}</p>
-      {multiline ? (
-        <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-          {value}
-        </p>
-      ) : (
-        <p className="mt-1 text-sm font-medium leading-snug text-foreground">
-          {value}
-        </p>
-      )}
-    </div>
-  );
-}
-
 export function EventManageDetailsCard({
   event,
   onUpdated,
@@ -81,12 +56,26 @@ export function EventManageDetailsCard({
   const inputRef = useRef<HTMLInputElement>(null);
   const initial = splitEventDateTime(event.starts_at);
 
+  const [name, setName] = useState(event.name);
+  const [description, setDescription] = useState(event.description);
+  const [location, setLocation] = useState(event.location ?? "");
+  const [capacity, setCapacity] = useState(
+    event.capacity != null ? String(event.capacity) : "",
+  );
   const [eventDate, setEventDate] = useState(initial.event_date);
   const [eventTime, setEventTime] = useState(initial.event_time);
+  const initialEnd = event.ends_at
+    ? splitEventDateTime(event.ends_at)
+    : { event_date: "", event_time: "" };
+  const [endDate, setEndDate] = useState(initialEnd.event_date);
+  const [endTime, setEndTime] = useState(initialEnd.event_time);
+
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [descriptionError, setDescriptionError] = useState<string | null>(null);
   const [dateError, setDateError] = useState<string | null>(null);
   const [timeError, setTimeError] = useState<string | null>(null);
-  const [scheduleError, setScheduleError] = useState<string | null>(null);
-  const [scheduleSaving, setScheduleSaving] = useState(false);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [detailsSaving, setDetailsSaving] = useState(false);
 
   const [photoSaving, setPhotoSaving] = useState(false);
   const [archiveSaving, setArchiveSaving] = useState(false);
@@ -96,54 +85,127 @@ export function EventManageDetailsCard({
 
   useEffect(() => {
     const next = splitEventDateTime(event.starts_at);
+    setName(event.name);
+    setDescription(event.description);
+    setLocation(event.location ?? "");
+    setCapacity(event.capacity != null ? String(event.capacity) : "");
     setEventDate(next.event_date);
     setEventTime(next.event_time);
+    const nextEnd = event.ends_at
+      ? splitEventDateTime(event.ends_at)
+      : { event_date: "", event_time: "" };
+    setEndDate(nextEnd.event_date);
+    setEndTime(nextEnd.event_time);
+    setNameError(null);
+    setDescriptionError(null);
     setDateError(null);
     setTimeError(null);
-    setScheduleError(null);
-  }, [event.id, event.starts_at]);
+    setDetailsError(null);
+  }, [
+    event.id,
+    event.name,
+    event.description,
+    event.location,
+    event.capacity,
+    event.starts_at,
+    event.ends_at,
+  ]);
 
   const savedSchedule = splitEventDateTime(event.starts_at);
-  const scheduleDirty =
+  const savedEnd = event.ends_at
+    ? splitEventDateTime(event.ends_at)
+    : { event_date: "", event_time: "" };
+  const savedCapacity = event.capacity != null ? String(event.capacity) : "";
+  const detailsDirty =
+    name.trim() !== event.name ||
+    description.trim() !== event.description ||
+    location.trim() !== (event.location ?? "").trim() ||
+    capacity.trim() !== savedCapacity ||
     eventDate !== savedSchedule.event_date ||
-    eventTime !== savedSchedule.event_time;
+    eventTime !== savedSchedule.event_time ||
+    endDate !== savedEnd.event_date ||
+    endTime !== savedEnd.event_time;
 
-  async function handleSaveSchedule() {
-    const nextDateError = validateCreateEventField("event_date", eventDate, {
-      name: event.name,
-      description: event.description,
+  async function handleSaveDetails() {
+    const formValues = {
+      name,
+      description,
+      location,
+      capacity,
       event_type: event.event_type,
       event_date: eventDate,
       event_time: eventTime,
       budget: "",
-    });
-    const nextTimeError = validateCreateEventField("event_time", eventTime, {
-      name: event.name,
-      description: event.description,
-      event_type: event.event_type,
-      event_date: eventDate,
-      event_time: eventTime,
-      budget: "",
-    });
+      meeting_visibility: event.meeting_visibility ?? "board_only",
+    };
 
+    const nextNameError = validateCreateEventField("name", name, formValues);
+    const nextDescriptionError = validateCreateEventField(
+      "description",
+      description,
+      formValues,
+    );
+    const nextDateError = validateCreateEventField(
+      "event_date",
+      eventDate,
+      formValues,
+    );
+    const nextTimeError = validateCreateEventField(
+      "event_time",
+      eventTime,
+      formValues,
+    );
+
+    setNameError(nextNameError);
+    setDescriptionError(nextDescriptionError);
     setDateError(nextDateError);
     setTimeError(nextTimeError);
-    setScheduleError(null);
+    setDetailsError(null);
 
-    if (nextDateError || nextTimeError) {
+    if (
+      nextNameError ||
+      nextDescriptionError ||
+      nextDateError ||
+      nextTimeError
+    ) {
       return;
     }
 
-    setScheduleSaving(true);
+    const trimmedCapacity = capacity.trim();
+    let nextCapacity: number | null = null;
+    if (trimmedCapacity) {
+      const parsed = Number(trimmedCapacity);
+      if (!Number.isInteger(parsed) || parsed < 1) {
+        setDetailsError("Capacity must be a whole number of at least 1.");
+        return;
+      }
+      nextCapacity = parsed;
+    }
+
+    let nextEndsAt: string | null = null;
+    if (endDate.trim() || endTime.trim()) {
+      if (!endDate.trim() || !endTime.trim()) {
+        setDetailsError("Provide both end date and end time, or clear both.");
+        return;
+      }
+      nextEndsAt = combineDateAndTime(endDate, endTime);
+    }
+
+    setDetailsSaving(true);
     try {
       const updated = await patchEvent(event.id, {
+        name: name.trim(),
+        description: description.trim(),
+        location: location.trim(),
+        capacity: nextCapacity,
         starts_at: combineDateAndTime(eventDate, eventTime),
+        ends_at: nextEndsAt,
       });
       onUpdated({ ...event, ...updated });
     } catch (caught) {
-      setScheduleError(getApiErrorMessage(caught));
+      setDetailsError(getApiErrorMessage(caught));
     } finally {
-      setScheduleSaving(false);
+      setDetailsSaving(false);
     }
   }
 
@@ -204,9 +266,6 @@ export function EventManageDetailsCard({
     }
   }
 
-  const location = event.location?.trim() || "Location TBA";
-  const description = event.description?.trim() || "No description yet.";
-
   return (
     <HomeCard
       padding="md"
@@ -217,15 +276,45 @@ export function EventManageDetailsCard({
         <div>
           <h2 className={EVENT_MANAGE_SECTION_TITLE}>Event Details</h2>
           <p className={EVENT_MANAGE_SECTION_SUBTITLE}>
-            Core information for this event.
+            Edit the core information members see for this event.
           </p>
         </div>
+        <Button
+          type="button"
+          size="sm"
+          disabled={!detailsDirty || detailsSaving}
+          loading={detailsSaving}
+          onClick={() => void handleSaveDetails()}
+        >
+          Save changes
+        </Button>
       </div>
 
       <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(15rem,20rem)] lg:items-start">
         <div className="min-w-0 space-y-8">
           <DetailsGroup title="General Information">
-            <ReadOnlyField label="Event name" value={event.name} />
+            <div>
+              <label
+                htmlFor="manage-event-name"
+                className="block text-xs font-medium text-gray-500"
+              >
+                Event name
+              </label>
+              <input
+                id="manage-event-name"
+                type="text"
+                value={name}
+                onChange={(changeEvent) => {
+                  setName(changeEvent.target.value);
+                  setNameError(null);
+                  setDetailsError(null);
+                }}
+                className={inputClassName}
+              />
+              {nameError ? (
+                <p className="mt-1 ds-field-error">{nameError}</p>
+              ) : null}
+            </div>
           </DetailsGroup>
 
           <DetailsGroup title="Category">
@@ -234,6 +323,9 @@ export function EventManageDetailsCard({
             >
               {EVENT_TYPE_LABELS[event.event_type]}
             </span>
+            <p className="text-xs text-gray-500">
+              Category is set when the event is created.
+            </p>
           </DetailsGroup>
 
           <div id="event-manage-schedule">
@@ -254,7 +346,7 @@ export function EventManageDetailsCard({
                     onChange={(changeEvent) => {
                       setEventDate(changeEvent.target.value);
                       setDateError(null);
-                      setScheduleError(null);
+                      setDetailsError(null);
                     }}
                     className={inputClassName}
                   />
@@ -276,7 +368,7 @@ export function EventManageDetailsCard({
                     onChange={(changeEvent) => {
                       setEventTime(changeEvent.target.value);
                       setTimeError(null);
-                      setScheduleError(null);
+                      setDetailsError(null);
                     }}
                     className={inputClassName}
                   />
@@ -284,35 +376,126 @@ export function EventManageDetailsCard({
                     <p className="mt-1 ds-field-error">{timeError}</p>
                   ) : null}
                 </div>
-              </div>
-
-              {scheduleError ? (
-                <p role="alert" className="ds-field-error">
-                  {scheduleError}
-                </p>
-              ) : null}
-
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={!scheduleDirty || scheduleSaving}
-                  loading={scheduleSaving}
-                  onClick={() => void handleSaveSchedule()}
-                >
-                  Save schedule
-                </Button>
+                <div>
+                  <label
+                    htmlFor="manage-event-end-date"
+                    className="block text-xs font-medium text-gray-500"
+                  >
+                    End date (optional)
+                  </label>
+                  <input
+                    id="manage-event-end-date"
+                    type="date"
+                    min={eventDate || getMinEventDate()}
+                    value={endDate}
+                    onChange={(changeEvent) => {
+                      setEndDate(changeEvent.target.value);
+                      setDetailsError(null);
+                    }}
+                    className={inputClassName}
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="manage-event-end-time"
+                    className="block text-xs font-medium text-gray-500"
+                  >
+                    End time (optional)
+                  </label>
+                  <input
+                    id="manage-event-end-time"
+                    type="time"
+                    value={endTime}
+                    onChange={(changeEvent) => {
+                      setEndTime(changeEvent.target.value);
+                      setDetailsError(null);
+                    }}
+                    className={inputClassName}
+                  />
+                </div>
               </div>
             </DetailsGroup>
           </div>
 
           <DetailsGroup title="Location">
-            <ReadOnlyField label="Venue" value={location} />
+            <div>
+              <label
+                htmlFor="manage-event-location"
+                className="block text-xs font-medium text-gray-500"
+              >
+                Venue
+              </label>
+              <input
+                id="manage-event-location"
+                type="text"
+                value={location}
+                placeholder="e.g. University Center Ballroom"
+                onChange={(changeEvent) => {
+                  setLocation(changeEvent.target.value);
+                  setDetailsError(null);
+                }}
+                className={inputClassName}
+              />
+            </div>
+          </DetailsGroup>
+
+          <DetailsGroup title="Capacity">
+            <div>
+              <label
+                htmlFor="manage-event-capacity"
+                className="block text-xs font-medium text-gray-500"
+              >
+                Max attendees (optional)
+              </label>
+              <input
+                id="manage-event-capacity"
+                type="number"
+                min={1}
+                step={1}
+                value={capacity}
+                placeholder="e.g. 120"
+                onChange={(changeEvent) => {
+                  setCapacity(changeEvent.target.value);
+                  setDetailsError(null);
+                }}
+                className={inputClassName}
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Displayed on check-in progress. Leave blank if unlimited.
+              </p>
+            </div>
           </DetailsGroup>
 
           <DetailsGroup title="Description">
-            <ReadOnlyField label="About this event" value={description} multiline />
+            <div>
+              <label
+                htmlFor="manage-event-description"
+                className="block text-xs font-medium text-gray-500"
+              >
+                About this event
+              </label>
+              <textarea
+                id="manage-event-description"
+                rows={5}
+                value={description}
+                onChange={(changeEvent) => {
+                  setDescription(changeEvent.target.value);
+                  setDescriptionError(null);
+                  setDetailsError(null);
+                }}
+                className={`${inputClassName} resize-y`}
+              />
+              {descriptionError ? (
+                <p className="mt-1 ds-field-error">{descriptionError}</p>
+              ) : null}
+            </div>
           </DetailsGroup>
+
+          {detailsError ? (
+            <p role="alert" className="ds-field-error">
+              {detailsError}
+            </p>
+          ) : null}
 
           {event.event_type === "meeting" ? (
             <DetailsGroup title="Meeting visibility">

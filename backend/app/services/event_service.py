@@ -9,11 +9,17 @@ from app.lib.event_visibility import (
     event_visible_to_member,
 )
 from app.models.event import Event, EventType
-from app.models.event_task import EventTask
+from app.models.event_task import EventTask, EventTaskKind, EventTaskStatus
 from app.models.finance_entry import FinanceEntry
 from app.models.member import Member
 from app.models.notification_sent_log import NotificationSentLog
-from app.schemas.event import EventCreateRequest, EventPatchRequest
+from app.models.volunteer import VolunteerSlot
+from app.schemas.event import (
+    EventCreateRequest,
+    EventDuplicateRequest,
+    EventPatchRequest,
+)
+from app.services.organization_context import get_default_organization_id
 
 
 class EventAccessDeniedError(Exception):
@@ -35,12 +41,15 @@ def create_event(
         description=data.description,
         event_type=data.event_type,
         starts_at=data.starts_at,
+        location=data.location,
+        capacity=data.capacity,
         budget=data.budget,
         show_in_photo_archive=default_show_in_photo_archive(data.event_type),
         meeting_visibility=(
             data.meeting_visibility if data.event_type == EventType.MEETING else None
         ),
         created_by_id=created_by_id,
+        organization_id=get_default_organization_id(db),
     )
     db.add(event)
     db.commit()
@@ -84,10 +93,21 @@ def update_event(
     if event is None:
         raise EventNotFoundError
 
+    if data.name is not None:
+        event.title = data.name
+    if data.description is not None:
+        event.description = data.description
+    if data.location is not None or "location" in data.model_fields_set:
+        # Allow clearing location with null/empty (schema normalizes "" → None).
+        event.location = data.location
+    if "capacity" in data.model_fields_set:
+        event.capacity = data.capacity
     if data.show_in_photo_archive is not None:
         event.show_in_photo_archive = data.show_in_photo_archive
     if data.starts_at is not None:
         event.starts_at = data.starts_at
+    if "ends_at" in data.model_fields_set:
+        event.ends_at = data.ends_at
     if data.meeting_visibility is not None:
         if event.event_type != EventType.MEETING:
             raise ValueError("meeting_visibility only applies to meeting events")
@@ -95,6 +115,73 @@ def update_event(
     db.commit()
     db.refresh(event)
     return event
+
+
+def duplicate_event(
+    db: Session,
+    event_id: int,
+    data: EventDuplicateRequest,
+    *,
+    created_by_id: int,
+) -> Event:
+    source = db.scalar(
+        select(Event)
+        .where(Event.id == event_id)
+        .options(
+            selectinload(Event.volunteer_slots),
+            selectinload(Event.event_tasks),
+        ),
+    )
+    if source is None:
+        raise EventNotFoundError
+
+    copy_name = data.name or f"{source.title} (Copy)"
+    duplicate = Event(
+        title=copy_name,
+        description=source.description,
+        event_type=source.event_type,
+        starts_at=data.starts_at,
+        location=source.location,
+        capacity=source.capacity,
+        budget=source.budget,
+        show_in_photo_archive=source.show_in_photo_archive,
+        meeting_visibility=source.meeting_visibility,
+        created_by_id=created_by_id,
+        organization_id=source.organization_id,
+    )
+    db.add(duplicate)
+    db.flush()
+
+    for slot in source.volunteer_slots:
+        db.add(
+            VolunteerSlot(
+                event_id=duplicate.id,
+                title=slot.title,
+                description=slot.description,
+                capacity=slot.capacity,
+                created_at=datetime.now(UTC),
+            ),
+        )
+
+    for task in source.event_tasks:
+        if task.task_kind == EventTaskKind.CHECKLIST:
+            # Prep checklist groups stay attached to the source event; only
+            # simple task templates are copied to keep duplication predictable.
+            continue
+        copied = EventTask(
+            event_id=duplicate.id,
+            task_kind=EventTaskKind.SIMPLE,
+            title=task.title,
+            description=task.description or "",
+            status=EventTaskStatus.TODO,
+            created_by_id=created_by_id,
+            created_at=datetime.now(UTC),
+        )
+        db.add(copied)
+
+    db.commit()
+    db.refresh(duplicate)
+    return duplicate
 
 
 def set_event_photo_url(
@@ -120,8 +207,11 @@ def list_events(
     event_type: EventType | None = None,
     viewer: Member,
 ) -> tuple[list[Event], int]:
-    query = select(Event)
-    count_query = select(func.count()).select_from(Event)
+    org_id = get_default_organization_id(db)
+    query = select(Event).where(Event.organization_id == org_id)
+    count_query = (
+        select(func.count()).select_from(Event).where(Event.organization_id == org_id)
+    )
 
     if month is not None:
         year, month_number = _parse_month(month)
@@ -151,8 +241,15 @@ def list_upcoming_events(
     viewer: Member,
 ) -> tuple[list[Event], int]:
     now = datetime.now(UTC)
-    query = select(Event).where(Event.starts_at >= now)
-    count_query = select(func.count()).select_from(Event).where(Event.starts_at >= now)
+    org_id = get_default_organization_id(db)
+    query = select(Event).where(
+        Event.starts_at >= now, Event.organization_id == org_id
+    )
+    count_query = (
+        select(func.count())
+        .select_from(Event)
+        .where(Event.starts_at >= now, Event.organization_id == org_id)
+    )
 
     query = apply_event_visibility_filter(query, viewer)
     count_query = apply_event_visibility_filter(count_query, viewer)
@@ -172,8 +269,15 @@ def list_past_events(
     viewer: Member,
 ) -> tuple[list[Event], int]:
     now = datetime.now(UTC)
-    query = select(Event).where(Event.starts_at < now)
-    count_query = select(func.count()).select_from(Event).where(Event.starts_at < now)
+    org_id = get_default_organization_id(db)
+    query = select(Event).where(
+        Event.starts_at < now, Event.organization_id == org_id
+    )
+    count_query = (
+        select(func.count())
+        .select_from(Event)
+        .where(Event.starts_at < now, Event.organization_id == org_id)
+    )
 
     query = apply_event_visibility_filter(query, viewer)
     count_query = apply_event_visibility_filter(count_query, viewer)

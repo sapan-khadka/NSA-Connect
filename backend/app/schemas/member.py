@@ -25,6 +25,7 @@ from app.models.member import (
 
 if TYPE_CHECKING:
     from app.models.member import Member
+    from app.models.organization import Organization
 
 CURRENT_YEAR = datetime.now().year
 MAX_GRADUATION_YEAR = CURRENT_YEAR + 8
@@ -177,6 +178,14 @@ class CustomBoardPositionField(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class OrganizationField(BaseModel):
+    id: int
+    slug: str
+    name: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class MemberResponse(BaseModel):
     id: int
     full_name: str
@@ -188,6 +197,7 @@ class MemberResponse(BaseModel):
     status: MemberStatus
     position: MemberPosition = MemberPosition.MEMBER
     custom_board_position: CustomBoardPositionField | None = None
+    organization: OrganizationField | None = None
     interests: str | None = None
     bio: str | None = None
     talents: list[str] = Field(default_factory=list)
@@ -248,6 +258,7 @@ class MemberResponse(BaseModel):
         member: "Member",
         *,
         viewer: "Member | None" = None,
+        organization: "Organization | None" = None,
     ) -> "MemberResponse":
         is_self = viewer is not None and viewer.id == member.id
         is_board = viewer is not None and viewer.has_role_at_least(MemberRole.BOARD)
@@ -279,6 +290,11 @@ class MemberResponse(BaseModel):
             if member.custom_board_position is not None
             else None
         )
+        organization_field = (
+            OrganizationField.model_validate(organization)
+            if organization is not None
+            else None
+        )
 
         return cls(
             id=member.id,
@@ -291,6 +307,7 @@ class MemberResponse(BaseModel):
             status=member.status,
             position=member.position or MemberPosition.MEMBER,
             custom_board_position=custom_position,
+            organization=organization_field,
             interests=member.interests,
             bio=member.bio,
             talents=list(member.talents or []),
