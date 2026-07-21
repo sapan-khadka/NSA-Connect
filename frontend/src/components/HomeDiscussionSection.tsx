@@ -34,7 +34,7 @@ function DiscussionCardShell({
         <h2 className="home-section-title">Discussions</h2>
         {headerAction}
       </div>
-      <div className="mt-2 min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
+      <div className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
         {children}
       </div>
     </HomeCard>
@@ -72,7 +72,7 @@ function DiscussionRoomRow({
   }
 
   return (
-    <div className="group flex items-start gap-1 rounded-card p-1.5 transition duration-200 ease-out hover:bg-surface-muted">
+    <div className="home-interactive-row group flex items-start gap-1 rounded-xl border border-transparent p-2 transition duration-200 ease-out hover:border-gray-200/80 hover:bg-white/70">
       <Link to={discussionRoomPath(room.room_id)} className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <p className="truncate text-sm font-semibold leading-snug text-foreground group-hover:text-primary">

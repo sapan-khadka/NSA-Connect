@@ -71,7 +71,7 @@ export function HomeWorkCenter({
         <div
           role="tablist"
           aria-label="Work views"
-          className="inline-flex rounded-lg bg-gray-100 p-0.5"
+          className="inline-flex rounded-full border border-gray-200/80 bg-white/70 p-0.5 backdrop-blur-sm"
         >
           <button
             type="button"
@@ -80,9 +80,9 @@ export function HomeWorkCenter({
             id="work-tab-mine"
             onClick={() => setTab("mine")}
             className={[
-              "rounded-md px-2.5 py-1 text-[11px] font-medium transition",
+              "rounded-full px-3 py-1 text-[11px] font-semibold transition",
               tab === "mine"
-                ? "bg-white text-foreground shadow-sm"
+                ? "bg-foreground text-white shadow-sm"
                 : "text-gray-600 hover:text-foreground",
             ].join(" ")}
           >
@@ -95,9 +95,9 @@ export function HomeWorkCenter({
             id="work-tab-oversight"
             onClick={() => setTab("oversight")}
             className={[
-              "rounded-md px-2.5 py-1 text-[11px] font-medium transition",
+              "rounded-full px-3 py-1 text-[11px] font-semibold transition",
               tab === "oversight"
-                ? "bg-white text-foreground shadow-sm"
+                ? "bg-foreground text-white shadow-sm"
                 : "text-gray-600 hover:text-foreground",
             ].join(" ")}
           >
@@ -106,7 +106,7 @@ export function HomeWorkCenter({
         </div>
       </div>
 
-      <div className="mt-1.5 min-h-0 flex-1">
+      <div className="mt-3 min-h-0 flex-1">
         <div
           role="tabpanel"
           aria-labelledby="work-tab-mine"

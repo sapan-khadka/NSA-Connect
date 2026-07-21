@@ -1,5 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
+
+function homeStage(stage: number): CSSProperties {
+  return { ["--home-stage" as string]: stage };
+}
 
 import { CoverBanner } from "../components/CoverBanner";
 import { HomeHeroBrand } from "../components/AppLogo";
@@ -93,8 +97,6 @@ type MemberHomeLayoutProps = {
   onCompleteTask: (taskId: number) => void;
 };
 
-const DASHBOARD_GAP = "gap-4";
-
 function MemberHomeLayout({
   member,
   nextEvent,
@@ -138,37 +140,47 @@ function MemberHomeLayout({
   const showTodayTimeline = !isLoading && todayItems.length > 0;
 
   return (
-    <div className="home-dashboard mx-auto flex w-full max-w-[1120px] flex-col gap-5 pb-8">
+    <div className="home-dashboard mx-auto flex w-full max-w-[1120px] flex-col gap-6 pb-10">
       {loadError ? (
         <div role="alert" className="ds-alert-banner shrink-0">
           {loadError}
         </div>
       ) : null}
 
-      <div className="space-y-2.5">
-        <HomeWelcomeBanner member={member} calmLine={calmLine} />
+      <div className="home-enter space-y-3" style={homeStage(0)}>
+        <HomeWelcomeBanner
+          member={member}
+          calmLine={calmLine}
+          showCreateEvent={showAssistant}
+        />
         <HomeUrgencyChips chips={urgencyChips} />
       </div>
 
-      <HomeFeaturedEvent
-        events={upcomingEvents}
-        canManage={showAssistant}
-        canCreateEvent={showAssistant}
-        isLoading={isLoading}
-      />
+      <div className="home-enter" style={homeStage(1)}>
+        <HomeFeaturedEvent
+          events={upcomingEvents}
+          canManage={showAssistant}
+          canCreateEvent={showAssistant}
+          isLoading={isLoading}
+        />
+      </div>
 
-      {showAssistant ? <HomeDiscussionSection previewLimit={3} /> : null}
+      {showAssistant ? (
+        <div className="home-enter" style={homeStage(2)}>
+          <HomeDiscussionSection previewLimit={3} />
+        </div>
+      ) : null}
 
       <div
         className={[
-          "grid grid-cols-1",
-          DASHBOARD_GAP,
+          "home-enter grid grid-cols-1 gap-4",
           showTodayTimeline
             ? "lg:grid-cols-2 xl:grid-cols-12 xl:items-stretch"
             : "",
         ]
           .filter(Boolean)
           .join(" ")}
+        style={homeStage(3)}
       >
         <div
           className={[

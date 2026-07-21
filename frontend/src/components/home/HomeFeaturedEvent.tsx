@@ -39,14 +39,16 @@ function FeaturedCarouselControls({
   }
 
   return (
-    <div className={["flex items-center gap-2", className].join(" ")}>
+    <div className={["flex items-center gap-2.5", className].join(" ")}>
       <div className="flex items-center gap-1.5" aria-hidden="true">
         {Array.from({ length: total }, (_, dotIndex) => (
           <span
             key={dotIndex}
             className={[
-              "h-1.5 w-1.5 rounded-full transition",
-              dotIndex === index ? "bg-white" : "bg-white/35",
+              "h-1.5 rounded-full transition-all duration-300",
+              dotIndex === index
+                ? "w-4 bg-white"
+                : "w-1.5 bg-white/35",
             ].join(" ")}
           />
         ))}
@@ -55,7 +57,7 @@ function FeaturedCarouselControls({
         type="button"
         aria-label="Previous upcoming event"
         onClick={onPrev}
-        className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/40 text-white ring-1 ring-inset ring-white/15 backdrop-blur-sm transition hover:bg-black/55"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/35 text-white ring-1 ring-inset ring-white/20 backdrop-blur-md transition hover:bg-black/50"
       >
         <AppIcon icon={ChevronLeft} size="sm" className="text-current" />
       </button>
@@ -63,7 +65,7 @@ function FeaturedCarouselControls({
         type="button"
         aria-label="Next upcoming event"
         onClick={onNext}
-        className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/40 text-white ring-1 ring-inset ring-white/15 backdrop-blur-sm transition hover:bg-black/55"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/35 text-white ring-1 ring-inset ring-white/20 backdrop-blur-md transition hover:bg-black/50"
       >
         <AppIcon icon={ChevronRight} size="sm" className="text-current" />
       </button>
@@ -136,12 +138,15 @@ export function HomeFeaturedEvent({
     return (
       <section
         aria-label="Featured Event"
-        className="overflow-hidden rounded-2xl bg-slate-900/5 p-6"
+        className="overflow-hidden rounded-[1.35rem] border border-gray-200/70 bg-white/60 p-6 shadow-[0_1px_0_rgba(15,23,42,0.04)] backdrop-blur-sm"
       >
-        <div className="h-4 w-28 animate-pulse rounded bg-slate-200/80" />
-        <div className="mt-4 h-7 w-2/3 max-w-md animate-pulse rounded bg-slate-200/80" />
-        <div className="mt-3 h-4 w-40 animate-pulse rounded bg-slate-200/70" />
-        <div className="mt-8 h-9 w-36 animate-pulse rounded-lg bg-slate-200/80" />
+        <div className="h-3 w-24 animate-pulse rounded-full bg-slate-200/80" />
+        <div className="mt-5 h-8 w-2/3 max-w-md animate-pulse rounded-lg bg-slate-200/80" />
+        <div className="mt-3 h-4 w-48 animate-pulse rounded bg-slate-200/70" />
+        <div className="mt-10 flex gap-2">
+          <div className="h-10 w-28 animate-pulse rounded-xl bg-slate-200/80" />
+          <div className="h-10 w-24 animate-pulse rounded-xl bg-slate-200/60" />
+        </div>
       </section>
     );
   }
@@ -150,10 +155,19 @@ export function HomeFeaturedEvent({
     return (
       <section
         aria-label="Featured Event"
-        className="overflow-hidden rounded-2xl border border-dashed border-gray-200 bg-white/70 px-6 py-8"
+        className="relative overflow-hidden rounded-[1.35rem] border border-dashed border-gray-300/80 bg-gradient-to-br from-white via-white to-badge-teal-bg/40 px-6 py-9 shadow-[0_1px_0_rgba(15,23,42,0.03)]"
       >
-        <p className="text-sm font-medium text-foreground">Nothing upcoming</p>
-        <p className="mt-1 max-w-sm text-sm text-gray-600">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-8 -top-10 h-40 w-40 rounded-full bg-primary/5 blur-2xl"
+        />
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-label">
+          Next event
+        </p>
+        <p className="mt-3 text-lg font-semibold tracking-tight text-foreground">
+          Nothing upcoming
+        </p>
+        <p className="mt-1.5 max-w-md text-sm leading-relaxed text-gray-600">
           {canCreateEvent
             ? "Create the next event when you’re ready to plan."
             : "Check the calendar for later dates."}
@@ -164,7 +178,7 @@ export function HomeFeaturedEvent({
               ? "/events/calendar?create=1"
               : "/events/calendar"
           }
-          className="mt-5 inline-flex text-sm font-medium text-primary hover:text-primary-hover"
+          className="mt-6 inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-hover"
         >
           {canCreateEvent ? "Create event" : "View calendar"}
         </Link>
@@ -180,32 +194,32 @@ export function HomeFeaturedEvent({
   return (
     <section
       aria-label="Featured Event"
-      className="relative overflow-hidden rounded-2xl bg-[#0b1220] text-white shadow-sm"
+      className="relative overflow-hidden rounded-[1.35rem] bg-[#07111f] text-white shadow-[0_18px_40px_-28px_rgba(7,17,31,0.85)]"
     >
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 right-0 w-[58%] min-w-[12rem] sm:w-[60%]"
+        className="pointer-events-none absolute inset-0"
       >
         <img
           src={photoUrl}
           alt=""
-          className="absolute inset-0 h-full w-full object-cover object-[68%_center]"
+          className="absolute inset-0 h-full w-full object-cover object-[68%_center] opacity-90"
         />
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(90deg, #0b1220 0%, #0b1220 14%, rgba(11,18,32,0.88) 36%, rgba(11,18,32,0.4) 62%, rgba(11,18,32,0.1) 82%, transparent 100%)",
-          }}
-        />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#07111f] via-[#07111f]/92 to-[#07111f]/35 sm:via-[#07111f]/88 sm:to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#07111f]/70 via-transparent to-[#07111f]/25" />
       </div>
 
-      <div className="relative grid min-h-[14rem] grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(10rem,0.9fr)]">
-        <div className="relative z-10 flex min-w-0 max-w-xl flex-col gap-3 p-5 sm:p-6 lg:pr-3">
+      <div className="relative grid min-h-[17rem] grid-cols-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(10rem,0.95fr)]">
+        <div className="relative z-10 flex min-w-0 max-w-xl flex-col gap-4 p-5 sm:p-7 lg:pr-4">
           <div className="flex items-start justify-between gap-2">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/55">
-              Next event
-            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/55">
+                Next event
+              </p>
+              <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white/85 ring-1 ring-inset ring-white/15 backdrop-blur-sm">
+                {countdown}
+              </span>
+            </div>
             <FeaturedCarouselControls
               index={safeIndex}
               total={events.length}
@@ -216,10 +230,10 @@ export function HomeFeaturedEvent({
           </div>
 
           <div className="min-w-0">
-            <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-[1.75rem]">
+            <h2 className="text-[1.65rem] font-semibold tracking-tight text-white sm:text-[1.9rem]">
               {event.name}
             </h2>
-            <p className="mt-2 text-sm text-white/70">
+            <p className="mt-2.5 text-sm leading-relaxed text-white/70">
               {formatFeaturedWhen(event.starts_at)}
               {event.location?.trim()
                 ? ` · ${event.location.trim()}`
@@ -227,27 +241,24 @@ export function HomeFeaturedEvent({
             </p>
           </div>
 
-          <p className="text-sm text-white/80">
-            <span className="font-medium text-white">{countdown}</span>
-            {goingCount != null ? (
-              <span className="text-white/60">
-                {" "}
-                · {goingCount} going
-              </span>
-            ) : null}
-          </p>
+          {goingCount != null ? (
+            <p className="text-sm text-white/75">
+              <span className="font-semibold text-white">{goingCount}</span>
+              <span className="text-white/55"> going</span>
+            </p>
+          ) : null}
 
-          <div className="mt-auto flex flex-wrap items-center gap-2 pt-2">
+          <div className="mt-auto flex flex-wrap items-center gap-2.5 pt-1">
             <Link
               to={eventPath}
-              className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-hover"
+              className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-[0_8px_20px_-10px_rgba(15,118,110,0.9)] transition hover:bg-primary-hover"
             >
               Open event
             </Link>
             {canManage ? (
               <Link
                 to={managePath}
-                className="inline-flex items-center justify-center rounded-xl px-3.5 py-2 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white"
+                className="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 px-3.5 py-2.5 text-sm font-medium text-white/90 backdrop-blur-sm transition hover:bg-white/12 hover:text-white"
               >
                 Manage
               </Link>
@@ -255,13 +266,13 @@ export function HomeFeaturedEvent({
           </div>
         </div>
 
-        <div className="relative hidden min-h-[14rem] lg:block">
+        <div className="relative hidden min-h-[17rem] lg:block">
           <FeaturedCarouselControls
             index={safeIndex}
             total={events.length}
             onPrev={goPrev}
             onNext={goNext}
-            className="absolute bottom-4 right-4 z-20"
+            className="absolute bottom-5 right-5 z-20"
           />
         </div>
       </div>

@@ -44,19 +44,22 @@ describe("buildHomeUrgencyChips", () => {
     ).toEqual([
       {
         id: "overdue",
-        label: "2 overdue",
+        count: 2,
+        label: "overdue",
         to: "/events/tasks",
         tone: "urgent",
       },
       {
         id: "due-today",
-        label: "1 due today",
+        count: 1,
+        label: "due today",
         to: "/events/tasks",
         tone: "warn",
       },
       {
         id: "reviews",
-        label: "3 reviews",
+        count: 3,
+        label: "reviews",
         to: "/members?tab=pending",
         tone: "warn",
       },

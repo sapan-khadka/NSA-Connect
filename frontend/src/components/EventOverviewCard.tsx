@@ -540,15 +540,6 @@ export function EventOverviewCard({
             ) : null}
 
             <DetailsActions className="details-panel-actions--stack details-panel-actions--dense">
-              <Link
-                to={eventDetailPath(previewEvent.id)}
-                className={detailsActionClass(
-                  "primary",
-                  "details-panel-btn--dominant w-full",
-                )}
-              >
-                Open Workspace
-              </Link>
               {canManage && manageEventId != null ? (
                 <Link
                   to={`/events/${manageEventId}/manage`}
@@ -560,6 +551,15 @@ export function EventOverviewCard({
                   Manage Event
                 </Link>
               ) : null}
+              <Link
+                to={eventDetailPath(previewEvent.id)}
+                className={detailsActionClass(
+                  "primary",
+                  "details-panel-btn--dominant w-full",
+                )}
+              >
+                Open Workspace
+              </Link>
             </DetailsActions>
           </div>
         </div>

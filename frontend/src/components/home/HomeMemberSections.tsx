@@ -1,4 +1,5 @@
-import { Check } from "lucide-react";
+import { Check, Plus } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import type { MemberResponse } from "../../lib/auth-api";
 import type { EventTaskResponse } from "../../lib/event-tasks-api";
@@ -21,46 +22,68 @@ import { HomeCard } from "../ui/HomeCard";
 function greetingForNow(now = new Date()): string {
   const hour = now.getHours();
   if (hour < 12) {
-    return "Good Morning";
+    return "Good morning";
   }
   if (hour < 17) {
-    return "Good Afternoon";
+    return "Good afternoon";
   }
-  return "Good Evening";
+  return "Good evening";
 }
 
 export function HomeWelcomeBanner({
   member,
   calmLine,
+  showCreateEvent = false,
 }: {
   member: MemberResponse;
   /** Soft supporting line when there are no urgency chips. */
   calmLine?: string;
+  showCreateEvent?: boolean;
 }) {
   const firstName = member.full_name.split(/\s+/)[0] ?? member.full_name;
   const greeting = greetingForNow();
   const todayLabel = new Intl.DateTimeFormat(undefined, {
-    weekday: "short",
+    weekday: "long",
     month: "short",
     day: "numeric",
   }).format(new Date());
 
   return (
     <section
-      className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between"
+      className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
       aria-label="Workspace welcome"
     >
       <div className="min-w-0">
-        <h1 className="text-xl font-semibold leading-tight tracking-tight text-foreground sm:text-2xl">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-label">
+          Workspace
+        </p>
+        <h1 className="mt-1 text-2xl font-semibold leading-tight tracking-tight text-foreground sm:text-[1.75rem]">
           {greeting}, {firstName}
         </h1>
         {calmLine ? (
-          <p className="mt-1 text-sm text-gray-500">{calmLine}</p>
+          <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-gray-500">
+            {calmLine}
+          </p>
+        ) : (
+          <p className="mt-1.5 text-sm text-gray-500">
+            Here’s what’s moving across your chapter today.
+          </p>
+        )}
+      </div>
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <p className="rounded-full border border-gray-200/80 bg-white/70 px-3 py-1 text-xs font-medium tabular-nums text-gray-500 backdrop-blur-sm">
+          {todayLabel}
+        </p>
+        {showCreateEvent ? (
+          <Link
+            to="/events/calendar?create=1"
+            className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-hover"
+          >
+            <AppIcon icon={Plus} size="xs" className="text-current" />
+            Create event
+          </Link>
         ) : null}
       </div>
-      <p className="shrink-0 text-xs font-medium tabular-nums text-gray-400">
-        {todayLabel}
-      </p>
     </section>
   );
 }
@@ -111,11 +134,14 @@ export function HomeYourWorkSection({
         </div>
       )}
 
-      <div className="mt-2 min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
+      <div className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
         {isLoading ? (
-          <ul className="space-y-3" aria-label="Loading tasks">
+          <ul className="space-y-2" aria-label="Loading tasks">
             {[0, 1, 2].map((row) => (
-              <li key={row} className="flex gap-2">
+              <li
+                key={row}
+                className="flex gap-2.5 rounded-xl border border-transparent px-2 py-2"
+              >
                 <span className="mt-0.5 h-4 w-4 animate-pulse rounded bg-slate-200/80" />
                 <span className="min-w-0 flex-1 space-y-1.5">
                   <span className="block h-3 w-2/3 animate-pulse rounded bg-slate-200/80" />
@@ -133,14 +159,14 @@ export function HomeYourWorkSection({
         ) : null}
 
         {!isLoading && hasTasks ? (
-          <ul className="divide-y divide-gray-100/80">
+          <ul className="space-y-0.5">
             {tasksSummary.previewTasks.slice(0, 5).map((task) => {
               const dueLabel = formatTaskDueLabel(task);
               const completing = completingTaskId === task.id;
               return (
                 <li
                   key={task.id}
-                  className="flex items-start gap-2.5 py-2.5 first:pt-0 last:pb-0"
+                  className="home-interactive-row flex items-start gap-2.5 rounded-xl border border-transparent px-2 py-2 hover:border-gray-200/80 hover:bg-white/70"
                 >
                   <button
                     type="button"

@@ -5,6 +5,8 @@ import { FINANCE_APPROVALS_PATH } from "../../lib/finance-routes";
 
 export type UrgencyChip = {
   id: string;
+  /** Numeric emphasis shown beside the label when present. */
+  count?: number;
   label: string;
   to: string;
   tone: "urgent" | "warn" | "info";
@@ -33,7 +35,8 @@ export function buildHomeUrgencyChips({
   if (tasksSummary.overdueCount > 0) {
     chips.push({
       id: "overdue",
-      label: `${tasksSummary.overdueCount} overdue`,
+      count: tasksSummary.overdueCount,
+      label: "overdue",
       to: tasksPath,
       tone: "urgent",
     });
@@ -41,7 +44,8 @@ export function buildHomeUrgencyChips({
   if (tasksSummary.dueTodayCount > 0) {
     chips.push({
       id: "due-today",
-      label: `${tasksSummary.dueTodayCount} due today`,
+      count: tasksSummary.dueTodayCount,
+      label: "due today",
       to: tasksPath,
       tone: "warn",
     });
@@ -54,7 +58,8 @@ export function buildHomeUrgencyChips({
   if (reviewTotal > 0) {
     chips.push({
       id: "reviews",
-      label: `${reviewTotal} review${reviewTotal === 1 ? "" : "s"}`,
+      count: reviewTotal,
+      label: reviewTotal === 1 ? "review" : "reviews",
       to:
         memberReviews > 0 ? "/members?tab=pending" : FINANCE_APPROVALS_PATH,
       tone: "warn",
@@ -74,9 +79,10 @@ export function buildHomeUrgencyChips({
 }
 
 const TONE_CLASS: Record<UrgencyChip["tone"], string> = {
-  urgent: "bg-rose-50 text-rose-800 ring-rose-100 hover:bg-rose-100/80",
-  warn: "bg-amber-50 text-amber-900 ring-amber-100 hover:bg-amber-100/70",
-  info: "bg-slate-100 text-slate-700 ring-slate-200 hover:bg-slate-200/70",
+  urgent:
+    "border-rose-200/80 bg-rose-50/90 text-rose-900 hover:border-rose-300 hover:bg-rose-100/90",
+  warn: "border-amber-200/80 bg-amber-50/90 text-amber-950 hover:border-amber-300 hover:bg-amber-100/80",
+  info: "border-slate-200 bg-white/80 text-slate-700 hover:border-slate-300 hover:bg-slate-50",
 };
 
 export function HomeUrgencyChips({ chips }: { chips: UrgencyChip[] }) {
@@ -85,20 +91,28 @@ export function HomeUrgencyChips({ chips }: { chips: UrgencyChip[] }) {
   }
 
   return (
-    <ul className="flex flex-wrap gap-1.5" aria-label="Needs attention">
-      {chips.map((chip) => (
-        <li key={chip.id}>
-          <Link
-            to={chip.to}
-            className={[
-              "inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ring-inset transition",
-              TONE_CLASS[chip.tone],
-            ].join(" ")}
-          >
-            {chip.label}
-          </Link>
-        </li>
-      ))}
-    </ul>
+    <div className="space-y-2" aria-label="Needs attention">
+      <p className="home-section-title">Needs attention</p>
+      <ul className="flex flex-wrap gap-2">
+        {chips.map((chip) => (
+          <li key={chip.id}>
+            <Link
+              to={chip.to}
+              className={["home-metric-pill", TONE_CLASS[chip.tone]].join(" ")}
+            >
+              {chip.count != null ? (
+                <>
+                  <span className="home-metric-count">{chip.count}</span>
+                  {" "}
+                  <span>{chip.label}</span>
+                </>
+              ) : (
+                <span>{chip.label}</span>
+              )}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
