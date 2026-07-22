@@ -13,10 +13,9 @@ import {
 } from "../components/home/HomeMemberSections";
 import { HomeFeaturedEvent } from "../components/home/HomeFeaturedEvent";
 import { pickFocusMeeting } from "../components/home/HomeMeetingMinutesCard";
-import {
-  HomeTodayTimeline,
-  getTodayTimelineItems,
-} from "../components/home/HomeTodayTimeline";
+import { HomeQuickStats } from "../components/home/HomeQuickStats";
+import { HomeRecentActivity } from "../components/home/HomeRecentActivity";
+import { HomeTodayGlance } from "../components/home/HomeTodayGlance";
 import {
   buildHomeUrgencyChips,
   HomeUrgencyChips,
@@ -27,6 +26,7 @@ import { useAuth } from "../context/useAuth";
 import { useNotificationSummary } from "../context/NotificationSummaryProvider";
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/api-error";
+import { fetchDiscussionInbox } from "../lib/discussion-api";
 import { fetchMyEventTasks, updateEventTask } from "../lib/event-tasks-api";
 import type { EventTaskResponse } from "../lib/event-tasks-api";
 import {
@@ -47,6 +47,7 @@ import {
   canViewTaskOversight,
   isRoleAtLeast,
 } from "../lib/roles";
+import { isSameLocalDay } from "../components/home/HomeTodayTimeline";
 
 function PublicHomeView() {
   return (
@@ -81,8 +82,8 @@ function PublicHomeView() {
 type MemberHomeLayoutProps = {
   member: MemberResponse;
   nextEvent: EventResponse | null;
-  timelineEvents: EventResponse[];
-  upcomingEvents: EventResponse[];
+  featuredEvents: EventResponse[];
+  todayEvents: EventResponse[];
   tasksSummary: ReturnType<typeof summarizeMyTasks>;
   isLoading: boolean;
   loadError: string | null;
@@ -95,13 +96,14 @@ type MemberHomeLayoutProps = {
   completingTaskId: number | null;
   taskCompleteError: string | null;
   onCompleteTask: (taskId: number) => void;
+  discussionCount: number;
 };
 
 function MemberHomeLayout({
   member,
   nextEvent,
-  timelineEvents,
-  upcomingEvents,
+  featuredEvents,
+  todayEvents,
   tasksSummary,
   isLoading,
   loadError,
@@ -114,6 +116,7 @@ function MemberHomeLayout({
   completingTaskId,
   taskCompleteError,
   onCompleteTask,
+  discussionCount,
 }: MemberHomeLayoutProps) {
   const canReviewMembers = canViewMemberDirectory(member.role);
   const canReviewFinance = canManageTreasury(member.role, member.position);
@@ -136,58 +139,45 @@ function MemberHomeLayout({
           member,
         })
       : undefined;
-  const todayItems = getTodayTimelineItems(timelineEvents);
-  const showTodayTimeline = !isLoading && todayItems.length > 0;
 
   return (
-    <div className="home-dashboard mx-auto flex w-full max-w-[1120px] flex-col gap-6 pb-10">
+    <div className="home-dashboard home-dashboard--board mx-auto flex w-full max-w-[1180px] flex-col gap-3.5 pb-8">
       {loadError ? (
         <div role="alert" className="ds-alert-banner shrink-0">
           {loadError}
         </div>
       ) : null}
 
-      <div className="home-enter space-y-3" style={homeStage(0)}>
-        <HomeWelcomeBanner
-          member={member}
-          calmLine={calmLine}
-          showCreateEvent={showAssistant}
-        />
+      <div className="home-enter home-dashboard-welcome shrink-0" style={homeStage(0)}>
+        <HomeWelcomeBanner member={member} calmLine={calmLine} />
         <HomeUrgencyChips chips={urgencyChips} />
       </div>
 
-      <div className="home-enter" style={homeStage(1)}>
-        <HomeFeaturedEvent
-          events={upcomingEvents}
-          canManage={showAssistant}
-          canCreateEvent={showAssistant}
-          isLoading={isLoading}
-        />
-      </div>
-
-      {showAssistant ? (
-        <div className="home-enter" style={homeStage(2)}>
-          <HomeDiscussionSection previewLimit={3} />
-        </div>
-      ) : null}
-
       <div
         className={[
-          "home-enter grid grid-cols-1 gap-4",
-          showTodayTimeline
-            ? "lg:grid-cols-2 xl:grid-cols-12 xl:items-stretch"
-            : "",
+          "home-enter home-board",
+          showAssistant ? "home-board--with-rail" : "",
         ]
           .filter(Boolean)
           .join(" ")}
-        style={homeStage(3)}
+        style={homeStage(1)}
       >
-        <div
-          className={[
-            "min-h-0 [&_>_*]:h-full",
-            showTodayTimeline ? "xl:col-span-7" : "xl:col-span-12",
-          ].join(" ")}
-        >
+        <div className="home-board-featured min-h-0">
+          <HomeFeaturedEvent
+            events={featuredEvents}
+            canManage={showAssistant}
+            canCreateEvent={showAssistant}
+            isLoading={isLoading}
+          />
+        </div>
+
+        {showAssistant ? (
+          <aside className="home-board-discussions min-h-0">
+            <HomeDiscussionSection previewLimit={3} />
+          </aside>
+        ) : null}
+
+        <div className="home-board-work min-h-0">
           <HomeWorkCenter
             member={member}
             showOversight={showTaskOversight}
@@ -199,11 +189,30 @@ function MemberHomeLayout({
             onCompleteTask={onCompleteTask}
           />
         </div>
-        {showTodayTimeline ? (
-          <div className="min-h-0 xl:col-span-5 [&_>_*]:h-full">
-            <HomeTodayTimeline events={timelineEvents} />
-          </div>
-        ) : null}
+
+        <aside className="home-board-glance min-h-0">
+          <HomeTodayGlance
+            events={todayEvents}
+            tasksSummary={tasksSummary}
+            discussionCount={discussionCount}
+            isLoading={isLoading}
+          />
+        </aside>
+
+        <div className="home-board-stats min-h-0">
+          <HomeQuickStats
+            member={member}
+            upcomingEventCount={featuredEvents.length}
+            tasksSummary={tasksSummary}
+            pendingMemberApprovals={pendingMemberApprovals}
+            financePendingCount={financePendingCount}
+            isLoadingEvents={isLoading}
+          />
+        </div>
+
+        <div className="home-board-activity min-h-0">
+          <HomeRecentActivity memberId={member.id} />
+        </div>
       </div>
     </div>
   );
@@ -211,9 +220,10 @@ function MemberHomeLayout({
 
 function MemberHomeView({ member }: { member: MemberResponse }) {
   const { summary } = useNotificationSummary();
-  const [upcomingEvents, setUpcomingEvents] = useState<EventResponse[]>([]);
-  const [timelineEvents, setTimelineEvents] = useState<EventResponse[]>([]);
+  const [featuredEvents, setFeaturedEvents] = useState<EventResponse[]>([]);
+  const [todayEvents, setTodayEvents] = useState<EventResponse[]>([]);
   const [myTasks, setMyTasks] = useState<EventTaskResponse[]>([]);
+  const [discussionCount, setDiscussionCount] = useState(0);
   const [notesNeededPath, setNotesNeededPath] = useState<string | null>(null);
   const [completingTaskId, setCompletingTaskId] = useState<number | null>(null);
   const [taskCompleteError, setTaskCompleteError] = useState<string | null>(
@@ -227,8 +237,8 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
   const tasksPath = getMyTasksPath(member.role);
   const tasksSummary = useMemo(() => summarizeMyTasks(myTasks), [myTasks]);
   const nextEvent = useMemo(
-    () => findNextNonMeetingEvent(upcomingEvents),
-    [upcomingEvents],
+    () => findNextNonMeetingEvent(featuredEvents),
+    [featuredEvents],
   );
   const financePendingCount = summary.finance_pending;
   const pendingMemberApprovals = summary.members_pending;
@@ -287,8 +297,8 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
         const nonMeetingUpcoming = upcoming.events.filter(
           (event) => event.event_type !== "meeting",
         );
-        setTimelineEvents(upcoming.events);
-        setUpcomingEvents(nonMeetingUpcoming);
+        setFeaturedEvents(nonMeetingUpcoming);
+        setTodayEvents(upcoming.events.filter((event) => isSameLocalDay(event.starts_at)));
         setMyTasks(tasksResult.tasks);
       } catch (caught) {
         if (!cancelled) {
@@ -307,6 +317,37 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
       cancelled = true;
     };
   }, [member]);
+
+  useEffect(() => {
+    if (!showAssistant) {
+      setDiscussionCount(0);
+      return;
+    }
+    let cancelled = false;
+    void fetchDiscussionInbox()
+      .then((response) => {
+        if (cancelled) {
+          return;
+        }
+        const active = response.rooms.filter(
+          (room) =>
+            room.unread_count > 0 ||
+            (room.last_message_at != null &&
+              isSameLocalDay(room.last_message_at)),
+        );
+        setDiscussionCount(
+          active.length > 0 ? active.length : Math.min(response.rooms.length, 2),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setDiscussionCount(0);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showAssistant, member.id]);
 
   useEffect(() => {
     if (!showAssistant) {
@@ -345,8 +386,8 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
     <MemberHomeLayout
       member={member}
       nextEvent={nextEvent}
-      timelineEvents={timelineEvents}
-      upcomingEvents={upcomingEvents}
+      featuredEvents={featuredEvents}
+      todayEvents={todayEvents}
       tasksSummary={tasksSummary}
       isLoading={isLoading}
       loadError={loadError}
@@ -361,6 +402,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
       onCompleteTask={(taskId) => {
         void handleCompleteTask(taskId);
       }}
+      discussionCount={discussionCount}
     />
   );
 }

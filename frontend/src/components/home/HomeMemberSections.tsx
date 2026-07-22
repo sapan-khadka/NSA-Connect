@@ -1,4 +1,4 @@
-import { Check, Plus } from "lucide-react";
+import { Check } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import type { MemberResponse } from "../../lib/auth-api";
@@ -16,7 +16,6 @@ import {
 } from "../../lib/roles";
 import { AppIcon } from "../ui/AppIcon";
 import { ArrowLink } from "../ui/ArrowLink";
-import { EmptyState } from "../ui/EmptyState";
 import { HomeCard } from "../ui/HomeCard";
 
 function greetingForNow(now = new Date()): string {
@@ -33,12 +32,10 @@ function greetingForNow(now = new Date()): string {
 export function HomeWelcomeBanner({
   member,
   calmLine,
-  showCreateEvent = false,
 }: {
   member: MemberResponse;
   /** Soft supporting line when there are no urgency chips. */
   calmLine?: string;
-  showCreateEvent?: boolean;
 }) {
   const firstName = member.full_name.split(/\s+/)[0] ?? member.full_name;
   const greeting = greetingForNow();
@@ -50,55 +47,92 @@ export function HomeWelcomeBanner({
 
   return (
     <section
-      className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+      className="home-welcome flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between"
       aria-label="Workspace welcome"
     >
       <div className="min-w-0">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-label">
-          Workspace
-        </p>
-        <h1 className="mt-1 text-2xl font-semibold leading-tight tracking-tight text-foreground sm:text-[1.75rem]">
-          {greeting}, {firstName}
+        <h1 className="home-welcome-title text-xl font-semibold leading-tight tracking-tight text-foreground sm:text-[1.5rem]">
+          {greeting}, {firstName}{" "}
+          <span aria-hidden="true">👋</span>
         </h1>
-        {calmLine ? (
-          <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-gray-500">
-            {calmLine}
-          </p>
-        ) : (
-          <p className="mt-1.5 text-sm text-gray-500">
-            Here’s what’s moving across your chapter today.
-          </p>
-        )}
-      </div>
-      <div className="flex shrink-0 flex-wrap items-center gap-2">
-        <p className="rounded-full border border-gray-200/80 bg-white/70 px-3 py-1 text-xs font-medium tabular-nums text-gray-500 backdrop-blur-sm">
-          {todayLabel}
+        <p className="home-welcome-copy mt-0.5 max-w-xl text-sm text-gray-500">
+          {calmLine ?? "Here’s what’s happening with your chapter today."}
         </p>
-        {showCreateEvent ? (
-          <Link
-            to="/events/calendar?create=1"
-            className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-hover"
-          >
-            <AppIcon icon={Plus} size="xs" className="text-current" />
-            Create event
-          </Link>
-        ) : null}
       </div>
+      <p className="home-welcome-date shrink-0 text-sm font-medium tabular-nums text-gray-500">
+        {todayLabel}
+      </p>
     </section>
   );
 }
 
-function formatTaskDueLabel(task: EventTaskResponse): string {
-  if (task.is_overdue) {
-    return "Overdue";
+function isDueToday(isoDate: string | null | undefined, now = new Date()): boolean {
+  if (!isoDate) {
+    return false;
   }
-  if (!task.due_date) {
-    return "No due date";
+  const due = new Date(isoDate);
+  if (Number.isNaN(due.getTime())) {
+    return false;
+  }
+  return (
+    due.getFullYear() === now.getFullYear() &&
+    due.getMonth() === now.getMonth() &&
+    due.getDate() === now.getDate()
+  );
+}
+
+function formatTaskDate(isoDate: string | null | undefined): string | null {
+  if (!isoDate) {
+    return null;
   }
   return new Intl.DateTimeFormat(undefined, {
     month: "short",
     day: "numeric",
-  }).format(new Date(task.due_date));
+  }).format(new Date(isoDate));
+}
+
+function TaskRow({
+  task,
+  completing,
+  onCompleteTask,
+}: {
+  task: EventTaskResponse;
+  completing: boolean;
+  onCompleteTask?: (taskId: number) => void;
+}) {
+  const dueToday = isDueToday(task.due_date);
+  const dateLabel = formatTaskDate(task.due_date) ?? "No date";
+  const dueClass = [
+    "home-task-due-text",
+    task.is_overdue ? "is-overdue" : "",
+    !task.is_overdue && dueToday ? "is-today" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <li className="home-task-row">
+      <button
+        type="button"
+        aria-label={`Mark ${getTaskDisplayName(task)} complete`}
+        disabled={!onCompleteTask || completing}
+        onClick={() => onCompleteTask?.(task.id)}
+        className="home-task-check group"
+      >
+        <AppIcon
+          icon={Check}
+          size="xs"
+          className={
+            completing
+              ? "text-current opacity-100"
+              : "text-current opacity-0 group-hover:opacity-70"
+          }
+        />
+      </button>
+      <p className="home-task-title">{getTaskDisplayName(task)}</p>
+      <span className={dueClass}>{dateLabel}</span>
+    </li>
+  );
 }
 
 export function HomeYourWorkSection({
@@ -120,103 +154,94 @@ export function HomeYourWorkSection({
   embedded?: boolean;
 }) {
   const hasTasks = tasksSummary.openCount > 0;
+  const preview = tasksSummary.previewTasks.slice(0, 3);
+  const upcomingCount = Math.max(
+    0,
+    tasksSummary.openCount -
+      tasksSummary.overdueCount -
+      tasksSummary.dueTodayCount,
+  );
 
   const body = (
-    <>
+    <div className="home-task-panel">
       {!embedded ? (
-        <div className="flex shrink-0 items-center justify-between gap-3">
-          <h2 className="home-section-title">My Tasks</h2>
+        <div className="home-task-header">
+          <h2 className="home-panel-title">My tasks</h2>
           <ArrowLink to={tasksPath}>View all</ArrowLink>
         </div>
       ) : (
-        <div className="flex shrink-0 items-center justify-end">
+        <div className="home-task-header home-task-header--embedded">
           <ArrowLink to={tasksPath}>View all</ArrowLink>
         </div>
       )}
 
-      <div className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
+      {!isLoading ? (
+        <div className="home-task-metrics" aria-label="Task summary">
+          <div className="home-task-metric is-overdue">
+            <span className="home-task-metric-value">
+              {tasksSummary.overdueCount}
+            </span>
+            <span className="home-task-metric-label">Overdue</span>
+          </div>
+          <div className="home-task-metric is-today">
+            <span className="home-task-metric-value">
+              {tasksSummary.dueTodayCount}
+            </span>
+            <span className="home-task-metric-label">Due today</span>
+          </div>
+          <div className="home-task-metric is-upcoming">
+            <span className="home-task-metric-value">{upcomingCount}</span>
+            <span className="home-task-metric-label">Upcoming</span>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="home-task-body">
         {isLoading ? (
-          <ul className="space-y-2" aria-label="Loading tasks">
+          <ul className="home-task-list" aria-label="Loading tasks">
             {[0, 1, 2].map((row) => (
-              <li
-                key={row}
-                className="flex gap-2.5 rounded-xl border border-transparent px-2 py-2"
-              >
-                <span className="mt-0.5 h-4 w-4 animate-pulse rounded bg-slate-200/80" />
-                <span className="min-w-0 flex-1 space-y-1.5">
-                  <span className="block h-3 w-2/3 animate-pulse rounded bg-slate-200/80" />
-                  <span className="block h-2.5 w-1/3 animate-pulse rounded bg-slate-200/60" />
-                </span>
+              <li key={row} className="home-task-skeleton">
+                <span className="h-4 w-4 animate-pulse rounded-[0.3rem] bg-slate-200/80" />
+                <span className="block h-2.5 w-3/5 animate-pulse rounded bg-slate-200/80" />
+                <span className="h-2 w-10 justify-self-end animate-pulse rounded bg-slate-200/60" />
               </li>
             ))}
           </ul>
         ) : null}
 
         {taskCompleteError ? (
-          <p className="mb-2 text-xs text-overdue" role="alert">
+          <p className="home-task-error" role="alert">
             {taskCompleteError}
           </p>
         ) : null}
 
         {!isLoading && hasTasks ? (
-          <ul className="space-y-0.5">
-            {tasksSummary.previewTasks.slice(0, 5).map((task) => {
-              const dueLabel = formatTaskDueLabel(task);
-              const completing = completingTaskId === task.id;
-              return (
-                <li
-                  key={task.id}
-                  className="home-interactive-row flex items-start gap-2.5 rounded-xl border border-transparent px-2 py-2 hover:border-gray-200/80 hover:bg-white/70"
-                >
-                  <button
-                    type="button"
-                    aria-label={`Mark ${getTaskDisplayName(task)} complete`}
-                    disabled={!onCompleteTask || completing}
-                    onClick={() => onCompleteTask?.(task.id)}
-                    className="group mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border border-gray-300 bg-white text-primary transition hover:border-primary hover:bg-badge-teal-bg disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <AppIcon
-                      icon={Check}
-                      size="xs"
-                      className={
-                        completing
-                          ? "text-current opacity-100"
-                          : "text-current opacity-0 group-hover:opacity-50"
-                      }
-                    />
-                  </button>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {getTaskDisplayName(task)}
-                    </p>
-                    <p className="mt-0.5 truncate text-xs text-gray-500">
-                      {task.event_name ? `${task.event_name} · ` : ""}
-                      <span
-                        className={
-                          task.is_overdue
-                            ? "font-medium text-overdue"
-                            : "text-gray-500"
-                        }
-                      >
-                        {dueLabel}
-                      </span>
-                    </p>
-                  </div>
-                </li>
-              );
-            })}
+          <ul className="home-task-list">
+            {preview.map((task) => (
+              <TaskRow
+                key={task.id}
+                task={task}
+                completing={completingTaskId === task.id}
+                onCompleteTask={onCompleteTask}
+              />
+            ))}
           </ul>
         ) : null}
 
         {!isLoading && !hasTasks ? (
-          <EmptyState
-            icon="check"
-            title="You're clear"
-            description="No open tasks right now."
-          />
+          <div className="home-task-empty">
+            <p className="home-task-empty-title">You're clear</p>
+            <p className="home-task-empty-copy">No open tasks right now.</p>
+          </div>
         ) : null}
       </div>
-    </>
+
+      <div className="home-task-footer">
+        <Link to={tasksPath} className="home-panel-footer-link">
+          + Add new task
+        </Link>
+      </div>
+    </div>
   );
 
   if (embedded) {
@@ -230,7 +255,7 @@ export function HomeYourWorkSection({
   return (
     <HomeCard
       padding="sm"
-      className="flex h-full min-h-0 flex-col home-surface-quiet"
+      className="flex h-full min-h-0 flex-col home-surface-quiet home-task-card"
       aria-label="My Tasks"
     >
       {body}

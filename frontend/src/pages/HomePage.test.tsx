@@ -29,6 +29,7 @@ vi.mock("../lib/events-api", () => ({
 
 vi.mock("../lib/event-tasks-api", () => ({
   fetchMyEventTasks: vi.fn(),
+  fetchEventTasks: vi.fn().mockResolvedValue({ tasks: [], total: 0 }),
   updateEventTask: vi.fn(),
   fetchTaskOverview: vi.fn().mockResolvedValue({
     members: [],
@@ -40,6 +41,7 @@ vi.mock("../lib/event-tasks-api", () => ({
 vi.mock("../lib/members-api", () => ({
   fetchMembers: vi.fn().mockResolvedValue({ members: [], total: 12 }),
   fetchPendingMembers: vi.fn(),
+  fetchMemberActivity: vi.fn().mockResolvedValue({ items: [], total: 0 }),
 }));
 
 vi.mock("../context/NotificationSummaryProvider", () => ({
@@ -186,11 +188,13 @@ describe("HomePage", () => {
       }),
     ).toBeInTheDocument();
 
-    expect(screen.queryByText("Overdue")).not.toBeInTheDocument();
-    expect(screen.queryByText("Due Today")).not.toBeInTheDocument();
     expect(screen.queryByText("Active Tasks")).not.toBeInTheDocument();
     expect(screen.queryByText("Needs Review")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Needs attention")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Quick stats")).toBeInTheDocument();
+    expect(screen.getByLabelText("Today at a glance")).toBeInTheDocument();
+    expect(screen.getByLabelText("Recent activity")).toBeInTheDocument();
+    expect(screen.getByLabelText("Task summary")).toBeInTheDocument();
 
     const featured = screen.getByLabelText("Featured Event");
     expect(
@@ -199,6 +203,9 @@ describe("HomePage", () => {
     expect(
       within(featured).getByRole("link", { name: /Open event/i }),
     ).toHaveAttribute("href", "/events/5");
+    expect(within(featured).getByText("Going")).toBeInTheDocument();
+    expect(within(featured).getByText("Maybe")).toBeInTheDocument();
+    expect(within(featured).getByText("Preparation")).toBeInTheDocument();
     expect(within(featured).queryByText("Budget")).not.toBeInTheDocument();
     expect(
       within(featured).queryByText("Confirmed attendance"),
@@ -498,7 +505,7 @@ describe("HomePage", () => {
     ).toHaveAttribute("href", "/events/calendar");
   });
 
-  it("shows Today only when an event is scheduled today", async () => {
+  it("keeps meeting-only days off the featured carousel", async () => {
     const now = new Date();
     const todayIso = new Date(
       now.getFullYear(),
@@ -528,8 +535,12 @@ describe("HomePage", () => {
       </MemoryRouter>,
     );
 
-    const timeline = await screen.findByLabelText("Today's Timeline");
-    expect(within(timeline).getByText("Board Sync")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Today's Timeline")).not.toBeInTheDocument();
+    const featured = await screen.findByLabelText("Featured Event");
+    expect(within(featured).getByText(sampleEvent.name)).toBeInTheDocument();
+    expect(within(featured).queryByText("Board Sync")).not.toBeInTheDocument();
+    expect(await screen.findByLabelText("Discussions")).toBeInTheDocument();
+    expect(screen.getByLabelText("Quick stats")).toBeInTheDocument();
   });
 
   it("marks a simple My Tasks row complete via status done", async () => {
