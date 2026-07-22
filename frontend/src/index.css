@@ -104,6 +104,13 @@
     @apply mx-auto w-full max-w-canvas flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 xl:px-10;
   }
 
+  /* Home (and similar boards): use full width beside the sidebar */
+  .ds-main-canvas--fluid {
+    max-width: none;
+    margin-inline: 0;
+    width: 100%;
+  }
+
   .ds-stat-card {
     @apply flex items-start gap-3 rounded-card border border-gray-200 bg-surface-card p-4 shadow-card transition duration-200 ease-out;
   }
@@ -225,6 +232,346 @@
 
   .home-dashboard--board {
     gap: 0.85rem;
+  }
+
+  .home-dashboard--v3 {
+    gap: 1rem;
+    width: 100%;
+    max-width: none;
+  }
+
+  @media (min-width: 1280px) {
+    .ds-main-canvas--fluid {
+      padding-left: 1.75rem;
+      padding-right: 1.75rem;
+    }
+  }
+
+  @media (min-width: 1536px) {
+    .ds-main-canvas--fluid {
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+  }
+
+  /* Full-bleed photo hero — must beat .home-featured grid rules below */
+  .home-featured.home-featured--hero {
+    position: relative;
+    display: block;
+    grid-template-columns: none;
+    min-height: 15.5rem;
+    overflow: hidden;
+    border-radius: 1.15rem;
+    background: #05070c;
+  }
+
+  @media (min-width: 900px) {
+    .home-featured.home-featured--hero {
+      grid-template-columns: none;
+      min-height: 17rem;
+    }
+  }
+
+  .home-featured.home-featured--hero .home-featured-photo {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+  }
+
+  .home-featured-hero-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(
+      105deg,
+      rgba(5, 7, 12, 0.92) 0%,
+      rgba(5, 7, 12, 0.72) 42%,
+      rgba(5, 7, 12, 0.35) 70%,
+      rgba(5, 7, 12, 0.45) 100%
+    );
+  }
+
+  .home-featured-hero-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    min-height: inherit;
+    flex-direction: column;
+    gap: 0.65rem;
+    padding: 1.25rem 1.35rem 1.2rem;
+  }
+
+  .home-featured-hero-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0.85rem;
+    margin-top: auto;
+  }
+
+  .home-featured-hero-skeleton {
+    min-height: 15.5rem;
+    background: linear-gradient(90deg, #111827, #1f2937, #111827);
+    background-size: 200% 100%;
+    animation: details-panel-shimmer 1.2s ease-in-out infinite;
+  }
+
+  .home-featured.home-featured--hero .home-featured-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0;
+    padding-top: 0;
+    grid-template-columns: none;
+  }
+
+  .home-featured.home-featured--hero .home-featured-people {
+    margin-top: 0;
+    padding-top: 0;
+  }
+
+  .home-featured-going-sep {
+    margin: 0 0.35rem;
+    opacity: 0.55;
+  }
+
+  /* Quick actions row */
+  .home-quick-actions-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  @media (min-width: 640px) {
+    .home-quick-actions-list {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .home-quick-actions-list {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+  }
+
+  .home-quick-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.45rem;
+    border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+    border-radius: 0.9rem;
+    background: #fff;
+    padding: 0.85rem 0.5rem;
+    text-decoration: none;
+    transition:
+      border-color 140ms ease,
+      transform 140ms ease,
+      box-shadow 140ms ease;
+  }
+
+  .home-quick-action:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 28%, var(--color-border));
+    box-shadow: 0 10px 22px -18px rgba(15, 23, 42, 0.35);
+    transform: translateY(-1px);
+  }
+
+  .home-quick-action-icon {
+    display: inline-flex;
+    height: 2.15rem;
+    width: 2.15rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.7rem;
+  }
+
+  .home-quick-action--teal .home-quick-action-icon {
+    background: var(--badge-teal-bg);
+    color: var(--color-primary);
+  }
+
+  .home-quick-action--slate .home-quick-action-icon {
+    background: #eef2f6;
+    color: #475569;
+  }
+
+  .home-quick-action--amber .home-quick-action-icon {
+    background: #fff7ed;
+    color: #c2410c;
+  }
+
+  .home-quick-action--olive .home-quick-action-icon {
+    background: #f0fdf4;
+    color: #15803d;
+  }
+
+  .home-quick-action--sky .home-quick-action-icon {
+    background: #eff6ff;
+    color: #2563eb;
+  }
+
+  .home-quick-action--gray .home-quick-action-icon {
+    background: #f3f4f6;
+    color: #4b5563;
+  }
+
+  .home-quick-action-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: center;
+    color: var(--color-foreground);
+  }
+
+  /* Discussions | Tasks split */
+  .home-split {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+    align-items: stretch;
+  }
+
+  @media (min-width: 1024px) {
+    .home-split--with-discussions {
+      grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 1fr);
+    }
+  }
+
+  @media (min-width: 1440px) {
+    .home-split--with-discussions {
+      grid-template-columns: minmax(0, 1.25fr) minmax(22rem, 1fr);
+      gap: 1rem;
+    }
+  }
+
+  .home-split-discussions > *,
+  .home-split-tasks > * {
+    height: 100%;
+  }
+
+  .home-tasks-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .home-discussion-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .home-discussion-group-title {
+    margin: 0 0 0.25rem;
+    padding: 0 0.1rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-label);
+  }
+
+  .home-discussion-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+  }
+
+  .home-discussion-unread {
+    display: inline-flex;
+    min-width: 1.15rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #2563eb;
+    padding: 0.1rem 0.35rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .home-discussion-dot {
+    height: 0.45rem;
+    width: 0.45rem;
+    flex-shrink: 0;
+    border-radius: 999px;
+    background: #2563eb;
+  }
+
+  .home-your-task-list {
+    margin: 0.45rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .home-your-task-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    column-gap: 0.55rem;
+    padding: 0.55rem 0.1rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+    text-decoration: none;
+  }
+
+  .home-your-task-list li:last-child .home-your-task-row {
+    border-bottom: 0;
+  }
+
+  .home-your-task-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-foreground);
+  }
+
+  .home-your-task-badge {
+    border-radius: 999px;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+  }
+
+  .home-your-task-badge.is-review {
+    background: var(--badge-teal-bg);
+    color: var(--color-primary);
+  }
+
+  .home-your-task-badge.is-action {
+    background: #eef2f6;
+    color: #475569;
+  }
+
+  .home-activity-rail {
+    display: flex;
+    gap: 0.65rem;
+    margin: 0.75rem 0 0;
+    padding: 0 0 0.15rem;
+    list-style: none;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  .home-activity-rail-item {
+    flex: 0 0 min(16rem, 78vw);
+  }
+
+  .home-activity-rail .home-activity-item {
+    height: 100%;
+    border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+    border-radius: 0.85rem;
+    background: #fff;
+    padding: 0.7rem 0.75rem;
   }
 
   .home-dashboard::before {
@@ -1200,9 +1547,15 @@
   }
 
   @media (min-width: 900px) {
-    .home-featured {
+    .home-featured:not(.home-featured--hero) {
       grid-template-columns: minmax(17rem, 1.05fr) minmax(14rem, 1fr);
     }
+  }
+
+  /* Keep hero as overlay (never stack photo under content) */
+  .home-featured.home-featured--hero {
+    display: block;
+    grid-template-columns: none;
   }
 
   .home-featured-info {

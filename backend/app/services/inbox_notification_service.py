@@ -1,11 +1,13 @@
 from collections.abc import Callable
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
+from app.models.event import Event
+from app.models.event_volunteer_signup import EventVolunteerSignup
 from app.models.inbox_notification import InboxNotification, InboxNotificationType
-from app.models.member import Member, MemberRole, MemberStatus
+from app.models.member import Member, MemberPosition, MemberRole, MemberStatus
 from app.schemas.inbox_notification import (
     InboxNotificationListResponse,
     InboxNotificationResponse,
@@ -50,6 +52,26 @@ def _role_recipients(db: Session, role: MemberRole) -> list[Member]:
             select(Member).where(
                 Member.status == MemberStatus.APPROVED,
                 Member.role == role,
+            )
+        ).all()
+    )
+
+
+def _task_manager_recipients(db: Session) -> list[Member]:
+    """President (role) or VP / Event Manager (position)."""
+    return list(
+        db.scalars(
+            select(Member).where(
+                Member.status == MemberStatus.APPROVED,
+                or_(
+                    Member.role == MemberRole.PRESIDENT,
+                    Member.position.in_(
+                        (
+                            MemberPosition.VICE_PRESIDENT,
+                            MemberPosition.EVENT_MANAGER,
+                        )
+                    ),
+                ),
             )
         ).all()
     )
@@ -282,6 +304,54 @@ def notify_task_due_inbox(
         body=f"Your task{detail} is due within about a day.",
         href="/events/tasks",
         dedupe_key=f"task_due:{task_id}:{assignee_id}",
+    )
+
+
+def notify_task_managers_of_volunteer_signup(
+    db: Session,
+    *,
+    event: Event,
+    volunteer: Member,
+    signup_id: int,
+) -> int:
+    # Prefer task managers; fall back to board so someone always sees the request.
+    recipients = [m for m in _task_manager_recipients(db) if m.id != volunteer.id]
+    if not recipients:
+        recipients = [m for m in _board_recipients(db) if m.id != volunteer.id]
+    return notify_many(
+        db,
+        recipients=recipients,
+        type=InboxNotificationType.VOLUNTEER_SIGNUP,
+        title=f"{volunteer.full_name} requested to volunteer",
+        body=f"Review their volunteer request for {event.title}.",
+        href=f"/events/{event.id}/manage?modal=volunteers",
+        dedupe_key_for=lambda recipient: (
+            f"volunteer_signup:{signup_id}:{recipient.id}"
+        ),
+    )
+
+
+def notify_volunteer_signup_reviewed(
+    db: Session,
+    *,
+    event: Event,
+    signup: EventVolunteerSignup,
+    approved: bool,
+) -> InboxNotification | None:
+    if approved:
+        title = f"Volunteer request approved for {event.title}"
+        body = "You can now be assigned tasks for this event."
+    else:
+        title = f"Volunteer request declined for {event.title}"
+        body = "Organizers declined this volunteer request."
+    return create_inbox_notification(
+        db,
+        member_id=signup.member_id,
+        type=InboxNotificationType.VOLUNTEER_SIGNUP_REVIEWED,
+        title=title,
+        body=body,
+        href=f"/events/{event.id}",
+        dedupe_key=f"volunteer_reviewed:{signup.id}:{signup.status.value}",
     )
 
 

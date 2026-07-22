@@ -63,7 +63,10 @@ def create_event_task_endpoint(
     except InvalidEventTaskAssigneeError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Assignee must be an approved board member",
+            detail=(
+                "Assignee must be a board member or an approved volunteer "
+                "for this event"
+            ),
         ) from None
     except EventTaskCreationClosedError:
         raise HTTPException(
@@ -169,7 +172,10 @@ def update_event_task_endpoint(
     except InvalidEventTaskAssigneeError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Assignee must be an approved board member",
+            detail=(
+                "Assignee must be a board member or an approved volunteer "
+                "for this event"
+            ),
         ) from None
 
     return EventTaskResponse.from_task(task)

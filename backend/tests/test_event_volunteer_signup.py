@@ -60,6 +60,7 @@ def test_member_can_volunteer_with_note(
     body = response.json()
     assert body["event_id"] == event["id"]
     assert body["note"] == "I can help with setup and cleanup."
+    assert body["status"] == "pending"
     assert body["created_at"]
 
     detail = client.get(
@@ -70,6 +71,70 @@ def test_member_can_volunteer_with_note(
     signup = detail.json()["current_member_volunteer_signup"]
     assert signup is not None
     assert signup["note"] == "I can help with setup and cleanup."
+    assert signup["status"] == "pending"
+
+
+def test_board_can_approve_volunteer(
+    client,
+    board_member_headers,
+    general_member_headers,
+):
+    event = _create_event(client, board_member_headers)
+    signup = client.post(
+        f"/api/v1/events/{event['id']}/volunteer-signup",
+        headers=general_member_headers,
+        json={"note": "Happy to help"},
+    ).json()
+
+    approved = client.patch(
+        f"/api/v1/events/{event['id']}/volunteer-signups/{signup['id']}",
+        headers=board_member_headers,
+        json={"status": "approved"},
+    )
+    assert approved.status_code == 200
+    assert approved.json()["status"] == "approved"
+
+    conflict = client.patch(
+        f"/api/v1/events/{event['id']}/volunteer-signups/{signup['id']}",
+        headers=board_member_headers,
+        json={"status": "rejected"},
+    )
+    assert conflict.status_code == 409
+
+
+def test_board_can_reject_volunteer(
+    client,
+    db_session,
+    board_member_headers,
+    general_member_headers,
+):
+    event = _create_event(client, board_member_headers)
+    register_member(client, email="helper2@semo.edu", student_id="33333333")
+    set_member_approved(db_session, email="helper2@semo.edu")
+    helper_headers = auth_header(client, email="helper2@semo.edu")
+
+    signup = client.post(
+        f"/api/v1/events/{event['id']}/volunteer-signup",
+        headers=helper_headers,
+        json={"note": "Available Saturday"},
+    ).json()
+
+    rejected = client.patch(
+        f"/api/v1/events/{event['id']}/volunteer-signups/{signup['id']}",
+        headers=board_member_headers,
+        json={"status": "rejected"},
+    )
+    assert rejected.status_code == 200
+    assert rejected.json()["status"] == "rejected"
+
+    # Rejected volunteer can re-request.
+    again = client.post(
+        f"/api/v1/events/{event['id']}/volunteer-signup",
+        headers=helper_headers,
+        json={"note": "Still available"},
+    )
+    assert again.status_code == 201
+    assert again.json()["status"] == "pending"
 
 
 def test_member_can_volunteer_without_note(
@@ -136,6 +201,7 @@ def test_board_can_list_event_volunteers(
     assert body["total"] == 1
     assert body["signups"][0]["full_name"]
     assert body["signups"][0]["note"] == "Decoration team"
+    assert body["signups"][0]["status"] == "pending"
 
 
 def test_general_member_cannot_list_event_volunteers(

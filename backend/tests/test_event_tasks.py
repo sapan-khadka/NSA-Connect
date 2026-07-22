@@ -50,6 +50,21 @@ def _create_event(client, headers, **overrides):
     return response.json()
 
 
+def _approve_volunteer(client, board_headers, event_id, volunteer_headers):
+    signup = client.post(
+        f"/api/v1/events/{event_id}/volunteer-signup",
+        headers=volunteer_headers,
+        json={"note": "Happy to help"},
+    ).json()
+    reviewed = client.patch(
+        f"/api/v1/events/{event_id}/volunteer-signups/{signup['id']}",
+        headers=board_headers,
+        json={"status": "approved"},
+    )
+    assert reviewed.status_code == 200
+    return reviewed.json()
+
+
 def _create_task(client, headers, event_id, **overrides):
     payload = {"title": "Book the venue"}
     payload.update(overrides)
@@ -147,9 +162,11 @@ def test_create_task_with_general_member_assignee(
 ):
     register_member(client)
     set_member_approved(db_session)
-    general = client.get("/api/v1/members/me", headers=auth_header(client)).json()
+    general_headers = auth_header(client)
+    general = client.get("/api/v1/members/me", headers=general_headers).json()
 
     event = _create_event(client, president_headers)
+    _approve_volunteer(client, president_headers, event["id"], general_headers)
     response = _create_task(
         client,
         president_headers,
@@ -163,6 +180,32 @@ def test_create_task_with_general_member_assignee(
     body = response.json()
     assert body["assignee_id"] == general["id"]
     assert body["assignee_name"] == general["full_name"]
+
+
+def test_create_task_rejects_unapproved_volunteer_assignee(
+    client,
+    db_session,
+    president_headers,
+):
+    register_member(client)
+    set_member_approved(db_session)
+    general_headers = auth_header(client)
+    general = client.get("/api/v1/members/me", headers=general_headers).json()
+
+    event = _create_event(client, president_headers)
+    client.post(
+        f"/api/v1/events/{event['id']}/volunteer-signup",
+        headers=general_headers,
+        json={"note": "Pending only"},
+    )
+    response = _create_task(
+        client,
+        president_headers,
+        event["id"],
+        title="Decoration help",
+        assignee_id=general["id"],
+    )
+    assert response.status_code == 400
 
 
 def test_create_task_with_invalid_assignee_returns_400(
@@ -190,6 +233,7 @@ def test_general_member_can_list_and_update_assigned_tasks(
     general = client.get("/api/v1/members/me", headers=general_headers).json()
 
     event = _create_event(client, president_headers)
+    _approve_volunteer(client, president_headers, event["id"], general_headers)
     task = _create_task(
         client,
         president_headers,
@@ -406,6 +450,7 @@ def test_overview_includes_general_member_volunteer_tasks(
     general = client.get("/api/v1/members/me", headers=general_headers).json()
 
     event = _create_event(client, president_headers)
+    _approve_volunteer(client, president_headers, event["id"], general_headers)
     _create_task(
         client,
         president_headers,
@@ -439,11 +484,7 @@ def test_overview_marks_volunteer_signup_on_assigned_tasks(
     general = client.get("/api/v1/members/me", headers=general_headers).json()
 
     event = _create_event(client, president_headers, name="tihar")
-    client.post(
-        f"/api/v1/events/{event['id']}/volunteer-signup",
-        headers=general_headers,
-        json={"note": "i can help with the decoration."},
-    )
+    _approve_volunteer(client, president_headers, event["id"], general_headers)
     _create_task(
         client,
         president_headers,

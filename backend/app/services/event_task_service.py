@@ -75,13 +75,31 @@ def _validate_assignee(
     assignee_id: int | None,
     *,
     require_board_role: bool = True,
+    event_id: int | None = None,
 ) -> None:
     if assignee_id is None:
         return
     assignee = db.get(Member, assignee_id)
     if assignee is None or assignee.status != MemberStatus.APPROVED:
         raise InvalidEventTaskAssigneeError
-    if require_board_role and not assignee.has_role_at_least(MemberRole.BOARD):
+    if require_board_role:
+        if not assignee.has_role_at_least(MemberRole.BOARD):
+            raise InvalidEventTaskAssigneeError
+        return
+    # Simple tasks: board+ or approved volunteer for this event.
+    if assignee.has_role_at_least(MemberRole.BOARD):
+        return
+    if event_id is None:
+        raise InvalidEventTaskAssigneeError
+    from app.services.event_volunteer_signup_service import (
+        member_has_approved_volunteer_signup,
+    )
+
+    if not member_has_approved_volunteer_signup(
+        db,
+        event_id=event_id,
+        member_id=assignee_id,
+    ):
         raise InvalidEventTaskAssigneeError
 
 
@@ -191,7 +209,12 @@ def create_simple_event_task(
     if not event.is_upcoming:
         raise EventTaskCreationClosedError
 
-    _validate_assignee(db, data.assignee_id, require_board_role=False)
+    _validate_assignee(
+        db,
+        data.assignee_id,
+        require_board_role=False,
+        event_id=event_id,
+    )
 
     task = EventTask(
         event_id=event_id,
@@ -320,6 +343,7 @@ def update_event_task(
             db,
             updates["assignee_id"],
             require_board_role=require_board_role,
+            event_id=task.event_id,
         )
         task.assignee_id = updates["assignee_id"]
 
@@ -431,9 +455,15 @@ def get_task_overview(db: Session) -> TaskOverviewResponse:
     for task in tasks:
         tasks_by_assignee[task.assignee_id].append(task)
 
+    from app.models.event_volunteer_signup import EventVolunteerSignupStatus
+
     volunteer_signup_pairs = {
         (signup.member_id, signup.event_id)
-        for signup in db.scalars(select(EventVolunteerSignup)).all()
+        for signup in db.scalars(
+            select(EventVolunteerSignup).where(
+                EventVolunteerSignup.status == EventVolunteerSignupStatus.APPROVED
+            )
+        ).all()
     }
 
     board_member_ids = {member.id for member in board_members}

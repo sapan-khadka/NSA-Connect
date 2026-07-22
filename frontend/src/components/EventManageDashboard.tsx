@@ -120,6 +120,24 @@ function parseManageTab(value: string | null): EventManageTab {
   return "overview";
 }
 
+const MANAGE_MODAL_IDS = new Set<Exclude<ManageModal, null>>([
+  "volunteers",
+  "tasks",
+  "transactions",
+  "checkin",
+  "attendance",
+  "invited",
+  "meeting",
+  "feedback",
+]);
+
+function parseManageModal(value: string | null): ManageModal {
+  if (value && MANAGE_MODAL_IDS.has(value as Exclude<ManageModal, null>)) {
+    return value as Exclude<ManageModal, null>;
+  }
+  return null;
+}
+
 function ManageCardShell({
   title,
   subtitle,
@@ -181,8 +199,11 @@ export function EventManageDashboard({
 }: EventManageDashboardProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = parseManageTab(searchParams.get("tab"));
+  const modalFromUrl = parseManageModal(searchParams.get("modal"));
   const [activeTab, setActiveTab] = useState<EventManageTab>(initialTab);
-  const [modal, setModal] = useState<ManageModal>(initialOpenModal);
+  const [modal, setModal] = useState<ManageModal>(
+    initialOpenModal ?? modalFromUrl,
+  );
   const [inviteOpen, setInviteOpen] = useState(false);
   const consumedInitialModalRef = useRef(false);
   const [volunteers, setVolunteers] = useState<EventVolunteerSignupMember[]>(
@@ -282,6 +303,32 @@ export function EventManageDashboard({
     }
     setModal(initialOpenModal);
   }, [initialOpenModal]);
+
+  useEffect(() => {
+    if (!modalFromUrl || consumedInitialModalRef.current) {
+      return;
+    }
+    consumedInitialModalRef.current = true;
+    if (
+      modalFromUrl === "volunteers" ||
+      modalFromUrl === "checkin" ||
+      modalFromUrl === "attendance" ||
+      modalFromUrl === "invited"
+    ) {
+      selectTab("people");
+    } else if (
+      modalFromUrl === "tasks" ||
+      modalFromUrl === "transactions"
+    ) {
+      selectTab("ops");
+    } else if (
+      modalFromUrl === "meeting" ||
+      modalFromUrl === "feedback"
+    ) {
+      selectTab("record");
+    }
+    setModal(modalFromUrl);
+  }, [modalFromUrl]);
 
   useEffect(() => {
     if (!canViewBoard) {
@@ -418,6 +465,11 @@ export function EventManageDashboard({
   function closeModal() {
     setModal(null);
     onDismissOpenTokens?.();
+    if (searchParams.has("modal")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("modal");
+      setSearchParams(next, { replace: true });
+    }
   }
 
   function handleResolveReadiness(
@@ -854,6 +906,7 @@ export function EventManageDashboard({
           eventId={event.id}
           eventName={event.name}
           refreshKey={refreshKey}
+          canReviewVolunteers={canViewBoard}
           canAssignTasks={canManageTasks && canCreateEventTasks(event)}
           onConvertToTask={(signup) => {
             onConvertVolunteerToTask(signup);

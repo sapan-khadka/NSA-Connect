@@ -51,8 +51,13 @@ export function EventManageVolunteersCard({
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const preview = volunteers.slice(0, 3);
+  const pendingCount = volunteers.filter((row) => row.status === "pending").length;
   const countLabel =
-    volunteers.length === 1 ? "1 interest" : `${volunteers.length} interests`;
+    pendingCount > 0
+      ? `${pendingCount} pending review`
+      : volunteers.length === 1
+        ? "1 interest"
+        : `${volunteers.length} interests`;
 
   async function loadSlots() {
     setSlotsLoading(true);
@@ -408,6 +413,11 @@ export function EventManageVolunteersCard({
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-foreground">
                       {signup.full_name}
+                      {signup.status === "pending" ? (
+                        <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                          Pending
+                        </span>
+                      ) : null}
                     </p>
                     <p className="mt-0.5 truncate text-xs text-gray-500">
                       {signup.note?.trim() || "No note"}

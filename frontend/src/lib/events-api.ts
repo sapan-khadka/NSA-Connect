@@ -74,11 +74,15 @@ export type EventFeedbackListResponse = {
   average_rating: number;
 };
 
+export type EventVolunteerSignupStatus = "pending" | "approved" | "rejected";
+
 export type EventVolunteerSignup = {
   id: number;
   event_id: number;
   note: string | null;
+  status: EventVolunteerSignupStatus;
   created_at: string;
+  reviewed_at?: string | null;
 };
 
 export type EventVolunteerSignupMember = {
@@ -86,7 +90,9 @@ export type EventVolunteerSignupMember = {
   member_id: number;
   full_name: string;
   note: string | null;
+  status: EventVolunteerSignupStatus;
   created_at: string;
+  reviewed_at?: string | null;
 };
 
 export type EventVolunteerSignupListResponse = {
@@ -498,6 +504,18 @@ export async function fetchEventVolunteerSignups(
 ): Promise<EventVolunteerSignupListResponse> {
   const response = await api.get<EventVolunteerSignupListResponse>(
     `/v1/events/${eventId}/volunteer-signups`,
+  );
+  return response.data;
+}
+
+export async function reviewEventVolunteerSignup(
+  eventId: number,
+  signupId: number,
+  status: "approved" | "rejected",
+): Promise<EventVolunteerSignupMember> {
+  const response = await api.patch<EventVolunteerSignupMember>(
+    `/v1/events/${eventId}/volunteer-signups/${signupId}`,
+    { status },
   );
   return response.data;
 }

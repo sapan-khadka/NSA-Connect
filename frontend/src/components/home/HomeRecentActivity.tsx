@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
-import {
-  fetchMemberActivity,
-} from "../../lib/members-api";
+import { fetchMemberActivity } from "../../lib/members-api";
 import {
   MEMBER_ACTIVITY_ICONS,
   mapMemberActivityApiItem,
@@ -21,10 +19,10 @@ export function HomeRecentActivity({ memberId }: { memberId: number }) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    void fetchMemberActivity(memberId, { limit: 6 })
+    void fetchMemberActivity(memberId, { limit: 8 })
       .then((response) => {
         if (!cancelled) {
-          setItems(response.items.map(mapMemberActivityApiItem).slice(0, 6));
+          setItems(response.items.map(mapMemberActivityApiItem).slice(0, 8));
         }
       })
       .catch(() => {
@@ -58,7 +56,7 @@ export function HomeRecentActivity({ memberId }: { memberId: number }) {
       ) : items.length === 0 ? (
         <p className="home-activity-empty">No recent activity yet.</p>
       ) : (
-        <ul className="home-activity-grid">
+        <ul className="home-activity-rail">
           {items.map((item) => {
             const Icon = MEMBER_ACTIVITY_ICONS[item.kind];
             const body = (
@@ -68,9 +66,6 @@ export function HomeRecentActivity({ memberId }: { memberId: number }) {
                 </span>
                 <span className="home-activity-copy">
                   <span className="home-activity-title">{item.title}</span>
-                  {item.detail ? (
-                    <span className="home-activity-detail">{item.detail}</span>
-                  ) : null}
                   <span className="home-activity-time">
                     {formatRelativeTimestamp(item.occurredAt)}
                   </span>
@@ -78,7 +73,7 @@ export function HomeRecentActivity({ memberId }: { memberId: number }) {
               </>
             );
             return (
-              <li key={item.id}>
+              <li key={item.id} className="home-activity-rail-item">
                 {item.href ? (
                   <Link to={item.href} className="home-activity-item">
                     {body}

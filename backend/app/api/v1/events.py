@@ -25,10 +25,13 @@ from app.schemas.event_feedback import (
     EventFeedbackListResponse,
     EventFeedbackResponse,
 )
+from app.models.event_volunteer_signup import EventVolunteerSignupStatus
 from app.schemas.event_volunteer_signup import (
     EventVolunteerSignupCreateRequest,
     EventVolunteerSignupListResponse,
+    EventVolunteerSignupMemberResponse,
     EventVolunteerSignupResponse,
+    EventVolunteerSignupReviewRequest,
 )
 from app.schemas.member import (
     EventParticipantInvitationCreateRequest,
@@ -83,8 +86,11 @@ from app.services.event_task_service import (
 )
 from app.services.event_volunteer_signup_service import (
     NotVolunteeredError,
+    VolunteerSignupNotFoundError,
+    VolunteerSignupNotPendingError,
     get_member_volunteer_signup,
     list_event_volunteer_signups,
+    review_volunteer_signup,
     to_member_response,
     volunteer_for_event,
     withdraw_volunteer_signup,
@@ -453,6 +459,52 @@ def list_event_volunteer_signups_endpoint(
         ) from None
 
     return EventVolunteerSignupListResponse(signups=signups, total=len(signups))
+
+
+@router.patch(
+    "/{event_id}/volunteer-signups/{signup_id}",
+    response_model=EventVolunteerSignupMemberResponse,
+)
+def review_volunteer_signup_endpoint(
+    event_id: int,
+    signup_id: int,
+    data: EventVolunteerSignupReviewRequest,
+    current_member: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    try:
+        signup = review_volunteer_signup(
+            db,
+            event_id=event_id,
+            signup_id=signup_id,
+            status=EventVolunteerSignupStatus(data.status),
+            reviewer=current_member,
+        )
+    except EventNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        ) from None
+    except VolunteerSignupNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Volunteer signup not found",
+        ) from None
+    except VolunteerSignupNotPendingError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only pending volunteer requests can be reviewed",
+        ) from None
+
+    return EventVolunteerSignupMemberResponse(
+        id=signup.id,
+        member_id=signup.member_id,
+        full_name=signup.member.full_name,
+        note=signup.note,
+        status=signup.status,
+        created_at=signup.created_at,
+        reviewed_at=signup.reviewed_at,
+    )
 
 
 @router.post(

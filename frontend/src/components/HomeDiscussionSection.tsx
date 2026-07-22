@@ -4,7 +4,6 @@ import { Link } from "react-router-dom";
 
 import {
   fetchDiscussionInbox,
-  toggleDiscussionRoomPin,
   type DiscussionInboxRoom,
 } from "../lib/discussion-api";
 import { discussionRoomPath } from "../lib/discussion-paths";
@@ -14,7 +13,6 @@ import { AppIcon } from "./ui/AppIcon";
 import { HomeCard } from "./ui/HomeCard";
 
 const INBOX_PATH = "/discussions";
-const HOME_ROW_CAP = 6;
 const INBOX_POLL_MS = 12_000;
 
 function DiscussionCardShell({
@@ -46,7 +44,7 @@ function DiscussionCardShell({
 
 export function selectHomeInboxRooms(
   rooms: DiscussionInboxRoom[],
-  cap = HOME_ROW_CAP,
+  cap = 6,
 ): DiscussionInboxRoom[] {
   const pinned = rooms.filter((room) => room.pinned);
   const unpinned = rooms.filter((room) => !room.pinned);
@@ -56,12 +54,16 @@ export function selectHomeInboxRooms(
 
 function DiscussionRoomRow({ room }: { room: DiscussionInboxRoom }) {
   return (
-    <Link
-      to={discussionRoomPath(room.room_id)}
-      className="home-discussion-row"
-    >
+    <Link to={discussionRoomPath(room.room_id)} className="home-discussion-row">
       <div className="home-discussion-copy">
-        <p className="home-discussion-title">{room.label}</p>
+        <div className="home-discussion-title-row">
+          <p className="home-discussion-title">{room.label}</p>
+          {room.unread_display ? (
+            <span className="home-discussion-unread">{room.unread_display}</span>
+          ) : room.unread_count > 0 ? (
+            <span className="home-discussion-dot" aria-hidden="true" />
+          ) : null}
+        </div>
         {room.last_message_preview ? (
           <p className="home-discussion-preview">
             {room.last_message_author
@@ -73,14 +75,35 @@ function DiscussionRoomRow({ room }: { room: DiscussionInboxRoom }) {
         )}
       </div>
       {room.last_message_at ? (
-        <time
-          dateTime={room.last_message_at}
-          className="home-discussion-time"
-        >
+        <time dateTime={room.last_message_at} className="home-discussion-time">
           {formatRelativeTimestamp(room.last_message_at)}
         </time>
       ) : null}
     </Link>
+  );
+}
+
+function DiscussionSection({
+  title,
+  rooms,
+}: {
+  title: string;
+  rooms: DiscussionInboxRoom[];
+}) {
+  if (rooms.length === 0) {
+    return null;
+  }
+  return (
+    <div className="home-discussion-group">
+      <p className="home-discussion-group-title">{title}</p>
+      <ul className="home-discussion-list">
+        {rooms.map((room) => (
+          <li key={room.room_id}>
+            <DiscussionRoomRow room={room} />
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -99,46 +122,34 @@ export function DiscussionRoomList({
   void _pinDisabled;
 
   if (!showPinnedSection) {
+    const pinned = rooms.filter((room) => room.pinned);
+    const unread = rooms.filter(
+      (room) => !room.pinned && room.unread_count > 0,
+    );
+    const recent = rooms.filter(
+      (room) => !room.pinned && room.unread_count <= 0,
+    );
     return (
-      <ul className="home-discussion-list">
-        {rooms.map((room) => (
-          <li key={room.room_id}>
-            <DiscussionRoomRow room={room} />
-          </li>
-        ))}
-      </ul>
+      <div className="home-discussion-groups">
+        <DiscussionSection title="Pinned" rooms={pinned} />
+        <DiscussionSection title="Unread" rooms={unread} />
+        <DiscussionSection title="Recent" rooms={recent} />
+      </div>
     );
   }
 
   const pinned = rooms.filter((room) => room.pinned);
   const unpinned = rooms.filter((room) => !room.pinned);
-
   return (
-    <div className="space-y-2">
-      {pinned.length > 0 ? (
-        <ul className="home-discussion-list">
-          {pinned.map((room) => (
-            <li key={room.room_id}>
-              <DiscussionRoomRow room={room} />
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {unpinned.length > 0 ? (
-        <ul className="home-discussion-list">
-          {unpinned.map((room) => (
-            <li key={room.room_id}>
-              <DiscussionRoomRow room={room} />
-            </li>
-          ))}
-        </ul>
-      ) : null}
+    <div className="home-discussion-groups">
+      <DiscussionSection title="Pinned" rooms={pinned} />
+      <DiscussionSection title="Recent" rooms={unpinned} />
     </div>
   );
 }
 
 export function HomeDiscussionSection({
-  previewLimit = HOME_ROW_CAP,
+  previewLimit = 8,
 }: {
   previewLimit?: number;
 }) {
@@ -169,7 +180,6 @@ export function HomeDiscussionSection({
     }
 
     void load();
-
     const pollId = window.setInterval(() => {
       if (document.visibilityState === "visible") {
         void load({ silent: true });
@@ -179,7 +189,6 @@ export function HomeDiscussionSection({
     function handleFocus() {
       void load({ silent: true });
     }
-
     function handleVisibility() {
       if (document.visibilityState === "visible") {
         void load({ silent: true });
@@ -188,7 +197,6 @@ export function HomeDiscussionSection({
 
     window.addEventListener("focus", handleFocus);
     document.addEventListener("visibilitychange", handleVisibility);
-
     return () => {
       cancelled = true;
       window.clearInterval(pollId);
@@ -196,19 +204,6 @@ export function HomeDiscussionSection({
       document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, []);
-
-  async function handleTogglePin(roomId: string) {
-    if (roomId === "board") {
-      return;
-    }
-    try {
-      await toggleDiscussionRoomPin(roomId);
-      const response = await fetchDiscussionInbox();
-      setRooms(response.rooms);
-    } catch {
-      /* keep current */
-    }
-  }
 
   const visible = selectHomeInboxRooms(rooms, previewLimit);
   const footer = (
@@ -246,7 +241,7 @@ export function HomeDiscussionSection({
     >
       <DiscussionRoomList
         rooms={visible}
-        onTogglePin={handleTogglePin}
+        onTogglePin={() => undefined}
         showPinnedSection={false}
       />
     </DiscussionCardShell>

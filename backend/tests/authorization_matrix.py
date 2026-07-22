@@ -491,6 +491,13 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
         "require_board",
     ),
     EndpointAuthRule(
+        "PATCH",
+        "/api/v1/events/{event_id}/volunteer-signups/{signup_id}",
+        "Approve or reject event volunteer signup",
+        "board",
+        "require_board",
+    ),
+    EndpointAuthRule(
         "GET",
         "/api/v1/events/{event_id}/discussion",
         "List event discussion messages",

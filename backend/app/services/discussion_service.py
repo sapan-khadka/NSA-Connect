@@ -80,14 +80,16 @@ def member_can_access_event_discussion(
         return False
     if member.has_role_at_least(MemberRole.BOARD):
         return True
-    return (
-        get_member_volunteer_signup(
-            db,
-            event_id=event.id,
-            member_id=member.id,
-        )
-        is not None
+    signup = get_member_volunteer_signup(
+        db,
+        event_id=event.id,
+        member_id=member.id,
     )
+    if signup is None:
+        return False
+    from app.models.event_volunteer_signup import EventVolunteerSignupStatus
+
+    return signup.status != EventVolunteerSignupStatus.REJECTED
 
 
 def assert_can_access_event_discussion(

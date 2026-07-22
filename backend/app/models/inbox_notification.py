@@ -17,6 +17,8 @@ class InboxNotificationType(StrEnum):
     TASK_ASSIGNED = "task_assigned"
     TASK_DUE_REMINDER = "task_due_reminder"
     ANNOUNCEMENT = "announcement"
+    VOLUNTEER_SIGNUP = "volunteer_signup"
+    VOLUNTEER_SIGNUP_REVIEWED = "volunteer_signup_reviewed"
 
 
 class InboxNotification(Base):

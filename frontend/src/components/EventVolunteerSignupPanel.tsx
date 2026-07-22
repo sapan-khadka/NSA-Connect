@@ -30,6 +30,13 @@ export function EventVolunteerSignupPanel({
   const [withdrawing, setWithdrawing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const canShowNewRequest = canVolunteer && !signup && !showForm;
+  const canShowForm =
+    canVolunteer &&
+    showForm &&
+    (!signup || signup.status === "rejected");
+  const canShowStatus = Boolean(signup) && !canShowForm;
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
@@ -75,11 +82,12 @@ export function EventVolunteerSignupPanel({
         </p>
       ) : null}
 
-      {canVolunteer && !signup && !showForm ? (
+      {canShowNewRequest ? (
         <>
           <p className="mt-2 text-sm text-label">
             Let organizers know you&apos;d like to help with setup, cleanup, or
-            other tasks.
+            other tasks. Requests need organizer approval before tasks can be
+            assigned.
           </p>
           <Button
             type="button"
@@ -92,7 +100,7 @@ export function EventVolunteerSignupPanel({
         </>
       ) : null}
 
-      {canVolunteer && !signup && showForm ? (
+      {canShowForm ? (
         <form className="mt-3 space-y-3" onSubmit={(event) => void handleSubmit(event)}>
           <label className="block text-sm text-label">
             Optional note
@@ -113,7 +121,9 @@ export function EventVolunteerSignupPanel({
               size="lg"
               className="w-full sm:w-auto"
             >
-              Submit volunteer signup
+              {signup?.status === "rejected"
+                ? "Submit again"
+                : "Submit volunteer signup"}
             </Button>
             <Button
               type="button"
@@ -133,12 +143,21 @@ export function EventVolunteerSignupPanel({
         </form>
       ) : null}
 
-      {signup ? (
+      {canShowStatus && signup ? (
         <div className="mt-3 rounded-lg border border-accent/20 bg-accent/5 px-3 py-3">
           <p className="text-sm font-medium text-foreground">
-            You&apos;re signed up to volunteer
+            {signup.status === "approved"
+              ? "You're approved to volunteer"
+              : signup.status === "rejected"
+                ? "Volunteer request declined"
+                : "Volunteer request pending approval"}
           </p>
           <p className="mt-1 text-xs text-label">
+            {signup.status === "pending"
+              ? "Organizers will review your request."
+              : signup.status === "rejected"
+                ? "You can submit again with an updated note."
+                : "You can be assigned tasks for this event."}{" "}
             Signed up {formatEventDateTime(signup.created_at)}
           </p>
           {signup.note ? (
@@ -146,7 +165,7 @@ export function EventVolunteerSignupPanel({
               {signup.note}
             </p>
           ) : null}
-          {canVolunteer ? (
+          {canVolunteer && signup.status !== "rejected" ? (
             <Button
               type="button"
               variant="outline"
@@ -157,6 +176,19 @@ export function EventVolunteerSignupPanel({
               className="mt-3 w-full sm:w-auto"
             >
               Withdraw signup
+            </Button>
+          ) : null}
+          {canVolunteer && signup.status === "rejected" ? (
+            <Button
+              type="button"
+              onClick={() => {
+                setShowForm(true);
+                setNote(signup.note ?? "");
+              }}
+              size="lg"
+              className="mt-3 w-full sm:w-auto"
+            >
+              Request again
             </Button>
           ) : null}
         </div>

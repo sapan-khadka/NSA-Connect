@@ -192,9 +192,10 @@ describe("HomePage", () => {
     expect(screen.queryByText("Needs Review")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Needs attention")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Quick stats")).toBeInTheDocument();
-    expect(screen.getByLabelText("Today at a glance")).toBeInTheDocument();
+    expect(screen.getByLabelText("Quick actions")).toBeInTheDocument();
     expect(screen.getByLabelText("Recent activity")).toBeInTheDocument();
     expect(screen.getByLabelText("Task summary")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Today at a glance")).not.toBeInTheDocument();
 
     const featured = screen.getByLabelText("Featured Event");
     expect(
@@ -203,9 +204,9 @@ describe("HomePage", () => {
     expect(
       within(featured).getByRole("link", { name: /Open event/i }),
     ).toHaveAttribute("href", "/events/5");
-    expect(within(featured).getByText("Going")).toBeInTheDocument();
-    expect(within(featured).getByText("Maybe")).toBeInTheDocument();
-    expect(within(featured).getByText("Preparation")).toBeInTheDocument();
+    expect(within(featured).getByText(/Going/i)).toBeInTheDocument();
+    expect(within(featured).getByText(/Maybe/i)).toBeInTheDocument();
+    expect(within(featured).queryByText("Preparation")).not.toBeInTheDocument();
     expect(within(featured).queryByText("Budget")).not.toBeInTheDocument();
     expect(
       within(featured).queryByText("Confirmed attendance"),
@@ -215,15 +216,9 @@ describe("HomePage", () => {
     expect(screen.queryByLabelText("Meeting Minutes")).not.toBeInTheDocument();
 
     const work = await screen.findByLabelText("Work Center");
-    expect(within(work).getByRole("tab", { name: "Mine" })).toBeInTheDocument();
-    expect(
-      within(work).getByRole("tab", { name: "Oversight" }),
-    ).toBeInTheDocument();
-
-    const oversight = await within(work).findByLabelText("Task Oversight");
-    expect(
-      within(oversight).getByText("Dashain Celebration"),
-    ).toBeInTheDocument();
+    expect(within(work).getByLabelText("My Tasks")).toBeInTheDocument();
+    expect(await within(work).findByLabelText("Task Oversight")).toBeInTheDocument();
+    expect(await within(work).findByText("Print flyers")).toBeInTheDocument();
 
     expect(screen.queryByLabelText("Today's Timeline")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Organization Health")).not.toBeInTheDocument();
@@ -231,7 +226,7 @@ describe("HomePage", () => {
     expect(await screen.findByLabelText("Discussions")).toBeInTheDocument();
   });
 
-  it("shows urgency chips only when counts are non-zero", async () => {
+  it("surfaces overdue task counts in My tasks metrics", async () => {
     const overdueTask = {
       id: 1,
       event_id: 5,
@@ -266,13 +261,12 @@ describe("HomePage", () => {
       </MemoryRouter>,
     );
 
-    const chips = await screen.findByLabelText("Needs attention");
-    expect(within(chips).getByRole("link", { name: /1 overdue/i })).toBeInTheDocument();
-    expect(within(chips).getByRole("link", { name: /2 reviews/i })).toBeInTheDocument();
+    const summary = await screen.findByLabelText("Task summary");
+    expect(within(summary).getByText("Overdue")).toBeInTheDocument();
+    expect(screen.getByLabelText("Quick actions")).toBeInTheDocument();
   });
 
-  it("lets President switch Work Center to personal tasks", async () => {
-    const user = userEvent.setup();
+  it("shows personal My tasks and Task Oversight for President", async () => {
     const openTask = {
       id: 1,
       event_id: 5,
@@ -307,12 +301,12 @@ describe("HomePage", () => {
     );
 
     const work = await screen.findByLabelText("Work Center");
-    await user.click(within(work).getByRole("tab", { name: "Mine" }));
     expect(await within(work).findByText("Book venue")).toBeInTheDocument();
+    expect(within(work).getByLabelText("Task Oversight")).toBeInTheDocument();
     expect(within(work).queryByText("High")).not.toBeInTheDocument();
   });
 
-  it("surfaces pending reviews in urgency chips for treasurer", async () => {
+  it("shows finance and member quick actions for treasurer", async () => {
     mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
     mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
     mockSummary({ members_pending: 2, finance_pending: 1 });
@@ -325,37 +319,16 @@ describe("HomePage", () => {
       </MemoryRouter>,
     );
 
-    const chips = await screen.findByLabelText("Needs attention");
-    expect(
-      within(chips).getByRole("link", { name: /3 reviews/i }),
-    ).toHaveAttribute("href", "/members?tab=pending");
+    const actions = await screen.findByLabelText("Quick actions");
+    expect(within(actions).getByRole("link", { name: /Add Expense/i })).toBeInTheDocument();
+    expect(within(actions).getByRole("link", { name: /Add Member/i })).toBeInTheDocument();
     expect(screen.getByLabelText("My Tasks")).toBeInTheDocument();
     expect(screen.queryByLabelText("Action Center")).not.toBeInTheDocument();
   });
 
-  it("surfaces notes-needed chip when a meeting still needs minutes", async () => {
+  it("shows create event quick action for board members", async () => {
     mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
     mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
-    mockedMeetings.mockResolvedValue({
-      meetings: [
-        {
-          event_id: 4,
-          event_name: "March Board Meeting",
-          starts_at: "2030-03-10T18:00:00+00:00",
-          is_past: false,
-          agenda: "",
-          has_attendance: false,
-          has_minutes: false,
-          has_summary: false,
-          present_count: 0,
-          absent_count: 0,
-          excused_count: 0,
-          unmarked_count: 0,
-          minutes_updated_at: null,
-        },
-      ],
-      total: 1,
-    });
 
     render(
       <MemoryRouter>
@@ -365,11 +338,10 @@ describe("HomePage", () => {
       </MemoryRouter>,
     );
 
-    const chips = await screen.findByLabelText("Needs attention");
+    const actions = await screen.findByLabelText("Quick actions");
     expect(
-      within(chips).getByRole("link", { name: /Notes needed/i }),
-    ).toHaveAttribute("href", "/events/meetings/4#meeting-minutes");
-    expect(screen.queryByLabelText("Meeting Minutes")).not.toBeInTheDocument();
+      within(actions).getByRole("link", { name: /Create Event/i }),
+    ).toHaveAttribute("href", "/events/calendar?create=1");
   });
 
   it("cycles featured upcoming events with carousel controls", async () => {
@@ -541,6 +513,7 @@ describe("HomePage", () => {
     expect(within(featured).queryByText("Board Sync")).not.toBeInTheDocument();
     expect(await screen.findByLabelText("Discussions")).toBeInTheDocument();
     expect(screen.getByLabelText("Quick stats")).toBeInTheDocument();
+    expect(screen.getByLabelText("Quick actions")).toBeInTheDocument();
   });
 
   it("marks a simple My Tasks row complete via status done", async () => {

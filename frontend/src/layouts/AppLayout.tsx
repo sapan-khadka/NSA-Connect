@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 
 import { AppSidebar } from "../components/AppSidebar";
 import { AppTopBar, MobileSidebarDrawer } from "../components/AppTopBar";
@@ -15,7 +15,9 @@ import { useAuth } from "../context/useAuth";
  */
 export function AppLayout() {
   const { isAuthenticated } = useAuth();
+  const { pathname } = useLocation();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const fluidCanvas = pathname === "/";
 
   if (!isAuthenticated) {
     return (
@@ -71,7 +73,14 @@ export function AppLayout() {
             onOpenSidebar={() => setMobileSidebarOpen(true)}
           />
 
-          <main className="ds-main-canvas pb-24 lg:pb-8">
+          <main
+            className={[
+              "ds-main-canvas pb-24 lg:pb-8",
+              fluidCanvas ? "ds-main-canvas--fluid" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
             <Outlet />
           </main>
 

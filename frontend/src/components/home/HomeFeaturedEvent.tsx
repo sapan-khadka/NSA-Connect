@@ -8,11 +8,12 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import nsaCover from "../../assets/nsa-cover.PNG";
+import { Avatar } from "../../design-system/components/Avatar";
 import { eventDetailPath } from "../../lib/event-links";
-import { fetchEventTasks } from "../../lib/event-tasks-api";
 import {
   fetchEventAttendees,
   type EventResponse,
+  type EventRsvpAttendee,
 } from "../../lib/events-api";
 import { formatCountdownBadge } from "../../lib/format-datetime";
 import { AppIcon } from "../ui/AppIcon";
@@ -87,7 +88,6 @@ export function HomeFeaturedEvent({
   isLoading,
 }: {
   events: EventResponse[];
-  openTaskCountByEventId?: Record<number, number>;
   canManage?: boolean;
   canCreateEvent?: boolean;
   isLoading: boolean;
@@ -95,7 +95,7 @@ export function HomeFeaturedEvent({
   const [index, setIndex] = useState(0);
   const [goingCount, setGoingCount] = useState<number | null>(null);
   const [maybeCount, setMaybeCount] = useState<number | null>(null);
-  const [prepPercent, setPrepPercent] = useState<number | null>(null);
+  const [attendees, setAttendees] = useState<EventRsvpAttendee[]>([]);
 
   const safeIndex = events.length === 0 ? 0 : Math.min(index, events.length - 1);
   const event = events[safeIndex] ?? null;
@@ -109,35 +109,27 @@ export function HomeFeaturedEvent({
     if (!event) {
       setGoingCount(null);
       setMaybeCount(null);
-      setPrepPercent(null);
+      setAttendees([]);
       return;
     }
 
     let cancelled = false;
-    void Promise.all([
-      fetchEventAttendees(event.id),
-      fetchEventTasks(event.id).catch(() => null),
-    ])
-      .then(([attendees, tasksResponse]) => {
+    void fetchEventAttendees(event.id)
+      .then((response) => {
         if (cancelled) {
           return;
         }
-        setGoingCount(attendees.going_count);
-        setMaybeCount(attendees.maybe_count);
-        if (tasksResponse && tasksResponse.tasks.length > 0) {
-          const done = tasksResponse.tasks.filter(
-            (task) => task.is_complete || task.status === "done",
-          ).length;
-          setPrepPercent(Math.round((done / tasksResponse.tasks.length) * 100));
-        } else {
-          setPrepPercent(null);
-        }
+        setGoingCount(response.going_count);
+        setMaybeCount(response.maybe_count);
+        setAttendees(
+          response.attendees.filter((row) => row.rsvp_status === "going"),
+        );
       })
       .catch(() => {
         if (!cancelled) {
           setGoingCount(null);
           setMaybeCount(null);
-          setPrepPercent(null);
+          setAttendees([]);
         }
       });
 
@@ -164,15 +156,9 @@ export function HomeFeaturedEvent({
     return (
       <section
         aria-label="Featured Event"
-        className="home-featured home-featured--loading"
+        className="home-featured home-featured--hero home-featured--loading"
       >
-        <div className="home-featured-info">
-          <div className="h-3 w-28 animate-pulse rounded-full bg-white/15" />
-          <div className="mt-5 h-8 w-2/3 max-w-md animate-pulse rounded-lg bg-white/15" />
-          <div className="mt-4 h-4 w-56 animate-pulse rounded bg-white/10" />
-          <div className="mt-2 h-4 w-40 animate-pulse rounded bg-white/10" />
-        </div>
-        <div className="home-featured-media home-featured-media--skeleton" />
+        <div className="home-featured-hero-skeleton" />
       </section>
     );
   }
@@ -181,9 +167,11 @@ export function HomeFeaturedEvent({
     return (
       <section
         aria-label="Featured Event"
-        className="home-featured home-featured--empty"
+        className="home-featured home-featured--hero home-featured--empty"
       >
-        <div className="home-featured-info">
+        <img src={nsaCover} alt="" className="home-featured-photo" />
+        <div className="home-featured-hero-scrim" aria-hidden="true" />
+        <div className="home-featured-hero-content">
           <p className="home-featured-eyebrow">Upcoming event</p>
           <h2 className="home-featured-title">Nothing upcoming</h2>
           <p className="home-featured-meta-line">
@@ -191,7 +179,7 @@ export function HomeFeaturedEvent({
               ? "Create the next event when you’re ready to plan."
               : "Check the calendar for later dates."}
           </p>
-          <div className="home-featured-actions">
+          <div className="home-featured-hero-footer">
             <Link
               to={
                 canCreateEvent
@@ -204,10 +192,6 @@ export function HomeFeaturedEvent({
             </Link>
           </div>
         </div>
-        <div className="home-featured-media">
-          <img src={nsaCover} alt="" className="home-featured-photo" />
-          <div className="home-featured-fade" aria-hidden="true" />
-        </div>
       </section>
     );
   }
@@ -217,10 +201,15 @@ export function HomeFeaturedEvent({
   const managePath = `${eventPath}/manage`;
   const countdown = formatCountdownBadge(event.starts_at);
   const location = event.location?.trim() || "Location TBA";
+  const visibleAttendees = attendees.slice(0, 4);
+  const overflow = Math.max(0, (goingCount ?? 0) - visibleAttendees.length);
 
   return (
-    <section aria-label="Featured Event" className="home-featured">
-      <div className="home-featured-info">
+    <section aria-label="Featured Event" className="home-featured home-featured--hero">
+      <img src={photoUrl} alt="" className="home-featured-photo" />
+      <div className="home-featured-hero-scrim" aria-hidden="true" />
+
+      <div className="home-featured-hero-content">
         <div className="home-featured-info-top">
           <div className="flex flex-wrap items-center gap-2">
             <p className="home-featured-eyebrow">Upcoming event</p>
@@ -231,7 +220,6 @@ export function HomeFeaturedEvent({
             total={events.length}
             onPrev={goPrev}
             onNext={goNext}
-            className="lg:hidden"
           />
         </div>
 
@@ -239,80 +227,60 @@ export function HomeFeaturedEvent({
 
         <ul className="home-featured-meta-list">
           <li>
-            <AppIcon icon={Calendar} size="xs" className="text-white/45" />
+            <AppIcon icon={Calendar} size="xs" className="text-white/55" />
             <span>{formatFeaturedWhen(event.starts_at)}</span>
           </li>
           <li>
-            <AppIcon icon={MapPin} size="xs" className="text-white/45" />
+            <AppIcon icon={MapPin} size="xs" className="text-white/55" />
             <span>{location}</span>
           </li>
         </ul>
 
-        <div className="home-featured-stats">
-          <div className="home-featured-rsvp">
-            <div>
-              <p className="home-featured-rsvp-value">
-                {goingCount == null ? "—" : goingCount}
-              </p>
-              <p className="home-featured-rsvp-label">Going</p>
-            </div>
-            <div>
-              <p className="home-featured-rsvp-value">
-                {maybeCount == null ? "—" : maybeCount}
-              </p>
-              <p className="home-featured-rsvp-label">Maybe</p>
-            </div>
+        <div className="home-featured-hero-footer">
+          <div className="home-featured-people">
+            {visibleAttendees.length > 0 ? (
+              <div className="home-featured-avatars" aria-hidden="true">
+                {visibleAttendees.map((person, avatarIndex) => (
+                  <span
+                    key={person.member_id}
+                    className="home-featured-avatar"
+                    style={{ zIndex: visibleAttendees.length - avatarIndex }}
+                  >
+                    <Avatar
+                      name={person.full_name}
+                      size="sm"
+                      className="h-7 w-7 text-[10px]"
+                    />
+                  </span>
+                ))}
+                {overflow > 0 ? (
+                  <span className="home-featured-avatar-more">+{overflow}</span>
+                ) : null}
+              </div>
+            ) : null}
+            <p className="home-featured-going">
+              <span>{goingCount ?? "—"}</span> Going
+              <span className="home-featured-going-sep">·</span>
+              <span>{maybeCount ?? "—"}</span> Maybe
+            </p>
           </div>
-          <div className="home-featured-prep">
-            <div className="home-featured-prep-head">
-              <span>Preparation</span>
-              <span>{prepPercent == null ? "—" : `${prepPercent}%`}</span>
-            </div>
-            <div
-              className="home-featured-prep-track"
-              role="progressbar"
-              aria-label="Event preparation"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={prepPercent ?? 0}
-            >
-              <span
-                className="home-featured-prep-fill"
-                style={{ width: `${prepPercent ?? 0}%` }}
-              />
-            </div>
-          </div>
-        </div>
 
-        <div className="home-featured-actions">
-          <Link
-            to={eventPath}
-            className="home-featured-btn home-featured-btn--primary"
-          >
-            Open event
-          </Link>
-          {canManage ? (
+          <div className="home-featured-actions">
             <Link
-              to={managePath}
-              className="home-featured-btn home-featured-btn--ghost"
+              to={eventPath}
+              className="home-featured-btn home-featured-btn--primary"
             >
-              Manage
+              Open event
             </Link>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="home-featured-media">
-        <img src={photoUrl} alt="" className="home-featured-photo" />
-        <div className="home-featured-fade" aria-hidden="true" />
-        <div className="home-featured-media-footer">
-          <FeaturedCarouselControls
-            index={safeIndex}
-            total={events.length}
-            onPrev={goPrev}
-            onNext={goNext}
-            className="home-featured-controls-desktop"
-          />
+            {canManage ? (
+              <Link
+                to={managePath}
+                className="home-featured-btn home-featured-btn--ghost"
+              >
+                Manage
+              </Link>
+            ) : null}
+          </div>
         </div>
       </div>
     </section>
