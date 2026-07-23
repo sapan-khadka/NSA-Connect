@@ -2401,6 +2401,103 @@
     overflow-x: auto;
   }
 
+  /* Mobile card list — mirrors MembersTable `.members-table-mobile-list` / card pattern. */
+  .my-tasks-mobile-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    margin: 0;
+    padding: 0.75rem;
+    list-style: none;
+  }
+
+  .my-tasks-card {
+    padding: 0.95rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+    border-radius: 0.75rem;
+    background: #fff;
+    cursor: pointer;
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease,
+      box-shadow 120ms ease;
+  }
+
+  .my-tasks-card:hover {
+    background-color: color-mix(in srgb, var(--color-surface-muted) 35%, white);
+    border-color: color-mix(in srgb, var(--color-border) 75%, transparent);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+  }
+
+  .my-tasks-card:focus {
+    outline: none;
+  }
+
+  .my-tasks-card:focus-visible {
+    border-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 28%, transparent);
+  }
+
+  .my-tasks-card-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+  }
+
+  .my-tasks-card-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .my-tasks-card-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem 0.85rem;
+    margin: 0.9rem 0 0;
+  }
+
+  .my-tasks-card-meta dt {
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-label, #9ca3af);
+  }
+
+  .my-tasks-card-meta dd {
+    margin: 0.2rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--color-foreground);
+    overflow-wrap: anywhere;
+  }
+
+  .my-tasks-card-actions {
+    display: flex;
+    justify-content: stretch;
+    margin-top: 0.85rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid color-mix(in srgb, var(--color-border) 35%, transparent);
+  }
+
+  .my-tasks-card-actions .my-tasks-status-seg {
+    display: flex;
+    width: 100%;
+  }
+
+  .my-tasks-card-actions .my-tasks-status-seg button {
+    flex: 1;
+    min-width: 0;
+    padding-inline: 0.35rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .my-tasks-card {
+      transition: none;
+    }
+  }
+
   .my-tasks-table {
     width: 100%;
     border-collapse: collapse;

@@ -11,6 +11,7 @@ import { KanbanTaskDetailPanel } from "../components/kanban/KanbanTaskDetailPane
 import { AppIcon } from "../components/ui/AppIcon";
 import { Card } from "../components/ui/Card";
 import { useAuth } from "../context/useAuth";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 import { isToday } from "../lib/calendar";
 import {
   fetchMyEventTasks,
@@ -246,8 +247,241 @@ function StatusSegment({
   );
 }
 
+const STATUS_LABEL: Record<KanbanColumnId, string> = {
+  todo: "To do",
+  in_progress: "In progress",
+  done: "Done",
+};
+
+type MyTasksTaskListProps = {
+  tasks: KanbanTask[];
+  isMobile: boolean;
+  completedView?: boolean;
+  movingTaskId: number | null;
+  onOpenTask: (taskId: number) => void;
+  onCompleteTask: (task: KanbanTask) => void;
+  onMoveTask: (taskId: number, column: KanbanColumnId) => void;
+};
+
+/**
+ * Desktop: 7-column table. Mobile (< md): MembersTable-style stacked cards.
+ */
+function MyTasksTaskList({
+  tasks,
+  isMobile,
+  completedView = false,
+  movingTaskId,
+  onOpenTask,
+  onCompleteTask,
+  onMoveTask,
+}: MyTasksTaskListProps) {
+  if (isMobile) {
+    return (
+      <ul className="my-tasks-mobile-list">
+        {tasks.map((task) => {
+          const title = getTaskDisplayName(task);
+          const urgency = getTaskUrgency(task);
+          const column = getKanbanColumn(task);
+          const busy = movingTaskId === task.id;
+          const assignee =
+            task.assignee_name?.trim() ||
+            (task.assignee_id != null ? `Member #${task.assignee_id}` : "—");
+
+          return (
+            <li key={task.id}>
+              <article
+                className="my-tasks-card"
+                tabIndex={0}
+                aria-label={`Open ${title}`}
+                onClick={() => onOpenTask(task.id)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onOpenTask(task.id);
+                  }
+                }}
+              >
+                <div className="my-tasks-card-top">
+                  <TaskCheck
+                    done={column === "done"}
+                    busy={busy}
+                    label={title}
+                    onComplete={
+                      completedView
+                        ? undefined
+                        : () => {
+                            onCompleteTask(task);
+                          }
+                    }
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="my-tasks-card-heading">
+                      <div className="min-w-0">
+                        <p className="my-tasks-task-name">{title}</p>
+                        <p className="my-tasks-task-project">{task.eventName}</p>
+                      </div>
+                      <PriorityCell urgency={urgency} />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="my-tasks-row-menu"
+                    aria-label={`Open ${title}`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onOpenTask(task.id);
+                    }}
+                  >
+                    <AppIcon
+                      icon={MoreHorizontal}
+                      size="sm"
+                      className="text-current"
+                    />
+                  </button>
+                </div>
+
+                <dl className="my-tasks-card-meta">
+                  <div>
+                    <dt>Status</dt>
+                    <dd>{STATUS_LABEL[column]}</dd>
+                  </div>
+                  <div>
+                    <dt>Assignee</dt>
+                    <dd>{assignee}</dd>
+                  </div>
+                  <div>
+                    <dt>Due</dt>
+                    <dd>
+                      <span className="my-tasks-due">
+                        {formatDueDate(task.due_date)}
+                      </span>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Event</dt>
+                    <dd>{task.eventName || "—"}</dd>
+                  </div>
+                </dl>
+
+                <div
+                  className="my-tasks-card-actions"
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => event.stopPropagation()}
+                >
+                  <StatusSegment
+                    task={task}
+                    busy={busy}
+                    onSetColumn={(next) => {
+                      onMoveTask(task.id, next);
+                    }}
+                  />
+                </div>
+              </article>
+            </li>
+          );
+        })}
+      </ul>
+    );
+  }
+
+  return (
+    <div className="my-tasks-table-wrap">
+      <table className="my-tasks-table">
+        <thead>
+          <tr>
+            <th scope="col">
+              <span className="sr-only">Complete</span>
+            </th>
+            <th scope="col">Task</th>
+            <th scope="col">Event</th>
+            <th scope="col">Priority</th>
+            <th scope="col">Due date</th>
+            <th scope="col">Status</th>
+            <th scope="col">
+              <span className="sr-only">
+                {completedView ? "Actions" : "Open"}
+              </span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {tasks.map((task) => {
+            const title = getTaskDisplayName(task);
+            const urgency = getTaskUrgency(task);
+            const column = getKanbanColumn(task);
+            const busy = movingTaskId === task.id;
+            return (
+              <tr key={task.id}>
+                <td>
+                  <TaskCheck
+                    done={column === "done"}
+                    busy={busy}
+                    label={title}
+                    onComplete={
+                      completedView
+                        ? undefined
+                        : () => {
+                            onCompleteTask(task);
+                          }
+                    }
+                  />
+                </td>
+                <td>
+                  <div className="my-tasks-table-task">
+                    <button type="button" onClick={() => onOpenTask(task.id)}>
+                      <span className="my-tasks-task-name">{title}</span>
+                      {!completedView && !isSimpleKanbanTask(task) ? (
+                        <span className="my-tasks-task-project">Checklist</span>
+                      ) : null}
+                    </button>
+                  </div>
+                </td>
+                <td>
+                  <span className="text-label">{task.eventName}</span>
+                </td>
+                <td>
+                  <PriorityCell urgency={urgency} />
+                </td>
+                <td>
+                  <span className="my-tasks-due">
+                    {formatDueDate(task.due_date)}
+                  </span>
+                </td>
+                <td>
+                  <StatusSegment
+                    task={task}
+                    busy={busy}
+                    onSetColumn={(next) => {
+                      onMoveTask(task.id, next);
+                    }}
+                  />
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    className="my-tasks-row-menu"
+                    aria-label={`Open ${title}`}
+                    onClick={() => onOpenTask(task.id)}
+                  >
+                    <AppIcon
+                      icon={MoreHorizontal}
+                      size="sm"
+                      className="text-current"
+                    />
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function BoardTasksPage() {
   const { member } = useAuth();
+  const isMobile = !useMediaQuery("(min-width: 768px)");
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
   const [movingTaskId, setMovingTaskId] = useState<number | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
@@ -730,98 +964,18 @@ export function BoardTasksPage() {
               </div>
             ) : (
               <>
-                <div className="my-tasks-table-wrap">
-                  <table className="my-tasks-table">
-                    <thead>
-                      <tr>
-                        <th scope="col">
-                          <span className="sr-only">Complete</span>
-                        </th>
-                        <th scope="col">Task</th>
-                        <th scope="col">Event</th>
-                        <th scope="col">Priority</th>
-                        <th scope="col">Due date</th>
-                        <th scope="col">Status</th>
-                        <th scope="col">
-                          <span className="sr-only">Open</span>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {visibleTasks.map((task) => {
-                        const title = getTaskDisplayName(task);
-                        const urgency = getTaskUrgency(task);
-                        const column = getKanbanColumn(task);
-                        const busy = movingTaskId === task.id;
-                        return (
-                          <tr key={task.id}>
-                            <td>
-                              <TaskCheck
-                                done={column === "done"}
-                                busy={busy}
-                                label={title}
-                                onComplete={() => {
-                                  void handleCompleteTask(task);
-                                }}
-                              />
-                            </td>
-                            <td>
-                              <div className="my-tasks-table-task">
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedTaskId(task.id)}
-                                >
-                                  <span className="my-tasks-task-name">
-                                    {title}
-                                  </span>
-                                  {!isSimpleKanbanTask(task) ? (
-                                    <span className="my-tasks-task-project">
-                                      Checklist
-                                    </span>
-                                  ) : null}
-                                </button>
-                              </div>
-                            </td>
-                            <td>
-                              <span className="text-label">{task.eventName}</span>
-                            </td>
-                            <td>
-                              <PriorityCell urgency={urgency} />
-                            </td>
-                            <td>
-                              <span className="my-tasks-due">
-                                {formatDueDate(task.due_date)}
-                              </span>
-                            </td>
-                            <td>
-                              <StatusSegment
-                                task={task}
-                                busy={busy}
-                                onSetColumn={(next) => {
-                                  void handleMoveTask(task.id, next);
-                                }}
-                              />
-                            </td>
-                            <td>
-                              <button
-                                type="button"
-                                className="my-tasks-row-menu"
-                                aria-label={`Open ${title}`}
-                                onClick={() => setSelectedTaskId(task.id)}
-                              >
-                                <AppIcon
-                                  icon={MoreHorizontal}
-                                  size="sm"
-                                  className="text-current"
-                                />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                <MyTasksTaskList
+                  tasks={visibleTasks}
+                  isMobile={isMobile}
+                  movingTaskId={movingTaskId}
+                  onOpenTask={setSelectedTaskId}
+                  onCompleteTask={(task) => {
+                    void handleCompleteTask(task);
+                  }}
+                  onMoveTask={(taskId, column) => {
+                    void handleMoveTask(taskId, column);
+                  }}
+                />
 
                 <div className="my-tasks-footer">
                   <p className="my-tasks-footer-meta">
@@ -871,84 +1025,19 @@ export function BoardTasksPage() {
             </div>
           ) : (
             <>
-              <div className="my-tasks-table-wrap">
-                <table className="my-tasks-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">
-                        <span className="sr-only">Complete</span>
-                      </th>
-                      <th scope="col">Task</th>
-                      <th scope="col">Event</th>
-                      <th scope="col">Priority</th>
-                      <th scope="col">Due date</th>
-                      <th scope="col">Status</th>
-                      <th scope="col">
-                        <span className="sr-only">Actions</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visibleTasks.map((task) => {
-                      const title = getTaskDisplayName(task);
-                      const urgency = getTaskUrgency(task);
-                      return (
-                        <tr key={task.id}>
-                          <td>
-                            <TaskCheck done busy={false} label={title} />
-                          </td>
-                          <td>
-                            <div className="my-tasks-table-task">
-                              <button
-                                type="button"
-                                onClick={() => setSelectedTaskId(task.id)}
-                              >
-                                <span className="my-tasks-task-name">
-                                  {title}
-                                </span>
-                              </button>
-                            </div>
-                          </td>
-                          <td>
-                            <span className="text-label">{task.eventName}</span>
-                          </td>
-                          <td>
-                            <PriorityCell urgency={urgency} />
-                          </td>
-                          <td>
-                            <span className="my-tasks-due">
-                              {formatDueDate(task.due_date)}
-                            </span>
-                          </td>
-                          <td>
-                            <StatusSegment
-                              task={task}
-                              busy={movingTaskId === task.id}
-                              onSetColumn={(next) => {
-                                void handleMoveTask(task.id, next);
-                              }}
-                            />
-                          </td>
-                          <td>
-                            <button
-                              type="button"
-                              className="my-tasks-row-menu"
-                              aria-label={`Open ${title}`}
-                              onClick={() => setSelectedTaskId(task.id)}
-                            >
-                              <AppIcon
-                                icon={MoreHorizontal}
-                                size="sm"
-                                className="text-current"
-                              />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <MyTasksTaskList
+                tasks={visibleTasks}
+                isMobile={isMobile}
+                completedView
+                movingTaskId={movingTaskId}
+                onOpenTask={setSelectedTaskId}
+                onCompleteTask={(task) => {
+                  void handleCompleteTask(task);
+                }}
+                onMoveTask={(taskId, column) => {
+                  void handleMoveTask(taskId, column);
+                }}
+              />
               <div className="my-tasks-footer">
                 <p className="my-tasks-footer-meta">
                   Showing 1 to {Math.min(visibleCount, listSource.length)} of{" "}
