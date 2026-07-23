@@ -234,10 +234,150 @@
     gap: 0.85rem;
   }
 
-  .home-dashboard--v3 {
+  .home-dashboard--v3,
+  .home-dashboard--v4 {
     gap: 1rem;
     width: 100%;
     max-width: none;
+  }
+
+  .home-dashboard--v4 {
+    gap: 0.9rem;
+  }
+
+  /*
+   * Home — Apple typography only (scoped).
+   * SF Pro system stack + charcoal/muted text. Accent UI colors stay intact.
+   */
+  .home-dashboard--apple {
+    --apple-text: #1d1d1f;
+    --apple-secondary: #86868b;
+
+    --color-foreground: var(--apple-text);
+    --color-label: var(--apple-secondary);
+
+    --font-sans:
+      -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+      "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+    --home-text-caption: clamp(0.75rem, 0.72rem + 0.12vw, 0.8125rem);
+    --home-text-body: clamp(0.875rem, 0.84rem + 0.18vw, 1.0625rem);
+    --home-text-title: clamp(1.0625rem, 1rem + 0.3vw, 1.3125rem);
+    --home-text-headline: clamp(1.375rem, 1.15rem + 0.9vw, 2.25rem);
+    --home-leading: 1.47;
+
+    font-family: var(--font-sans);
+    font-size: var(--home-text-body);
+    line-height: var(--home-leading);
+    letter-spacing: -0.011em;
+    color: var(--apple-text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .home-dashboard--apple,
+  .home-dashboard--apple * {
+    font-family: inherit;
+  }
+
+  .home-dashboard--apple .home-panel-title {
+    font-size: var(--home-text-title);
+    font-weight: 600;
+    letter-spacing: -0.022em;
+    line-height: 1.2;
+    color: var(--apple-text);
+  }
+
+  .home-dashboard--apple .home-section-title,
+  .home-dashboard--apple .home-discussion-group-title,
+  .home-dashboard--apple .home-attention-strip-label {
+    font-size: var(--home-text-caption);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--apple-secondary);
+  }
+
+  .home-dashboard--apple .home-featured-title {
+    font-size: var(--home-text-headline);
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+  }
+
+  .home-dashboard--apple .home-task-due-text,
+  .home-dashboard--apple .home-activity-empty,
+  .home-dashboard--apple .home-your-tasks-summary-label,
+  .home-dashboard--apple .home-discussion-preview,
+  .home-dashboard--apple .home-discussion-time,
+  .home-dashboard--apple .home-quick-stats--kpi .home-quick-stat-label {
+    color: var(--apple-secondary);
+  }
+
+  .home-dashboard--apple .home-activity--minimal .home-activity-title,
+  .home-dashboard--apple .home-quick-stats--kpi .home-quick-stat-value {
+    color: var(--apple-text);
+    letter-spacing: -0.022em;
+  }
+
+  .home-dashboard--apple .home-activity--minimal .home-activity-time {
+    color: var(--apple-secondary);
+  }
+
+  .home-dashboard--apple .home-quick-stats--kpi .home-quick-stat-value {
+    font-size: clamp(1.35rem, 1.2rem + 0.6vw, 1.85rem);
+    font-weight: 600;
+  }
+
+  /* 3-column home grid: tasks | discussions | activity+actions */
+  .home-main-columns {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+    align-items: start;
+  }
+
+  @media (max-width: 767px) {
+    .home-main-columns {
+      display: flex;
+      flex-direction: column;
+      /* Base rule uses align-items:start (for desktop grid); that
+         shrinks flex children to content width and leaves a dead
+         right gutter on phones. */
+      align-items: stretch;
+    }
+
+    .home-main-columns > .home-col,
+    .home-main-columns .home-quick-actions-card,
+    .home-main-columns .home-activity,
+    .home-main-columns .home-task-card,
+    .home-main-columns .home-your-tasks-card {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      align-self: stretch;
+    }
+  }
+
+  .home-col--rail {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .home-col--rail .home-activity--minimal {
+    flex: 1 1 auto;
+    min-height: 22rem;
+  }
+
+  @media (min-width: 1024px) {
+    .home-main-columns--with-discussions {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 0.9fr);
+      gap: 1rem;
+    }
+
+    .home-main-columns:not(.home-main-columns--with-discussions) {
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.95fr);
+    }
   }
 
   @media (min-width: 1280px) {
@@ -265,9 +405,19 @@
     background: #05070c;
   }
 
+  .home-featured.home-featured--cinematic {
+    min-height: 14.5rem;
+    border-radius: 1.25rem;
+    box-shadow: 0 24px 48px -28px rgba(6, 28, 22, 0.75);
+  }
+
   @media (min-width: 768px) {
     .home-featured.home-featured--hero {
       min-height: 15.5rem;
+    }
+
+    .home-featured.home-featured--cinematic {
+      min-height: 17.5rem;
     }
   }
 
@@ -276,6 +426,480 @@
       grid-template-columns: none;
       min-height: 17rem;
     }
+
+    .home-featured.home-featured--cinematic {
+      min-height: 19rem;
+    }
+  }
+
+  .home-featured--cinematic .home-featured-hero-scrim {
+    background: linear-gradient(
+      115deg,
+      rgba(6, 28, 22, 0.94) 0%,
+      rgba(8, 36, 28, 0.82) 38%,
+      rgba(10, 42, 34, 0.45) 68%,
+      rgba(8, 30, 24, 0.55) 100%
+    );
+  }
+
+  .home-featured-cinematic-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+  }
+
+  .home-featured-date-block {
+    display: flex;
+    width: 4.25rem;
+    flex-shrink: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.1rem;
+    border-radius: 0.85rem;
+    background: rgba(248, 250, 252, 0.96);
+    padding: 0.65rem 0.4rem;
+    color: #0f172a;
+    box-shadow: 0 10px 24px -18px rgba(15, 23, 42, 0.55);
+  }
+
+  .home-featured-date-month {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: #64748b;
+  }
+
+  .home-featured-date-day {
+    font-size: 1.65rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.04em;
+  }
+
+  .home-featured-date-weekday {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #64748b;
+  }
+
+  .home-featured-cinematic-main {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .home-featured-stats-bar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem 1rem;
+    margin-top: auto;
+    border-radius: 0.95rem;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 0.85rem 0.95rem;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+
+  .home-featured-stats-bar .home-featured-actions {
+    grid-column: 1 / -1;
+  }
+
+  @media (min-width: 768px) {
+    .home-featured-stats-bar {
+      grid-template-columns: auto auto auto minmax(9rem, 1.2fr) auto;
+      align-items: center;
+    }
+
+    .home-featured-stats-bar .home-featured-actions {
+      grid-column: auto;
+      justify-content: flex-end;
+    }
+  }
+
+  .home-featured-stat-cell {
+    min-width: 3.5rem;
+  }
+
+  .home-featured-stat-cell--health {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.2rem;
+  }
+
+  .home-featured-stat-cell--budget {
+    min-width: 0;
+  }
+
+  .home-featured-budget-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .home-featured-rsvp-ring {
+    position: relative;
+    display: inline-flex;
+    height: 2.75rem;
+    width: 2.75rem;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .home-featured-rsvp-ring-value {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: #fff;
+  }
+
+  .home-featured--cinematic .home-featured-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-top: 0;
+    padding-top: 0;
+    grid-template-columns: none;
+  }
+
+  .home-featured--cinematic .home-featured-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.55rem 0.9rem;
+    font-size: 0.8125rem;
+    border-radius: 0.7rem;
+  }
+
+  .home-featured--cinematic .home-featured-btn--primary {
+    background: #0f766e;
+    color: #fff;
+    box-shadow: 0 10px 20px -14px rgba(15, 118, 110, 0.9);
+  }
+
+  .home-featured--cinematic .home-featured-btn--primary:hover {
+    background: #0d9488;
+  }
+
+  .home-featured--cinematic .home-featured-btn--ghost {
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    background: transparent;
+    color: #fff;
+  }
+
+  .home-featured--cinematic .home-featured-btn--ghost:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  /* Needs your attention strip */
+  .home-attention-strip {
+    border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+    border-radius: 0.95rem;
+    background: color-mix(in srgb, white 92%, var(--color-surface-muted));
+    padding: 0.65rem 0.85rem;
+  }
+
+  .home-attention-strip-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.55rem 0.75rem;
+  }
+
+  .home-attention-strip-label {
+    margin: 0;
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-label);
+  }
+
+  .home-attention-chips {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .home-attention-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 999px;
+    padding: 0.28rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 120ms ease, transform 120ms ease;
+  }
+
+  .home-attention-chip:hover {
+    transform: translateY(-1px);
+  }
+
+  .home-attention-chip-count {
+    display: inline-flex;
+    min-width: 1.15rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.08);
+    padding: 0.05rem 0.35rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .home-attention-chip--overdue {
+    background: color-mix(in srgb, var(--color-overdue) 12%, white);
+    color: var(--color-overdue);
+  }
+
+  .home-attention-chip--amber {
+    background: #fff7ed;
+    color: #c2410c;
+  }
+
+  .home-attention-chip--sky {
+    background: #eff6ff;
+    color: #1d4ed8;
+  }
+
+  .home-attention-chip--violet {
+    background: #f5f3ff;
+    color: #6d28d9;
+  }
+
+  .home-attention-view-all {
+    margin-left: auto;
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    text-decoration: none;
+  }
+
+  .home-attention-view-all:hover {
+    color: var(--color-primary-hover);
+  }
+
+  /* My tasks tabs */
+  .home-task-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin: 0.7rem 0 0.15rem;
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, var(--color-surface-muted) 85%, white);
+    padding: 0.2rem;
+  }
+
+  .home-task-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: 0;
+    border-radius: 0.55rem;
+    background: transparent;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-label);
+    transition:
+      color 120ms ease,
+      background-color 120ms ease,
+      box-shadow 120ms ease;
+  }
+
+  .home-task-tab:hover {
+    color: var(--color-foreground);
+  }
+
+  .home-task-tab.is-active {
+    background: #fff;
+    color: var(--color-foreground);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  }
+
+  .home-task-tab.is-overdue:not(.is-active) {
+    color: var(--color-overdue);
+  }
+
+  .home-task-tab-count {
+    display: inline-flex;
+    min-width: 1.1rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-border) 55%, white);
+    padding: 0.05rem 0.3rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .home-task-tab.is-active .home-task-tab-count {
+    background: var(--badge-teal-bg);
+    color: var(--color-primary);
+  }
+
+  .home-your-tasks-kicker {
+    margin: 0 0 0.1rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-label);
+  }
+
+  .home-your-tasks-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+    margin: 0.7rem 0 0.15rem;
+  }
+
+  .home-your-tasks-summary-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    border-radius: 0.75rem;
+    border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
+    background: #fff;
+    padding: 0.55rem 0.65rem;
+  }
+
+  .home-your-tasks-summary-value {
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-foreground);
+  }
+
+  .home-your-tasks-summary-label {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--color-label);
+  }
+
+  .home-your-tasks-summary-box.is-overdue {
+    border-color: transparent;
+    background: color-mix(in srgb, var(--color-overdue) 10%, white);
+  }
+
+  .home-your-tasks-summary-box.is-overdue .home-your-tasks-summary-value {
+    color: var(--color-overdue);
+  }
+
+  .home-your-tasks-summary-box.is-progress {
+    background: #eff6ff;
+    border-color: color-mix(in srgb, #1d4ed8 14%, var(--color-border));
+  }
+
+  .home-your-tasks-summary-box.is-progress .home-your-tasks-summary-value {
+    color: #1d4ed8;
+  }
+
+  /* Quick actions — single horizontal row */
+  .home-quick-actions-card .home-task-header {
+    margin-bottom: 0;
+  }
+
+  .home-quick-actions-tiles {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.4rem;
+    margin: 0.65rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .home-quick-action-tile {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    border-radius: 0.75rem;
+    padding: 0.65rem 0.35rem;
+    text-align: center;
+    text-decoration: none;
+    transition:
+      transform 140ms ease,
+      box-shadow 140ms ease,
+      filter 140ms ease;
+  }
+
+  .home-quick-action-tile:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px -18px rgba(15, 23, 42, 0.4);
+    filter: saturate(1.04);
+  }
+
+  .home-quick-action-tile-icon {
+    display: inline-flex;
+    height: 1.85rem;
+    width: 1.85rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.55rem;
+    background: rgba(255, 255, 255, 0.55);
+  }
+
+  .home-quick-action-tile-label {
+    font-size: 0.6875rem;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    color: inherit;
+  }
+
+  .home-quick-action-tile--teal {
+    background: linear-gradient(160deg, #ccfbf1 0%, #99f6e4 100%);
+    color: #0f766e;
+  }
+
+  .home-quick-action-tile--cyan {
+    background: linear-gradient(160deg, #cffafe 0%, #a5f3fc 100%);
+    color: #0e7490;
+  }
+
+  .home-quick-action-tile--amber {
+    background: linear-gradient(160deg, #ffedd5 0%, #fed7aa 100%);
+    color: #c2410c;
+  }
+
+  .home-quick-action-tile--violet {
+    background: linear-gradient(160deg, #ede9fe 0%, #ddd6fe 100%);
+    color: #6d28d9;
+  }
+
+  .home-attention-chip.is-muted {
+    opacity: 0.72;
+  }
+
+  .home-attention-chip-label-short {
+    display: none;
   }
 
   .home-featured.home-featured--hero .home-featured-photo {
@@ -370,6 +994,306 @@
 
     .home-welcome-title {
       font-size: 1.125rem !important;
+    }
+
+    /* ——— Home phone layout ——— */
+    .home-dashboard--v4 {
+      gap: 0.6rem;
+      padding-bottom: 0.25rem;
+    }
+
+    .home-main-columns {
+      gap: 0.6rem;
+      align-items: stretch;
+    }
+
+    /* Phone stack: Discussions → Quick actions → Tasks → Activity */
+    .home-col--rail {
+      display: contents;
+    }
+
+    .home-tasks-stack,
+    .home-col--discussions > * {
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .home-col--discussions {
+      order: 1;
+    }
+
+    .home-col--rail .home-quick-actions-card {
+      order: 2;
+    }
+
+    .home-col--tasks {
+      order: 3;
+    }
+
+    .home-col--rail .home-activity {
+      order: 4;
+    }
+
+    .home-col--rail .home-activity--minimal {
+      min-height: 0;
+    }
+
+    .home-featured.home-featured--cinematic {
+      min-height: 0;
+      border-radius: 0.95rem;
+      box-shadow: 0 14px 28px -22px rgba(6, 28, 22, 0.65);
+    }
+
+    .home-featured-hero-content {
+      gap: 0.5rem;
+      padding: 0.7rem 0.75rem 0.75rem;
+    }
+
+    .home-featured-cinematic-top {
+      gap: 0.55rem;
+    }
+
+    .home-featured-date-block {
+      width: 3.1rem;
+      border-radius: 0.65rem;
+      padding: 0.4rem 0.2rem;
+    }
+
+    .home-featured-date-day {
+      font-size: 1.25rem;
+    }
+
+    .home-featured-date-month,
+    .home-featured-date-weekday {
+      font-size: 0.5625rem;
+    }
+
+    .home-featured-info-top {
+      gap: 0.35rem;
+    }
+
+    .home-featured.home-featured--hero .home-featured-title {
+      font-size: 1.2rem;
+      line-height: 1.15;
+    }
+
+    .home-featured--cinematic .home-featured-nav-btn {
+      display: none;
+    }
+
+    .home-featured-meta-list {
+      gap: 0.15rem;
+      font-size: 0.75rem;
+    }
+
+    .home-featured-stats-bar {
+      grid-template-columns: 1fr 1fr;
+      gap: 0.35rem 0.65rem;
+      padding: 0.55rem 0.65rem;
+      border-radius: 0.7rem;
+    }
+
+    .home-featured-stat-cell--health {
+      display: none;
+    }
+
+    .home-featured-rsvp-value {
+      font-size: 1rem;
+    }
+
+    .home-featured-stat-cell--budget {
+      grid-column: 1 / -1;
+    }
+
+    .home-featured-budget-head {
+      margin-bottom: 0.25rem;
+    }
+
+    .home-featured-stats-bar .home-featured-actions {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.4rem;
+    }
+
+    .home-featured--cinematic .home-featured-btn {
+      min-height: 2.5rem;
+      justify-content: center;
+      padding: 0.55rem 0.65rem;
+      font-size: 0.8125rem;
+    }
+
+    /* Attention: full 2×2 grid, no clipped chips */
+    .home-attention-strip {
+      border-radius: 0.85rem;
+      padding: 0.55rem 0.65rem 0.65rem;
+    }
+
+    .home-attention-strip-inner {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      grid-template-areas:
+        "label view"
+        "chips chips";
+      align-items: center;
+      gap: 0.45rem 0.5rem;
+    }
+
+    .home-attention-strip-label {
+      grid-area: label;
+      font-size: 0.6875rem;
+    }
+
+    .home-attention-view-all {
+      grid-area: view;
+      margin-left: 0;
+      min-height: 1.75rem;
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.75rem;
+    }
+
+    .home-attention-chips {
+      grid-area: chips;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.4rem;
+      margin: 0;
+      padding: 0;
+      overflow: visible;
+    }
+
+    .home-attention-chip {
+      width: 100%;
+      min-height: 2.5rem;
+      justify-content: flex-start;
+      padding: 0.45rem 0.55rem;
+      font-size: 0.75rem;
+      border-radius: 0.7rem;
+    }
+
+    .home-attention-chip-label {
+      display: none;
+    }
+
+    .home-attention-chip-label-short {
+      display: inline;
+    }
+
+    /* Quick actions: always one tight row of 4 */
+    .home-quick-actions-card.ds-card.home-surface-quiet {
+      padding: 0.7rem 0.75rem;
+    }
+
+    .home-quick-actions-tiles {
+      display: grid !important;
+      grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+      gap: 0.35rem;
+      margin-top: 0.45rem;
+      overflow: visible;
+    }
+
+    .home-quick-actions-tiles > li {
+      min-width: 0;
+      flex: unset;
+    }
+
+    .home-quick-action-tile {
+      min-height: 3.65rem;
+      gap: 0.25rem;
+      padding: 0.5rem 0.25rem;
+      border-radius: 0.7rem;
+    }
+
+    .home-quick-action-tile-icon {
+      height: 1.6rem;
+      width: 1.6rem;
+      border-radius: 0.45rem;
+    }
+
+    .home-quick-action-tile-label {
+      font-size: 0.625rem;
+    }
+
+    .home-task-tabs {
+      flex-wrap: nowrap;
+      gap: 0.2rem;
+      margin: 0.5rem 0 0.1rem;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    .home-task-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .home-task-tab {
+      flex: 1 1 0;
+      min-height: 2.25rem;
+      justify-content: center;
+      padding: 0.3rem 0.4rem;
+      font-size: 0.6875rem;
+    }
+
+    .home-task-empty {
+      padding: 0.55rem 0.15rem;
+    }
+
+    .home-task-empty-title {
+      font-size: 0.875rem;
+    }
+
+    .home-task-empty-copy {
+      font-size: 0.75rem;
+    }
+
+    .home-task-footer {
+      padding-top: 0.35rem;
+    }
+
+    .home-your-tasks-summary {
+      margin: 0.5rem 0 0.1rem;
+      gap: 0.35rem;
+    }
+
+    .home-your-tasks-summary-box {
+      padding: 0.45rem 0.55rem;
+    }
+
+    .home-your-tasks-summary-value {
+      font-size: 1rem;
+    }
+
+    .home-activity-row {
+      min-height: 2.5rem;
+      align-items: center;
+      padding: 0.5rem 0.05rem;
+    }
+
+    .home-quick-stats--strip .home-quick-stats-grid,
+    .home-quick-stats--kpi .home-quick-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.45rem;
+      overflow: visible;
+    }
+
+    .home-quick-stats--strip .home-quick-stat,
+    .home-quick-stats--kpi .home-quick-stat {
+      flex: unset;
+      min-width: 0;
+      min-height: 4.5rem;
+      padding: 0.7rem 0.75rem;
+    }
+
+    .home-quick-stats--kpi .home-quick-stat:last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+    }
+
+    .ds-card.home-surface-quiet {
+      border-radius: 0.9rem;
+      padding: 0.75rem 0.8rem;
     }
   }
 
@@ -604,26 +1528,62 @@
     color: #475569;
   }
 
-  .home-activity-rail {
+  /* Minimal vertical activity feed */
+  .home-activity--minimal {
     display: flex;
-    gap: 0.65rem;
-    margin: 0.75rem 0 0;
-    padding: 0 0 0.15rem;
+    flex-direction: column;
+  }
+
+  .home-activity-feed {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    margin: 0.55rem 0 0;
+    padding: 0;
     list-style: none;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
   }
 
-  .home-activity-rail-item {
-    flex: 0 0 min(16rem, 78vw);
+  .home-activity-feed > li + li {
+    border-top: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
   }
 
-  .home-activity-rail .home-activity-item {
-    height: 100%;
-    border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
-    border-radius: 0.85rem;
-    background: #fff;
-    padding: 0.7rem 0.75rem;
+  .home-activity-row {
+    display: grid;
+    grid-template-columns: 1.1rem minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 0.55rem;
+    padding: 0.55rem 0.1rem;
+    text-decoration: none;
+    color: inherit;
+    transition: background-color 120ms ease;
+  }
+
+  a.home-activity-row:hover {
+    background: color-mix(in srgb, var(--color-surface-muted) 70%, transparent);
+  }
+
+  .home-activity--minimal .home-activity-icon {
+    margin-top: 0.1rem;
+    height: auto;
+    width: auto;
+    border-radius: 0;
+    background: transparent;
+    color: #94a3b8;
+  }
+
+  .home-activity--minimal .home-activity-title {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.35;
+    color: #334155;
+  }
+
+  .home-activity--minimal .home-activity-time {
+    margin-top: 0.1rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    white-space: nowrap;
+    color: #94a3b8;
   }
 
   .home-dashboard::before {
@@ -1463,6 +2423,10 @@
     .home-quick-stats--strip .home-quick-stats-grid {
       grid-template-columns: repeat(4, minmax(0, 1fr));
     }
+
+    .home-quick-stats--kpi .home-quick-stats-grid {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
   }
 
   .home-quick-stats--strip .home-quick-stat {
@@ -1471,6 +2435,11 @@
     padding: 0.8rem 0.85rem;
     background: #fff;
     box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
+  }
+
+  .home-quick-stat--sky .home-quick-stat-icon {
+    background: #eff6ff;
+    color: #2563eb;
   }
 
   .home-quick-stat-value.is-negative {

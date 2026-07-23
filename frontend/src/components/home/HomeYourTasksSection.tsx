@@ -21,17 +21,14 @@ function formatTaskDate(isoDate: string | null | undefined): string {
 
 function YourTaskRow({ task }: { task: EventTaskResponse }) {
   const badge = task.is_overdue
-    ? { label: "Action", tone: "action" as const }
+    ? { label: "Overdue", tone: "action" as const }
     : task.status === "in_progress"
       ? { label: "Review", tone: "review" as const }
-      : { label: "Action", tone: "action" as const };
+      : { label: "Open", tone: "action" as const };
 
   return (
     <li>
-      <Link
-        to="/events/oversight"
-        className="home-your-task-row"
-      >
+      <Link to="/events/oversight" className="home-your-task-row">
         <span className="home-your-task-title">{getTaskDisplayName(task)}</span>
         <span className={`home-your-task-badge is-${badge.tone}`}>
           {badge.label}
@@ -87,6 +84,23 @@ export function HomeYourTasksSection() {
     };
   }, []);
 
+  const openCount = tasks.length;
+  const dueThisWeekCount = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(end.getDate() + (7 - end.getDay()));
+    end.setHours(23, 59, 59, 999);
+    return tasks.filter((task) => {
+      if (!task.due_date) {
+        return false;
+      }
+      const due = new Date(task.due_date);
+      return due >= start && due <= end;
+    }).length;
+  }, [tasks]);
+
   const preview = useMemo(() => {
     return [...tasks]
       .sort((a, b) => {
@@ -105,9 +119,24 @@ export function HomeYourTasksSection() {
       aria-label="Task Oversight"
     >
       <div className="home-task-header">
-        <h2 className="home-panel-title">Task Oversight</h2>
+        <h2 className="home-panel-title">Your tasks</h2>
         <ArrowLink to="/events/oversight">View all</ArrowLink>
       </div>
+
+      {!isLoading ? (
+        <div className="home-your-tasks-summary" aria-label="Oversight summary">
+          <div className="home-your-tasks-summary-box is-open">
+            <span className="home-your-tasks-summary-value">{openCount}</span>
+            <span className="home-your-tasks-summary-label">Assigned to you</span>
+          </div>
+          <div className="home-your-tasks-summary-box is-progress">
+            <span className="home-your-tasks-summary-value">
+              {dueThisWeekCount}
+            </span>
+            <span className="home-your-tasks-summary-label">Due this week</span>
+          </div>
+        </div>
+      ) : null}
 
       <div className="home-task-body">
         {isLoading ? (

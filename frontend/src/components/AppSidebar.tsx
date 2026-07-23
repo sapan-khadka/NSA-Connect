@@ -3,18 +3,20 @@ import {
   ChevronDown,
   ChevronRight,
   ClipboardList,
+  FileText,
   Home,
-  LayoutDashboard,
   LogOut,
   Megaphone,
+  MessageSquare,
   Settings,
+  Shield,
   Sparkles,
   Users,
   Wallet,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 
 import {
   NavCountBadge,
@@ -27,6 +29,7 @@ import {
   canBrowseMemberDirectory,
   canViewMemberDirectory,
   formatRoleLabel,
+  isRoleAtLeast,
 } from "../lib/roles";
 import { AppIcon } from "./ui/AppIcon";
 import { AppLogo } from "./AppLogo";
@@ -235,35 +238,41 @@ function SidebarNavLink({
   );
 }
 
+function SidebarNavSection({
+  label,
+  items,
+  onNavigate,
+}: {
+  label: string;
+  items: SidebarLink[];
+  onNavigate?: () => void;
+}) {
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <div>
+      <SidebarSectionLabel>{label}</SidebarSectionLabel>
+      <ul className="space-y-0.5">
+        {items.map((item) => (
+          <li key={`${item.to}-${item.label}`}>
+            <SidebarNavLink item={item} onNavigate={onNavigate} />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const { member } = useAuth();
   const logout = useLogout();
-  const location = useLocation();
   const { summary } = useNotificationSummary();
   const showMembers = member ? canBrowseMemberDirectory(member.role) : false;
   const showFinance = member ? canAccessFinance(member.role) : false;
+  const showBoardWork = member ? isRoleAtLeast(member.role, "board") : false;
   const showAdmin = member ? canViewMemberDirectory(member.role) : false;
-
-  const adminItems = [
-    {
-      label: "Discussions",
-      to: "/discussions",
-      badgeCount: summary.discussions_unread,
-    },
-    { label: "Meeting minutes", to: "/board/meeting-minutes" },
-    { label: "Announcement email", to: "/board/announcement-email" },
-  ];
-
-  const adminActive = adminItems.some((item) =>
-    location.pathname.startsWith(item.to.split("?")[0] ?? item.to),
-  );
-  const [adminOpen, setAdminOpen] = useState(adminActive);
-
-  useEffect(() => {
-    if (adminActive) {
-      setAdminOpen(true);
-    }
-  }, [adminActive]);
 
   const myTasksCount = summary.tasks_overdue + summary.tasks_due_today;
   const eventsBadge =
@@ -273,11 +282,6 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
   const mainItems: SidebarLink[] = [
     { to: "/", label: "Home", icon: Home, end: true },
-    {
-      to: "/announcements",
-      label: "Announcements",
-      icon: Megaphone,
-    },
     {
       to: "/events/calendar",
       label: "Events",
@@ -294,33 +298,73 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
           } satisfies SidebarLink,
         ]
       : []),
+    {
+      to: "/announcements",
+      label: "Announcements",
+      icon: Megaphone,
+    },
   ];
 
-  const toolItems: SidebarLink[] = [
+  const workItems: SidebarLink[] = [
     {
-      to: "/assistant",
-      label: "Assistant",
-      icon: Sparkles,
+      to: "/events/tasks",
+      label: "Tasks",
+      icon: ClipboardList,
+      badgeCount: myTasksCount,
     },
+    {
+      to: "/discussions",
+      label: "Discussions",
+      icon: MessageSquare,
+      badgeCount: summary.discussions_unread,
+    },
+    ...(showBoardWork
+      ? [
+          {
+            to: "/board/meeting-minutes",
+            label: "Documents",
+            icon: FileText,
+          } satisfies SidebarLink,
+        ]
+      : []),
+  ];
+
+  const financeItems: SidebarLink[] = [
+    ...(showFinance
+      ? [
+          {
+            to: "/finance",
+            label: "Treasury",
+            icon: Wallet,
+            badgeCount: summary.finance_pending,
+          } satisfies SidebarLink,
+        ]
+      : []),
     {
       to: "/reports",
       label: "Reports",
       icon: ClipboardList,
     },
-    ...(showFinance
+  ];
+
+  const adminItems: SidebarLink[] = [
+    {
+      to: "/profile",
+      label: "Settings",
+      icon: Settings,
+    },
+    ...(showAdmin
       ? [
           {
-            to: "/finance",
-            label: "Finance",
-            icon: Wallet,
-            badgeCount: summary.finance_pending,
+            to: "/members?tab=pending",
+            label: "Roles & Permissions",
+            icon: Shield,
           } satisfies SidebarLink,
         ]
       : []),
   ];
 
   const roleLabel = member ? formatRoleLabel(member.role) : "";
-  const adminIsActivePill = adminActive && !adminOpen;
 
   return (
     <aside className="ds-sidebar">
@@ -333,95 +377,26 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 py-3"
       >
         <div className="space-y-4">
-          <div>
-            <SidebarSectionLabel>Main</SidebarSectionLabel>
-            <ul className="space-y-0.5">
-              {mainItems.map((item) => (
-                <li key={item.to}>
-                  <SidebarNavLink item={item} onNavigate={onNavigate} />
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <SidebarSectionLabel>Tools</SidebarSectionLabel>
-            <ul className="space-y-0.5">
-              {toolItems.map((item) => (
-                <li key={item.to}>
-                  <SidebarNavLink item={item} onNavigate={onNavigate} />
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {showAdmin ? (
-            <div>
-              <SidebarSectionLabel>Admin</SidebarSectionLabel>
-              <ul className="space-y-0.5">
-                <li>
-                  <button
-                    type="button"
-                    aria-expanded={adminOpen}
-                    onClick={() => setAdminOpen((current) => !current)}
-                    className={[
-                      navItemBaseClass,
-                      adminIsActivePill ? navItemActiveClass : navItemIdleClass,
-                    ].join(" ")}
-                  >
-                    <AppIcon
-                      icon={LayoutDashboard}
-                      size="md"
-                      className={
-                        adminIsActivePill
-                          ? "text-primary"
-                          : "text-label transition-colors group-hover:text-foreground"
-                      }
-                    />
-                    <span className="min-w-0 flex-1 truncate text-left">
-                      Admin
-                    </span>
-                    <AppIcon
-                      icon={ChevronDown}
-                      size="xs"
-                      className={[
-                        "text-label transition-transform duration-200 ease-out",
-                        adminOpen ? "rotate-180" : "",
-                      ].join(" ")}
-                    />
-                  </button>
-                  {adminOpen ? (
-                    <ul className="relative mt-1 space-y-0.5 border-l border-gray-200 ml-4 pl-2">
-                      {adminItems.map((item) => (
-                        <li key={item.to}>
-                          <NavLink
-                            to={item.to}
-                            onClick={onNavigate}
-                            className={({ isActive }) =>
-                              [
-                                "flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] transition-colors duration-150",
-                                focusRingClass,
-                                isActive
-                                  ? "bg-badge-teal-bg font-semibold text-primary"
-                                  : "text-label hover:bg-surface-muted hover:text-foreground",
-                              ].join(" ")
-                            }
-                          >
-                            <span className="min-w-0 flex-1 truncate">
-                              {item.label}
-                            </span>
-                            {"badgeCount" in item ? (
-                              <NavCountBadge count={item.badgeCount ?? 0} />
-                            ) : null}
-                          </NavLink>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </li>
-              </ul>
-            </div>
-          ) : null}
+          <SidebarNavSection
+            label="Main"
+            items={mainItems}
+            onNavigate={onNavigate}
+          />
+          <SidebarNavSection
+            label="Work"
+            items={workItems}
+            onNavigate={onNavigate}
+          />
+          <SidebarNavSection
+            label="Finance"
+            items={financeItems}
+            onNavigate={onNavigate}
+          />
+          <SidebarNavSection
+            label="Admin"
+            items={adminItems}
+            onNavigate={onNavigate}
+          />
         </div>
       </nav>
 

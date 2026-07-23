@@ -1,4 +1,5 @@
 import { Check } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import type { MemberResponse } from "../../lib/auth-api";
@@ -6,8 +7,10 @@ import type { EventTaskResponse } from "../../lib/event-tasks-api";
 import type { EventResponse } from "../../lib/events-api";
 import { FINANCE_APPROVALS_PATH } from "../../lib/finance-routes";
 import {
+  filterTasksForTab,
   getTaskDisplayName,
   type MyTasksSummary,
+  type MyTasksTab,
 } from "../../lib/home-tasks";
 import { buildHomeUrgencyLine } from "../../lib/home-urgency";
 import {
@@ -135,6 +138,16 @@ function TaskRow({
   );
 }
 
+function pickDefaultTab(summary: MyTasksSummary): MyTasksTab {
+  if (summary.overdueCount > 0) {
+    return "overdue";
+  }
+  if (summary.dueTodayCount > 0) {
+    return "today";
+  }
+  return "upcoming";
+}
+
 export function HomeYourWorkSection({
   tasksSummary,
   tasksPath,
@@ -153,14 +166,22 @@ export function HomeYourWorkSection({
   onCompleteTask?: (taskId: number) => void;
   embedded?: boolean;
 }) {
-  const hasTasks = tasksSummary.openCount > 0;
-  const preview = tasksSummary.previewTasks.slice(0, 3);
-  const upcomingCount = Math.max(
-    0,
-    tasksSummary.openCount -
-      tasksSummary.overdueCount -
-      tasksSummary.dueTodayCount,
-  );
+  const [tab, setTab] = useState<MyTasksTab>("upcoming");
+  const [userPickedTab, setUserPickedTab] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading && !userPickedTab) {
+      setTab(pickDefaultTab(tasksSummary));
+    }
+  }, [isLoading, tasksSummary, userPickedTab]);
+
+  const tabTasks = filterTasksForTab(tasksSummary, tab).slice(0, 6);
+  const emptyCopy =
+    tab === "overdue"
+      ? "No overdue tasks."
+      : tab === "today"
+        ? "Nothing due today."
+        : "No upcoming tasks.";
 
   const body = (
     <div className="home-task-panel">
@@ -176,23 +197,51 @@ export function HomeYourWorkSection({
       )}
 
       {!isLoading ? (
-        <div className="home-task-metrics" aria-label="Task summary">
-          <div className="home-task-metric is-overdue">
-            <span className="home-task-metric-value">
-              {tasksSummary.overdueCount}
-            </span>
-            <span className="home-task-metric-label">Overdue</span>
-          </div>
-          <div className="home-task-metric is-today">
-            <span className="home-task-metric-value">
-              {tasksSummary.dueTodayCount}
-            </span>
-            <span className="home-task-metric-label">Due today</span>
-          </div>
-          <div className="home-task-metric is-upcoming">
-            <span className="home-task-metric-value">{upcomingCount}</span>
-            <span className="home-task-metric-label">Upcoming</span>
-          </div>
+        <div
+          className="home-task-tabs"
+          role="tablist"
+          aria-label="Task summary"
+        >
+          {(
+            [
+              {
+                id: "overdue" as const,
+                label: "Overdue",
+                count: tasksSummary.overdueCount,
+              },
+              {
+                id: "today" as const,
+                label: "Today",
+                count: tasksSummary.dueTodayCount,
+              },
+              {
+                id: "upcoming" as const,
+                label: "Upcoming",
+                count: tasksSummary.upcomingCount,
+              },
+            ] as const
+          ).map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === item.id}
+              className={[
+                "home-task-tab",
+                tab === item.id ? "is-active" : "",
+                item.id === "overdue" && item.count > 0 ? "is-overdue" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              onClick={() => {
+                setUserPickedTab(true);
+                setTab(item.id);
+              }}
+            >
+              <span>{item.label}</span>
+              <span className="home-task-tab-count">{item.count}</span>
+            </button>
+          ))}
         </div>
       ) : null}
 
@@ -215,9 +264,9 @@ export function HomeYourWorkSection({
           </p>
         ) : null}
 
-        {!isLoading && hasTasks ? (
+        {!isLoading && tabTasks.length > 0 ? (
           <ul className="home-task-list">
-            {preview.map((task) => (
+            {tabTasks.map((task) => (
               <TaskRow
                 key={task.id}
                 task={task}
@@ -228,10 +277,16 @@ export function HomeYourWorkSection({
           </ul>
         ) : null}
 
-        {!isLoading && !hasTasks ? (
+        {!isLoading && tabTasks.length === 0 ? (
           <div className="home-task-empty">
-            <p className="home-task-empty-title">You're clear</p>
-            <p className="home-task-empty-copy">No open tasks right now.</p>
+            <p className="home-task-empty-title">
+              {tasksSummary.openCount === 0 ? "You're clear" : "All clear"}
+            </p>
+            <p className="home-task-empty-copy">
+              {tasksSummary.openCount === 0
+                ? "No open tasks right now."
+                : emptyCopy}
+            </p>
           </div>
         ) : null}
       </div>

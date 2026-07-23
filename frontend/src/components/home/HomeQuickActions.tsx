@@ -1,7 +1,5 @@
 import {
   CalendarDays,
-  ClipboardList,
-  FileText,
   Megaphone,
   UserPlus,
   Wallet,
@@ -11,109 +9,103 @@ import { Link } from "react-router-dom";
 import type { MemberResponse } from "../../lib/auth-api";
 import { FINANCE_BOOKS_PATH } from "../../lib/finance-routes";
 import {
-  canManageEventTasks,
   canManageTreasury,
   canViewMemberDirectory,
   isRoleAtLeast,
 } from "../../lib/roles";
 import { AppIcon } from "../ui/AppIcon";
+import { HomeCard } from "../ui/HomeCard";
 
-type ActionTone = "teal" | "slate" | "amber" | "olive" | "sky" | "gray";
+type ActionTone = "teal" | "cyan" | "amber" | "violet";
 
 type QuickAction = {
   id: string;
   label: string;
+  ariaLabel: string;
   to: string;
-  icon: typeof ClipboardList;
+  icon: typeof CalendarDays;
   tone: ActionTone;
 };
 
 export function HomeQuickActions({ member }: { member: MemberResponse }) {
   const actions: QuickAction[] = [];
 
-  if (canManageEventTasks(member.role, member.position)) {
-    actions.push({
-      id: "add-task",
-      label: "Add Task",
-      to: "/events/tasks",
-      icon: ClipboardList,
-      tone: "teal",
-    });
-  } else {
-    actions.push({
-      id: "my-tasks",
-      label: "My Tasks",
-      to: "/events/tasks",
-      icon: ClipboardList,
-      tone: "teal",
-    });
-  }
-
   if (isRoleAtLeast(member.role, "board")) {
     actions.push({
       id: "create-event",
-      label: "Create Event",
+      label: "Event",
+      ariaLabel: "Create Event",
       to: "/events/calendar?create=1",
       icon: CalendarDays,
-      tone: "slate",
-    });
-    actions.push({
-      id: "announcement",
-      label: "Send Announcement",
-      to: "/announcements",
-      icon: Megaphone,
-      tone: "amber",
+      tone: "teal",
     });
   }
 
   if (canViewMemberDirectory(member.role)) {
     actions.push({
       id: "add-member",
-      label: "Add Member",
+      label: "Member",
+      ariaLabel: "Add Member",
       to: "/members?tab=pending",
       icon: UserPlus,
-      tone: "olive",
+      tone: "cyan",
+    });
+  }
+
+  if (isRoleAtLeast(member.role, "board")) {
+    actions.push({
+      id: "announcement",
+      label: "Announce",
+      ariaLabel: "Post Announcement",
+      to: "/announcements",
+      icon: Megaphone,
+      tone: "amber",
     });
   }
 
   if (canManageTreasury(member.role, member.position)) {
     actions.push({
       id: "add-expense",
-      label: "Add Expense",
+      label: "Expense",
+      ariaLabel: "Add Expense",
       to: FINANCE_BOOKS_PATH,
       icon: Wallet,
-      tone: "sky",
+      tone: "violet",
     });
   }
 
-  actions.push({
-    id: "reports",
-    label: "View Reports",
-    to: "/reports",
-    icon: FileText,
-    tone: "gray",
-  });
+  if (actions.length === 0) {
+    return null;
+  }
 
   return (
-    <section aria-label="Quick actions" className="home-quick-actions">
-      <ul className="home-quick-actions-list">
+    <HomeCard
+      padding="sm"
+      className="home-surface-quiet home-quick-actions-card"
+      aria-label="Quick actions"
+    >
+      <div className="home-task-header">
+        <h2 className="home-panel-title">Quick actions</h2>
+      </div>
+      <ul className="home-quick-actions-tiles">
         {actions.map((action) => (
           <li key={action.id}>
             <Link
               to={action.to}
+              aria-label={action.ariaLabel}
               className={[
-                "home-quick-action",
-                `home-quick-action--${action.tone}`,
+                "home-quick-action-tile",
+                `home-quick-action-tile--${action.tone}`,
               ].join(" ")}
             >
-              <span className="home-quick-action-icon" aria-hidden="true">
-                <AppIcon icon={action.icon} size="sm" className="text-current" />
+              <span className="home-quick-action-tile-icon" aria-hidden="true">
+                <AppIcon icon={action.icon} size="md" className="text-current" />
               </span>
-              <span className="home-quick-action-label">{action.label}</span>
+              <span className="home-quick-action-tile-label">{action.label}</span>
             </Link>
           </li>
         ))}
       </ul>
-    </section>
+    </HomeCard>
   );
 }

@@ -7,10 +7,7 @@ function homeStage(stage: number): CSSProperties {
 
 import { CoverBanner } from "../components/CoverBanner";
 import { HomeHeroBrand } from "../components/AppLogo";
-import {
-  buildWelcomeUrgency,
-  HomeWelcomeBanner,
-} from "../components/home/HomeMemberSections";
+import { HomeAttentionStrip } from "../components/home/HomeAttentionStrip";
 import { HomeFeaturedEvent } from "../components/home/HomeFeaturedEvent";
 import { HomeQuickActions } from "../components/home/HomeQuickActions";
 import { HomeQuickStats } from "../components/home/HomeQuickStats";
@@ -19,6 +16,7 @@ import { HomeWorkCenter } from "../components/home/HomeWorkCenter";
 import { HomeDiscussionSection } from "../components/HomeDiscussionSection";
 import { useAuth } from "../context/useAuth";
 import { useNotificationSummary } from "../context/NotificationSummaryProvider";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/api-error";
 import { fetchMyEventTasks, updateEventTask } from "../lib/event-tasks-api";
@@ -33,7 +31,6 @@ import {
   getMyTasksPath,
   summarizeMyTasks,
 } from "../lib/home-tasks";
-import { findNextNonMeetingEvent } from "../lib/calendar-upcoming";
 import {
   canViewTaskOversight,
   isRoleAtLeast,
@@ -71,7 +68,6 @@ function PublicHomeView() {
 
 type MemberHomeLayoutProps = {
   member: MemberResponse;
-  nextEvent: EventResponse | null;
   featuredEvents: EventResponse[];
   tasksSummary: ReturnType<typeof summarizeMyTasks>;
   isLoading: boolean;
@@ -88,7 +84,6 @@ type MemberHomeLayoutProps = {
 
 function MemberHomeLayout({
   member,
-  nextEvent,
   featuredEvents,
   tasksSummary,
   isLoading,
@@ -102,16 +97,13 @@ function MemberHomeLayout({
   taskCompleteError,
   onCompleteTask,
 }: MemberHomeLayoutProps) {
-  const calmLine = buildWelcomeUrgency({
-    tasksSummary,
-    pendingMemberApprovals,
-    financePendingCount,
-    nextEvent,
-    member,
-  });
+  const { summary } = useNotificationSummary();
+  const isMobile = useMediaQuery("(max-width: 767px)");
+  const discussionLimit = isMobile ? 4 : 8;
+  const activityLimit = isMobile ? 6 : 12;
 
   return (
-    <div className="home-dashboard home-dashboard--v3 flex w-full min-w-0 flex-col gap-4 pb-8">
+    <div className="home-dashboard home-dashboard--v4 home-dashboard--apple flex w-full min-w-0 flex-col pb-8">
       {loadError ? (
         <div role="alert" className="ds-alert-banner shrink-0">
           {loadError}
@@ -127,26 +119,20 @@ function MemberHomeLayout({
         />
       </div>
 
-      <div className="home-enter space-y-3" style={homeStage(1)}>
-        <HomeWelcomeBanner member={member} calmLine={calmLine} />
-        <HomeQuickActions member={member} />
+      <div className="home-enter" style={homeStage(1)}>
+        <HomeAttentionStrip member={member} summary={summary} />
       </div>
 
       <div
         className={[
-          "home-enter home-split",
-          showAssistant ? "home-split--with-discussions" : "",
+          "home-enter home-main-columns",
+          showAssistant ? "home-main-columns--with-discussions" : "",
         ]
           .filter(Boolean)
           .join(" ")}
         style={homeStage(2)}
       >
-        {showAssistant ? (
-          <div className="home-split-discussions min-h-0">
-            <HomeDiscussionSection previewLimit={8} />
-          </div>
-        ) : null}
-        <div className="home-split-tasks min-h-0">
+        <div className="home-col home-col--tasks min-h-0">
           <HomeWorkCenter
             member={member}
             showOversight={showTaskOversight}
@@ -158,13 +144,20 @@ function MemberHomeLayout({
             onCompleteTask={onCompleteTask}
           />
         </div>
+
+        {showAssistant ? (
+          <div className="home-col home-col--discussions min-h-0">
+            <HomeDiscussionSection previewLimit={discussionLimit} />
+          </div>
+        ) : null}
+
+        <div className="home-col home-col--rail min-h-0">
+          <HomeQuickActions member={member} />
+          <HomeRecentActivity memberId={member.id} limit={activityLimit} />
+        </div>
       </div>
 
       <div className="home-enter" style={homeStage(3)}>
-        <HomeRecentActivity memberId={member.id} />
-      </div>
-
-      <div className="home-enter" style={homeStage(4)}>
         <HomeQuickStats
           member={member}
           upcomingEventCount={featuredEvents.length}
@@ -193,10 +186,6 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
   const showTaskOversight = canViewTaskOversight(member.role, member.position);
   const tasksPath = getMyTasksPath(member.role);
   const tasksSummary = useMemo(() => summarizeMyTasks(myTasks), [myTasks]);
-  const nextEvent = useMemo(
-    () => findNextNonMeetingEvent(featuredEvents),
-    [featuredEvents],
-  );
   const financePendingCount = summary.finance_pending;
   const pendingMemberApprovals = summary.members_pending;
 
@@ -275,7 +264,6 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
   return (
     <MemberHomeLayout
       member={member}
-      nextEvent={nextEvent}
       featuredEvents={featuredEvents}
       tasksSummary={tasksSummary}
       isLoading={isLoading}

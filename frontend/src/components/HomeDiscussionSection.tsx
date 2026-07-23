@@ -242,7 +242,7 @@ export function HomeDiscussionSection({
       <DiscussionRoomList
         rooms={visible}
         onTogglePin={() => undefined}
-        showPinnedSection={false}
+        showPinnedSection
       />
     </DiscussionCardShell>
   );

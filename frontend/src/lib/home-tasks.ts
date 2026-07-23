@@ -74,15 +74,34 @@ export function applyOptimisticTaskComplete(
   return { ...task, is_complete: true, status: "done" };
 }
 
+export type MyTasksTab = "overdue" | "today" | "upcoming";
+
 export type MyTasksSummary = {
   openCount: number;
   overdueCount: number;
   dueTodayCount: number;
+  upcomingCount: number;
   nextTask: EventTaskResponse | null;
   overdueTask: EventTaskResponse | null;
   /** Open tasks: overdue first, then soonest due date. */
   previewTasks: EventTaskResponse[];
+  overdueTasks: EventTaskResponse[];
+  dueTodayTasks: EventTaskResponse[];
+  upcomingTasks: EventTaskResponse[];
 };
+
+export function filterTasksForTab(
+  summary: MyTasksSummary,
+  tab: MyTasksTab,
+): EventTaskResponse[] {
+  if (tab === "overdue") {
+    return summary.overdueTasks;
+  }
+  if (tab === "today") {
+    return summary.dueTodayTasks;
+  }
+  return summary.upcomingTasks;
+}
 
 const PREVIEW_LIMIT = 5;
 
@@ -105,10 +124,24 @@ export function sortOpenTasksForPreview(
     });
 }
 
-export function summarizeMyTasks(tasks: EventTaskResponse[]): MyTasksSummary {
+export function summarizeMyTasks(
+  tasks: EventTaskResponse[],
+  now = new Date(),
+): MyTasksSummary {
   const open = tasks.filter((task) => !task.is_complete);
   const sortedOpen = sortOpenTasksForPreview(tasks);
-  const overdue = sortedOpen.filter((task) => task.is_overdue);
+  const overdueTasks = sortedOpen.filter((task) => task.is_overdue);
+  const dueTodayTasks = sortedOpen.filter(
+    (task) =>
+      !task.is_overdue &&
+      task.due_date != null &&
+      isToday(new Date(task.due_date), now),
+  );
+  const upcomingTasks = sortedOpen.filter(
+    (task) =>
+      !task.is_overdue &&
+      !(task.due_date != null && isToday(new Date(task.due_date), now)),
+  );
   const withDue = open
     .filter((task) => task.due_date)
     .sort(
@@ -118,11 +151,15 @@ export function summarizeMyTasks(tasks: EventTaskResponse[]): MyTasksSummary {
 
   return {
     openCount: open.length,
-    overdueCount: overdue.length,
-    dueTodayCount: countDueTodayTasks(tasks),
+    overdueCount: overdueTasks.length,
+    dueTodayCount: dueTodayTasks.length,
+    upcomingCount: upcomingTasks.length,
     nextTask: withDue[0] ?? open[0] ?? null,
-    overdueTask: overdue[0] ?? null,
+    overdueTask: overdueTasks[0] ?? null,
     previewTasks: sortedOpen.slice(0, PREVIEW_LIMIT),
+    overdueTasks,
+    dueTodayTasks,
+    upcomingTasks,
   };
 }
 

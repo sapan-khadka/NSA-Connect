@@ -2,19 +2,22 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
   MapPin,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import nsaCover from "../../assets/nsa-cover.PNG";
-import { Avatar } from "../../design-system/components/Avatar";
 import { eventDetailPath } from "../../lib/event-links";
 import {
   fetchEventAttendees,
   type EventResponse,
-  type EventRsvpAttendee,
 } from "../../lib/events-api";
+import {
+  fetchEventBudgetForEvent,
+  type FinanceEventBudgetSummary,
+} from "../../lib/finance-api";
 import { formatCountdownBadge } from "../../lib/format-datetime";
 import { AppIcon } from "../ui/AppIcon";
 
@@ -29,6 +32,100 @@ function formatFeaturedWhen(isoDate: string): string {
     minute: "2-digit",
   }).format(new Date(isoDate));
   return `${date} · ${time}`;
+}
+
+function formatMoney(value: string | number): string {
+  const amount = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(amount)) {
+    return String(value);
+  }
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: amount % 1 === 0 ? 0 : 2,
+  }).format(amount);
+}
+
+function getDateBlockParts(isoDate: string): {
+  month: string;
+  day: string;
+  weekday: string;
+} {
+  const date = new Date(isoDate);
+  return {
+    month: new Intl.DateTimeFormat(undefined, { month: "short" })
+      .format(date)
+      .toUpperCase(),
+    day: new Intl.DateTimeFormat(undefined, { day: "numeric" }).format(date),
+    weekday: new Intl.DateTimeFormat(undefined, { weekday: "short" })
+      .format(date)
+      .toUpperCase(),
+  };
+}
+
+function computeRsvpHealth({
+  going,
+  maybe,
+  notGoing,
+  capacity,
+}: {
+  going: number | null;
+  maybe: number | null;
+  notGoing: number | null;
+  capacity: number | null;
+}): number | null {
+  if (going == null) {
+    return null;
+  }
+  if (capacity != null && capacity > 0) {
+    return Math.min(100, Math.round((going / capacity) * 100));
+  }
+  const maybeSafe = maybe ?? 0;
+  const notGoingSafe = notGoing ?? 0;
+  const responded = going + maybeSafe + notGoingSafe;
+  if (responded <= 0) {
+    return null;
+  }
+  return Math.round((going / responded) * 100);
+}
+
+function RsvpHealthRing({ percent }: { percent: number | null }) {
+  const size = 44;
+  const stroke = 3.5;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const value = percent ?? 0;
+  const offset = circumference - (value / 100) * circumference;
+
+  return (
+    <div className="home-featured-rsvp-ring" aria-hidden={percent == null}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="rgba(255,255,255,0.14)"
+          strokeWidth={stroke}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="var(--color-primary)"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={percent == null ? circumference : offset}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+      </svg>
+      <span className="home-featured-rsvp-ring-value">
+        {percent == null ? "—" : `${percent}%`}
+      </span>
+    </div>
+  );
 }
 
 function FeaturedCarouselControls({
@@ -95,7 +192,9 @@ export function HomeFeaturedEvent({
   const [index, setIndex] = useState(0);
   const [goingCount, setGoingCount] = useState<number | null>(null);
   const [maybeCount, setMaybeCount] = useState<number | null>(null);
-  const [attendees, setAttendees] = useState<EventRsvpAttendee[]>([]);
+  const [notGoingCount, setNotGoingCount] = useState<number | null>(null);
+  const [budgetSummary, setBudgetSummary] =
+    useState<FinanceEventBudgetSummary | null>(null);
 
   const safeIndex = events.length === 0 ? 0 : Math.min(index, events.length - 1);
   const event = events[safeIndex] ?? null;
@@ -109,7 +208,8 @@ export function HomeFeaturedEvent({
     if (!event) {
       setGoingCount(null);
       setMaybeCount(null);
-      setAttendees([]);
+      setNotGoingCount(null);
+      setBudgetSummary(null);
       return;
     }
 
@@ -121,15 +221,25 @@ export function HomeFeaturedEvent({
         }
         setGoingCount(response.going_count);
         setMaybeCount(response.maybe_count);
-        setAttendees(
-          response.attendees.filter((row) => row.rsvp_status === "going"),
-        );
+        setNotGoingCount(response.not_going_count);
       })
       .catch(() => {
         if (!cancelled) {
           setGoingCount(null);
           setMaybeCount(null);
-          setAttendees([]);
+          setNotGoingCount(null);
+        }
+      });
+
+    void fetchEventBudgetForEvent(event.id)
+      .then((summary) => {
+        if (!cancelled) {
+          setBudgetSummary(summary);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setBudgetSummary(null);
         }
       });
 
@@ -156,7 +266,7 @@ export function HomeFeaturedEvent({
     return (
       <section
         aria-label="Featured Event"
-        className="home-featured home-featured--hero home-featured--loading"
+        className="home-featured home-featured--hero home-featured--cinematic home-featured--loading"
       >
         <div className="home-featured-hero-skeleton" />
       </section>
@@ -167,7 +277,7 @@ export function HomeFeaturedEvent({
     return (
       <section
         aria-label="Featured Event"
-        className="home-featured home-featured--hero home-featured--empty"
+        className="home-featured home-featured--hero home-featured--cinematic home-featured--empty"
       >
         <img src={nsaCover} alt="" className="home-featured-photo" />
         <div className="home-featured-hero-scrim" aria-hidden="true" />
@@ -201,76 +311,108 @@ export function HomeFeaturedEvent({
   const managePath = `${eventPath}/manage`;
   const countdown = formatCountdownBadge(event.starts_at);
   const location = event.location?.trim() || "Location TBA";
-  const visibleAttendees = attendees.slice(0, 4);
-  const overflow = Math.max(0, (goingCount ?? 0) - visibleAttendees.length);
+  const dateBlock = getDateBlockParts(event.starts_at);
+  const rsvpHealth = computeRsvpHealth({
+    going: goingCount,
+    maybe: maybeCount,
+    notGoing: notGoingCount,
+    capacity: event.capacity,
+  });
+
+  const plannedBudget = Number(
+    budgetSummary?.planned_budget ?? event.budget ?? 0,
+  );
+  const spentBudget = Number(budgetSummary?.actual_expense ?? NaN);
+  const hasBudget = Number.isFinite(plannedBudget) && plannedBudget > 0;
+  const hasSpent = Number.isFinite(spentBudget);
+  const budgetProgress =
+    hasBudget && hasSpent
+      ? Math.min(100, Math.round((spentBudget / plannedBudget) * 100))
+      : hasBudget
+        ? 0
+        : null;
 
   return (
-    <section aria-label="Featured Event" className="home-featured home-featured--hero">
+    <section
+      aria-label="Featured Event"
+      className="home-featured home-featured--hero home-featured--cinematic"
+    >
       <img src={photoUrl} alt="" className="home-featured-photo" />
       <div className="home-featured-hero-scrim" aria-hidden="true" />
 
       <div className="home-featured-hero-content">
-        <div className="home-featured-info-top">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="home-featured-eyebrow">Upcoming event</p>
-            <span className="home-featured-countdown">{countdown}</span>
+        <div className="home-featured-cinematic-top">
+          <div className="home-featured-date-block" aria-hidden="true">
+            <span className="home-featured-date-month">{dateBlock.month}</span>
+            <span className="home-featured-date-day">{dateBlock.day}</span>
+            <span className="home-featured-date-weekday">{dateBlock.weekday}</span>
           </div>
-          <FeaturedCarouselControls
-            index={safeIndex}
-            total={events.length}
-            onPrev={goPrev}
-            onNext={goNext}
-          />
+
+          <div className="home-featured-cinematic-main">
+            <div className="home-featured-info-top">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="home-featured-eyebrow">Upcoming event</p>
+                <span className="home-featured-countdown">{countdown}</span>
+              </div>
+              <FeaturedCarouselControls
+                index={safeIndex}
+                total={events.length}
+                onPrev={goPrev}
+                onNext={goNext}
+              />
+            </div>
+
+            <h2 className="home-featured-title">{event.name}</h2>
+
+            <ul className="home-featured-meta-list">
+              <li>
+                <AppIcon icon={Calendar} size="xs" className="text-white/55" />
+                <span>{formatFeaturedWhen(event.starts_at)}</span>
+              </li>
+              <li>
+                <AppIcon icon={MapPin} size="xs" className="text-white/55" />
+                <span>{location}</span>
+              </li>
+            </ul>
+          </div>
         </div>
 
-        <h2 className="home-featured-title">{event.name}</h2>
-
-        <ul className="home-featured-meta-list">
-          <li>
-            <AppIcon icon={Calendar} size="xs" className="text-white/55" />
-            <span>{formatFeaturedWhen(event.starts_at)}</span>
-          </li>
-          <li>
-            <AppIcon icon={MapPin} size="xs" className="text-white/55" />
-            <span>{location}</span>
-          </li>
-        </ul>
-
-        <div className="home-featured-hero-footer">
-          <div className="home-featured-people">
-            {visibleAttendees.length > 0 ? (
-              <div className="home-featured-avatars" aria-hidden="true">
-                {visibleAttendees.map((person, avatarIndex) => (
-                  <span
-                    key={person.member_id}
-                    className="home-featured-avatar"
-                    style={{ zIndex: visibleAttendees.length - avatarIndex }}
-                  >
-                    <Avatar
-                      name={person.full_name}
-                      size="sm"
-                      className="h-7 w-7 text-[10px]"
-                    />
-                  </span>
-                ))}
-                {overflow > 0 ? (
-                  <span className="home-featured-avatar-more">+{overflow}</span>
-                ) : null}
-              </div>
-            ) : null}
-            <p className="home-featured-going">
-              <span>{goingCount ?? "—"}</span> Going
-              <span className="home-featured-going-sep">·</span>
-              <span>{maybeCount ?? "—"}</span> Maybe
-            </p>
+        <div className="home-featured-stats-bar">
+          <div className="home-featured-stat-cell">
+            <p className="home-featured-rsvp-value">{goingCount ?? "—"}</p>
+            <p className="home-featured-rsvp-label">Going</p>
           </div>
-
+          <div className="home-featured-stat-cell">
+            <p className="home-featured-rsvp-value">{maybeCount ?? "—"}</p>
+            <p className="home-featured-rsvp-label">Maybe</p>
+          </div>
+          <div className="home-featured-stat-cell home-featured-stat-cell--health">
+            <RsvpHealthRing percent={rsvpHealth} />
+            <p className="home-featured-rsvp-label">RSVP Health</p>
+          </div>
+          <div className="home-featured-stat-cell home-featured-stat-cell--budget">
+            <div className="home-featured-budget-head">
+              <span>Budget</span>
+              <span>
+                {hasSpent ? formatMoney(spentBudget) : "—"}
+                {" / "}
+                {hasBudget ? formatMoney(plannedBudget) : formatMoney(event.budget || 0)}
+              </span>
+            </div>
+            <div className="home-featured-prep-track" aria-hidden="true">
+              <span
+                className="home-featured-prep-fill"
+                style={{ width: `${budgetProgress ?? 0}%` }}
+              />
+            </div>
+          </div>
           <div className="home-featured-actions">
             <Link
               to={eventPath}
               className="home-featured-btn home-featured-btn--primary"
             >
-              Open event
+              Open Event
+              <AppIcon icon={ExternalLink} size="xs" className="text-current" />
             </Link>
             {canManage ? (
               <Link

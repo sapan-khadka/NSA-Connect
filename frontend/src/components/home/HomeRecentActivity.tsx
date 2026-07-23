@@ -12,17 +12,27 @@ import { AppIcon } from "../ui/AppIcon";
 import { ArrowLink } from "../ui/ArrowLink";
 import { HomeCard } from "../ui/HomeCard";
 
-export function HomeRecentActivity({ memberId }: { memberId: number }) {
+const DEFAULT_ACTIVITY_LIMIT = 12;
+
+export function HomeRecentActivity({
+  memberId,
+  limit = DEFAULT_ACTIVITY_LIMIT,
+}: {
+  memberId: number;
+  limit?: number;
+}) {
   const [items, setItems] = useState<MemberActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    void fetchMemberActivity(memberId, { limit: 8 })
+    void fetchMemberActivity(memberId, { limit })
       .then((response) => {
         if (!cancelled) {
-          setItems(response.items.map(mapMemberActivityApiItem).slice(0, 8));
+          setItems(
+            response.items.map(mapMemberActivityApiItem).slice(0, limit),
+          );
         }
       })
       .catch(() => {
@@ -38,17 +48,17 @@ export function HomeRecentActivity({ memberId }: { memberId: number }) {
     return () => {
       cancelled = true;
     };
-  }, [memberId]);
+  }, [memberId, limit]);
 
   return (
     <HomeCard
       padding="sm"
-      className="home-activity home-surface-quiet"
+      className="home-activity home-activity--minimal home-surface-quiet"
       aria-label="Recent activity"
     >
       <div className="home-activity-head">
         <h2 className="home-panel-title">Recent activity</h2>
-        <ArrowLink to={`/members/${memberId}`}>View all activity</ArrowLink>
+        <ArrowLink to={`/members/${memberId}`}>View all</ArrowLink>
       </div>
 
       {loading ? (
@@ -56,7 +66,7 @@ export function HomeRecentActivity({ memberId }: { memberId: number }) {
       ) : items.length === 0 ? (
         <p className="home-activity-empty">No recent activity yet.</p>
       ) : (
-        <ul className="home-activity-rail">
+        <ul className="home-activity-feed">
           {items.map((item) => {
             const Icon = MEMBER_ACTIVITY_ICONS[item.kind];
             const body = (
@@ -64,22 +74,23 @@ export function HomeRecentActivity({ memberId }: { memberId: number }) {
                 <span className="home-activity-icon" aria-hidden="true">
                   <AppIcon icon={Icon} size="xs" className="text-current" />
                 </span>
-                <span className="home-activity-copy">
-                  <span className="home-activity-title">{item.title}</span>
-                  <span className="home-activity-time">
-                    {formatRelativeTimestamp(item.occurredAt)}
-                  </span>
-                </span>
+                <span className="home-activity-title">{item.title}</span>
+                <time
+                  className="home-activity-time"
+                  dateTime={item.occurredAt}
+                >
+                  {formatRelativeTimestamp(item.occurredAt)}
+                </time>
               </>
             );
             return (
-              <li key={item.id} className="home-activity-rail-item">
+              <li key={item.id}>
                 {item.href ? (
-                  <Link to={item.href} className="home-activity-item">
+                  <Link to={item.href} className="home-activity-row">
                     {body}
                   </Link>
                 ) : (
-                  <div className="home-activity-item">{body}</div>
+                  <div className="home-activity-row">{body}</div>
                 )}
               </li>
             );

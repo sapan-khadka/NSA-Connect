@@ -55,6 +55,16 @@ vi.mock("../lib/finance-api", () => ({
     total_income: "0",
     total_expense: "0",
   }),
+  fetchEventBudgetForEvent: vi.fn().mockResolvedValue({
+    event_id: 5,
+    event_name: "Dashain Celebration",
+    planned_budget: "500.00",
+    actual_expense: "120.00",
+    actual_income: "0",
+    budget_remaining: "380.00",
+    over_budget: false,
+    entry_count: 1,
+  }),
   fetchPendingFinanceChangeRequests: vi.fn(),
   fetchMyFinanceChangeRequestSummary: vi.fn().mockResolvedValue({
     pending_count: 0,
@@ -183,15 +193,15 @@ describe("HomePage", () => {
     );
 
     expect(
-      await screen.findByRole("heading", {
+      screen.queryByRole("heading", {
         name: /Good (Morning|Afternoon|Evening), Test/i,
       }),
-    ).toBeInTheDocument();
+    ).not.toBeInTheDocument();
 
     expect(screen.queryByText("Active Tasks")).not.toBeInTheDocument();
     expect(screen.queryByText("Needs Review")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Needs attention")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Quick stats")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Quick stats")).toBeInTheDocument();
     expect(screen.getByLabelText("Quick actions")).toBeInTheDocument();
     expect(screen.getByLabelText("Recent activity")).toBeInTheDocument();
     expect(screen.getByLabelText("Task summary")).toBeInTheDocument();
@@ -206,8 +216,9 @@ describe("HomePage", () => {
     ).toHaveAttribute("href", "/events/5");
     expect(within(featured).getByText(/Going/i)).toBeInTheDocument();
     expect(within(featured).getByText(/Maybe/i)).toBeInTheDocument();
+    expect(within(featured).getByText(/RSVP Health/i)).toBeInTheDocument();
+    expect(within(featured).getByText(/Budget/i)).toBeInTheDocument();
     expect(within(featured).queryByText("Preparation")).not.toBeInTheDocument();
-    expect(within(featured).queryByText("Budget")).not.toBeInTheDocument();
     expect(
       within(featured).queryByText("Confirmed attendance"),
     ).not.toBeInTheDocument();
@@ -219,6 +230,7 @@ describe("HomePage", () => {
     expect(within(work).getByLabelText("My Tasks")).toBeInTheDocument();
     expect(await within(work).findByLabelText("Task Oversight")).toBeInTheDocument();
     expect(await within(work).findByText("Print flyers")).toBeInTheDocument();
+    expect(await within(work).findByText("Your tasks")).toBeInTheDocument();
 
     expect(screen.queryByLabelText("Today's Timeline")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Organization Health")).not.toBeInTheDocument();
@@ -226,7 +238,7 @@ describe("HomePage", () => {
     expect(await screen.findByLabelText("Discussions")).toBeInTheDocument();
   });
 
-  it("surfaces overdue task counts in My tasks metrics", async () => {
+  it("surfaces overdue task counts in My tasks tabs", async () => {
     const overdueTask = {
       id: 1,
       event_id: 5,
@@ -322,6 +334,7 @@ describe("HomePage", () => {
     const actions = await screen.findByLabelText("Quick actions");
     expect(within(actions).getByRole("link", { name: /Add Expense/i })).toBeInTheDocument();
     expect(within(actions).getByRole("link", { name: /Add Member/i })).toBeInTheDocument();
+    expect(within(actions).getByRole("link", { name: /Post Announcement/i })).toBeInTheDocument();
     expect(screen.getByLabelText("My Tasks")).toBeInTheDocument();
     expect(screen.queryByLabelText("Action Center")).not.toBeInTheDocument();
   });
@@ -342,6 +355,34 @@ describe("HomePage", () => {
     expect(
       within(actions).getByRole("link", { name: /Create Event/i }),
     ).toHaveAttribute("href", "/events/calendar?create=1");
+    expect(
+      within(actions).getByRole("link", { name: /Post Announcement/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the attention strip when notification counts are present", async () => {
+    mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
+    mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
+    mockSummary({
+      tasks_overdue: 2,
+      members_pending: 1,
+      suggestions_pending: 3,
+      discussions_unread: 4,
+    });
+
+    render(
+      <MemoryRouter>
+        <MockAuthProvider value={{ member: createMockMember("president") }}>
+          <HomePage />
+        </MockAuthProvider>
+      </MemoryRouter>,
+    );
+
+    const strip = await screen.findByLabelText("Needs your attention");
+    expect(within(strip).getByText(/Overdue tasks/i)).toBeInTheDocument();
+    expect(within(strip).getByText(/Pending approvals/i)).toBeInTheDocument();
+    expect(within(strip).getByText(/Event needs update/i)).toBeInTheDocument();
+    expect(within(strip).getByText(/Notes needing response/i)).toBeInTheDocument();
   });
 
   it("cycles featured upcoming events with carousel controls", async () => {

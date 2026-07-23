@@ -3,6 +3,7 @@ import {
   CheckCircle2,
   CircleDollarSign,
   Users,
+  UserCheck,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -18,7 +19,7 @@ import {
 } from "../../lib/roles";
 import { AppIcon } from "../ui/AppIcon";
 
-type StatTone = "teal" | "slate" | "amber" | "olive";
+type StatTone = "teal" | "slate" | "amber" | "olive" | "sky";
 
 type StatCard = {
   id: string;
@@ -51,6 +52,7 @@ export function HomeQuickStats({
   pendingMemberApprovals,
   financePendingCount,
   isLoadingEvents,
+  attendanceAvg = null,
 }: {
   member: MemberResponse;
   upcomingEventCount: number;
@@ -58,6 +60,8 @@ export function HomeQuickStats({
   pendingMemberApprovals: number;
   financePendingCount: number;
   isLoadingEvents: boolean;
+  /** Average attendance percent when available; otherwise shown as em dash. */
+  attendanceAvg?: number | null;
 }) {
   const canSeeMembers = canViewMemberDirectory(member.role);
   const canSeeTreasury = canManageTreasury(member.role, member.position);
@@ -147,6 +151,33 @@ export function HomeQuickStats({
     to: "/events/calendar",
   });
 
+  if (canSeeTreasury) {
+    const amount = treasuryBalance == null ? null : Number(treasuryBalance);
+    cards.push({
+      id: "treasury",
+      label: "Treasury",
+      value: treasuryBalance == null ? "—" : formatMoney(treasuryBalance),
+      hint: "Available balance",
+      hintTone: "muted",
+      valueTone: amount != null && amount < 0 ? "negative" : "default",
+      icon: CircleDollarSign,
+      tone: "olive",
+      to: FINANCE_PATH,
+    });
+  } else {
+    cards.push({
+      id: "overdue",
+      label: "Overdue",
+      value: String(tasksSummary.overdueCount),
+      hint:
+        tasksSummary.overdueCount > 0 ? "Needs attention" : "You’re caught up",
+      hintTone: tasksSummary.overdueCount > 0 ? "warning" : "positive",
+      icon: CheckCircle2,
+      tone: "olive",
+      to: "/events/tasks",
+    });
+  }
+
   if (canSeeMembers || canSeeTreasury) {
     cards.push({
       id: "pending",
@@ -179,35 +210,25 @@ export function HomeQuickStats({
     });
   }
 
-  if (canSeeTreasury) {
-    const amount = treasuryBalance == null ? null : Number(treasuryBalance);
-    cards.push({
-      id: "treasury",
-      label: "Treasury",
-      value: treasuryBalance == null ? "—" : formatMoney(treasuryBalance),
-      hint: "Available balance",
-      hintTone: "muted",
-      valueTone: amount != null && amount < 0 ? "negative" : "default",
-      icon: CircleDollarSign,
-      tone: "olive",
-      to: FINANCE_PATH,
-    });
-  } else {
-    cards.push({
-      id: "completed-pace",
-      label: "Overdue",
-      value: String(tasksSummary.overdueCount),
-      hint:
-        tasksSummary.overdueCount > 0 ? "Needs attention" : "You’re caught up",
-      hintTone: tasksSummary.overdueCount > 0 ? "warning" : "positive",
-      icon: CheckCircle2,
-      tone: "olive",
-      to: "/events/tasks",
-    });
-  }
+  cards.push({
+    id: "attendance",
+    label: "Attendance",
+    value:
+      attendanceAvg == null || !Number.isFinite(attendanceAvg)
+        ? "—"
+        : `${Math.round(attendanceAvg)}%`,
+    hint: attendanceAvg == null ? "Avg · no data yet" : "Average RSVP health",
+    hintTone: "muted",
+    icon: UserCheck,
+    tone: "sky",
+    to: "/events/calendar",
+  });
 
   return (
-    <section className="home-quick-stats home-quick-stats--strip" aria-label="Quick stats">
+    <section
+      className="home-quick-stats home-quick-stats--strip home-quick-stats--kpi"
+      aria-label="Quick stats"
+    >
       <ul className="home-quick-stats-grid">
         {cards.map((card) => (
           <li key={card.id}>
