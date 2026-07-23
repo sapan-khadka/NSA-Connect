@@ -45,6 +45,10 @@ vi.mock("../lib/events-api", async () => {
     fetchEventVolunteerSignups: vi.fn().mockResolvedValue({
       signups: [],
     }),
+    fetchEventVolunteerSlots: vi.fn().mockResolvedValue({
+      slots: [],
+      total: 0,
+    }),
   };
 });
 

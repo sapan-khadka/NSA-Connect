@@ -13,6 +13,8 @@ type InviteMembersToEventModalProps = {
   eventId: number;
   eventName: string;
   alreadyInvitedMemberIds?: number[];
+  /** Volunteer ask copy + “invite all” action for board organizers. */
+  purpose?: "participants" | "volunteers";
   onClose: () => void;
   onInvited?: () => void;
 };
@@ -22,9 +24,11 @@ export function InviteMembersToEventModal({
   eventId,
   eventName,
   alreadyInvitedMemberIds = [],
+  purpose = "participants",
   onClose,
   onInvited,
 }: InviteMembersToEventModalProps) {
+  const isVolunteerInvite = purpose === "volunteers";
   const [members, setMembers] = useState<MemberResponse[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [query, setQuery] = useState("");
@@ -100,8 +104,8 @@ export function InviteMembersToEventModal({
     });
   }
 
-  async function handleInvite() {
-    if (selectedIds.size === 0) {
+  async function inviteMemberIds(memberIds: number[]) {
+    if (memberIds.length === 0) {
       return;
     }
 
@@ -110,10 +114,15 @@ export function InviteMembersToEventModal({
     setSuccessMessage(null);
 
     try {
-      const memberIds = Array.from(selectedIds);
-      await inviteEventParticipants(eventId, memberIds);
+      await inviteEventParticipants(
+        eventId,
+        memberIds,
+        isVolunteerInvite ? "volunteers" : "participants",
+      );
       setSuccessMessage(
-        `Invited ${memberIds.length} member${memberIds.length === 1 ? "" : "s"}.`,
+        isVolunteerInvite
+          ? `Sent volunteer invites to ${memberIds.length} member${memberIds.length === 1 ? "" : "s"}.`
+          : `Invited ${memberIds.length} member${memberIds.length === 1 ? "" : "s"}.`,
       );
       setSelectedIds(new Set());
       onInvited?.();
@@ -124,11 +133,34 @@ export function InviteMembersToEventModal({
     }
   }
 
+  async function handleInvite() {
+    await inviteMemberIds(Array.from(selectedIds));
+  }
+
+  async function handleInviteAll() {
+    await inviteMemberIds(filteredMembers.map((member) => member.id));
+  }
+
   return (
-    <Modal open={open} title="Invite participants" onClose={onClose} size="md">
+    <Modal
+      open={open}
+      title={isVolunteerInvite ? "Invite volunteers" : "Invite participants"}
+      onClose={onClose}
+      size="md"
+    >
       <p className="text-sm text-gray-600">
-        Invite approved members to participate in{" "}
-        <span className="font-medium text-foreground">{eventName}</span>.
+        {isVolunteerInvite ? (
+          <>
+            Ask approved members to volunteer for{" "}
+            <span className="font-medium text-foreground">{eventName}</span>.
+            They&apos;ll get an invite and can sign up from the event page.
+          </>
+        ) : (
+          <>
+            Invite approved members to participate in{" "}
+            <span className="font-medium text-foreground">{eventName}</span>.
+          </>
+        )}
       </p>
 
       <label className="mt-4 block">
@@ -189,10 +221,21 @@ export function InviteMembersToEventModal({
         )}
       </div>
 
-      <div className="mt-5 flex justify-end gap-2">
+      <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button type="button" variant="secondary" onClick={onClose}>
           Close
         </Button>
+        {isVolunteerInvite ? (
+          <Button
+            type="button"
+            variant="outline"
+            loading={isSubmitting}
+            disabled={filteredMembers.length === 0 || isSubmitting}
+            onClick={() => void handleInviteAll()}
+          >
+            Invite all members
+          </Button>
+        ) : null}
         <Button
           type="button"
           loading={isSubmitting}
@@ -200,7 +243,7 @@ export function InviteMembersToEventModal({
           onClick={() => void handleInvite()}
         >
           {selectedIds.size === 0
-            ? "Invite"
+            ? "Invite selected"
             : `Invite ${selectedIds.size}`}
         </Button>
       </div>

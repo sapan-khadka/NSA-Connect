@@ -13,11 +13,13 @@ import { Card } from "./ui/Card";
 type EventVolunteerRolesPanelProps = {
   eventId: number;
   canVolunteer: boolean;
+  onSlotsLoaded?: (slotCount: number) => void;
 };
 
 export function EventVolunteerRolesPanel({
   eventId,
   canVolunteer,
+  onSlotsLoaded,
 }: EventVolunteerRolesPanelProps) {
   const [slots, setSlots] = useState<VolunteerSlotResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,8 +31,10 @@ export function EventVolunteerRolesPanel({
     try {
       const response = await fetchEventVolunteerSlots(eventId);
       setSlots(response.slots);
+      onSlotsLoaded?.(response.slots.length);
     } catch {
       setSlots([]);
+      onSlotsLoaded?.(0);
     } finally {
       setLoading(false);
     }

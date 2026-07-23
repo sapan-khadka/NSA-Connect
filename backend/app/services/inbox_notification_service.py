@@ -331,6 +331,36 @@ def notify_task_managers_of_volunteer_signup(
     )
 
 
+def notify_members_of_volunteer_invite(
+    db: Session,
+    *,
+    event: Event,
+    member_ids: list[int],
+    inviter: Member,
+) -> int:
+    recipients = [
+        member
+        for member in db.scalars(
+            select(Member).where(
+                Member.id.in_(member_ids),
+                Member.status == MemberStatus.APPROVED,
+            )
+        ).all()
+        if member.id != inviter.id
+    ]
+    return notify_many(
+        db,
+        recipients=recipients,
+        type=InboxNotificationType.VOLUNTEER_INVITE,
+        title=f"You're invited to volunteer for {event.title}",
+        body=f"{inviter.full_name} asked you to help with {event.title}.",
+        href=f"/events/{event.id}?volunteer=1",
+        dedupe_key_for=lambda recipient: (
+            f"volunteer_invite:{event.id}:{recipient.id}"
+        ),
+    )
+
+
 def notify_volunteer_signup_reviewed(
     db: Session,
     *,

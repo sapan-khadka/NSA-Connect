@@ -38,7 +38,10 @@ export type EventReadinessResult = {
 export type EventReadinessInput = {
   event: EventDetailResponse;
   budget: FinanceEventBudgetSummary | null;
+  /** Filled volunteer role spots (or legacy interest count). */
   volunteerCount: number | null;
+  /** Total spots the board configured. Null while loading; 0 = no roles set. */
+  volunteerNeeded?: number | null;
   volunteersLoading?: boolean;
 };
 
@@ -56,15 +59,44 @@ function hasPositiveBudget(
 export function computeEventReadiness(
   input: EventReadinessInput,
 ): EventReadinessResult {
-  const { event, budget, volunteerCount, volunteersLoading = false } = input;
+  const {
+    event,
+    budget,
+    volunteerCount,
+    volunteerNeeded = null,
+    volunteersLoading = false,
+  } = input;
 
   const coverPass = Boolean(event.event_photo_url?.trim());
   const schedulePass = Boolean(event.starts_at);
   const locationPass = Boolean(event.location?.trim());
   const budgetPass = hasPositiveBudget(event, budget);
   const rsvpPass = !event.is_past;
-  const volunteersPass =
-    volunteerCount !== null && !volunteersLoading ? volunteerCount > 0 : null;
+  let volunteersPass: boolean | null = null;
+  let volunteersLabel = "Volunteers";
+  let volunteersNextStep = "Add volunteer roles, then invite helpers.";
+  if (!volunteersLoading && volunteerCount !== null) {
+    if (volunteerNeeded != null && volunteerNeeded > 0) {
+      volunteersPass = volunteerCount >= volunteerNeeded;
+      volunteersLabel = volunteersPass
+        ? "Volunteers Ready"
+        : "Volunteers Short";
+      volunteersNextStep = volunteersPass
+        ? "Volunteer roles are filled."
+        : `Fill ${volunteerNeeded - volunteerCount} more volunteer spot${
+            volunteerNeeded - volunteerCount === 1 ? "" : "s"
+          }, or invite members.`;
+    } else if (volunteerNeeded === 0) {
+      volunteersPass = false;
+      volunteersLabel = "Volunteer Roles Missing";
+      volunteersNextStep = "Add volunteer roles with spot counts, then invite.";
+    } else {
+      // Legacy: no needed target provided — any helpers count as ready.
+      volunteersPass = volunteerCount > 0;
+      volunteersLabel = volunteersPass ? "Volunteers Ready" : "Volunteers Missing";
+      volunteersNextStep = "Add volunteer roles or invite helpers.";
+    }
+  }
   const capacityPass = event.capacity != null && event.capacity > 0;
 
   const checks: ReadinessCheck[] = [
@@ -105,15 +137,10 @@ export function computeEventReadiness(
     },
     {
       id: "volunteers",
-      label:
-        volunteersPass === null
-          ? "Volunteers"
-          : volunteersPass
-            ? "Volunteers Ready"
-            : "Volunteers Missing",
+      label: volunteersPass === null ? "Volunteers" : volunteersLabel,
       status:
         volunteersPass === null ? "unknown" : volunteersPass ? "pass" : "warn",
-      nextStep: "Add volunteer roles or invite helpers.",
+      nextStep: volunteersNextStep,
       resolveTarget: "volunteers",
     },
     {

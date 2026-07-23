@@ -37,6 +37,7 @@ type EventManageOverviewProps = {
   event: EventDetailResponse;
   budget: FinanceEventBudgetSummary | null;
   volunteerCount: number | null;
+  volunteerNeeded?: number | null;
   volunteersLoading: boolean;
   attendeeCount: number | null;
   attendeesLoading: boolean;
@@ -92,6 +93,7 @@ export function EventManageOverview({
   event,
   budget,
   volunteerCount,
+  volunteerNeeded = null,
   volunteersLoading,
   attendeeCount,
   attendeesLoading,
@@ -121,6 +123,7 @@ export function EventManageOverview({
         event={event}
         budget={budget}
         volunteerCount={volunteerCount}
+        volunteerNeeded={volunteerNeeded}
         volunteersLoading={volunteersLoading}
         onResolve={onResolve}
         compact

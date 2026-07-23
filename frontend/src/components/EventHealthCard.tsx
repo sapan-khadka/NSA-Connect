@@ -13,6 +13,8 @@ export type EventHealthCardProps = {
   budgetCap: number;
   volunteersFilled: number;
   volunteersNeeded: number;
+  /** False when the board has not set volunteer role spots yet. */
+  volunteersTargetSet?: boolean;
   /** Hide the card title when nested under a disclosure summary. */
   showHeading?: boolean;
   className?: string;
@@ -74,12 +76,15 @@ export function EventHealthCard({
   budgetCap,
   volunteersFilled,
   volunteersNeeded,
+  volunteersTargetSet = true,
   showHeading = true,
   className = "",
 }: EventHealthCardProps) {
   const preparationValue = `${Math.round(clampPercent(preparationPct))}%`;
   const budgetValue = `${formatCurrency(budgetSpent)} / ${formatCurrency(budgetCap)}`;
-  const volunteersValue = `${volunteersFilled} / ${volunteersNeeded}`;
+  const volunteersValue = volunteersTargetSet
+    ? `${volunteersFilled} / ${volunteersNeeded}`
+    : "Not set";
 
   return (
     <Card
@@ -108,7 +113,11 @@ export function EventHealthCard({
         <HealthRow
           label="Volunteers"
           value={volunteersValue}
-          percent={ratioPercent(volunteersFilled, volunteersNeeded)}
+          percent={
+            volunteersTargetSet
+              ? ratioPercent(volunteersFilled, volunteersNeeded)
+              : 0
+          }
         />
       </div>
     </Card>

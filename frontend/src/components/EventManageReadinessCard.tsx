@@ -22,6 +22,7 @@ type EventManageReadinessCardProps = {
   event: EventDetailResponse;
   budget: FinanceEventBudgetSummary | null;
   volunteerCount: number | null;
+  volunteerNeeded?: number | null;
   volunteersLoading?: boolean;
   onResolve: (target: ResolveTarget) => void;
   /** Dense overview layout: open issues only + stronger next-step CTA. */
@@ -116,6 +117,7 @@ export function EventManageReadinessCard({
   event,
   budget,
   volunteerCount,
+  volunteerNeeded = null,
   volunteersLoading = false,
   onResolve,
   compact = false,
@@ -124,6 +126,7 @@ export function EventManageReadinessCard({
     event,
     budget,
     volunteerCount,
+    volunteerNeeded,
     volunteersLoading,
   });
   const tone = scoreTone(readiness.scorePercent);

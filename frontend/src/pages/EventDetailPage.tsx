@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { EventAttendeesPanel } from "../components/EventAttendeesPanel";
 import { EventAttendanceSummaryPanel } from "../components/EventAttendanceSummaryPanel";
@@ -43,10 +43,13 @@ import { fetchMyEventTasks } from "../lib/event-tasks-api";
 
 export function EventDetailPage() {
   const { eventId } = useParams();
+  const [searchParams] = useSearchParams();
   const numericEventId = Number(eventId);
   const { member } = useAuth();
+  const invitedToVolunteer = searchParams.get("volunteer") === "1";
 
   const [event, setEvent] = useState<EventDetailResponse | null>(null);
+  const [hasVolunteerRoles, setHasVolunteerRoles] = useState(false);
   const [assignableMembers, setAssignableMembers] = useState<MemberResponse[]>(
     [],
   );
@@ -323,9 +326,11 @@ export function EventDetailPage() {
         </p>
 
         <div className="mt-5">
-          {event.current_member_is_invited_participant ? (
+          {invitedToVolunteer || event.current_member_is_invited_participant ? (
             <p className="mb-3 inline-flex rounded-full bg-[#EEF4FF] px-3 py-1 text-sm text-[#1B4B8A]">
-              You&apos;ve been invited to participate
+              {invitedToVolunteer
+                ? "You've been invited to volunteer — claim a role below"
+                : "You've been invited to participate"}
             </p>
           ) : null}
           <EventRsvpButton
@@ -335,23 +340,49 @@ export function EventDetailPage() {
             atCapacity={event.current_member_rsvp_status === "waitlisted"}
             onStatusChange={(status) => void handleRsvpStatusChange(status)}
           />
-          <div className="mt-3 space-y-3">
+          <div className="mt-3 space-y-3" id="volunteer-roles">
             <EventVolunteerRolesPanel
               eventId={event.id}
               canVolunteer={isEventUpcoming(event.starts_at)}
+              onSlotsLoaded={(count) => setHasVolunteerRoles(count > 0)}
             />
-            <EventVolunteerSignupPanel
-              eventId={event.id}
-              canVolunteer={isEventUpcoming(event.starts_at)}
-              signup={event.current_member_volunteer_signup}
-              onSignupChange={(signup) =>
-                setEvent((current) =>
-                  current
-                    ? { ...current, current_member_volunteer_signup: signup }
-                    : current,
-                )
-              }
-            />
+            {!hasVolunteerRoles || event.current_member_volunteer_signup ? (
+              <EventVolunteerSignupPanel
+                eventId={event.id}
+                canVolunteer={isEventUpcoming(event.starts_at)}
+                signup={event.current_member_volunteer_signup}
+                onSignupChange={(signup) =>
+                  setEvent((current) =>
+                    current
+                      ? { ...current, current_member_volunteer_signup: signup }
+                      : current,
+                  )
+                }
+              />
+            ) : (
+              <details className="rounded-xl border border-gray-100 bg-white px-3 py-2">
+                <summary className="cursor-pointer text-sm text-label">
+                  Can&apos;t claim a role? Leave a general volunteer note
+                </summary>
+                <div className="mt-2">
+                  <EventVolunteerSignupPanel
+                    eventId={event.id}
+                    canVolunteer={isEventUpcoming(event.starts_at)}
+                    signup={event.current_member_volunteer_signup}
+                    onSignupChange={(signup) =>
+                      setEvent((current) =>
+                        current
+                          ? {
+                              ...current,
+                              current_member_volunteer_signup: signup,
+                            }
+                          : current,
+                      )
+                    }
+                  />
+                </div>
+              </details>
+            )}
           </div>
           <div className="mt-3">
             <EventFeedbackPanel

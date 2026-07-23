@@ -469,10 +469,11 @@ export async function fetchEventInvitedParticipants(
 export async function inviteEventParticipants(
   eventId: number,
   memberIds: number[],
+  purpose: "participants" | "volunteers" = "participants",
 ): Promise<EventParticipantInvitationListResponse> {
   const response = await api.post<EventParticipantInvitationListResponse>(
     `/v1/events/${eventId}/invited-participants`,
-    { member_ids: memberIds },
+    { member_ids: memberIds, purpose },
   );
   return response.data;
 }

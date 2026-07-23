@@ -48,10 +48,12 @@ def invite_members_to_event(
     event_id: int,
     member_ids: list[int],
     invited_by_id: int,
+    purpose: str = "participants",
 ) -> list[EventParticipantInvitation]:
-    get_event_or_raise(db, event_id)
+    event = get_event_or_raise(db, event_id)
     now = datetime.now(UTC)
     created: list[EventParticipantInvitation] = []
+    notified_member_ids: list[int] = []
 
     for member_id in member_ids:
         member = db.get(Member, member_id)
@@ -65,6 +67,8 @@ def invite_members_to_event(
             ),
         )
         if existing is not None:
+            if purpose == "volunteers":
+                notified_member_ids.append(member_id)
             continue
 
         invitation = EventParticipantInvitation(
@@ -75,11 +79,26 @@ def invite_members_to_event(
         )
         db.add(invitation)
         created.append(invitation)
+        notified_member_ids.append(member_id)
 
     db.commit()
 
     for invitation in created:
         db.refresh(invitation)
+
+    if purpose == "volunteers" and notified_member_ids:
+        from app.services.inbox_notification_service import (
+            notify_members_of_volunteer_invite,
+        )
+
+        inviter = db.get(Member, invited_by_id)
+        if inviter is not None:
+            notify_members_of_volunteer_invite(
+                db,
+                event=event,
+                member_ids=notified_member_ids,
+                inviter=inviter,
+            )
 
     return list_event_participant_invitations(db, event_id)
 

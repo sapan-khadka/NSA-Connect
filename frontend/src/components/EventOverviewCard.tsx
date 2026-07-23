@@ -16,13 +16,10 @@ import { useAuth } from "../context/useAuth";
 import type { EventType } from "../lib/event-types";
 import { eventDetailPath } from "../lib/event-links";
 import { isEventUpcoming } from "../lib/event-rsvp";
-import {
-  filledNeededRoles,
-  NEEDED_VOLUNTEER_ROLES,
-} from "../lib/event-volunteer-summary";
+import { summarizeVolunteerSlots } from "../lib/event-volunteer-summary";
 import {
   fetchEventAttendees,
-  fetchEventVolunteerSignups,
+  fetchEventVolunteerSlots,
   type EventDetailResponse,
   type EventResponse,
   type EventRsvpAttendee,
@@ -160,9 +157,8 @@ export function EventOverviewCard({
   } | null>(null);
   const [budget, setBudget] = useState<FinanceEventBudgetSummary | null>(null);
   const [volunteersFilled, setVolunteersFilled] = useState(0);
-  const [volunteersNeeded, setVolunteersNeeded] = useState(
-    NEEDED_VOLUNTEER_ROLES.length,
-  );
+  const [volunteersNeeded, setVolunteersNeeded] = useState(0);
+  const [volunteersTargetSet, setVolunteersTargetSet] = useState(false);
 
   useEffect(() => {
     setAttendeesExpanded(false);
@@ -175,7 +171,8 @@ export function EventOverviewCard({
       setTaskStats(null);
       setBudget(null);
       setVolunteersFilled(0);
-      setVolunteersNeeded(NEEDED_VOLUNTEER_ROLES.length);
+      setVolunteersNeeded(0);
+      setVolunteersTargetSet(false);
       return;
     }
 
@@ -234,25 +231,29 @@ export function EventOverviewCard({
           }
         });
 
-      void fetchEventVolunteerSignups(eventId)
+      void fetchEventVolunteerSlots(eventId)
         .then((response) => {
           if (cancelled) {
             return;
           }
-          setVolunteersFilled(filledNeededRoles(response.signups).size);
-          setVolunteersNeeded(NEEDED_VOLUNTEER_ROLES.length);
+          const totals = summarizeVolunteerSlots(response.slots);
+          setVolunteersFilled(totals.filled);
+          setVolunteersNeeded(totals.needed);
+          setVolunteersTargetSet(totals.hasTarget);
         })
         .catch(() => {
           if (!cancelled) {
             setVolunteersFilled(0);
-            setVolunteersNeeded(NEEDED_VOLUNTEER_ROLES.length);
+            setVolunteersNeeded(0);
+            setVolunteersTargetSet(false);
           }
         });
     } else {
       setTaskStats(null);
       setBudget(null);
       setVolunteersFilled(0);
-      setVolunteersNeeded(NEEDED_VOLUNTEER_ROLES.length);
+      setVolunteersNeeded(0);
+      setVolunteersTargetSet(false);
     }
 
     return () => {
@@ -296,19 +297,21 @@ export function EventOverviewCard({
         severity: "urgent",
       });
     }
-    const volunteerShortfall = Math.max(
-      0,
-      volunteersNeeded - volunteersFilled,
-    );
-    if (volunteerShortfall > 0) {
-      items.push({
-        id: "volunteers-short",
-        label:
-          volunteerShortfall === 1
-            ? "Need 1 more volunteer"
-            : `Need ${volunteerShortfall} more volunteers`,
-        severity: "pending",
-      });
+    if (volunteersTargetSet) {
+      const volunteerShortfall = Math.max(
+        0,
+        volunteersNeeded - volunteersFilled,
+      );
+      if (volunteerShortfall > 0) {
+        items.push({
+          id: "volunteers-short",
+          label:
+            volunteerShortfall === 1
+              ? "Need 1 more volunteer"
+              : `Need ${volunteerShortfall} more volunteers`,
+          severity: "pending",
+        });
+      }
     }
     return items;
   }, [
@@ -318,6 +321,7 @@ export function EventOverviewCard({
     spentBudget,
     volunteersFilled,
     volunteersNeeded,
+    volunteersTargetSet,
   ]);
 
   const stackAttendees = useMemo(
@@ -528,6 +532,7 @@ export function EventOverviewCard({
                     budgetCap={plannedBudget}
                     volunteersFilled={volunteersFilled}
                     volunteersNeeded={volunteersNeeded}
+                    volunteersTargetSet={volunteersTargetSet}
                     showHeading={false}
                     className="border-0 bg-transparent p-0"
                   />

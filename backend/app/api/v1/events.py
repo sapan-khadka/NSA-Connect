@@ -600,6 +600,7 @@ def invite_event_participants_endpoint(
             event_id=event_id,
             member_ids=data.member_ids,
             invited_by_id=current_member.id,
+            purpose=data.purpose,
         )
     except EventNotFoundError:
         raise HTTPException(

@@ -345,6 +345,7 @@ class MemberTalentOptionsResponse(BaseModel):
 
 class EventParticipantInvitationCreateRequest(BaseModel):
     member_ids: list[int] = Field(min_length=1)
+    purpose: Literal["participants", "volunteers"] = "participants"
 
 
 class EventParticipantInvitationResponse(BaseModel):

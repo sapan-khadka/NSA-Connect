@@ -40,10 +40,12 @@ import {
   fetchEventAttendees,
   fetchEventInvitedParticipants,
   fetchEventVolunteerSignups,
+  fetchEventVolunteerSlots,
   type EventAttendeesResponse,
   type EventDetailResponse,
   type EventVolunteerSignupMember,
 } from "../lib/events-api";
+import { summarizeVolunteerSlots } from "../lib/event-volunteer-summary";
 import type { EventTaskDraft } from "../lib/event-task-draft";
 import type { EventTaskResponse } from "../lib/event-tasks-api";
 import { computeEventReadiness } from "../lib/event-readiness";
@@ -210,6 +212,8 @@ export function EventManageDashboard({
     [],
   );
   const [volunteersLoading, setVolunteersLoading] = useState(true);
+  const [volunteerFilled, setVolunteerFilled] = useState<number | null>(null);
+  const [volunteerNeeded, setVolunteerNeeded] = useState<number | null>(null);
   const [checkInCount, setCheckInCount] = useState(0);
   const [invitedCount, setInvitedCount] = useState<number | null>(null);
   const [invitedMemberIds, setInvitedMemberIds] = useState<number[]>([]);
@@ -334,21 +338,32 @@ export function EventManageDashboard({
     if (!canViewBoard) {
       setVolunteers([]);
       setVolunteersLoading(false);
+      setVolunteerFilled(null);
+      setVolunteerNeeded(null);
       return;
     }
 
     let cancelled = false;
     setVolunteersLoading(true);
 
-    void fetchEventVolunteerSignups(event.id)
-      .then((response) => {
-        if (!cancelled) {
-          setVolunteers(response.signups);
+    void Promise.all([
+      fetchEventVolunteerSignups(event.id),
+      fetchEventVolunteerSlots(event.id),
+    ])
+      .then(([signupsResponse, slotsResponse]) => {
+        if (cancelled) {
+          return;
         }
+        setVolunteers(signupsResponse.signups);
+        const totals = summarizeVolunteerSlots(slotsResponse.slots);
+        setVolunteerFilled(totals.filled);
+        setVolunteerNeeded(totals.hasTarget ? totals.needed : 0);
       })
       .catch(() => {
         if (!cancelled) {
           setVolunteers([]);
+          setVolunteerFilled(0);
+          setVolunteerNeeded(0);
         }
       })
       .finally(() => {
@@ -452,13 +467,13 @@ export function EventManageDashboard({
   useEffect(() => {
     onMetricsChange?.({
       attendeeCount: attendeesLoading ? null : (attendees?.going_count ?? null),
-      volunteerCount: volunteersLoading ? null : volunteers.length,
+      volunteerCount: volunteersLoading ? null : (volunteerFilled ?? 0),
     });
   }, [
     attendees?.going_count,
     attendeesLoading,
     onMetricsChange,
-    volunteers.length,
+    volunteerFilled,
     volunteersLoading,
   ]);
 
@@ -695,7 +710,8 @@ export function EventManageDashboard({
           <EventManageOverview
             event={event}
             budget={budget}
-            volunteerCount={volunteersLoading ? null : volunteers.length}
+            volunteerCount={volunteersLoading ? null : (volunteerFilled ?? 0)}
+            volunteerNeeded={volunteersLoading ? null : (volunteerNeeded ?? 0)}
             volunteersLoading={volunteersLoading}
             attendeeCount={attendeesLoading ? null : (attendees?.going_count ?? null)}
             attendeesLoading={attendeesLoading}
@@ -752,13 +768,16 @@ export function EventManageDashboard({
         <div className="event-manage-grid mt-5 grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <EventManageVolunteersCard
             eventId={event.id}
+            eventName={event.name}
             volunteers={volunteers}
             isLoading={volunteersLoading}
+            alreadyInvitedMemberIds={invitedMemberIds}
             onViewSignups={() => setModal("volunteers")}
             onConvertToTasks={() => {
               selectTab("ops");
               setModal("tasks");
             }}
+            onSlotsChanged={onRefresh}
           />
           {invitesCard}
           <EventManageCheckInCard

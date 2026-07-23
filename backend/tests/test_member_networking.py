@@ -184,3 +184,40 @@ def test_invite_members_to_event(client, db_session):
     )
     assert listed.status_code == 200
     assert listed.json()["total"] == 1
+
+
+def test_volunteer_invite_creates_inbox_notification(client, db_session):
+    member_headers = _register_and_approve(
+        client, db_session, email="volinvite@semo.edu", student_id="88888888"
+    )
+    me = client.get("/api/v1/members/me", headers=member_headers).json()
+    board_headers = _register_board(client, db_session)
+    event = client.post(
+        "/api/v1/events",
+        headers=board_headers,
+        json={
+            "name": "Service Day",
+            "starts_at": "2031-07-01T18:00:00+00:00",
+            "event_type": "service",
+            "description": "Help out",
+            "budget": "50.00",
+        },
+    ).json()
+
+    invite = client.post(
+        f"/api/v1/events/{event['id']}/invited-participants",
+        headers=board_headers,
+        json={"member_ids": [me["id"]], "purpose": "volunteers"},
+    )
+    assert invite.status_code == 201
+
+    inbox = client.get("/api/v1/notifications", headers=member_headers)
+    assert inbox.status_code == 200
+    titles = [row["title"] for row in inbox.json()["notifications"]]
+    assert any("volunteer" in title.lower() for title in titles)
+    volunteer_note = next(
+        row
+        for row in inbox.json()["notifications"]
+        if "volunteer" in row["title"].lower()
+    )
+    assert volunteer_note["href"] == f"/events/{event['id']}?volunteer=1"

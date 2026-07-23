@@ -1,60 +1,26 @@
-import type { EventVolunteerSignupMember } from "../lib/events-api";
+import type { VolunteerSlotResponse } from "../lib/events-api";
 
-export const NEEDED_VOLUNTEER_ROLES = [
-  "Setup",
-  "Registration",
-  "Photography",
-  "Cleanup",
-] as const;
+export type VolunteerSlotTotals = {
+  filled: number;
+  needed: number;
+  /** True when the board has configured at least one volunteer role. */
+  hasTarget: boolean;
+};
 
-export type NeededVolunteerRole = (typeof NEEDED_VOLUNTEER_ROLES)[number];
-
-const ROLE_MATCHERS: {
-  role: NeededVolunteerRole;
-  pattern: RegExp;
-}[] = [
-  { role: "Setup", pattern: /\b(set[\s-]?up|decorat\w*|stage|arrange)\b/i },
-  {
-    role: "Registration",
-    pattern: /\b(regist\w*|check[\s-]?in|front[\s-]?desk|welcome|sign[\s-]?in)\b/i,
-  },
-  {
-    role: "Photography",
-    pattern: /\b(photo\w*|camera|film|media|video)\b/i,
-  },
-  {
-    role: "Cleanup",
-    pattern: /\b(clean\w*|tear[\s-]?down|pack[\s-]?up|breakdown)\b/i,
-  },
-];
-
-/** Infer a display role from the volunteer note when no role API exists. */
-export function inferVolunteerRole(
-  note: string | null | undefined,
-): string {
-  const text = note?.trim() ?? "";
-  if (!text) {
-    return "General help";
+/** Aggregate filled/needed from board-configured volunteer role spots. */
+export function summarizeVolunteerSlots(
+  slots: VolunteerSlotResponse[],
+): VolunteerSlotTotals {
+  if (slots.length === 0) {
+    return { filled: 0, needed: 0, hasTarget: false };
   }
-  for (const matcher of ROLE_MATCHERS) {
-    if (matcher.pattern.test(text)) {
-      return matcher.role;
-    }
+  let filled = 0;
+  let needed = 0;
+  for (const slot of slots) {
+    filled += Math.max(0, slot.signup_count);
+    needed += Math.max(0, slot.max_signup_count);
   }
-  return "General help";
-}
-
-export function filledNeededRoles(
-  signups: EventVolunteerSignupMember[],
-): Set<NeededVolunteerRole> {
-  const filled = new Set<NeededVolunteerRole>();
-  for (const signup of signups) {
-    const role = inferVolunteerRole(signup.note);
-    if ((NEEDED_VOLUNTEER_ROLES as readonly string[]).includes(role)) {
-      filled.add(role as NeededVolunteerRole);
-    }
-  }
-  return filled;
+  return { filled, needed, hasTarget: needed > 0 };
 }
 
 export function volunteerInitials(fullName: string): string {

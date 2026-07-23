@@ -19,28 +19,35 @@ import {
   EVENT_MANAGE_SECONDARY_BTN_FLEX,
 } from "../lib/event-manage-ui";
 import { volunteerInitials } from "../lib/event-volunteer-summary";
+import { InviteMembersToEventModal } from "./InviteMembersToEventModal";
 import { HomeCard } from "./ui/HomeCard";
 import { inputFieldClassName } from "./ui/Input";
 
 type EventManageVolunteersCardProps = {
   eventId: number;
+  eventName: string;
   volunteers: EventVolunteerSignupMember[];
   isLoading: boolean;
+  alreadyInvitedMemberIds?: number[];
   onViewSignups: () => void;
   onConvertToTasks: () => void;
+  onSlotsChanged?: () => void;
 };
 
 export function EventManageVolunteersCard({
   eventId,
+  eventName,
   volunteers,
   isLoading,
+  alreadyInvitedMemberIds = [],
   onViewSignups,
   onConvertToTasks,
+  onSlotsChanged,
 }: EventManageVolunteersCardProps) {
   const [slots, setSlots] = useState<VolunteerSlotResponse[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(true);
   const [roleName, setRoleName] = useState("");
-  const [roleCapacity, setRoleCapacity] = useState("4");
+  const [roleCapacity, setRoleCapacity] = useState("2");
   const [addingRole, setAddingRole] = useState(false);
   const [roleError, setRoleError] = useState<string | null>(null);
   const [showAddRole, setShowAddRole] = useState(false);
@@ -49,6 +56,7 @@ export function EventManageVolunteersCard({
   const [editCapacity, setEditCapacity] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const preview = volunteers.slice(0, 3);
   const pendingCount = volunteers.filter((row) => row.status === "pending").length;
@@ -96,8 +104,9 @@ export function EventManageVolunteersCard({
       });
       setSlots((current) => [...current, created]);
       setRoleName("");
-      setRoleCapacity("4");
+      setRoleCapacity("2");
       setShowAddRole(false);
+      onSlotsChanged?.();
     } catch (caught) {
       setRoleError(getApiErrorMessage(caught));
     } finally {
@@ -135,6 +144,7 @@ export function EventManageVolunteersCard({
         current.map((slot) => (slot.id === slotId ? updated : slot)),
       );
       setEditingSlotId(null);
+      onSlotsChanged?.();
     } catch (caught) {
       setRoleError(getApiErrorMessage(caught));
     } finally {
@@ -158,6 +168,7 @@ export function EventManageVolunteersCard({
       if (editingSlotId === slotId) {
         setEditingSlotId(null);
       }
+      onSlotsChanged?.();
     } catch (caught) {
       setRoleError(getApiErrorMessage(caught));
     } finally {
@@ -173,15 +184,26 @@ export function EventManageVolunteersCard({
     >
       <div className="flex shrink-0 items-center justify-between gap-2">
         <h2 className="home-section-title">Volunteers</h2>
-        {!isLoading && volunteers.length > 0 ? (
-          <button
-            type="button"
-            onClick={onViewSignups}
-            className={EVENT_MANAGE_ACTION_LINK}
-          >
-            View interests
-          </button>
-        ) : null}
+        <div className="flex items-center gap-2">
+          {slots.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setInviteOpen(true)}
+              className={EVENT_MANAGE_ACTION_LINK}
+            >
+              Invite
+            </button>
+          ) : null}
+          {!isLoading && volunteers.length > 0 ? (
+            <button
+              type="button"
+              onClick={onViewSignups}
+              className={EVENT_MANAGE_ACTION_LINK}
+            >
+              View interests
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {slotsLoading ? (
@@ -191,10 +213,15 @@ export function EventManageVolunteersCard({
           <div>
             <p className={EVENT_MANAGE_EYEBROW}>Roles</p>
             {slots.length === 0 ? (
-              <p className="mt-1.5 text-xs leading-relaxed text-gray-500">
-                Add roles like Setup, Food, or Cleanup so members can claim
-                spots.
-              </p>
+              <div className="mt-1.5 space-y-1.5">
+                <p className="text-xs leading-relaxed text-gray-500">
+                  1. Add roles with how many people you need (Setup × 2,
+                  Cleanup × 2).
+                </p>
+                <p className="text-xs leading-relaxed text-gray-500">
+                  2. Invite members personally or invite everyone.
+                </p>
+              </div>
             ) : (
               <ul className="mt-2 space-y-2">
                 {slots.map((slot) => (
@@ -428,11 +455,28 @@ export function EventManageVolunteersCard({
             </ul>
           )}
 
-          <div className="mt-auto flex gap-2 pt-3">
+          <div className="mt-auto flex flex-wrap gap-2 pt-3">
+            {slots.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setInviteOpen(true)}
+                className={EVENT_MANAGE_PRIMARY_BTN_FLEX}
+              >
+                Invite volunteers
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowAddRole(true)}
+                className={EVENT_MANAGE_PRIMARY_BTN_FLEX}
+              >
+                Add first role
+              </button>
+            )}
             <button
               type="button"
               onClick={onViewSignups}
-              className={EVENT_MANAGE_PRIMARY_BTN_FLEX}
+              className={EVENT_MANAGE_SECONDARY_BTN_FLEX}
             >
               View interests
             </button>
@@ -446,6 +490,15 @@ export function EventManageVolunteersCard({
           </div>
         </div>
       )}
+
+      <InviteMembersToEventModal
+        open={inviteOpen}
+        eventId={eventId}
+        eventName={eventName}
+        purpose="volunteers"
+        alreadyInvitedMemberIds={alreadyInvitedMemberIds}
+        onClose={() => setInviteOpen(false)}
+      />
     </HomeCard>
   );
 }
