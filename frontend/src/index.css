@@ -7634,6 +7634,94 @@
     gap: 0.5rem;
   }
 
+  /* Scrollable Events hub tabs — edge fades signal overflow (no visible scrollbar). */
+  .events-hub-tabs {
+    position: relative;
+  }
+
+  .events-hub-tabs-scroller {
+    display: flex;
+    gap: 0.25rem;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    /* Soft dissolve into the edge so clipped tabs read as “more this way.” */
+    --events-hub-mask-left: 0rem;
+    --events-hub-mask-right: 0rem;
+    mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      #000 var(--events-hub-mask-left),
+      #000 calc(100% - var(--events-hub-mask-right)),
+      transparent 100%
+    );
+  }
+
+  .events-hub-tabs-scroller::-webkit-scrollbar {
+    display: none;
+  }
+
+  .events-hub-tabs--fade-left {
+    --events-hub-mask-left: 1.75rem;
+  }
+
+  .events-hub-tabs--fade-right {
+    --events-hub-mask-right: 2.5rem;
+  }
+
+  .events-hub-tab {
+    scroll-snap-align: start;
+  }
+
+  .events-hub-tabs-fade {
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    bottom: 1px;
+    width: 2.75rem;
+    z-index: 1;
+    opacity: 0;
+    transition: opacity 160ms ease;
+  }
+
+  .events-hub-tabs-fade--left {
+    left: 0;
+    background: linear-gradient(
+      to right,
+      var(--color-surface),
+      color-mix(in srgb, var(--color-surface) 55%, transparent)
+    );
+  }
+
+  .events-hub-tabs-fade--right {
+    right: 0;
+    background: linear-gradient(
+      to left,
+      var(--color-surface),
+      color-mix(in srgb, var(--color-surface) 55%, transparent)
+    );
+  }
+
+  .events-hub-tabs--fade-left .events-hub-tabs-fade--left,
+  .events-hub-tabs--fade-right .events-hub-tabs-fade--right {
+    opacity: 1;
+  }
+
+  @media (min-width: 768px) {
+    .events-hub-tabs--fade-left {
+      --events-hub-mask-left: 1.25rem;
+    }
+
+    .events-hub-tabs--fade-right {
+      --events-hub-mask-right: 1.75rem;
+    }
+
+    .events-hub-tabs-fade {
+      width: 2.25rem;
+    }
+  }
+
   .events-calendar-card {
     @apply rounded-2xl bg-white;
     box-shadow:
