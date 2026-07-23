@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  formatCompactRelativeTimestamp,
   formatCountdownBadge,
   formatRelativeTimestamp,
 } from "./format-datetime";
@@ -17,6 +18,24 @@ describe("formatRelativeTimestamp", () => {
     expect(
       formatRelativeTimestamp("2030-01-01T10:00:00.000Z", now),
     ).toBe("2 hr ago");
+  });
+});
+
+describe("formatCompactRelativeTimestamp", () => {
+  it("uses short stamps for inbox density", () => {
+    const now = new Date("2030-01-01T12:00:00.000Z");
+    expect(
+      formatCompactRelativeTimestamp("2030-01-01T11:59:30.000Z", now),
+    ).toBe("now");
+    expect(
+      formatCompactRelativeTimestamp("2030-01-01T11:50:00.000Z", now),
+    ).toBe("10m");
+    expect(
+      formatCompactRelativeTimestamp("2030-01-01T10:00:00.000Z", now),
+    ).toBe("2h");
+    expect(
+      formatCompactRelativeTimestamp("2029-12-20T12:00:00.000Z", now),
+    ).toMatch(/Dec/);
   });
 });
 

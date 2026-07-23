@@ -38,6 +38,40 @@ export function formatRelativeTimestamp(isoDate: string, now = new Date()): stri
   return formatEventDateTime(isoDate);
 }
 
+/** Shorter stamp for dense lists (inbox rows) — avoids wrapping at phone widths. */
+export function formatCompactRelativeTimestamp(
+  isoDate: string,
+  now = new Date(),
+): string {
+  const then = new Date(isoDate).getTime();
+  const diffSeconds = Math.round((now.getTime() - then) / 1000);
+
+  if (!Number.isFinite(diffSeconds)) {
+    return "—";
+  }
+
+  if (diffSeconds < 45) {
+    return "now";
+  }
+  if (diffSeconds < 3600) {
+    return `${Math.max(1, Math.floor(diffSeconds / 60))}m`;
+  }
+  if (diffSeconds < 86400) {
+    return `${Math.max(1, Math.floor(diffSeconds / 3600))}h`;
+  }
+  if (diffSeconds < 172800) {
+    return "yday";
+  }
+  if (diffSeconds < 604800) {
+    return `${Math.floor(diffSeconds / 86400)}d`;
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+  }).format(new Date(isoDate));
+}
+
 export function formatIsoDateLabel(isoDate: string): string {
   const [year, month, day] = isoDate.split("-").map(Number);
   return new Intl.DateTimeFormat(undefined, {

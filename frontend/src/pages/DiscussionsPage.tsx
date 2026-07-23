@@ -360,7 +360,7 @@ export function DiscussionsPage() {
   }
 
   return (
-    <div className="-mx-4 -my-5 flex h-[calc(100dvh-4rem-1.25rem)] min-h-[28rem] overflow-hidden border-y border-gray-200 bg-white sm:-mx-6 sm:-my-6 sm:h-[calc(100dvh-4rem-1.5rem)] lg:-mx-8 lg:h-[calc(100dvh-4rem-1.5rem)] xl:-mx-10">
+    <div className="discussions-shell -mx-4 -my-5 flex min-h-[28rem] overflow-hidden border-y border-gray-200 bg-white sm:-mx-6 sm:-my-6 lg:-mx-8 xl:-mx-10">
       {showList ? (
         <DiscussionRoomSidebar
           rooms={rooms}

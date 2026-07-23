@@ -9399,6 +9399,36 @@
     animation: rsvp-confirmation-fade-in 400ms ease-out forwards;
   }
 
+  /* Full-height discussions shell — clears topbar; clears bottom nav on list (mobile). */
+  .discussions-shell {
+    height: calc(100dvh - 4rem - 1.25rem - 4.25rem - env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Thread view hides bottom nav (< lg), so reclaim that space. */
+  @media (max-width: 1023px) {
+    .discussions-shell:has(.discussion-feed-pane) {
+      height: calc(100dvh - 4rem - 1.25rem);
+    }
+  }
+
+  @media (min-width: 640px) and (max-width: 1023px) {
+    .discussions-shell:has(.discussion-feed-pane) {
+      height: calc(100dvh - 4rem - 1.5rem);
+    }
+  }
+
+  @media (min-width: 640px) {
+    .discussions-shell {
+      height: calc(100dvh - 4rem - 1.5rem - 4.25rem - env(safe-area-inset-bottom, 0px));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .discussions-shell {
+      height: calc(100dvh - 4rem - 1.5rem);
+    }
+  }
+
   @keyframes discussion-reaction-picker-in {
     from {
       opacity: 0;

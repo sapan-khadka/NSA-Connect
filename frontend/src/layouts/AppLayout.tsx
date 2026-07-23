@@ -9,6 +9,14 @@ import { AppLogo } from "../components/AppLogo";
 import { NotificationSummaryProvider } from "../context/NotificationSummaryProvider";
 import { useAuth } from "../context/useAuth";
 
+function isDiscussionThreadPath(pathname: string): boolean {
+  return (
+    pathname === "/discussions/board" ||
+    /^\/discussions\/event\/\d+$/.test(pathname) ||
+    /^\/discussions\/room\/\d+$/.test(pathname)
+  );
+}
+
 /**
  * App shell: fixed left sidebar + top header + scrollable main canvas.
  * Navigation lives in the sidebar only (not the top bar).
@@ -18,6 +26,7 @@ export function AppLayout() {
   const { pathname } = useLocation();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const fluidCanvas = pathname === "/";
+  const hideMobileBottomNav = isDiscussionThreadPath(pathname);
 
   if (!isAuthenticated) {
     return (
@@ -75,7 +84,8 @@ export function AppLayout() {
 
           <main
             className={[
-              "ds-main-canvas pb-24 lg:pb-8",
+              "ds-main-canvas",
+              hideMobileBottomNav ? "pb-0 lg:pb-8" : "pb-24 lg:pb-8",
               fluidCanvas ? "ds-main-canvas--fluid" : "",
             ]
               .filter(Boolean)
@@ -84,7 +94,7 @@ export function AppLayout() {
             <Outlet />
           </main>
 
-          <MobileBottomNav />
+          {hideMobileBottomNav ? null : <MobileBottomNav />}
         </div>
       </div>
     </NotificationSummaryProvider>

@@ -12,8 +12,7 @@ import type {
   DiscussionRoom,
 } from "../../lib/discussion-api";
 import { discussionRoomPath } from "../../lib/discussion-paths";
-import { formatRelativeTimestamp } from "../../lib/format-datetime";
-import { AppIcon } from "../ui/AppIcon";
+import { formatCompactRelativeTimestamp } from "../../lib/format-datetime";import { AppIcon } from "../ui/AppIcon";
 import { Button } from "../ui/Button";
 
 const GROUP_AVATAR_COLOR = "#0F766E";
@@ -118,9 +117,9 @@ function DiscussionSidebarRow({
             {room.last_message_at ? (
               <time
                 dateTime={room.last_message_at}
-                className="text-xs text-gray-500"
+                className="text-xs tabular-nums text-gray-500"
               >
-                {formatRelativeTimestamp(room.last_message_at)}
+                {formatCompactRelativeTimestamp(room.last_message_at)}
               </time>
             ) : null}
           </div>
@@ -148,7 +147,7 @@ function DiscussionSidebarRow({
         disabled={pinDisabled || isBoard}
         onClick={handlePinClick}
         className={[
-          "mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition",
+          "mt-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition sm:mt-1 sm:h-7 sm:w-7",
           room.pinned
             ? "text-primary"
             : "text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-gray-100 hover:text-foreground max-sm:opacity-100",
@@ -233,7 +232,7 @@ function ArchivedRoomRow({
             ? "Event discussion"
             : "Group"}
         {room.archived_at
-          ? ` · archived ${formatRelativeTimestamp(room.archived_at)}`
+          ? ` · archived ${formatCompactRelativeTimestamp(room.archived_at)}`
           : ""}
       </p>
       <Button
@@ -311,7 +310,7 @@ export function DiscussionRoomSidebar({
         <h1 className="truncate text-base font-medium text-foreground">
           {showArchived ? "Archived" : "Discussions"}
         </h1>
-        <div className="flex shrink-0 items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1">
           {canManageArchive && onToggleArchived ? (
             <Button
               type="button"
@@ -322,9 +321,12 @@ export function DiscussionRoomSidebar({
               aria-label={
                 showArchived ? "Back to active discussions" : "View archived"
               }
+              className="min-h-11 min-w-11 px-2 sm:min-h-0 sm:min-w-0 sm:px-3"
             >
               <AppIcon icon={Archive} size="xs" />
-              {showArchived ? "Active" : "Archived"}
+              <span className="hidden sm:inline">
+                {showArchived ? "Active" : "Archived"}
+              </span>
               {!showArchived && archived.length > 0 ? (
                 <span className="tabular-nums">{archived.length}</span>
               ) : null}
@@ -337,9 +339,10 @@ export function DiscussionRoomSidebar({
               size="sm"
               onClick={onCreateGroup}
               aria-label="New discussion group"
+              className="min-h-11 min-w-11 px-2 sm:min-h-0 sm:min-w-0 sm:px-3"
             >
               <AppIcon icon={Plus} size="xs" />
-              New group
+              <span className="hidden sm:inline">New group</span>
             </Button>
           ) : null}
         </div>

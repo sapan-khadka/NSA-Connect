@@ -626,7 +626,10 @@ function Composer({
   }
 
   return (
-    <form onSubmit={onSubmit} className="shrink-0 border-t border-gray-200 p-3">
+    <form
+      onSubmit={onSubmit}
+      className="shrink-0 border-t border-gray-200 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+    >
       {errorMessage ? (
         <p className="mb-2 text-sm text-overdue" role="alert">
           {errorMessage}
@@ -802,7 +805,7 @@ function DiscussionShell({
           type="button"
           onClick={onBack}
           aria-label="Back to rooms"
-          className="inline-flex h-8 w-8 items-center justify-center rounded-full text-foreground transition hover:bg-gray-100 md:hidden"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-foreground transition hover:bg-gray-100 md:hidden"
         >
           <AppIcon icon={ArrowLeft} size="sm" />
         </button>
@@ -909,7 +912,10 @@ function DiscussionShell({
   if (isPane) {
     return (
       <section
-        className={["flex h-full min-h-0 flex-col bg-white", className]
+        className={[
+          "discussion-feed-pane flex h-full min-h-0 flex-col bg-white",
+          className,
+        ]
           .filter(Boolean)
           .join(" ")}
         aria-label={title}
