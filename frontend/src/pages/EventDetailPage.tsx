@@ -314,7 +314,7 @@ export function EventDetailPage() {
           {canViewBoard ? (
             <Link
               to={`/events/${event.id}/manage`}
-              className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-foreground transition hover:border-accent hover:text-accent"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-semibold text-foreground transition hover:border-accent hover:text-accent sm:w-auto"
             >
               Manage event
             </Link>

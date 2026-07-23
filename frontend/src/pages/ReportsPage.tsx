@@ -85,8 +85,8 @@ export function ReportsPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <Card padding="none" className="p-6 sm:p-8">
+    <div className="reports-page space-y-6 sm:space-y-8">
+      <Card padding="none" className="p-5 sm:p-8">
         <h1 className="text-3xl font-light tracking-headline text-foreground">
           Reports
         </h1>
@@ -97,7 +97,7 @@ export function ReportsPage() {
       </Card>
 
       {canGenerate ? (
-        <Card padding="none" className="p-6 sm:p-8">
+        <Card padding="none" className="p-5 sm:p-8">
           <h2 className="text-lg font-medium text-foreground">Generate report</h2>
           <p className="mt-1 text-sm text-label">
             Board members can create a snapshot report for a semester or custom
@@ -109,8 +109,8 @@ export function ReportsPage() {
               <legend className="text-sm font-medium text-foreground">
                 Date range
               </legend>
-              <div className="mt-2 flex flex-wrap gap-4 text-sm">
-                <label className="flex items-center gap-2">
+              <div className="mt-2 flex flex-col gap-1 text-sm sm:flex-row sm:flex-wrap sm:gap-4">
+                <label className="flex min-h-11 items-center gap-2">
                   <input
                     type="radio"
                     name="range-mode"
@@ -119,7 +119,7 @@ export function ReportsPage() {
                   />
                   Semester
                 </label>
-                <label className="flex items-center gap-2">
+                <label className="flex min-h-11 items-center gap-2">
                   <input
                     type="radio"
                     name="range-mode"
@@ -198,7 +198,7 @@ export function ReportsPage() {
             <button
               type="submit"
               disabled={isGenerating}
-              className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-60"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-60 sm:w-auto"
             >
               {isGenerating ? "Generating…" : "Generate report"}
             </button>
@@ -206,7 +206,7 @@ export function ReportsPage() {
         </Card>
       ) : null}
 
-      <Card padding="none" className="p-6 sm:p-8">
+      <Card padding="none" className="p-5 sm:p-8">
         <h2 className="text-lg font-medium text-foreground">Past reports</h2>
 
         {isLoading ? (
@@ -223,9 +223,9 @@ export function ReportsPage() {
               <li key={report.id} className="py-4">
                 <Link
                   to={`/reports/${report.id}`}
-                  className="group block rounded-md transition-colors hover:bg-accent/5"
+                  className="group block min-h-11 rounded-md transition-colors hover:bg-accent/5"
                 >
-                  <div className="px-2 py-2">
+                  <div className="px-2 py-2.5">
                     <p className="text-base font-medium text-foreground group-hover:text-accent">
                       {report.title}
                     </p>

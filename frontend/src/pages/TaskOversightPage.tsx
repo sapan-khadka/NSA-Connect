@@ -17,6 +17,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { AppIcon } from "../components/ui/AppIcon";
 import { Card } from "../components/ui/Card";
 import { useAuth } from "../context/useAuth";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 import { getApiErrorMessage } from "../lib/api-error";
 import { isToday } from "../lib/calendar";
 import {
@@ -101,7 +102,7 @@ function OversightTaskCard({ task }: { task: EventTaskResponse }) {
           : 0;
 
   return (
-    <article className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
+    <article className="oversight-task-card">
       <div className="flex items-start justify-between gap-2">
         <h3 className="min-w-0 text-sm font-semibold leading-snug text-foreground">
           {getTaskDisplayName(task)}
@@ -116,22 +117,21 @@ function OversightTaskCard({ task }: { task: EventTaskResponse }) {
         </span>
       </div>
 
-      <div className="mt-2.5 flex items-center gap-2">
+      <div className="oversight-task-card-meta">
         <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-badge-teal-bg text-[10px] font-semibold text-primary">
           {initials(task.assignee_name)}
         </span>
-        <span className="truncate text-xs text-gray-600">
+        <span className="min-w-0 truncate text-xs text-gray-600">
           {task.assignee_name}
+        </span>
+        <span className="oversight-task-card-due truncate text-[11px] text-gray-500">
+          {dueLabel ?? "No due date"}
+          {task.is_overdue && !task.is_complete ? " · Overdue" : ""}
         </span>
       </div>
 
-      <p className="mt-2 truncate text-[11px] text-gray-500">
-        {dueLabel ?? "No due date"}
-        {task.is_overdue && !task.is_complete ? " · Overdue" : ""}
-      </p>
-
       {task.status !== "todo" || checklistTotal > 0 ? (
-        <div className="mt-2.5">
+        <div className="oversight-task-card-progress">
           <div className="mb-1 flex items-center justify-between text-[10px] text-gray-500">
             <span>
               {checklistTotal > 0
@@ -142,7 +142,7 @@ function OversightTaskCard({ task }: { task: EventTaskResponse }) {
             </span>
             <span className="tabular-nums">{progress}%</span>
           </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-gray-100">
+          <div className="h-1 overflow-hidden rounded-full bg-gray-100">
             <div
               className={[
                 "h-full rounded-full transition-[width]",
@@ -159,6 +159,7 @@ function OversightTaskCard({ task }: { task: EventTaskResponse }) {
 
 export function TaskOversightPage() {
   const { member } = useAuth();
+  const isMobile = !useMediaQuery("(min-width: 768px)");
   const [searchParams, setSearchParams] = useSearchParams();
   const [overview, setOverview] = useState<TaskOverviewResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -554,14 +555,22 @@ export function TaskOversightPage() {
                 </div>
 
                 <div
-                  className="grid grid-cols-1 gap-3 md:grid-cols-3"
+                  className={
+                    isMobile
+                      ? "oversight-board-mobile"
+                      : "grid grid-cols-1 gap-3 md:grid-cols-3"
+                  }
                   aria-label="Task board"
                 >
                   {columns.map((column) => (
                     <section
                       key={column.id}
                       aria-label={column.label}
-                      className="rounded-xl border border-gray-100 bg-slate-50/80 p-2.5"
+                      className={
+                        isMobile
+                          ? "oversight-board-mobile-col"
+                          : "rounded-xl border border-gray-100 bg-slate-50/80 p-2.5"
+                      }
                     >
                       <div className="mb-2 flex items-center justify-between gap-2 px-1">
                         <h2 className="text-sm font-semibold text-foreground">
@@ -573,7 +582,7 @@ export function TaskOversightPage() {
                       </div>
                       <ul className="space-y-2">
                         {column.items.length === 0 ? (
-                          <li className="rounded-lg border border-dashed border-gray-200 bg-white/60 px-3 py-6 text-center text-xs text-gray-500">
+                          <li className="oversight-board-empty">
                             No tasks
                           </li>
                         ) : (

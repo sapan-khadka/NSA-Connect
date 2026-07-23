@@ -67,7 +67,7 @@ type EventRsvpButtonProps = {
 
 function defaultButtonClass(isSelected: boolean): string {
   const base =
-    "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60";
+    "inline-flex min-h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none sm:shrink-0";
 
   if (isSelected) {
     return `${base} bg-primary text-white`;
@@ -236,7 +236,7 @@ export function EventRsvpButton({
             <div
               role="group"
               aria-label="RSVP options"
-              className="mt-3 flex flex-wrap gap-2"
+              className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap"
             >
               {options.map((option) => {
                 const isSelected = displayStatus === option.value;

@@ -87,7 +87,7 @@ export function ProfilePage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="profile-page space-y-6 sm:space-y-8">
       <Card padding="none" className="p-4 sm:p-8">
         <p className="ds-section-label">Account settings</p>
         <h1 className="mt-2 text-3xl font-light tracking-headline text-foreground">

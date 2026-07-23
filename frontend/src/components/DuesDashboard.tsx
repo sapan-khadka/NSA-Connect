@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "./ui/Button";
 import { inputFieldClassName } from "./ui/Input";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 import { getApiErrorMessage } from "../lib/api-error";
 import {
   DUES_PAYMENT_METHODS,
@@ -29,6 +30,49 @@ import { formatSemesterLabel } from "../lib/semester";
 import { DataTable } from "../design-system/components/data-display/DataTable";
 import type { DataTableColumn } from "../design-system/components/data-display/DataTable";
 import { Modal } from "./ui/Modal";
+
+function DuesRecordActions({
+  record,
+  busy,
+  compact,
+  onMarkPaid,
+  onMarkUnpaid,
+  onEditAmount,
+}: {
+  record: MemberDuesRecord;
+  busy: boolean;
+  compact?: boolean;
+  onMarkPaid: () => void;
+  onMarkUnpaid: () => void;
+  onEditAmount: () => void;
+}) {
+  const btnClass = compact
+    ? "dues-record-action-btn"
+    : "rounded-full border border-gray-200 px-3 py-1 text-xs hover:border-accent disabled:opacity-60";
+
+  return (
+    <div className={compact ? "dues-record-card-actions" : "flex flex-wrap gap-2"}>
+      {record.status !== "paid" && record.status !== "exempt" ? (
+        <button type="button" onClick={onMarkPaid} className={btnClass}>
+          Mark paid
+        </button>
+      ) : null}
+      {record.status === "paid" || record.status === "partial" ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onMarkUnpaid}
+          className={btnClass}
+        >
+          Mark unpaid
+        </button>
+      ) : null}
+      <button type="button" onClick={onEditAmount} className={btnClass}>
+        Edit amount
+      </button>
+    </div>
+  );
+}
 
 type DuesDashboardProps = {
   semester: string;
@@ -253,6 +297,7 @@ function EditAmountModal({
 }
 
 export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboardProps) {
+  const isMobile = !useMediaQuery("(min-width: 768px)");
   const [dashboardState, setDashboardState] = useState<DashboardState>({
     status: "loading",
   });
@@ -439,36 +484,15 @@ export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboard
         id: "actions",
         header: "Actions",
         cell: (record) => (
-          <div className="flex flex-wrap gap-2">
-            {record.status !== "paid" && record.status !== "exempt" ? (
-              <button
-                type="button"
-                onClick={() => setMarkPaidState({ record })}
-                className="rounded-full border border-gray-200 px-3 py-1 text-xs hover:border-accent"
-              >
-                Mark paid
-              </button>
-            ) : null}
-            {record.status === "paid" || record.status === "partial" ? (
-              <button
-                type="button"
-                disabled={busyRecordId === record.id}
-                onClick={() => void handleMarkUnpaid(record)}
-                className="rounded-full border border-gray-200 px-3 py-1 text-xs hover:border-accent disabled:opacity-60"
-              >
-                Mark unpaid
-              </button>
-            ) : null}
-            <button
-              type="button"
-              onClick={() =>
-                setEditAmountState({ record, amount: record.amount_owed })
-              }
-              className="rounded-full border border-gray-200 px-3 py-1 text-xs hover:border-accent"
-            >
-              Edit amount
-            </button>
-          </div>
+          <DuesRecordActions
+            record={record}
+            busy={busyRecordId === record.id}
+            onMarkPaid={() => setMarkPaidState({ record })}
+            onMarkUnpaid={() => void handleMarkUnpaid(record)}
+            onEditAmount={() =>
+              setEditAmountState({ record, amount: record.amount_owed })
+            }
+          />
         ),
       },
     ],
@@ -585,14 +609,14 @@ export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboard
 
           <section className="rounded-card border border-gray-200 bg-surface-card shadow-card">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-3">
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
                 <input
                   type="search"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="Search by name or email"
                   aria-label="Search members"
-                  className={`${inputFieldClassName} min-w-[14rem]`}
+                  className={`${inputFieldClassName} w-full min-w-0 sm:min-w-[14rem]`}
                 />
                 <select
                   aria-label="Filter by status"
@@ -614,15 +638,82 @@ export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboard
               </p>
             </div>
 
-            <DataTable
-              columns={duesColumns}
-              rows={records}
-              getRowId={(record) => String(record.id)}
-              emptyTitle="No dues records match this filter."
-              emptyDescription="Generate records to get started."
-              caption="Member dues records"
-              className="border-0 bg-transparent shadow-none rounded-none"
-            />
+            {isMobile ? (
+              records.length === 0 ? (
+                <div className="px-4 py-10 text-center">
+                  <p className="text-sm font-medium text-foreground">
+                    No dues records match this filter.
+                  </p>
+                  <p className="mt-1 text-sm text-label">
+                    Generate records to get started.
+                  </p>
+                </div>
+              ) : (
+                <ul
+                  className="dues-record-mobile-list"
+                  aria-label="Member dues records"
+                >
+                  {records.map((record) => (
+                    <li key={record.id}>
+                      <article className="dues-record-card">
+                        <div className="dues-record-card-top">
+                          <div className="min-w-0 flex-1">
+                            <p className="dues-record-card-name">
+                              {record.member_name}
+                            </p>
+                            <p className="dues-record-card-email">
+                              {record.member_email}
+                            </p>
+                          </div>
+                          <span
+                            className={`inline-flex shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-medium ${duesStatusToneClass(record.status)}`}
+                          >
+                            {duesStatusLabel(record.status)}
+                          </span>
+                        </div>
+                        <dl className="dues-record-card-meta">
+                          <div>
+                            <dt>Owed</dt>
+                            <dd>{formatCurrency(record.amount_owed)}</dd>
+                          </div>
+                          <div>
+                            <dt>Paid</dt>
+                            <dd>{formatCurrency(record.amount_paid)}</dd>
+                          </div>
+                          <div>
+                            <dt>Method</dt>
+                            <dd>{paymentMethodLabel(record.payment_method)}</dd>
+                          </div>
+                        </dl>
+                        <DuesRecordActions
+                          record={record}
+                          busy={busyRecordId === record.id}
+                          compact
+                          onMarkPaid={() => setMarkPaidState({ record })}
+                          onMarkUnpaid={() => void handleMarkUnpaid(record)}
+                          onEditAmount={() =>
+                            setEditAmountState({
+                              record,
+                              amount: record.amount_owed,
+                            })
+                          }
+                        />
+                      </article>
+                    </li>
+                  ))}
+                </ul>
+              )
+            ) : (
+              <DataTable
+                columns={duesColumns}
+                rows={records}
+                getRowId={(record) => String(record.id)}
+                emptyTitle="No dues records match this filter."
+                emptyDescription="Generate records to get started."
+                caption="Member dues records"
+                className="border-0 bg-transparent shadow-none rounded-none"
+              />
+            )}
           </section>
         </>
       ) : null}

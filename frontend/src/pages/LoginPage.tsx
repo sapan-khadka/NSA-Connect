@@ -169,7 +169,8 @@ export function LoginPage() {
           type="submit"
           disabled={isSubmitting}
           loading={isSubmitting}
-          className="w-full"
+          size="lg"
+          className="min-h-11 w-full"
         >
           Sign in
         </Button>

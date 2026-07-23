@@ -7,6 +7,7 @@ import {
   ExternalLink,
   ListTodo,
   MapPin,
+  MoreHorizontal,
   Pencil,
   Share2,
   Users,
@@ -16,6 +17,8 @@ import {
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
+import { Drawer } from "../design-system/components/feedback/Drawer";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 import { getApiErrorMessage } from "../lib/api-error";
 import { EVENT_TYPE_BADGE_CLASS, EVENT_TYPE_LABELS } from "../lib/event-types";
 import {
@@ -131,6 +134,7 @@ export function EventManageHero({
   volunteerCount: volunteerCountProp,
 }: EventManageHeroProps) {
   const navigate = useNavigate();
+  const isMobile = !useMediaQuery("(min-width: 768px)");
   const metricsProvided =
     attendeeCountProp !== undefined || volunteerCountProp !== undefined;
   const [attendeeCountLocal, setAttendeeCountLocal] = useState<number | null>(
@@ -140,6 +144,7 @@ export function EventManageHero({
     null,
   );
   const [shareCopied, setShareCopied] = useState(false);
+  const [moreActionsOpen, setMoreActionsOpen] = useState(false);
   const [duplicateOpen, setDuplicateOpen] = useState(false);
   const initialSchedule = splitEventDateTime(event.starts_at);
   const [duplicateName, setDuplicateName] = useState(`${event.name} (Copy)`);
@@ -244,6 +249,16 @@ export function EventManageHero({
     }
   }
 
+  const viewPageLabel = canSharePublicly
+    ? "View Public Page"
+    : "View Event Page";
+  const shareLabel = shareCopied
+    ? "Link copied"
+    : canSharePublicly
+      ? "Share Public Link"
+      : "Copy Member Link";
+  const mobileActionBtn = "event-manage-mobile-action";
+
   return (
     <Card
       as="section"
@@ -253,7 +268,7 @@ export function EventManageHero({
     >
       <Link
         to={backTo}
-        className="inline-flex items-center text-sm font-medium text-gray-500 transition duration-150 hover:text-primary"
+        className="event-manage-back-link inline-flex items-center text-sm font-medium text-gray-500 transition duration-150 hover:text-primary"
       >
         ← Back to Events
       </Link>
@@ -320,58 +335,142 @@ export function EventManageHero({
 
         <div className="flex flex-col gap-2.5 lg:items-stretch">
           <p className={EVENT_MANAGE_EYEBROW}>Actions</p>
-          <button
-            type="button"
-            onClick={onEditEvent}
-            className={`${EVENT_MANAGE_PRIMARY_BTN} gap-1.5`}
-          >
-            <AppIcon icon={Pencil} size="xs" className="text-current" />
-            Edit Event
-          </button>
+          {isMobile ? (
+            <>
+              <button
+                type="button"
+                onClick={onEditEvent}
+                className={`${EVENT_MANAGE_PRIMARY_BTN} ${mobileActionBtn} gap-1.5`}
+              >
+                <AppIcon icon={Pencil} size="xs" className="text-current" />
+                Edit Event
+              </button>
+              <button
+                type="button"
+                onClick={onCheckIn}
+                className={`${secondaryActionClassName()} ${mobileActionBtn}`}
+              >
+                <AppIcon
+                  icon={ClipboardCheck}
+                  size="xs"
+                  className="text-gray-500"
+                />
+                Check In
+              </button>
+              <button
+                type="button"
+                onClick={() => setMoreActionsOpen(true)}
+                className={`${secondaryActionClassName()} ${mobileActionBtn}`}
+                aria-haspopup="dialog"
+                aria-expanded={moreActionsOpen}
+              >
+                <AppIcon
+                  icon={MoreHorizontal}
+                  size="xs"
+                  className="text-gray-500"
+                />
+                More actions
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={onEditEvent}
+                className={`${EVENT_MANAGE_PRIMARY_BTN} gap-1.5`}
+              >
+                <AppIcon icon={Pencil} size="xs" className="text-current" />
+                Edit Event
+              </button>
+              <Link
+                to={canSharePublicly ? sharePath : memberPath}
+                className={secondaryActionClassName()}
+              >
+                <AppIcon
+                  icon={ExternalLink}
+                  size="xs"
+                  className="text-gray-500"
+                />
+                {viewPageLabel}
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  void handleShare();
+                }}
+                className={secondaryActionClassName(shareCopied)}
+                aria-live="polite"
+              >
+                <AppIcon icon={Share2} size="xs" className="text-current" />
+                {shareLabel}
+              </button>
+              <button
+                type="button"
+                onClick={onCheckIn}
+                className={secondaryActionClassName()}
+              >
+                <AppIcon
+                  icon={ClipboardCheck}
+                  size="xs"
+                  className="text-gray-500"
+                />
+                Check In
+              </button>
+              <button
+                type="button"
+                onClick={openDuplicateModal}
+                className={secondaryActionClassName()}
+              >
+                <AppIcon icon={Copy} size="xs" className="text-gray-500" />
+                Duplicate Event
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      <Drawer
+        open={isMobile && moreActionsOpen}
+        onClose={() => setMoreActionsOpen(false)}
+        side="bottom"
+        title="More actions"
+        className="event-manage-more-drawer"
+      >
+        <div className="flex flex-col gap-2.5">
           <Link
             to={canSharePublicly ? sharePath : memberPath}
-            className={secondaryActionClassName()}
+            className={`${secondaryActionClassName()} ${mobileActionBtn}`}
+            onClick={() => setMoreActionsOpen(false)}
           >
             <AppIcon icon={ExternalLink} size="xs" className="text-gray-500" />
-            {canSharePublicly ? "View Public Page" : "View Event Page"}
+            {viewPageLabel}
           </Link>
           <button
             type="button"
             onClick={() => {
-              void handleShare();
+              void handleShare().then(() => {
+                window.setTimeout(() => setMoreActionsOpen(false), 900);
+              });
             }}
-            className={secondaryActionClassName(shareCopied)}
+            className={`${secondaryActionClassName(shareCopied)} ${mobileActionBtn}`}
             aria-live="polite"
           >
             <AppIcon icon={Share2} size="xs" className="text-current" />
-            {shareCopied
-              ? "Link copied"
-              : canSharePublicly
-                ? "Share Public Link"
-                : "Copy Member Link"}
+            {shareLabel}
           </button>
           <button
             type="button"
-            onClick={onCheckIn}
-            className={secondaryActionClassName()}
-          >
-            <AppIcon
-              icon={ClipboardCheck}
-              size="xs"
-              className="text-gray-500"
-            />
-            Check In
-          </button>
-          <button
-            type="button"
-            onClick={openDuplicateModal}
-            className={secondaryActionClassName()}
+            onClick={() => {
+              setMoreActionsOpen(false);
+              openDuplicateModal();
+            }}
+            className={`${secondaryActionClassName()} ${mobileActionBtn}`}
           >
             <AppIcon icon={Copy} size="xs" className="text-gray-500" />
             Duplicate Event
           </button>
         </div>
-      </div>
+      </Drawer>
 
       <Modal
         open={duplicateOpen}
