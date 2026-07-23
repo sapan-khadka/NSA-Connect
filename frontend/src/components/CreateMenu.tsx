@@ -89,15 +89,18 @@ export function CreateMenu({ onLogTransaction, className = "" }: CreateMenuProps
     <div ref={rootRef} className={["relative shrink-0", className].join(" ")}>
       <button
         type="button"
+        aria-label="Create"
         aria-expanded={open}
         aria-haspopup="menu"
         aria-controls={menuId}
         onClick={() => setOpen((current) => !current)}
-        className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-2 text-sm font-medium text-white transition hover:bg-primary-hover"
+        className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-medium text-white transition hover:bg-primary-hover md:h-auto md:w-auto md:gap-1.5 md:px-3.5 md:py-2"
       >
         <AppIcon icon={Plus} size="sm" className="text-current" />
-        Create
-        <AppIcon icon={ChevronDown} size="xs" className="text-current opacity-80" />
+        <span className="hidden md:inline">Create</span>
+        <span className="hidden md:inline-flex" aria-hidden="true">
+          <AppIcon icon={ChevronDown} size="xs" className="text-current opacity-80" />
+        </span>
       </button>
 
       {open ? (

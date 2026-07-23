@@ -128,9 +128,19 @@ export function AppTopBar({
           <span className="hidden w-10 shrink-0 lg:block" aria-hidden="true" />
         )}
 
+        {/* Below md: icon opens GlobalSearch overlay. md+: persistent inline field. */}
+        <button
+          type="button"
+          aria-label="Search events, members, announcements"
+          onClick={openSearch}
+          className="ds-icon-btn ml-auto h-10 w-10 shrink-0 rounded-xl text-label transition duration-200 hover:bg-surface-muted hover:text-foreground md:hidden"
+        >
+          <AppIcon icon={Search} size="md" className="text-current" />
+        </button>
+
         <form
           onSubmit={handleSearch}
-          className="relative mx-auto min-w-0 w-full max-w-2xl flex-1"
+          className="relative mx-auto hidden min-w-0 w-full max-w-2xl flex-1 md:block"
           role="search"
         >
           <AppIcon
@@ -153,7 +163,7 @@ export function AppTopBar({
           </kbd>
         </form>
 
-        <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2 md:ml-auto">
           <CreateMenu
             onLogTransaction={canLog ? () => setIsLogOpen(true) : undefined}
           />
