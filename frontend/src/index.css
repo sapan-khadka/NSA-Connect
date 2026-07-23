@@ -7869,6 +7869,99 @@
     min-width: 0;
   }
 
+  /* Phone: one-row scrollable KPI chips (replaces 3-row card wrap). */
+  .events-stats-chip-row {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.15rem;
+    scroll-snap-type: x proximity;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    mask-image: linear-gradient(
+      to right,
+      #000 0%,
+      #000 calc(100% - 1.75rem),
+      transparent 100%
+    );
+  }
+
+  .events-stats-chip-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .events-stats-chip {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 8.5rem;
+    max-width: 11rem;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+    border-radius: 0.75rem;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    scroll-snap-align: start;
+  }
+
+  @media (max-width: 767px) {
+    .events-calendar-page {
+      gap: 0.65rem;
+      /* Clear fixed mobile bottom nav + safe area for upcoming strip / legend. */
+      padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    .events-calendar-panel-controls {
+      gap: 0.35rem 0.5rem;
+      padding-bottom: 0.35rem;
+    }
+
+    .events-calendar-panel-nav {
+      order: 2;
+      flex: 1 1 100%;
+      justify-content: space-between;
+    }
+
+    .events-calendar-panel-controls > button:first-child {
+      order: 1;
+    }
+
+    .events-calendar-panel-controls > [role="group"] {
+      order: 1;
+      margin-left: auto;
+    }
+
+    .events-calendar-grid {
+      margin-top: 0.5rem !important;
+      gap: 0.2rem !important;
+    }
+
+    .events-calendar-grid [data-testid="calendar-day-cell"] {
+      min-height: 2rem;
+    }
+
+    .events-calendar-card .mt-3.flex.flex-wrap {
+      margin-top: 0.65rem;
+      padding-top: 0.65rem;
+      gap: 0.35rem 0.75rem;
+    }
+
+    .events-upcoming-strip {
+      margin-bottom: 0.25rem;
+      /* Keep last cards clear of bottom nav when scrolled to end. */
+      padding-bottom: 0.25rem;
+    }
+
+    .events-preview-sheet-peek {
+      bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    .events-preview-sheet-panel {
+      padding-bottom: calc(1.1rem + 4.25rem + env(safe-area-inset-bottom, 0px));
+    }
+  }
+
   .events-calendar-toolbar {
     display: flex;
     flex-wrap: wrap;

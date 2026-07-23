@@ -170,7 +170,7 @@ export function EventsCalendarPanel({
                 {nepaliRange ? (
                   <p className="events-calendar-nepali-range">{nepaliRange}</p>
                 ) : null}
-                <div className="events-calendar-panel-picker">
+                <div className="events-calendar-panel-picker hidden md:flex">
                   <CalendarMonthYearPicker
                     year={year}
                     month={month}

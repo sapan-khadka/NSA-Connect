@@ -54,6 +54,14 @@ function formatFocusDate(date: Date): string {
   }).format(date);
 }
 
+function formatFocusDateShort(date: Date): string {
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  }).format(date);
+}
+
 function StatTile({
   icon,
   value,
@@ -86,9 +94,44 @@ function StatTile({
   );
 }
 
+function StatChip({
+  icon,
+  value,
+  label,
+  tone,
+}: {
+  icon: LucideIcon;
+  value: string | number;
+  label: string;
+  tone: StatTone;
+}) {
+  const colors = TONE_CLASS[tone];
+
+  return (
+    <div
+      className="events-stats-chip"
+      aria-label={`${label}: ${value}`}
+    >
+      <span
+        className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${colors.circle}`}
+      >
+        <AppIcon icon={icon} size="xs" className={colors.icon} />
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-bold tabular-nums leading-tight text-foreground">
+          {value}
+        </span>
+        <span className="block truncate text-[10px] font-medium leading-tight text-label">
+          {label}
+        </span>
+      </span>
+    </div>
+  );
+}
+
 /**
  * Horizontal strip of calendar-hub KPI tiles.
- * Counts are supplied by the parent — this component does not fetch.
+ * Below sm: one-row scrollable chips. sm+: wrapping HomeCard tiles.
  */
 export function EventsStatsStrip({
   upcomingEventsCount,
@@ -98,41 +141,77 @@ export function EventsStatsStrip({
   today = new Date(),
   className = "",
 }: EventsStatsStripProps) {
+  const focusLong = formatFocusDate(today);
+  const focusShort = formatFocusDateShort(today);
+
+  const items = [
+    {
+      icon: Calendar,
+      valueLong: focusLong,
+      valueShort: focusShort,
+      label: "Today's Focus",
+      tone: "teal" as const,
+    },
+    {
+      icon: CalendarDays,
+      valueLong: upcomingEventsCount,
+      valueShort: upcomingEventsCount,
+      label: "Upcoming events",
+      tone: "purple" as const,
+    },
+    {
+      icon: ClipboardList,
+      valueLong: tasksDueTodayCount,
+      valueShort: tasksDueTodayCount,
+      label: "Tasks due today",
+      tone: "coral" as const,
+    },
+    {
+      icon: DollarSign,
+      valueLong: financeApprovalCount,
+      valueShort: financeApprovalCount,
+      label: "Finance approval",
+      tone: "green" as const,
+    },
+    {
+      icon: Users,
+      valueLong: meetingsTodayCount,
+      valueShort: meetingsTodayCount,
+      label: "Meetings today",
+      tone: "blue" as const,
+    },
+  ];
+
   return (
     <section
       aria-label="Events overview stats"
-      className={["flex flex-wrap gap-2", className].filter(Boolean).join(" ")}
+      className={["events-calendar-stats-strip", className]
+        .filter(Boolean)
+        .join(" ")}
     >
-      <StatTile
-        icon={Calendar}
-        value={formatFocusDate(today)}
-        label="Today's Focus"
-        tone="teal"
-      />
-      <StatTile
-        icon={CalendarDays}
-        value={upcomingEventsCount}
-        label="Upcoming events"
-        tone="purple"
-      />
-      <StatTile
-        icon={ClipboardList}
-        value={tasksDueTodayCount}
-        label="Tasks due today"
-        tone="coral"
-      />
-      <StatTile
-        icon={DollarSign}
-        value={financeApprovalCount}
-        label="Finance approval"
-        tone="green"
-      />
-      <StatTile
-        icon={Users}
-        value={meetingsTodayCount}
-        label="Meetings today"
-        tone="blue"
-      />
+      <div className="events-stats-chip-row sm:hidden">
+        {items.map((item) => (
+          <StatChip
+            key={item.label}
+            icon={item.icon}
+            value={item.valueShort}
+            label={item.label}
+            tone={item.tone}
+          />
+        ))}
+      </div>
+
+      <div className="hidden flex-wrap gap-2 sm:flex">
+        {items.map((item) => (
+          <StatTile
+            key={item.label}
+            icon={item.icon}
+            value={item.valueLong}
+            label={item.label}
+            tone={item.tone}
+          />
+        ))}
+      </div>
     </section>
   );
 }
