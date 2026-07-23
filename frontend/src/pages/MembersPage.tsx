@@ -24,6 +24,7 @@ import { MembersTable } from "../components/MembersTable";
 import { PendingApprovals } from "../components/PendingApprovals";
 import { Modal } from "../components/ui/Modal";
 import { useAuth } from "../context/useAuth";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/api-error";
 import { fetchDuesDashboard } from "../lib/dues-api";
@@ -173,6 +174,7 @@ function SummaryChip({
   onClick,
   disabled,
   title,
+  stacked = false,
 }: {
   count: string;
   label: string;
@@ -181,6 +183,7 @@ function SummaryChip({
   onClick?: () => void;
   disabled?: boolean;
   title?: string;
+  stacked?: boolean;
 }) {
   const toneClass =
     tone === "pending"
@@ -191,17 +194,31 @@ function SummaryChip({
 
   const className = [
     "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors",
+    stacked ? "w-full justify-between rounded-xl px-3.5 py-3" : "",
     active
       ? "border-primary/30 bg-badge-teal-bg"
       : "border-gray-200 bg-surface-card hover:border-primary/25 hover:bg-surface-muted/60",
     disabled ? "cursor-default opacity-70" : "cursor-pointer",
-  ].join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const body = stacked ? (
+    <>
+      <span className="text-label">{label}</span>
+      <span className={`font-semibold tabular-nums ${toneClass}`}>{count}</span>
+    </>
+  ) : (
+    <>
+      <span className={`font-semibold tabular-nums ${toneClass}`}>{count}</span>{" "}
+      <span className="text-label">{label}</span>
+    </>
+  );
 
   if (!onClick || disabled) {
     return (
       <span className={className} title={title}>
-        <span className={`font-semibold tabular-nums ${toneClass}`}>{count}</span>{" "}
-        <span className="text-label">{label}</span>
+        {body}
       </span>
     );
   }
@@ -213,8 +230,7 @@ function SummaryChip({
       onClick={onClick}
       title={title}
     >
-      <span className={`font-semibold tabular-nums ${toneClass}`}>{count}</span>{" "}
-      <span className="text-label">{label}</span>
+      {body}
     </button>
   );
 }
@@ -231,6 +247,7 @@ function MembersStatusStrip({
   onFocusIdle,
   onFocusPending,
   onFocusDues,
+  stacked = false,
 }: {
   kpis: MembersDirectoryKpis | null;
   loading: boolean;
@@ -243,6 +260,7 @@ function MembersStatusStrip({
   onFocusIdle: () => void;
   onFocusPending: () => void;
   onFocusDues: () => void;
+  stacked?: boolean;
 }) {
   const value = (n: number | null | undefined) => {
     if (loading) return "…";
@@ -257,13 +275,18 @@ function MembersStatusStrip({
   return (
     <section
       aria-label="Members summary"
-      className="flex flex-wrap items-center gap-2"
+      className={
+        stacked
+          ? "flex flex-col gap-2"
+          : "flex flex-wrap items-center gap-2"
+      }
     >
       <SummaryChip
         count={value(kpis?.totalMembers)}
         label="members"
         active={activeFocus === "people"}
         onClick={onFocusPeople}
+        stacked={stacked}
       />
       {showEngagement ? (
         <>
@@ -274,6 +297,7 @@ function MembersStatusStrip({
             active={activeFocus === "active"}
             onClick={onFocusActive}
             title="Attended events, paid dues, completed tasks, or shared suggestions recently"
+            stacked={stacked}
           />
           <SummaryChip
             count={value(kpis?.idleCount)}
@@ -282,6 +306,7 @@ function MembersStatusStrip({
             active={activeFocus === "idle"}
             onClick={onFocusIdle}
             title="Approved members with no recent attendance, dues, tasks, or suggestions"
+            stacked={stacked}
           />
         </>
       ) : null}
@@ -292,6 +317,7 @@ function MembersStatusStrip({
         active={activeFocus === "pending"}
         onClick={canReview ? onFocusPending : undefined}
         disabled={!canReview}
+        stacked={stacked}
       />
       {showDues ? (
         <SummaryChip
@@ -300,6 +326,7 @@ function MembersStatusStrip({
           tone={dues > 0 ? "dues" : "default"}
           active={activeFocus === "dues"}
           onClick={onFocusDues}
+          stacked={stacked}
         />
       ) : null}
     </section>
@@ -308,6 +335,7 @@ function MembersStatusStrip({
 
 export function MembersPage() {
   const { member: currentMember } = useAuth();
+  const isMobile = useMediaQuery("(max-width: 767px)");
   const [searchParams, setSearchParams] = useSearchParams();
   const importInputRef = useRef<HTMLInputElement>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -639,19 +667,21 @@ export function MembersPage() {
         ) : null}
 
         <div className="members-page-section space-y-4">
-          <MembersStatusStrip
-            kpis={kpis}
-            loading={isLoading}
-            showDues={canFetchDues}
-            showEngagement={canReviewMembers}
-            canReview={canReviewMembers}
-            activeFocus={activeFocus}
-            onFocusPeople={focusPeopleDirectory}
-            onFocusActive={focusActiveMembers}
-            onFocusIdle={focusIdleMembers}
-            onFocusPending={focusPendingQueue}
-            onFocusDues={focusOutstandingDues}
-          />
+          {!isMobile ? (
+            <MembersStatusStrip
+              kpis={kpis}
+              loading={isLoading}
+              showDues={canFetchDues}
+              showEngagement={canReviewMembers}
+              canReview={canReviewMembers}
+              activeFocus={activeFocus}
+              onFocusPeople={focusPeopleDirectory}
+              onFocusActive={focusActiveMembers}
+              onFocusIdle={focusIdleMembers}
+              onFocusPending={focusPendingQueue}
+              onFocusDues={focusOutstandingDues}
+            />
+          ) : null}
 
           {canReviewMembers ? (
             <div
@@ -765,7 +795,30 @@ export function MembersPage() {
                   </Button>
                 ) : null}
               </div>
-              <MembersFiltersToolbar values={filters} onChange={setFilters} />
+              <MembersFiltersToolbar
+                values={filters}
+                onChange={setFilters}
+                focusActiveCount={
+                  activeFocus && activeFocus !== "people" ? 1 : 0
+                }
+                onResetFocus={focusPeopleDirectory}
+                summarySlot={
+                  <MembersStatusStrip
+                    stacked
+                    kpis={kpis}
+                    loading={isLoading}
+                    showDues={canFetchDues}
+                    showEngagement={canReviewMembers}
+                    canReview={canReviewMembers}
+                    activeFocus={activeFocus}
+                    onFocusPeople={focusPeopleDirectory}
+                    onFocusActive={focusActiveMembers}
+                    onFocusIdle={focusIdleMembers}
+                    onFocusPending={focusPendingQueue}
+                    onFocusDues={focusOutstandingDues}
+                  />
+                }
+              />
             </section>
             <section
               aria-label="Member table"

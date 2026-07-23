@@ -1,10 +1,11 @@
 /**
  * Members page filter toolbar — Linear-style presentation.
  * Controlled from MembersPage so search/filters apply to the directory table.
+ * Below md: Filters open a bottom sheet (status chips + field filters).
  */
 
 import { Filter } from "lucide-react";
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
 
 import { Drawer } from "../design-system/components/feedback/Drawer";
 import { Search } from "../design-system/components/Search";
@@ -130,17 +131,26 @@ function FilterFields({
 type MembersFiltersToolbarProps = {
   values: MembersDirectoryFilters;
   onChange: (next: MembersDirectoryFilters) => void;
+  /** Mobile bottom sheet: status/focus chips (hidden inline below md). */
+  summarySlot?: ReactNode;
+  /** Extra active count from focus chips (active/idle/dues/pending). */
+  focusActiveCount?: number;
+  /** Clears page-level focus chips when Reset is pressed. */
+  onResetFocus?: () => void;
 };
 
 export function MembersFiltersToolbar({
   values,
   onChange,
+  summarySlot,
+  focusActiveCount = 0,
+  onResetFocus,
 }: MembersFiltersToolbarProps) {
   const drawerTitleId = useId();
   const isMobile = useMediaQuery("(max-width: 767px)");
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const activeFilterCount = useMemo(() => {
+  const fieldFilterCount = useMemo(() => {
     let count = 0;
     if (values.role) count += 1;
     if (values.graduationYear) count += 1;
@@ -148,6 +158,8 @@ export function MembersFiltersToolbar({
     if (values.memberStatus) count += 1;
     return count;
   }, [values]);
+
+  const activeFilterCount = fieldFilterCount + focusActiveCount;
 
   const hasAnyFilter =
     values.search.trim().length > 0 || activeFilterCount > 0;
@@ -161,6 +173,7 @@ export function MembersFiltersToolbar({
 
   function resetFilters() {
     onChange(EMPTY_MEMBERS_DIRECTORY_FILTERS);
+    onResetFocus?.();
   }
 
   const fieldProps: FilterFieldsProps = {
@@ -231,10 +244,9 @@ export function MembersFiltersToolbar({
         <Drawer
           open={filtersOpen}
           onClose={() => setFiltersOpen(false)}
-          side="right"
-          size="sm"
+          side="bottom"
           title="Filters"
-          description="Narrow the member directory."
+          description="Focus the directory or narrow by role, year, and status."
           className="members-filters-drawer"
           footer={
             <div className="members-filters-drawer-footer">
@@ -267,6 +279,19 @@ export function MembersFiltersToolbar({
             <span id={drawerTitleId} className="sr-only">
               Member filters
             </span>
+            {summarySlot ? (
+              <div
+                className="members-filters-summary-slot"
+                onClick={(event) => {
+                  if ((event.target as HTMLElement).closest("button")) {
+                    setFiltersOpen(false);
+                  }
+                }}
+              >
+                <p className="members-filters-summary-label">Focus</p>
+                {summarySlot}
+              </div>
+            ) : null}
             <FilterFields
               {...fieldProps}
               idPrefix="members-filter-mobile"

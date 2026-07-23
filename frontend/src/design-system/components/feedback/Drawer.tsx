@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, type ReactNode } from "react";
 import { cx } from "../../cx";
 import { useBodyScrollLock, useEscapeKey } from "./useOverlay";
 
-export type DrawerSide = "left" | "right";
+export type DrawerSide = "left" | "right" | "bottom";
 export type DrawerSize = "sm" | "md" | "lg";
 
 export type DrawerProps = {
@@ -139,11 +139,16 @@ export function Drawer({
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
         className={cx(
-          "absolute inset-y-0 flex w-full flex-col border-gray-200 bg-surface-card shadow-card-hover",
-          side === "right"
-            ? "right-0 border-l ds-animate-slide-in-right"
-            : "left-0 border-r ds-animate-slide-in-left",
-          SIZE_CLASS[size],
+          "absolute flex flex-col border-gray-200 bg-surface-card shadow-card-hover",
+          side === "bottom"
+            ? "inset-x-0 bottom-0 max-h-[min(88vh,40rem)] w-full rounded-t-2xl border-t ds-animate-slide-up"
+            : [
+                "inset-y-0 w-full",
+                side === "right"
+                  ? "right-0 border-l ds-animate-slide-in-right"
+                  : "left-0 border-r ds-animate-slide-in-left",
+                SIZE_CLASS[size],
+              ],
           className,
         )}
       >

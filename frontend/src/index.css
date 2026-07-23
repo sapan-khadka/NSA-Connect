@@ -2978,13 +2978,31 @@
   }
 
   .members-filters-drawer {
-    max-width: min(22rem, 100%);
+    max-width: none;
   }
 
   .members-filters-drawer-fields {
     display: flex;
     flex-direction: column;
     gap: 0.875rem;
+  }
+
+  .members-filters-summary-slot {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    padding-bottom: 0.85rem;
+    margin-bottom: 0.15rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+  }
+
+  .members-filters-summary-label {
+    margin: 0;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-label);
   }
 
   .members-filters-drawer-fields label {
@@ -3602,9 +3620,20 @@
   .members-table-card-actions {
     display: flex;
     justify-content: flex-end;
+    align-items: center;
+    gap: 0.15rem;
     margin-top: 0.85rem;
     padding-top: 0.7rem;
     border-top: 1px solid color-mix(in srgb, var(--color-border) 35%, transparent);
+  }
+
+  /* Mobile card actions — 44px minimum tap targets (WCAG / iOS HIG). */
+  .members-table-card-actions .members-table-icon-action {
+    width: 2.75rem;
+    height: 2.75rem;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    border-radius: 0.55rem;
   }
 
   @media (prefers-reduced-motion: reduce) {
