@@ -7,7 +7,6 @@ function homeStage(stage: number): CSSProperties {
 
 import { CoverBanner } from "../components/CoverBanner";
 import { HomeHeroBrand } from "../components/AppLogo";
-import { HomeAttentionStrip } from "../components/home/HomeAttentionStrip";
 import { HomeFeaturedEvent } from "../components/home/HomeFeaturedEvent";
 import { HomeQuickActions } from "../components/home/HomeQuickActions";
 import { HomeQuickStats } from "../components/home/HomeQuickStats";
@@ -97,7 +96,6 @@ function MemberHomeLayout({
   taskCompleteError,
   onCompleteTask,
 }: MemberHomeLayoutProps) {
-  const { summary } = useNotificationSummary();
   const isMobile = useMediaQuery("(max-width: 767px)");
   const discussionLimit = isMobile ? 4 : 8;
   const activityLimit = isMobile ? 6 : 12;
@@ -110,17 +108,34 @@ function MemberHomeLayout({
         </div>
       ) : null}
 
-      <div className="home-enter" style={homeStage(0)}>
-        <HomeFeaturedEvent
-          events={featuredEvents}
-          canManage={showAssistant}
-          canCreateEvent={showAssistant}
-          isLoading={isLoading}
-        />
-      </div>
-
-      <div className="home-enter" style={homeStage(1)}>
-        <HomeAttentionStrip member={member} summary={summary} />
+      <div
+        className={[
+          "home-enter home-top-split",
+          showAssistant ? "home-top-split--with-discussions" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        style={homeStage(0)}
+      >
+        <div className="home-top-split__banner">
+          <HomeFeaturedEvent
+            events={featuredEvents}
+            canManage={showAssistant}
+            canCreateEvent={showAssistant}
+            isLoading={isLoading}
+          />
+        </div>
+        <aside className="home-top-split__side" aria-label="Home overview">
+          <HomeQuickStats
+            member={member}
+            upcomingEventCount={featuredEvents.length}
+            tasksSummary={tasksSummary}
+            pendingMemberApprovals={pendingMemberApprovals}
+            financePendingCount={financePendingCount}
+            isLoadingEvents={isLoading}
+          />
+          <HomeQuickActions member={member} />
+        </aside>
       </div>
 
       <div
@@ -130,7 +145,7 @@ function MemberHomeLayout({
         ]
           .filter(Boolean)
           .join(" ")}
-        style={homeStage(2)}
+        style={homeStage(1)}
       >
         <div className="home-col home-col--tasks min-h-0">
           <HomeWorkCenter
@@ -152,20 +167,8 @@ function MemberHomeLayout({
         ) : null}
 
         <div className="home-col home-col--rail min-h-0">
-          <HomeQuickActions member={member} />
           <HomeRecentActivity memberId={member.id} limit={activityLimit} />
         </div>
-      </div>
-
-      <div className="home-enter" style={homeStage(3)}>
-        <HomeQuickStats
-          member={member}
-          upcomingEventCount={featuredEvents.length}
-          tasksSummary={tasksSummary}
-          pendingMemberApprovals={pendingMemberApprovals}
-          financePendingCount={financePendingCount}
-          isLoadingEvents={isLoading}
-        />
       </div>
     </div>
   );

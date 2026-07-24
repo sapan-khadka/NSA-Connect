@@ -34,10 +34,10 @@ function DiscussionCardShell({
         <h2 className="home-panel-title">Discussions</h2>
         {headerAction}
       </div>
-      <div className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
+      <div className="home-discussion-body mt-3 min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
         {children}
       </div>
-      {footer}
+      {footer ? <div className="home-discussion-footer shrink-0">{footer}</div> : null}
     </HomeCard>
   );
 }

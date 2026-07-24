@@ -216,7 +216,7 @@ describe("HomePage", () => {
     ).toHaveAttribute("href", "/events/5");
     expect(within(featured).getByText(/Going/i)).toBeInTheDocument();
     expect(within(featured).getByText(/Maybe/i)).toBeInTheDocument();
-    expect(within(featured).getByText(/RSVP Health/i)).toBeInTheDocument();
+    expect(within(featured).getByText(/^RSVP$/i)).toBeInTheDocument();
     expect(within(featured).getByText(/Budget/i)).toBeInTheDocument();
     expect(within(featured).queryByText("Preparation")).not.toBeInTheDocument();
     expect(
@@ -358,31 +358,6 @@ describe("HomePage", () => {
     expect(
       within(actions).getByRole("link", { name: /Post Announcement/i }),
     ).toBeInTheDocument();
-  });
-
-  it("shows the attention strip when notification counts are present", async () => {
-    mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
-    mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
-    mockSummary({
-      tasks_overdue: 2,
-      members_pending: 1,
-      suggestions_pending: 3,
-      discussions_unread: 4,
-    });
-
-    render(
-      <MemoryRouter>
-        <MockAuthProvider value={{ member: createMockMember("president") }}>
-          <HomePage />
-        </MockAuthProvider>
-      </MemoryRouter>,
-    );
-
-    const strip = await screen.findByLabelText("Needs your attention");
-    expect(within(strip).getByText(/Overdue tasks/i)).toBeInTheDocument();
-    expect(within(strip).getByText(/Pending approvals/i)).toBeInTheDocument();
-    expect(within(strip).getByText(/Event needs update/i)).toBeInTheDocument();
-    expect(within(strip).getByText(/Notes needing response/i)).toBeInTheDocument();
   });
 
   it("cycles featured upcoming events with carousel controls", async () => {

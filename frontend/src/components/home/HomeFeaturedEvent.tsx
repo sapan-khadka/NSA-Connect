@@ -89,45 +89,6 @@ function computeRsvpHealth({
   return Math.round((going / responded) * 100);
 }
 
-function RsvpHealthRing({ percent }: { percent: number | null }) {
-  const size = 44;
-  const stroke = 3.5;
-  const radius = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const value = percent ?? 0;
-  const offset = circumference - (value / 100) * circumference;
-
-  return (
-    <div className="home-featured-rsvp-ring" aria-hidden={percent == null}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="rgba(255,255,255,0.14)"
-          strokeWidth={stroke}
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="var(--color-primary)"
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={percent == null ? circumference : offset}
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        />
-      </svg>
-      <span className="home-featured-rsvp-ring-value">
-        {percent == null ? "—" : `${percent}%`}
-      </span>
-    </div>
-  );
-}
-
 function FeaturedCarouselControls({
   index,
   total,
@@ -332,80 +293,84 @@ export function HomeFeaturedEvent({
         ? 0
         : null;
 
+  const budgetLabel = `${hasSpent ? formatMoney(spentBudget) : "—"} / ${
+    hasBudget ? formatMoney(plannedBudget) : formatMoney(event.budget || 0)
+  }`;
+
   return (
     <section
       aria-label="Featured Event"
-      className="home-featured home-featured--hero home-featured--cinematic"
+      className="home-featured home-featured--hero home-featured--cinematic home-featured--split"
     >
       <img src={photoUrl} alt="" className="home-featured-photo" />
       <div className="home-featured-hero-scrim" aria-hidden="true" />
 
       <div className="home-featured-hero-content">
-        <div className="home-featured-cinematic-top">
-          <div className="home-featured-date-block" aria-hidden="true">
-            <span className="home-featured-date-month">{dateBlock.month}</span>
-            <span className="home-featured-date-day">{dateBlock.day}</span>
-            <span className="home-featured-date-weekday">{dateBlock.weekday}</span>
-          </div>
-
-          <div className="home-featured-cinematic-main">
-            <div className="home-featured-info-top">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="home-featured-eyebrow">Upcoming event</p>
-                <span className="home-featured-countdown">{countdown}</span>
-              </div>
-              <FeaturedCarouselControls
-                index={safeIndex}
-                total={events.length}
-                onPrev={goPrev}
-                onNext={goNext}
-              />
+        <div className="home-featured-info">
+          <div className="home-featured-info-top">
+            <div className="home-featured-pills">
+              <p className="home-featured-eyebrow">Upcoming event</p>
+              <span className="home-featured-countdown">{countdown}</span>
             </div>
+            <FeaturedCarouselControls
+              index={safeIndex}
+              total={events.length}
+              onPrev={goPrev}
+              onNext={goNext}
+            />
+          </div>
 
-            <h2 className="home-featured-title">{event.name}</h2>
-
-            <ul className="home-featured-meta-list">
-              <li>
-                <AppIcon icon={Calendar} size="xs" className="text-white/55" />
-                <span>{formatFeaturedWhen(event.starts_at)}</span>
-              </li>
-              <li>
-                <AppIcon icon={MapPin} size="xs" className="text-white/55" />
-                <span>{location}</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <div className="home-featured-stats-bar">
-          <div className="home-featured-stat-cell">
-            <p className="home-featured-rsvp-value">{goingCount ?? "—"}</p>
-            <p className="home-featured-rsvp-label">Going</p>
-          </div>
-          <div className="home-featured-stat-cell">
-            <p className="home-featured-rsvp-value">{maybeCount ?? "—"}</p>
-            <p className="home-featured-rsvp-label">Maybe</p>
-          </div>
-          <div className="home-featured-stat-cell home-featured-stat-cell--health">
-            <RsvpHealthRing percent={rsvpHealth} />
-            <p className="home-featured-rsvp-label">RSVP Health</p>
-          </div>
-          <div className="home-featured-stat-cell home-featured-stat-cell--budget">
-            <div className="home-featured-budget-head">
-              <span>Budget</span>
-              <span>
-                {hasSpent ? formatMoney(spentBudget) : "—"}
-                {" / "}
-                {hasBudget ? formatMoney(plannedBudget) : formatMoney(event.budget || 0)}
+          <div className="home-featured-info-body">
+            <div className="home-featured-date-block" aria-hidden="true">
+              <span className="home-featured-date-month">{dateBlock.month}</span>
+              <span className="home-featured-date-day">{dateBlock.day}</span>
+              <span className="home-featured-date-weekday">
+                {dateBlock.weekday}
               </span>
             </div>
-            <div className="home-featured-prep-track" aria-hidden="true">
-              <span
-                className="home-featured-prep-fill"
-                style={{ width: `${budgetProgress ?? 0}%` }}
-              />
+
+            <div className="home-featured-info-copy">
+              <h2 className="home-featured-title">{event.name}</h2>
+              <ul className="home-featured-meta-list">
+                <li>
+                  <AppIcon icon={Calendar} size="xs" className="text-white/75" />
+                  <span>{formatFeaturedWhen(event.starts_at)}</span>
+                </li>
+                <li>
+                  <AppIcon icon={MapPin} size="xs" className="text-white/75" />
+                  <span>{location}</span>
+                </li>
+              </ul>
             </div>
           </div>
+
+          <dl className="home-featured-metrics">
+            <div className="home-featured-metric">
+              <dt>Going</dt>
+              <dd>{goingCount ?? "—"}</dd>
+            </div>
+            <div className="home-featured-metric">
+              <dt>Maybe</dt>
+              <dd>{maybeCount ?? "—"}</dd>
+            </div>
+            <div className="home-featured-metric">
+              <dt>RSVP</dt>
+              <dd>{rsvpHealth == null ? "—" : `${rsvpHealth}%`}</dd>
+            </div>
+            <div className="home-featured-metric home-featured-metric--budget">
+              <dt>Budget</dt>
+              <dd>
+                <span>{budgetLabel}</span>
+                <span className="home-featured-prep-track" aria-hidden="true">
+                  <span
+                    className="home-featured-prep-fill"
+                    style={{ width: `${budgetProgress ?? 0}%` }}
+                  />
+                </span>
+              </dd>
+            </div>
+          </dl>
+
           <div className="home-featured-actions">
             <Link
               to={eventPath}

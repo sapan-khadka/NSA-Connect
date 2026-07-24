@@ -2,8 +2,8 @@ import {
   CalendarDays,
   CheckCircle2,
   CircleDollarSign,
+  Clock3,
   Users,
-  UserCheck,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -52,7 +52,6 @@ export function HomeQuickStats({
   pendingMemberApprovals,
   financePendingCount,
   isLoadingEvents,
-  attendanceAvg = null,
 }: {
   member: MemberResponse;
   upcomingEventCount: number;
@@ -60,8 +59,6 @@ export function HomeQuickStats({
   pendingMemberApprovals: number;
   financePendingCount: number;
   isLoadingEvents: boolean;
-  /** Average attendance percent when available; otherwise shown as em dash. */
-  attendanceAvg?: number | null;
 }) {
   const canSeeMembers = canViewMemberDirectory(member.role);
   const canSeeTreasury = canManageTreasury(member.role, member.position);
@@ -119,7 +116,7 @@ export function HomeQuickStats({
         pendingMemberApprovals > 0
           ? `${pendingMemberApprovals} awaiting approval`
           : "Active roster",
-      hintTone: pendingMemberApprovals > 0 ? "warning" : "positive",
+      hintTone: pendingMemberApprovals > 0 ? "warning" : "muted",
       icon: Users,
       tone: "teal",
       to: "/members",
@@ -147,7 +144,7 @@ export function HomeQuickStats({
     hint: upcomingEventCount === 1 ? "Upcoming event" : "Upcoming events",
     hintTone: "muted",
     icon: CalendarDays,
-    tone: "slate",
+    tone: "sky",
     to: "/events/calendar",
   });
 
@@ -181,11 +178,11 @@ export function HomeQuickStats({
   if (canSeeMembers || canSeeTreasury) {
     cards.push({
       id: "pending",
-      label: "Pending approvals",
+      label: "Pending",
       value: String(pendingTotal),
       hint: pendingTotal > 0 ? "Requires action" : "No pending items",
       hintTone: pendingTotal > 0 ? "warning" : "muted",
-      icon: CheckCircle2,
+      icon: Clock3,
       tone: "amber",
       to:
         canSeeMembers && pendingMemberApprovals > 0
@@ -210,23 +207,9 @@ export function HomeQuickStats({
     });
   }
 
-  cards.push({
-    id: "attendance",
-    label: "Attendance",
-    value:
-      attendanceAvg == null || !Number.isFinite(attendanceAvg)
-        ? "—"
-        : `${Math.round(attendanceAvg)}%`,
-    hint: attendanceAvg == null ? "Avg · no data yet" : "Average RSVP health",
-    hintTone: "muted",
-    icon: UserCheck,
-    tone: "sky",
-    to: "/events/calendar",
-  });
-
   return (
     <section
-      className="home-quick-stats home-quick-stats--strip home-quick-stats--kpi"
+      className="home-quick-stats home-quick-stats--tiles home-quick-stats--kpi home-quick-stats--companion"
       aria-label="Quick stats"
     >
       <ul className="home-quick-stats-grid">
@@ -234,30 +217,23 @@ export function HomeQuickStats({
           <li key={card.id}>
             <Link
               to={card.to}
-              className={["home-quick-stat", `home-quick-stat--${card.tone}`].join(
-                " ",
-              )}
+              className={[
+                "home-quick-stat",
+                card.valueTone === "negative" ? "home-quick-stat--negative" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
             >
               <div className="home-quick-stat-top">
-                <p className="home-quick-stat-label">{card.label}</p>
+                <p className="home-quick-stat-category">{card.label}</p>
                 <span className="home-quick-stat-icon" aria-hidden="true">
-                  <AppIcon icon={card.icon} size="sm" className="text-current" />
+                  <AppIcon icon={card.icon} size="xs" className="text-current" />
                 </span>
               </div>
-              <p
-                className={[
-                  "home-quick-stat-value",
-                  card.valueTone === "negative" ? "is-negative" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-              >
-                {card.value}
-              </p>
+              <p className="home-quick-stat-value">{card.value}</p>
               <p
                 className={[
                   "home-quick-stat-hint",
-                  card.hintTone === "positive" ? "is-positive" : "",
                   card.hintTone === "warning" ? "is-warning" : "",
                 ]
                   .filter(Boolean)
