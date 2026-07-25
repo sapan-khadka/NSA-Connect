@@ -22,6 +22,7 @@ from app.schemas.discussion import (
     DiscussionReactionRequest,
     DiscussionReadReceiptRequest,
 )
+from app.services.discussion_room_service import DiscussionRoomNotFoundError
 from app.services.discussion_service import (
     DiscussionForbiddenError,
     DiscussionMessageNotFoundError,
@@ -31,13 +32,21 @@ from app.services.discussion_service import (
     create_board_discussion_message,
     create_custom_room_discussion_message,
     create_event_discussion_message,
+    edit_discussion_message,
     list_board_discussion_messages,
     list_custom_room_discussion_messages,
     list_discussion_read_receipts,
     list_event_discussion_messages,
     messages_to_responses,
+    soft_delete_discussion_message,
     upsert_discussion_read_state,
 )
+from app.services.discussion_ws_rate_limit import (
+    allow_ws_chat,
+    allow_ws_reaction,
+    allow_ws_typing,
+)
+from app.services.discussion_realtime_sync import touch_global_presence
 from app.services.discussion_ws_manager import (
     BOARD_ROOM_KEY,
     PresenceUser,
@@ -47,6 +56,7 @@ from app.services.discussion_ws_manager import (
     new_fanout_id,
 )
 from app.services.event_service import EventNotFoundError
+from app.services.user_notify_ws_manager import user_notify_connection_manager
 
 logger = logging.getLogger(__name__)
 
@@ -147,10 +157,12 @@ async def _discussion_websocket(
                 receipt.model_dump(mode="json")
                 for receipt in list_discussion_read_receipts(db, room_id=room_key)
             ]
-        except EventNotFoundError:
-            await websocket.close(code=WS_CLOSE_FORBIDDEN)
-            return
-        except DiscussionForbiddenError:
+        except (
+            EventNotFoundError,
+            DiscussionForbiddenError,
+            DiscussionRoomNotFoundError,
+        ):
+            # Uniform close — do not leak whether a private room exists.
             await websocket.close(code=WS_CLOSE_FORBIDDEN)
             return
 
@@ -165,6 +177,7 @@ async def _discussion_websocket(
         websocket,
         user=presence_user,
     )
+    touch_global_presence(member_id)
     try:
         await websocket.send_json(
             {
@@ -215,9 +228,12 @@ async def _discussion_websocket(
             event_type = body.get("type")
             if event_type == "presence_heartbeat":
                 await discussion_connection_manager.refresh_presence(websocket)
+                touch_global_presence(member_id)
                 continue
 
             if event_type == "typing":
+                if not allow_ws_typing(member_id):
+                    continue
                 is_typing = bool(body.get("is_typing"))
                 await _publish_typing(
                     room_key=room_key,
@@ -303,6 +319,14 @@ async def _discussion_websocket(
                 continue
 
             if event_type == "reaction":
+                if not allow_ws_reaction(member_id):
+                    await websocket.send_json(
+                        {
+                            "type": "error",
+                            "detail": "Too many reactions. Please slow down.",
+                        }
+                    )
+                    continue
                 try:
                     reaction = DiscussionReactionRequest.model_validate(body)
                 except ValidationError as exc:
@@ -373,7 +397,129 @@ async def _discussion_websocket(
                     )
                 continue
 
+            if event_type == "delete_message":
+                message_id = body.get("message_id")
+                if not isinstance(message_id, int) or message_id < 1:
+                    await websocket.send_json(
+                        {"type": "error", "detail": "Invalid message_id"}
+                    )
+                    continue
+                db = create_db_session()
+                try:
+                    author = db.get(Member, member_id)
+                    if author is None or not author.can_authenticate():
+                        await websocket.close(code=WS_CLOSE_UNAUTHORIZED)
+                        return
+                    deleted = soft_delete_discussion_message(
+                        db,
+                        member=author,
+                        message_id=message_id,
+                    )
+                    payload = build_message_response(deleted).model_dump(mode="json")
+                except DiscussionMessageNotFoundError:
+                    await websocket.send_json(
+                        {"type": "error", "detail": "Message not found"}
+                    )
+                    continue
+                except DiscussionForbiddenError:
+                    await websocket.send_json(
+                        {"type": "error", "detail": "Message not found"}
+                    )
+                    continue
+                except Exception:
+                    logger.exception("Failed to delete discussion WS message")
+                    await websocket.send_json(
+                        {"type": "error", "detail": "Failed to delete message"}
+                    )
+                    continue
+                finally:
+                    db.close()
+                await discussion_connection_manager.publish(
+                    room_key,
+                    {"type": "message_updated", "message": payload},
+                )
+                continue
+
+            if event_type == "edit_message":
+                if not allow_ws_chat(member_id):
+                    await websocket.send_json(
+                        {
+                            "type": "error",
+                            "detail": "Too many messages. Please slow down.",
+                        }
+                    )
+                    continue
+                try:
+                    edit_req = DiscussionMessageCreateRequest.model_validate(
+                        {"content": body.get("content")}
+                    )
+                except ValidationError as exc:
+                    detail = (
+                        exc.errors()[0].get("msg", "Invalid content")
+                        if exc.errors()
+                        else "Invalid content"
+                    )
+                    await websocket.send_json(
+                        {"type": "error", "detail": str(detail)}
+                    )
+                    continue
+                message_id = body.get("message_id")
+                if not isinstance(message_id, int) or message_id < 1:
+                    await websocket.send_json(
+                        {"type": "error", "detail": "Invalid message_id"}
+                    )
+                    continue
+                db = create_db_session()
+                try:
+                    author = db.get(Member, member_id)
+                    if author is None or not author.can_authenticate():
+                        await websocket.close(code=WS_CLOSE_UNAUTHORIZED)
+                        return
+                    edited = edit_discussion_message(
+                        db,
+                        member=author,
+                        message_id=message_id,
+                        content=edit_req.content,
+                    )
+                    payload = build_message_response(edited).model_dump(mode="json")
+                except DiscussionMessageNotFoundError:
+                    await websocket.send_json(
+                        {"type": "error", "detail": "Message not found"}
+                    )
+                    continue
+                except DiscussionForbiddenError:
+                    await websocket.send_json(
+                        {"type": "error", "detail": "Message not found"}
+                    )
+                    continue
+                except DiscussionValidationError as exc:
+                    await websocket.send_json(
+                        {"type": "error", "detail": str(exc)}
+                    )
+                    continue
+                except Exception:
+                    logger.exception("Failed to edit discussion WS message")
+                    await websocket.send_json(
+                        {"type": "error", "detail": "Failed to edit message"}
+                    )
+                    continue
+                finally:
+                    db.close()
+                await discussion_connection_manager.publish(
+                    room_key,
+                    {"type": "message_updated", "message": payload},
+                )
+                continue
+
             # Chat message — either plain `{content}` or `{type:"chat", content}`.
+            if not allow_ws_chat(member_id):
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "detail": "Too many messages. Please slow down.",
+                    }
+                )
+                continue
             try:
                 parsed = DiscussionMessageCreateRequest.model_validate(body)
             except ValidationError as exc:
@@ -516,3 +662,44 @@ async def custom_room_discussion_websocket(
             content=content,
         ),
     )
+
+
+@router.websocket("/ws/notifications")
+async def user_notifications_websocket(
+    websocket: WebSocket,
+    token: str | None = Query(default=None),
+):
+    """Realtime toast/push channel for inbox events (chat messages, etc.)."""
+    db = create_db_session()
+    try:
+        try:
+            member = authenticate_member_from_token(db, token)
+        except TokenAuthenticationError:
+            await websocket.close(code=WS_CLOSE_UNAUTHORIZED)
+            return
+        except TokenAuthorizationError:
+            await websocket.close(code=WS_CLOSE_FORBIDDEN)
+            return
+        member_id = member.id
+    finally:
+        db.close()
+
+    await websocket.accept()
+    await user_notify_connection_manager.connect(member_id, websocket)
+    touch_global_presence(member_id)
+    try:
+        await websocket.send_json({"type": "ready"})
+        while True:
+            raw = await websocket.receive_text()
+            try:
+                body = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(body, dict):
+                continue
+            if body.get("type") == "presence_heartbeat":
+                touch_global_presence(member_id)
+    except WebSocketDisconnect:
+        pass
+    finally:
+        await user_notify_connection_manager.disconnect(member_id, websocket)

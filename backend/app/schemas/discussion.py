@@ -13,7 +13,29 @@ class DiscussionMessageCreateRequest(BaseModel):
     @classmethod
     def normalize_content(cls, value: object) -> object:
         if isinstance(value, str):
-            return value.strip()
+            # Strip C0 controls except tab/newline; reject NUL.
+            cleaned = "".join(
+                ch
+                for ch in value
+                if ch in "\t\n\r" or (ord(ch) >= 32 and ch != "\x7f")
+            )
+            return cleaned.strip()
+        return value
+
+
+class DiscussionMessageUpdateRequest(BaseModel):
+    content: str = Field(min_length=1, max_length=MAX_DISCUSSION_CONTENT_LENGTH)
+
+    @field_validator("content", mode="before")
+    @classmethod
+    def normalize_content(cls, value: object) -> object:
+        if isinstance(value, str):
+            cleaned = "".join(
+                ch
+                for ch in value
+                if ch in "\t\n\r" or (ord(ch) >= 32 and ch != "\x7f")
+            )
+            return cleaned.strip()
         return value
 
 
@@ -62,6 +84,9 @@ class DiscussionMessageResponse(BaseModel):
     event_id: int | None
     custom_room_id: int | None = None
     created_at: datetime
+    edited_at: datetime | None = None
+    deleted_at: datetime | None = None
+    is_deleted: bool = False
     author: DiscussionMessageAuthor
     reactions: dict[str, DiscussionReactionSummary] = Field(default_factory=dict)
 
@@ -94,6 +119,20 @@ class DiscussionPinToggleResponse(BaseModel):
     pinned: bool
 
 
+class DiscussionMuteToggleResponse(BaseModel):
+    room_id: str
+    muted: bool
+
+
+class DiscussionWsTicketResponse(BaseModel):
+    token: str
+    expires_at: datetime
+
+
+class DiscussionPresenceResponse(BaseModel):
+    online: dict[str, bool] = Field(default_factory=dict)
+
+
 class DiscussionArchiveResponse(BaseModel):
     room_id: str
     archived: bool
@@ -120,6 +159,9 @@ class DiscussionInboxRoomResponse(BaseModel):
     unread_display: str | None = None
     pinned: bool = False
     pinned_at: datetime | None = None
+    muted: bool = False
+    peer_user_id: int | None = None
+    peer_online: bool | None = None
 
 
 class DiscussionInboxResponse(BaseModel):

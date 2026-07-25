@@ -3,6 +3,7 @@ import {
   CheckCircle2,
   ClipboardList,
   Megaphone,
+  MessageCircle,
   Sparkles,
   UserPlus,
   Wallet,
@@ -74,6 +75,12 @@ const BY_TYPE: Record<string, NotificationVisual> = {
   suggestion_noted: {
     label: "Suggestion",
     icon: CheckCircle2,
+    iconClass: "text-primary",
+    chipClass: "bg-badge-teal-bg",
+  },
+  discussion_message: {
+    label: "Message",
+    icon: MessageCircle,
     iconClass: "text-primary",
     chipClass: "bg-badge-teal-bg",
   },

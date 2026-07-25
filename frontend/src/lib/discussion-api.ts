@@ -16,6 +16,9 @@ export type DiscussionMessage = {
   event_id: number | null;
   custom_room_id?: number | null;
   created_at: string;
+  edited_at?: string | null;
+  deleted_at?: string | null;
+  is_deleted?: boolean;
   author: DiscussionMessageAuthor;
   reactions?: Record<string, DiscussionReactionSummary>;
 };
@@ -32,10 +35,13 @@ export type DiscussionRoomMember = {
   role: "owner" | "member";
 };
 
+export type DiscussionRoomKind = "group" | "dm";
+
 export type DiscussionRoom = {
   id: number;
   name: string;
   description: string | null;
+  kind?: DiscussionRoomKind;
   status: DiscussionRoomStatus;
   room_id: string;
   href: string;
@@ -47,6 +53,8 @@ export type DiscussionRoom = {
   created_at: string;
   reviewed_at: string | null;
   members: DiscussionRoomMember[];
+  peer_member_id?: number | null;
+  peer_full_name?: string | null;
 };
 
 export type DiscussionRoomListResponse = {
@@ -83,6 +91,9 @@ export type DiscussionInboxRoom = {
   unread_display: string | null;
   pinned: boolean;
   pinned_at: string | null;
+  muted?: boolean;
+  peer_user_id?: number | null;
+  peer_online?: boolean | null;
 };
 
 export type DiscussionArchivedRoom = {
@@ -138,6 +149,41 @@ export async function toggleDiscussionRoomPin(
     { room_id: roomId },
   );
   return response.data;
+}
+
+export async function toggleDiscussionRoomMute(
+  roomId: string,
+): Promise<{ room_id: string; muted: boolean }> {
+  const response = await api.post<{ room_id: string; muted: boolean }>(
+    "/v1/discussions/mutes/toggle",
+    { room_id: roomId },
+  );
+  return response.data;
+}
+
+export async function fetchDiscussionWsTicket(): Promise<{
+  token: string;
+  expires_at: string;
+}> {
+  const response = await api.post<{ token: string; expires_at: string }>(
+    "/v1/discussions/ws-ticket",
+  );
+  return response.data;
+}
+
+export async function fetchDiscussionPresence(
+  userIds: number[],
+): Promise<Record<string, boolean>> {
+  if (userIds.length === 0) {
+    return {};
+  }
+  const response = await api.get<{ online: Record<string, boolean> }>(
+    "/v1/discussions/presence",
+    {
+      params: { user_ids: userIds.join(",") },
+    },
+  );
+  return response.data.online ?? {};
 }
 
 export async function fetchEventDiscussion(
@@ -198,6 +244,16 @@ export async function createDiscussionRoom(payload: {
   member_ids?: number[];
 }): Promise<DiscussionRoom> {
   const response = await api.post<DiscussionRoom>("/v1/discussions/rooms", payload);
+  return response.data;
+}
+
+/** Find or create a private 1:1 DM with another approved member. */
+export async function ensureDirectMessage(
+  memberId: number,
+): Promise<DiscussionRoom> {
+  const response = await api.post<DiscussionRoom>("/v1/discussions/dms", {
+    member_id: memberId,
+  });
   return response.data;
 }
 
@@ -302,6 +358,26 @@ export async function postCustomRoomDiscussion(
   const response = await api.post<DiscussionMessage>(
     `/v1/discussions/rooms/${roomId}/messages`,
     { content },
+  );
+  return response.data;
+}
+
+export async function editDiscussionMessage(
+  messageId: number,
+  content: string,
+): Promise<DiscussionMessage> {
+  const response = await api.patch<DiscussionMessage>(
+    `/v1/discussions/messages/${messageId}`,
+    { content },
+  );
+  return response.data;
+}
+
+export async function deleteDiscussionMessage(
+  messageId: number,
+): Promise<DiscussionMessage> {
+  const response = await api.delete<DiscussionMessage>(
+    `/v1/discussions/messages/${messageId}`,
   );
   return response.data;
 }

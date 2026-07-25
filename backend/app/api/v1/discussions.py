@@ -1,26 +1,34 @@
 from typing import NoReturn
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.dependencies import (
     get_current_member,
     require_board,
     require_task_oversight,
 )
+from app.core.rate_limit import limit
 from app.models.member import Member
+from app.core.security import create_ws_ticket
 from app.schemas.discussion import (
     DiscussionArchiveResponse,
     DiscussionInboxResponse,
     DiscussionMessageCreateRequest,
     DiscussionMessageListResponse,
     DiscussionMessageResponse,
+    DiscussionMessageUpdateRequest,
+    DiscussionMuteToggleResponse,
     DiscussionPinToggleResponse,
+    DiscussionPresenceResponse,
     DiscussionRoomIdRequest,
     DiscussionRoomReadResponse,
+    DiscussionWsTicketResponse,
 )
 from app.schemas.discussion_room import (
+    DirectMessageCreateRequest,
     DiscussionRoomCreateRequest,
     DiscussionRoomListResponse,
     DiscussionRoomRejectRequest,
@@ -30,9 +38,11 @@ from app.services.discussion_inbox_service import (
     archive_inbox_room,
     list_discussion_inbox,
     mark_discussion_room_read,
+    toggle_discussion_room_mute,
     toggle_discussion_room_pin,
     unarchive_inbox_room,
 )
+from app.services.discussion_realtime_sync import users_online
 from app.services.discussion_room_service import (
     DiscussionRoomInvalidStateError,
     DiscussionRoomNotFoundError,
@@ -41,6 +51,7 @@ from app.services.discussion_room_service import (
     assert_can_access_custom_room,
     build_room_response,
     create_discussion_room,
+    get_or_create_dm,
     list_my_discussion_rooms,
     list_pending_discussion_rooms,
     reject_discussion_room,
@@ -48,15 +59,18 @@ from app.services.discussion_room_service import (
 from app.services.discussion_service import (
     DEFAULT_DISCUSSION_LIMIT,
     DiscussionForbiddenError,
+    DiscussionMessageNotFoundError,
     DiscussionValidationError,
     build_message_response,
     create_board_discussion_message,
     create_custom_room_discussion_message,
     create_event_discussion_message,
+    edit_discussion_message,
     list_board_discussion_messages,
     list_custom_room_discussion_messages,
     list_event_discussion_messages,
     messages_to_responses,
+    soft_delete_discussion_message,
 )
 from app.services.event_service import EventNotFoundError
 
@@ -131,6 +145,70 @@ def toggle_discussion_room_pin_endpoint(
         )
     except (EventNotFoundError, DiscussionForbiddenError, DiscussionValidationError) as exc:
         _handle_room_access_errors(exc)
+
+
+@router.post(
+    "/discussions/mutes/toggle",
+    response_model=DiscussionMuteToggleResponse,
+)
+def toggle_discussion_room_mute_endpoint(
+    data: DiscussionRoomIdRequest,
+    db: Session = Depends(get_db),
+    current_member: Member = Depends(get_current_member),
+):
+    try:
+        return toggle_discussion_room_mute(
+            db,
+            member=current_member,
+            room_id=data.room_id,
+        )
+    except (EventNotFoundError, DiscussionForbiddenError, DiscussionValidationError) as exc:
+        _handle_room_access_errors(exc)
+
+
+@router.post(
+    "/discussions/ws-ticket",
+    response_model=DiscussionWsTicketResponse,
+)
+def create_discussion_ws_ticket_endpoint(
+    current_member: Member = Depends(get_current_member),
+):
+    token, expires_at = create_ws_ticket(
+        member_id=current_member.id,
+        email=current_member.email,
+        role=current_member.role.value
+        if hasattr(current_member.role, "value")
+        else str(current_member.role),
+        token_version=current_member.token_version,
+    )
+    return DiscussionWsTicketResponse(token=token, expires_at=expires_at)
+
+
+@router.get(
+    "/discussions/presence",
+    response_model=DiscussionPresenceResponse,
+)
+def get_discussion_presence_endpoint(
+    user_ids: str = Query(
+        default="",
+        description="Comma-separated member ids to check (max 50)",
+    ),
+    current_member: Member = Depends(get_current_member),
+):
+    del current_member  # auth gate only
+    raw_ids = [part.strip() for part in user_ids.split(",") if part.strip()]
+    parsed: list[int] = []
+    for raw in raw_ids[:50]:
+        try:
+            value = int(raw)
+        except ValueError:
+            continue
+        if value > 0:
+            parsed.append(value)
+    online = users_online(parsed)
+    return DiscussionPresenceResponse(
+        online={str(user_id): bool(is_online) for user_id, is_online in online.items()}
+    )
 
 
 @router.post(
@@ -232,12 +310,15 @@ def list_event_discussion_endpoint(
     response_model=DiscussionMessageResponse,
     status_code=status.HTTP_201_CREATED,
 )
+@limit(f"{settings.RATE_LIMIT_DISCUSSION_MESSAGE_MAX}/minute")
 def create_event_discussion_endpoint(
+    request: Request,
     event_id: int,
     data: DiscussionMessageCreateRequest,
     db: Session = Depends(get_db),
     current_member: Member = Depends(get_current_member),
 ):
+    del request
     try:
         message = create_event_discussion_message(
             db,
@@ -295,11 +376,14 @@ def list_board_discussion_endpoint(
     response_model=DiscussionMessageResponse,
     status_code=status.HTTP_201_CREATED,
 )
+@limit(f"{settings.RATE_LIMIT_DISCUSSION_MESSAGE_MAX}/minute")
 def create_board_discussion_endpoint(
+    request: Request,
     data: DiscussionMessageCreateRequest,
     db: Session = Depends(get_db),
     current_member: Member = Depends(require_board),
 ):
+    del request
     try:
         message = create_board_discussion_message(
             db,
@@ -322,9 +406,10 @@ def _handle_room_admin_errors(exc: Exception) -> NoReturn:
             detail="Discussion room not found",
         ) from None
     if isinstance(exc, DiscussionForbiddenError):
+        # Uniform 404 avoids leaking whether a private DM room exists.
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=DISCUSSION_FORBIDDEN_DETAIL,
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Discussion room not found",
         ) from None
     if isinstance(exc, DiscussionRoomInvalidStateError):
         raise HTTPException(
@@ -359,7 +444,31 @@ def create_discussion_room_endpoint(
         )
     except (DiscussionForbiddenError, DiscussionValidationError) as exc:
         _handle_room_admin_errors(exc)
-    return build_room_response(room)
+    return build_room_response(room, viewer_id=current_member.id)
+
+
+@router.post(
+    "/discussions/dms",
+    response_model=DiscussionRoomResponse,
+)
+@limit(f"{settings.RATE_LIMIT_DISCUSSION_DM_MAX}/minute")
+def ensure_direct_message_endpoint(
+    request: Request,
+    data: DirectMessageCreateRequest,
+    db: Session = Depends(get_db),
+    current_member: Member = Depends(get_current_member),
+):
+    """Find or create a private 1:1 DM with another approved member."""
+    del request  # required by SlowAPI limit decorator
+    try:
+        room = get_or_create_dm(
+            db,
+            actor=current_member,
+            target_member_id=data.member_id,
+        )
+    except (DiscussionForbiddenError, DiscussionValidationError) as exc:
+        _handle_room_admin_errors(exc)
+    return build_room_response(room, viewer_id=current_member.id)
 
 
 @router.get(
@@ -409,7 +518,7 @@ def get_discussion_room_endpoint(
         )
     except (DiscussionRoomNotFoundError, DiscussionForbiddenError) as exc:
         _handle_room_admin_errors(exc)
-    return build_room_response(room)
+    return build_room_response(room, viewer_id=current_member.id)
 
 
 @router.post(
@@ -523,12 +632,15 @@ def list_custom_room_messages_endpoint(
     response_model=DiscussionMessageResponse,
     status_code=status.HTTP_201_CREATED,
 )
+@limit(f"{settings.RATE_LIMIT_DISCUSSION_MESSAGE_MAX}/minute")
 def create_custom_room_message_endpoint(
+    request: Request,
     room_id: int,
     data: DiscussionMessageCreateRequest,
     db: Session = Depends(get_db),
     current_member: Member = Depends(get_current_member),
 ):
+    del request
     try:
         message = create_custom_room_discussion_message(
             db,
@@ -543,4 +655,73 @@ def create_custom_room_message_endpoint(
     ) as exc:
         _handle_room_admin_errors(exc)
 
+    return build_message_response(message)
+
+
+@router.patch(
+    "/discussions/messages/{message_id}",
+    response_model=DiscussionMessageResponse,
+)
+@limit(f"{settings.RATE_LIMIT_DISCUSSION_MESSAGE_MAX}/minute")
+def edit_discussion_message_endpoint(
+    request: Request,
+    message_id: int,
+    data: DiscussionMessageUpdateRequest,
+    db: Session = Depends(get_db),
+    current_member: Member = Depends(get_current_member),
+):
+    del request
+    try:
+        message = edit_discussion_message(
+            db,
+            member=current_member,
+            message_id=message_id,
+            content=data.content,
+        )
+    except DiscussionMessageNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Message not found",
+        ) from None
+    except DiscussionForbiddenError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Message not found",
+        ) from None
+    except DiscussionValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from None
+    return build_message_response(message)
+
+
+@router.delete(
+    "/discussions/messages/{message_id}",
+    response_model=DiscussionMessageResponse,
+)
+@limit(f"{settings.RATE_LIMIT_DISCUSSION_MESSAGE_MAX}/minute")
+def delete_discussion_message_endpoint(
+    request: Request,
+    message_id: int,
+    db: Session = Depends(get_db),
+    current_member: Member = Depends(get_current_member),
+):
+    del request
+    try:
+        message = soft_delete_discussion_message(
+            db,
+            member=current_member,
+            message_id=message_id,
+        )
+    except DiscussionMessageNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Message not found",
+        ) from None
+    except DiscussionForbiddenError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Message not found",
+        ) from None
     return build_message_response(message)

@@ -20,6 +20,7 @@ class InboxNotificationType(StrEnum):
     VOLUNTEER_SIGNUP = "volunteer_signup"
     VOLUNTEER_SIGNUP_REVIEWED = "volunteer_signup_reviewed"
     VOLUNTEER_INVITE = "volunteer_invite"
+    DISCUSSION_MESSAGE = "discussion_message"
 
 
 class InboxNotification(Base):

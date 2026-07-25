@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getAccessToken } from "./auth-token";
+import { fetchDiscussionWsTicket } from "./discussion-api";
 import type {
   DiscussionMessage,
   DiscussionReactionSummary,
@@ -29,6 +30,11 @@ type HistoryPayload = {
 
 type MessagePayload = {
   type: "message";
+  message: DiscussionMessage;
+};
+
+type MessageUpdatedPayload = {
+  type: "message_updated";
   message: DiscussionMessage;
 };
 
@@ -487,6 +493,16 @@ export function useDiscussion(
     [sendStoppedTyping],
   );
 
+  const deleteMessage = useCallback((messageId: number) => {
+    const socket = socketRef.current;
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      throw new Error("Discussion is not connected");
+    }
+    socket.send(
+      JSON.stringify({ type: "delete_message", message_id: messageId }),
+    );
+  }, []);
+
   const toggleReaction = useCallback(
     (messageId: number, emoji: string) => {
       const socket = socketRef.current;
@@ -650,8 +666,7 @@ export function useDiscussion(
         return;
       }
 
-      const token = getAccessToken();
-      if (!token) {
+      if (!getAccessToken()) {
         setError("Not signed in");
         setStatus("closed");
         setLoading(false);
@@ -667,21 +682,48 @@ export function useDiscussion(
       );
       setError(null);
 
-      const socket = new WebSocket(buildDiscussionWsUrl(currentScope, token));
-      socketRef.current = socket;
-
-      socket.onopen = () => {
-        if (cancelled || socketRef.current !== socket) {
+      void (async () => {
+        let ticket: string;
+        try {
+          const issued = await fetchDiscussionWsTicket();
+          ticket = issued.token;
+        } catch {
+          if (cancelled || scopeRef.current == null) {
+            return;
+          }
+          setError("Could not connect to live chat");
+          setStatus("closed");
+          setLoading(false);
+          scheduleReconnect();
           return;
         }
-        backoffRef.current = INITIAL_BACKOFF_MS;
-        reconnectAttemptsRef.current = 0;
-        setStatus("live");
-        clearHeartbeat();
-        heartbeatTimerRef.current = window.setInterval(() => {
-          sendRaw({ type: "presence_heartbeat" });
-        }, PRESENCE_HEARTBEAT_MS);
-      };
+
+        if (
+          cancelled ||
+          intentionalCloseRef.current ||
+          scopeRef.current == null ||
+          scopeKey(scopeRef.current) !== scopeKey(currentScope)
+        ) {
+          return;
+        }
+
+        const socket = new WebSocket(
+          buildDiscussionWsUrl(currentScope, ticket),
+        );
+        socketRef.current = socket;
+
+        socket.onopen = () => {
+          if (cancelled || socketRef.current !== socket) {
+            return;
+          }
+          backoffRef.current = INITIAL_BACKOFF_MS;
+          reconnectAttemptsRef.current = 0;
+          setStatus("live");
+          clearHeartbeat();
+          heartbeatTimerRef.current = window.setInterval(() => {
+            sendRaw({ type: "presence_heartbeat" });
+          }, PRESENCE_HEARTBEAT_MS);
+        };
 
       socket.onmessage = (event) => {
         if (cancelled || socketRef.current !== socket) {
@@ -696,11 +738,20 @@ export function useDiscussion(
         }
 
         if (payload.type === "history") {
-          setMessages(
-            (payload.messages ?? []).map((message) => ({
-              ...message,
-              reactions: normalizeReactions(message.reactions),
-            })),
+          const incoming = (payload.messages ?? []).map((message) => ({
+            ...message,
+            reactions: normalizeReactions(message.reactions),
+          }));
+          // Reconnect: merge so we don't drop messages arrived during brief gaps.
+          setMessages((current) =>
+            current.length === 0
+              ? incoming
+              : mergeMessages(
+                  incoming,
+                  current.filter(
+                    (row) => !incoming.some((item) => item.id === row.id),
+                  ),
+                ),
           );
           setLoading(false);
           setError(null);
@@ -757,6 +808,23 @@ export function useDiscussion(
           return;
         }
 
+        if (payload.type === "message_updated" && payload.message) {
+          const updated = {
+            ...payload.message,
+            reactions: normalizeReactions(payload.message.reactions),
+          };
+          setMessages((current) => {
+            const has = current.some((row) => row.id === updated.id);
+            if (!has) {
+              return mergeMessages(current, [updated]);
+            }
+            return current.map((row) =>
+              row.id === updated.id ? updated : row,
+            );
+          });
+          return;
+        }
+
         if (payload.type === "reaction") {
           const viewerId = viewerUserIdRef.current;
           if (viewerId != null) {
@@ -810,31 +878,32 @@ export function useDiscussion(
         }
       };
 
-      socket.onerror = () => {
-        // onclose handles reconnect.
-      };
+        socket.onerror = () => {
+          // onclose handles reconnect.
+        };
 
-      socket.onclose = (event) => {
-        if (socketRef.current === socket) {
-          socketRef.current = null;
-        }
-        clearHeartbeat();
-        if (cancelled || intentionalCloseRef.current) {
-          setStatus("closed");
-          return;
-        }
-        if (event.code === 4001 || event.code === 4003) {
-          setError(
-            event.code === 4001
-              ? "Discussion authentication failed"
-              : "You do not have access to this discussion",
-          );
-          setStatus("closed");
-          setLoading(false);
-          return;
-        }
-        scheduleReconnect();
-      };
+        socket.onclose = (event) => {
+          if (socketRef.current === socket) {
+            socketRef.current = null;
+          }
+          clearHeartbeat();
+          if (cancelled || intentionalCloseRef.current) {
+            setStatus("closed");
+            return;
+          }
+          if (event.code === 4001 || event.code === 4003) {
+            setError(
+              event.code === 4001
+                ? "Discussion authentication failed"
+                : "You do not have access to this discussion",
+            );
+            setStatus("closed");
+            setLoading(false);
+            return;
+          }
+          scheduleReconnect();
+        };
+      })();
     }
 
     setLoading(true);
@@ -886,6 +955,7 @@ export function useDiscussion(
     error,
     loading,
     sendMessage,
+    deleteMessage,
     toggleReaction,
     markLatestAsRead,
     notifyTypingActivity,

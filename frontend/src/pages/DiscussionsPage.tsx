@@ -1,9 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
+
+import { Bell, BellOff, Users } from "lucide-react";
 
 import { DiscussionFeed } from "../components/DiscussionFeed";
 import { CreateDiscussionRoomModal } from "../components/discussions/CreateDiscussionRoomModal";
+import { DiscussionRoomMembersDrawer } from "../components/discussions/DiscussionRoomMembersDrawer";
 import { DiscussionRoomSidebar } from "../components/discussions/DiscussionRoomSidebar";
+import { NewDirectMessageModal } from "../components/discussions/NewDirectMessageModal";
+import { AppIcon } from "../components/ui/AppIcon";
 import { Button } from "../components/ui/Button";
 import { useAuth } from "../context/useAuth";
 import { useMediaQuery } from "../hooks/useMediaQuery";
@@ -11,9 +16,11 @@ import {
   approveDiscussionRoom,
   archiveDiscussionInboxRoom,
   fetchDiscussionInbox,
+  fetchDiscussionRoom,
   fetchMyDiscussionRooms,
   fetchPendingDiscussionRooms,
   rejectDiscussionRoom,
+  toggleDiscussionRoomMute,
   toggleDiscussionRoomPin,
   unarchiveDiscussionInboxRoom,
   type DiscussionArchivedRoom,
@@ -25,6 +32,7 @@ import {
   discussionRoomPath,
   discussionScopeFromPath,
 } from "../lib/discussion-paths";
+import { openDirectMessage } from "../lib/open-direct-message";
 import { canViewTaskOversight, isRoleAtLeast } from "../lib/roles";
 
 const INBOX_POLL_MS = 12_000;
@@ -59,6 +67,8 @@ export function DiscussionsPage() {
   const { member } = useAuth();
   const isMdUp = useMediaQuery("(min-width: 768px)");
   const selectedRoomId = discussionRoomIdFromPath(location.pathname);
+  const selectedRoomIdRef = useRef(selectedRoomId);
+  selectedRoomIdRef.current = selectedRoomId;
   const scope = discussionScopeFromPath(location.pathname);
 
   const canCreateGroup = member
@@ -73,11 +83,16 @@ export function DiscussionsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pinningId, setPinningId] = useState<string | null>(null);
+  const [mutingId, setMutingId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [newMessageOpen, setNewMessageOpen] = useState(false);
   const [pendingRooms, setPendingRooms] = useState<DiscussionRoom[]>([]);
   const [awaitingRooms, setAwaitingRooms] = useState<DiscussionRoom[]>([]);
   const [pendingBusyId, setPendingBusyId] = useState<number | null>(null);
   const [archiving, setArchiving] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(false);
+  const [activeRoomDetail, setActiveRoomDetail] =
+    useState<DiscussionRoom | null>(null);
   const [unarchivingId, setUnarchivingId] = useState<string | null>(null);
   const [archivedRooms, setArchivedRooms] = useState<DiscussionArchivedRoom[]>(
     [],
@@ -96,7 +111,18 @@ export function DiscussionsPage() {
       try {
         const response = await fetchDiscussionInbox();
         if (!cancelled) {
-          setRooms(sortRooms(response.rooms));
+          // Keep the open thread cleared so polling cannot restore unread
+          // while the user is actively reading it.
+          const activeId = selectedRoomIdRef.current;
+          setRooms(
+            sortRooms(
+              response.rooms.map((room) =>
+                room.room_id === activeId
+                  ? { ...room, unread_count: 0, unread_display: null }
+                  : room,
+              ),
+            ),
+          );
           setArchivedRooms(response.archived_rooms ?? []);
         }
       } catch {
@@ -191,6 +217,34 @@ export function DiscussionsPage() {
     );
   }, [selectedRoomId]);
 
+  const activeCustomRoomId = scope?.type === "room" ? scope.roomId : null;
+
+  // Prefetch custom room detail so the header can show member count / roster.
+  useEffect(() => {
+    if (activeCustomRoomId == null) {
+      setActiveRoomDetail(null);
+      setMembersOpen(false);
+      return;
+    }
+
+    let cancelled = false;
+    void fetchDiscussionRoom(activeCustomRoomId)
+      .then((detail) => {
+        if (!cancelled) {
+          setActiveRoomDetail(detail);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setActiveRoomDetail(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeCustomRoomId]);
+
   // Desktop: if landing on /discussions with rooms, open the first one.
   useEffect(() => {
     if (!isMdUp || loading || selectedRoomId || rooms.length === 0) {
@@ -269,6 +323,30 @@ export function DiscussionsPage() {
     }
   }
 
+  async function handleToggleMute(roomId: string) {
+    const previous = rooms;
+    setRooms((current) =>
+      current.map((room) =>
+        room.room_id === roomId ? { ...room, muted: !room.muted } : room,
+      ),
+    );
+    setMutingId(roomId);
+    try {
+      const result = await toggleDiscussionRoomMute(roomId);
+      setRooms((current) =>
+        current.map((room) =>
+          room.room_id === result.room_id
+            ? { ...room, muted: result.muted }
+            : room,
+        ),
+      );
+    } catch {
+      setRooms(previous);
+    } finally {
+      setMutingId(null);
+    }
+  }
+
   async function handleApprovePending(roomId: number) {
     setPendingBusyId(roomId);
     try {
@@ -337,21 +415,37 @@ export function DiscussionsPage() {
   const showList = isMdUp || !selectedRoomId;
   const showThread = isMdUp || Boolean(selectedRoomId);
 
+  const isDmThread =
+    selectedRoom?.event_type === "dm" || activeRoomDetail?.kind === "dm";
+  const isGroupThread =
+    scope?.type === "room" && !isDmThread && !selectedArchived;
+  const memberCount = activeRoomDetail?.members.length ?? 0;
+
   const feedTitle =
     selectedRoom?.label ??
     selectedArchived?.label ??
     (scope?.type === "board"
       ? "Board Discussion"
       : scope?.type === "room"
-        ? "Group"
+        ? isDmThread
+          ? (activeRoomDetail?.peer_full_name ?? "Direct message")
+          : "Group"
         : "Discussion");
   const feedDescription = selectedArchived
     ? "Archived — messaging is closed until restored"
     : scope?.type === "board"
       ? "Visible to board members and above"
-      : scope?.type === "room"
-        ? "Private group"
-        : undefined;
+      : isDmThread
+        ? selectedRoom?.peer_online
+          ? "Online"
+          : "Direct message"
+        : isGroupThread
+          ? memberCount > 0
+            ? `${memberCount} member${memberCount === 1 ? "" : "s"}`
+            : "Private group"
+          : scope?.type === "room"
+            ? "Private group"
+            : undefined;
 
   const canArchiveSelected = canManageArchive && Boolean(selectedRoomId);
 
@@ -371,6 +465,7 @@ export function DiscussionsPage() {
           error={error}
           canCreateGroup={canCreateGroup}
           onCreateGroup={() => setCreateOpen(true)}
+          onNewMessage={() => setNewMessageOpen(true)}
           pendingRooms={pendingRooms}
           pendingBusyId={pendingBusyId}
           onApprovePending={handleApprovePending}
@@ -397,35 +492,106 @@ export function DiscussionsPage() {
               onBack={() => navigate("/discussions")}
               className="h-full"
               headerAction={
-                canManageArchive && selectedRoomId && selectedArchived ? (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    loading={unarchivingId === selectedRoomId}
-                    onClick={() => void handleUnarchiveRoom(selectedRoomId)}
-                  >
-                    Unarchive
-                  </Button>
-                ) : canArchiveSelected && selectedRoomId && !selectedArchived ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    loading={archiving}
-                    onClick={() => void handleArchiveRoom(selectedRoomId)}
-                  >
-                    Archive
-                  </Button>
-                ) : undefined
+                <div className="flex items-center gap-1.5">
+                  {selectedRoomId && !selectedArchived ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      aria-label={
+                        selectedRoom?.muted
+                          ? "Unmute notifications"
+                          : "Mute notifications"
+                      }
+                      aria-pressed={Boolean(selectedRoom?.muted)}
+                      loading={mutingId === selectedRoomId}
+                      onClick={() => void handleToggleMute(selectedRoomId)}
+                    >
+                      <AppIcon
+                        icon={selectedRoom?.muted ? BellOff : Bell}
+                        size="xs"
+                        className="text-current"
+                      />
+                      {selectedRoom?.muted ? "Unmute" : "Mute"}
+                    </Button>
+                  ) : null}
+                  {isGroupThread ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      aria-label="View group members"
+                      onClick={() => setMembersOpen(true)}
+                    >
+                      <AppIcon icon={Users} size="xs" className="text-current" />
+                      Members
+                    </Button>
+                  ) : null}
+                  {canManageArchive && selectedRoomId && selectedArchived ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      loading={unarchivingId === selectedRoomId}
+                      onClick={() => void handleUnarchiveRoom(selectedRoomId)}
+                    >
+                      Unarchive
+                    </Button>
+                  ) : canArchiveSelected &&
+                    selectedRoomId &&
+                    !selectedArchived &&
+                    !isDmThread ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      loading={archiving}
+                      onClick={() => void handleArchiveRoom(selectedRoomId)}
+                    >
+                      Archive
+                    </Button>
+                  ) : null}
+                </div>
               }
             />
           ) : (
-            <div className="flex h-full items-center justify-center px-6 text-sm text-gray-500">
-              Select a conversation
+            <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+              <p className="text-sm font-medium text-foreground">
+                Select a conversation
+              </p>
+              <p className="max-w-xs text-xs text-gray-500">
+                Pick a chat from the left, or start a new private message.
+              </p>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setNewMessageOpen(true)}
+              >
+                New message
+              </Button>
             </div>
           )}
         </div>
+      ) : null}
+
+      <DiscussionRoomMembersDrawer
+        open={membersOpen && isGroupThread}
+        roomId={activeCustomRoomId}
+        onClose={() => setMembersOpen(false)}
+        onLoaded={setActiveRoomDetail}
+      />
+
+      {member ? (
+        <NewDirectMessageModal
+          open={newMessageOpen}
+          currentMemberId={member.id}
+          onClose={() => setNewMessageOpen(false)}
+          onSelectMember={async (memberId) => {
+            await openDirectMessage(navigate, memberId);
+            await reloadInboxSilent();
+          }}
+        />
       ) : null}
 
       {member && canCreateGroup ? (

@@ -11,6 +11,7 @@ from app.models.discussion_room import (
     DiscussionRoomStatus,
 )
 from app.models.discussion_room_archive import DiscussionRoomArchive
+from app.models.discussion_room_mute import DiscussionRoomMute
 from app.models.discussion_room_pin import DiscussionRoomPin
 from app.models.discussion_room_read import DiscussionRoomRead
 from app.models.event import Event, EventType, MeetingVisibility
@@ -77,6 +78,7 @@ __all__ = [
     "DiscussionRoomMemberRole",
     "DiscussionRoomStatus",
     "DiscussionRoomArchive",
+    "DiscussionRoomMute",
     "DiscussionRoomPin",
     "DiscussionRoomRead",
     "Event",

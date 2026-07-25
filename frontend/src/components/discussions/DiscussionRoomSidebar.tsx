@@ -1,6 +1,15 @@
-import { Archive, MessagesSquare, Pin, Plus, Users } from "lucide-react";
+import {
+  Archive,
+  BellOff,
+  MessageSquare,
+  MessagesSquare,
+  Pin,
+  Plus,
+  Search,
+  Users,
+} from "lucide-react";
+import { useMemo, useState, type MouseEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import type { MouseEvent } from "react";
 
 import {
   EVENT_TYPE_COLOR,
@@ -12,10 +21,12 @@ import type {
   DiscussionRoom,
 } from "../../lib/discussion-api";
 import { discussionRoomPath } from "../../lib/discussion-paths";
-import { formatCompactRelativeTimestamp } from "../../lib/format-datetime";import { AppIcon } from "../ui/AppIcon";
+import { formatCompactRelativeTimestamp } from "../../lib/format-datetime";
+import { AppIcon } from "../ui/AppIcon";
 import { Button } from "../ui/Button";
 
 const GROUP_AVATAR_COLOR = "#0F766E";
+const DM_AVATAR_COLOR = "#111113";
 
 function RoomAvatar({ room }: { room: DiscussionInboxRoom }) {
   if (room.room_id === "board") {
@@ -25,6 +36,29 @@ function RoomAvatar({ room }: { room: DiscussionInboxRoom }) {
         aria-hidden="true"
       >
         <AppIcon icon={MessagesSquare} size="sm" />
+      </span>
+    );
+  }
+
+  if (room.event_type === "dm") {
+    const initial = (room.label.trim().charAt(0) || "?").toUpperCase();
+    const online = Boolean(room.peer_online);
+    return (
+      <span className="relative inline-flex h-9 w-9 shrink-0" title="Direct message">
+        <span
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold text-white"
+          style={{ backgroundColor: DM_AVATAR_COLOR }}
+          aria-hidden="true"
+        >
+          {initial}
+        </span>
+        <span
+          className={[
+            "absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white",
+            online ? "bg-success" : "bg-gray-300",
+          ].join(" ")}
+          aria-label={online ? "Online" : "Offline"}
+        />
       </span>
     );
   }
@@ -71,6 +105,7 @@ function DiscussionSidebarRow({
 }) {
   const unread = room.unread_count > 0;
   const isBoard = room.room_id === "board";
+  const muted = Boolean(room.muted);
 
   function handlePinClick(event: MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
@@ -107,6 +142,16 @@ function DiscussionSidebarRow({
             ].join(" ")}
           >
             {room.label}
+            {room.event_type === "dm" ? (
+              <span className="ml-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                Direct
+              </span>
+            ) : null}
+            {muted ? (
+              <span className="ml-1.5 inline-flex align-middle text-gray-400" title="Muted">
+                <AppIcon icon={BellOff} size="xs" />
+              </span>
+            ) : null}
           </p>
           <div className="flex shrink-0 items-center gap-1.5">
             {room.unread_display ? (
@@ -258,6 +303,7 @@ export function DiscussionRoomSidebar({
   error,
   canCreateGroup,
   onCreateGroup,
+  onNewMessage,
   pendingRooms,
   pendingBusyId,
   onApprovePending,
@@ -278,6 +324,7 @@ export function DiscussionRoomSidebar({
   error?: string | null;
   canCreateGroup?: boolean;
   onCreateGroup?: () => void;
+  onNewMessage?: () => void;
   pendingRooms?: DiscussionRoom[];
   pendingBusyId?: number | null;
   onApprovePending?: (roomId: number) => void;
@@ -291,11 +338,32 @@ export function DiscussionRoomSidebar({
   onUnarchive?: (roomId: string) => void;
 }) {
   const navigate = useNavigate();
-  const pinned = rooms.filter((room) => room.pinned);
-  const unpinned = rooms.filter((room) => !room.pinned);
+  const [query, setQuery] = useState("");
   const reviewQueue = pendingRooms ?? [];
   const awaiting = awaitingRooms ?? [];
   const archived = archivedRooms ?? [];
+
+  const filteredRooms = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) {
+      return rooms;
+    }
+    return rooms.filter((room) => {
+      const haystack = [
+        room.label,
+        room.last_message_preview ?? "",
+        room.last_message_author ?? "",
+        room.event_type ?? "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(needle);
+    });
+  }, [rooms, query]);
+
+  const pinned = filteredRooms.filter((room) => room.pinned);
+  const unpinned = filteredRooms.filter((room) => !room.pinned);
+  const hasSearch = query.trim().length > 0;
 
   function handleSelect(roomId: string) {
     navigate(discussionRoomPath(roomId));
@@ -332,21 +400,54 @@ export function DiscussionRoomSidebar({
               ) : null}
             </Button>
           ) : null}
-          {!showArchived && canCreateGroup && onCreateGroup ? (
+          {!showArchived && onNewMessage ? (
             <Button
               type="button"
               variant="secondary"
+              size="sm"
+              onClick={onNewMessage}
+              aria-label="New message"
+              className="min-h-11 min-w-11 px-2 sm:min-h-0 sm:min-w-0 sm:px-3"
+            >
+              <AppIcon icon={MessageSquare} size="xs" />
+              <span className="hidden sm:inline">Message</span>
+            </Button>
+          ) : null}
+          {!showArchived && canCreateGroup && onCreateGroup ? (
+            <Button
+              type="button"
+              variant="ghost"
               size="sm"
               onClick={onCreateGroup}
               aria-label="New discussion group"
               className="min-h-11 min-w-11 px-2 sm:min-h-0 sm:min-w-0 sm:px-3"
             >
               <AppIcon icon={Plus} size="xs" />
-              <span className="hidden sm:inline">New group</span>
+              <span className="hidden sm:inline">Group</span>
             </Button>
           ) : null}
         </div>
       </div>
+
+      {!showArchived ? (
+        <div className="shrink-0 border-b border-gray-100 px-3 py-2">
+          <label className="relative block">
+            <span className="sr-only">Search conversations</span>
+            <AppIcon
+              icon={Search}
+              size="xs"
+              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search chats"
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 py-1.5 pl-8 pr-2.5 text-sm text-foreground outline-none focus:border-primary focus:bg-white"
+            />
+          </label>
+        </div>
+      ) : null}
 
       <div
         className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain"
@@ -416,8 +517,52 @@ export function DiscussionRoomSidebar({
               </div>
             ) : null}
 
-            {!loading && !error && rooms.length === 0 && reviewQueue.length === 0 ? (
-              <p className="px-4 py-3 text-sm text-gray-500">No discussions yet</p>
+            {!loading &&
+            !error &&
+            !hasSearch &&
+            rooms.length === 0 &&
+            reviewQueue.length === 0 ? (
+              <div className="px-4 py-6 text-center">
+                <p className="text-sm font-medium text-foreground">
+                  No conversations yet
+                </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  Message a member or start a group to begin.
+                </p>
+                <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                  {onNewMessage ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={onNewMessage}
+                    >
+                      <AppIcon icon={MessageSquare} size="xs" />
+                      New message
+                    </Button>
+                  ) : null}
+                  {canCreateGroup && onCreateGroup ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={onCreateGroup}
+                    >
+                      <AppIcon icon={Plus} size="xs" />
+                      New group
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
+            {!loading &&
+            !error &&
+            hasSearch &&
+            filteredRooms.length === 0 ? (
+              <p className="px-4 py-3 text-sm text-gray-500">
+                No chats match “{query.trim()}”.
+              </p>
             ) : null}
 
             {pinned.length > 0 ? (

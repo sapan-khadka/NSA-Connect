@@ -13,6 +13,7 @@ JWT_ALGORITHM = "HS256"
 class TokenType(StrEnum):
     ACCESS = "access"
     REFRESH = "refresh"
+    WS = "ws"
 
 
 class InvalidTokenError(Exception):
@@ -128,9 +129,46 @@ def create_token_pair(
     return access_token, access_expires_at, refresh_token, refresh_expires_at
 
 
+def create_ws_ticket(
+    *,
+    member_id: int,
+    email: str,
+    role: str,
+    token_version: int,
+    expires_seconds: int | None = None,
+) -> tuple[str, datetime]:
+    """Short-lived ticket for WebSocket auth (avoid putting access JWT in URLs)."""
+    ttl = expires_seconds
+    if ttl is None:
+        ttl = settings.WS_TICKET_EXPIRE_SECONDS
+    expires_at = datetime.now(UTC) + timedelta(seconds=ttl)
+    payload = {
+        "member_id": member_id,
+        "user_id": member_id,
+        "email": email,
+        "role": role,
+        "tv": token_version,
+        "typ": TokenType.WS.value,
+        "exp": expires_at,
+    }
+    return _encode_token(payload), expires_at
+
+
 def decode_access_token(token: str) -> dict:
     return _decode_token(token, expected_type=TokenType.ACCESS)
 
 
 def decode_refresh_token(token: str) -> dict:
     return _decode_token(token, expected_type=TokenType.REFRESH)
+
+
+def decode_ws_ticket(token: str) -> dict:
+    return _decode_token(token, expected_type=TokenType.WS)
+
+
+def decode_ws_or_access_token(token: str) -> dict:
+    """Accept a short-lived WS ticket, falling back to access tokens."""
+    try:
+        return decode_ws_ticket(token)
+    except InvalidTokenError:
+        return decode_access_token(token)

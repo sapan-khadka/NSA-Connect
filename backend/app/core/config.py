@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     )
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 14
+    WS_TICKET_EXPIRE_SECONDS: int = Field(
+        default=120,
+        description="TTL for short-lived WebSocket auth tickets",
+    )
 
     RATE_LIMIT_STORAGE_URI: str = Field(
         default="",
@@ -64,6 +68,10 @@ class Settings(BaseSettings):
     RATE_LIMIT_PASSWORD_RESET_IP_WINDOW_SECONDS: int = 3600
     RATE_LIMIT_RECEIPT_SCAN_MAX: int = 10
     RATE_LIMIT_RECEIPT_SCAN_WINDOW_SECONDS: int = 3600
+    RATE_LIMIT_DISCUSSION_MESSAGE_MAX: int = 40
+    RATE_LIMIT_DISCUSSION_MESSAGE_WINDOW_SECONDS: int = 60
+    RATE_LIMIT_DISCUSSION_DM_MAX: int = 20
+    RATE_LIMIT_DISCUSSION_DM_WINDOW_SECONDS: int = 60
 
     PASSWORD_RESET_EXPIRE_MINUTES: int = 45
 

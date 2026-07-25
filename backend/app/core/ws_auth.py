@@ -2,7 +2,11 @@
 
 from sqlalchemy.orm import Session
 
-from app.core.security import InvalidTokenError, decode_access_token, resolve_user_id
+from app.core.security import (
+    InvalidTokenError,
+    decode_ws_or_access_token,
+    resolve_user_id,
+)
 from app.models.member import Member
 
 
@@ -15,12 +19,15 @@ class TokenAuthorizationError(Exception):
 
 
 def authenticate_member_from_token(db: Session, token: str | None) -> Member:
-    """Mirror ``get_current_member`` checks without relying on HTTPBearer."""
+    """Mirror ``get_current_member`` checks without relying on HTTPBearer.
+
+    Accepts short-lived WS tickets (preferred) or access tokens.
+    """
     if not token or not token.strip():
         raise TokenAuthenticationError("Missing access token")
 
     try:
-        payload = decode_access_token(token.strip())
+        payload = decode_ws_or_access_token(token.strip())
     except InvalidTokenError as exc:
         raise TokenAuthenticationError("Invalid or expired token") from exc
 

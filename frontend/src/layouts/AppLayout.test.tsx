@@ -3,6 +3,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createMockMember, renderWithRouter } from "../test/test-utils";
 
+vi.mock("../lib/discussion-api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/discussion-api")>();
+  return {
+    ...actual,
+    fetchDiscussionWsTicket: vi.fn().mockRejectedValue(new Error("offline")),
+  };
+});
+
 vi.mock("../lib/notifications-api", () => ({
   EMPTY_NOTIFICATION_SUMMARY: {
     members_pending: 0,
@@ -128,8 +136,8 @@ describe("AppLayout navigation", () => {
       "/profile",
     );
     expect(
-      within(sidebar).getByRole("link", { name: "Roles & Permissions" }),
-    ).toHaveAttribute("href", "/members?tab=pending");
+      within(sidebar).queryByRole("link", { name: "Roles & Permissions" }),
+    ).not.toBeInTheDocument();
     expect(within(sidebar).getByRole("link", { name: "Documents" })).toHaveAttribute(
       "href",
       "/board/meeting-minutes",

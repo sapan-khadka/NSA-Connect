@@ -6,7 +6,9 @@ import { AppTopBar, MobileSidebarDrawer } from "../components/AppTopBar";
 import { MobileBottomNav } from "../components/MobileBottomNav";
 import { buildNavLinkClass } from "../components/AppNav";
 import { AppLogo } from "../components/AppLogo";
+import { ChatNotificationProvider } from "../context/ChatNotificationProvider";
 import { NotificationSummaryProvider } from "../context/NotificationSummaryProvider";
+import { ToastProvider } from "../context/ToastProvider";
 import { useAuth } from "../context/useAuth";
 
 function isDiscussionThreadPath(pathname: string): boolean {
@@ -26,6 +28,8 @@ export function AppLayout() {
   const { pathname } = useLocation();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const fluidCanvas = pathname === "/";
+  const eventsCalendarCanvas =
+    pathname === "/events" || pathname === "/events/calendar";
   const hideMobileBottomNav = isDiscussionThreadPath(pathname);
 
   if (!isAuthenticated) {
@@ -61,42 +65,51 @@ export function AppLayout() {
 
   return (
     <NotificationSummaryProvider>
-      <div className="ds-app-shell">
-        {/* Fixed left sidebar — desktop */}
-        <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:flex lg:w-[var(--sidebar-width)]">
-          <AppSidebar />
-        </div>
+      <ToastProvider>
+        <ChatNotificationProvider>
+          <div className="ds-app-shell">
+            {/* Fixed left sidebar — desktop */}
+            <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:flex lg:w-[var(--sidebar-width)]">
+              <AppSidebar />
+            </div>
 
-        {/* Mobile drawer sidebar */}
-        <MobileSidebarDrawer
-          open={mobileSidebarOpen}
-          onClose={() => setMobileSidebarOpen(false)}
-        >
-          <AppSidebar onNavigate={() => setMobileSidebarOpen(false)} />
-        </MobileSidebarDrawer>
+            {/* Mobile drawer sidebar */}
+            <MobileSidebarDrawer
+              open={mobileSidebarOpen}
+              onClose={() => setMobileSidebarOpen(false)}
+            >
+              <AppSidebar onNavigate={() => setMobileSidebarOpen(false)} />
+            </MobileSidebarDrawer>
 
-        {/* Scrollable column: sticky header + main content */}
-        <div className="flex min-h-screen min-w-0 flex-col lg:pl-[var(--sidebar-width)]">
-          <AppTopBar
-            showMenuButton
-            onOpenSidebar={() => setMobileSidebarOpen(true)}
-          />
+            {/* Scrollable column: sticky header + main content */}
+            <div className="flex min-h-screen min-w-0 flex-col lg:pl-[var(--sidebar-width)]">
+              <AppTopBar
+                showMenuButton
+                onOpenSidebar={() => setMobileSidebarOpen(true)}
+              />
 
-          <main
-            className={[
-              "ds-main-canvas",
-              hideMobileBottomNav ? "pb-0 lg:pb-8" : "pb-24 lg:pb-8",
-              fluidCanvas ? "ds-main-canvas--fluid" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-          >
-            <Outlet />
-          </main>
+              <main
+                className={[
+                  "ds-main-canvas",
+                  eventsCalendarCanvas
+                    ? "pb-0"
+                    : hideMobileBottomNav
+                      ? "pb-0 lg:pb-8"
+                      : "pb-24 lg:pb-8",
+                  fluidCanvas ? "ds-main-canvas--fluid" : "",
+                  eventsCalendarCanvas ? "ds-main-canvas--events-calendar" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                <Outlet />
+              </main>
 
-          {hideMobileBottomNav ? null : <MobileBottomNav />}
-        </div>
-      </div>
+              {hideMobileBottomNav ? null : <MobileBottomNav />}
+            </div>
+          </div>
+        </ChatNotificationProvider>
+      </ToastProvider>
     </NotificationSummaryProvider>
   );
 }

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.models.discussion_message import DiscussionMessage
 from app.models.discussion_room_archive import DiscussionRoomArchive
+from app.models.discussion_room_mute import DiscussionRoomMute
 from app.models.discussion_room_pin import DiscussionRoomPin
 from app.models.discussion_room_read import DiscussionRoomRead
 from app.models.event import Event
@@ -19,6 +20,7 @@ from app.schemas.discussion import (
     DiscussionArchivedRoomResponse,
     DiscussionInboxResponse,
     DiscussionInboxRoomResponse,
+    DiscussionMuteToggleResponse,
     DiscussionPinToggleResponse,
     DiscussionRoomReadResponse,
 )
@@ -267,6 +269,12 @@ def _preview_text(content: str) -> str:
     return f"{single[: PREVIEW_MAX_CHARS - 1].rstrip()}…"
 
 
+def _preview_for_message(message: DiscussionMessage) -> str:
+    if message.deleted_at is not None:
+        return "This message was deleted"
+    return _preview_text(message.content)
+
+
 def _unread_display(count: int) -> str | None:
     if count <= 0:
         return None
@@ -307,6 +315,43 @@ def mark_discussion_room_read(
         room_id=existing.room_id,
         last_read_at=existing.last_read_at,
     )
+
+
+def sync_inbox_read_watermark(
+    db: Session,
+    *,
+    member: Member,
+    room_id: str,
+    last_read_message_id: int,
+    last_read_at: datetime,
+) -> None:
+    """Advance inbox unread watermark from a live read receipt (no access re-check)."""
+    existing = db.scalars(
+        select(DiscussionRoomRead).where(
+            DiscussionRoomRead.user_id == member.id,
+            DiscussionRoomRead.room_id == room_id,
+        )
+    ).first()
+    if existing is None:
+        existing = DiscussionRoomRead(
+            user_id=member.id,
+            room_id=room_id,
+            last_read_at=last_read_at,
+            last_read_message_id=last_read_message_id,
+        )
+        db.add(existing)
+    else:
+        if (
+            existing.last_read_at is None
+            or last_read_at > existing.last_read_at
+        ):
+            existing.last_read_at = last_read_at
+        if (
+            existing.last_read_message_id is None
+            or last_read_message_id > existing.last_read_message_id
+        ):
+            existing.last_read_message_id = last_read_message_id
+    db.commit()
 
 
 def toggle_discussion_room_pin(
@@ -359,9 +404,41 @@ def toggle_discussion_room_pin(
     return DiscussionPinToggleResponse(room_id=cleaned, pinned=True)
 
 
+def toggle_discussion_room_mute(
+    db: Session,
+    *,
+    member: Member,
+    room_id: str,
+) -> DiscussionMuteToggleResponse:
+    cleaned = room_id.strip()
+    assert_can_access_room(db, member=member, room_id=cleaned)
+
+    existing = db.scalars(
+        select(DiscussionRoomMute).where(
+            DiscussionRoomMute.user_id == member.id,
+            DiscussionRoomMute.room_id == cleaned,
+        )
+    ).first()
+
+    if existing is not None:
+        db.delete(existing)
+        db.commit()
+        return DiscussionMuteToggleResponse(room_id=cleaned, muted=False)
+
+    mute = DiscussionRoomMute(
+        user_id=member.id,
+        room_id=cleaned,
+        muted_at=datetime.now(UTC),
+    )
+    db.add(mute)
+    db.commit()
+    return DiscussionMuteToggleResponse(room_id=cleaned, muted=True)
+
+
 def _count_unread(
     db: Session,
     *,
+    member_id: int,
     event_id: int | None,
     custom_room_id: int | None = None,
     last_read_at: datetime | None,
@@ -381,7 +458,15 @@ def _count_unread(
             DiscussionMessage.event_id == event_id,
             DiscussionMessage.custom_room_id.is_(None),
         )
-    statement = select(func.count()).select_from(DiscussionMessage).where(scope)
+    statement = (
+        select(func.count())
+        .select_from(DiscussionMessage)
+        .where(
+            scope,
+            DiscussionMessage.author_id != member_id,
+            DiscussionMessage.deleted_at.is_(None),
+        )
+    )
     if last_read_at is not None:
         statement = statement.where(DiscussionMessage.created_at > last_read_at)
     return int(db.scalar(statement) or 0)
@@ -434,9 +519,19 @@ def list_discussion_inbox(
             select(DiscussionRoomPin).where(DiscussionRoomPin.user_id == member.id)
         ).all()
     }
+    muted_ids = set(
+        db.scalars(
+            select(DiscussionRoomMute.room_id).where(
+                DiscussionRoomMute.user_id == member.id
+            )
+        ).all()
+    )
+
+    from app.services.discussion_realtime_sync import users_online
 
     rooms: list[DiscussionInboxRoomResponse] = []
     archived_ids = _archived_system_room_ids(db)
+    peer_ids_for_presence: list[int] = []
 
     if member.has_role_at_least(MemberRole.BOARD):
         latest = _latest_message(db, event_id=None)
@@ -444,6 +539,7 @@ def list_discussion_inbox(
             room_id = BOARD_ROOM_KEY
             unread = _count_unread(
                 db,
+                member_id=member.id,
                 event_id=None,
                 last_read_at=reads.get(room_id),
             )
@@ -454,7 +550,7 @@ def list_discussion_inbox(
                     event_id=None,
                     event_type=None,
                     href="/discussions/board",
-                    last_message_preview=_preview_text(latest.content),
+                    last_message_preview=_preview_for_message(latest),
                     last_message_at=latest.created_at,
                     last_message_author=latest.author.full_name
                     if latest.author
@@ -464,6 +560,7 @@ def list_discussion_inbox(
                     # Board Discussion is always in the pinned section.
                     pinned=True,
                     pinned_at=pins.get(room_id) or latest.created_at,
+                    muted=room_id in muted_ids,
                 )
             )
 
@@ -513,6 +610,7 @@ def list_discussion_inbox(
                 continue
             unread = _count_unread(
                 db,
+                member_id=member.id,
                 event_id=event_id,
                 last_read_at=reads.get(room_id),
             )
@@ -525,7 +623,7 @@ def list_discussion_inbox(
                     if hasattr(event.event_type, "value")
                     else str(event.event_type),
                     href=f"/discussions/event/{event_id}",
-                    last_message_preview=_preview_text(latest.content),
+                    last_message_preview=_preview_for_message(latest),
                     last_message_at=latest.created_at,
                     last_message_author=latest.author.full_name
                     if latest.author
@@ -534,41 +632,82 @@ def list_discussion_inbox(
                     unread_display=_unread_display(unread),
                     pinned=room_id in pins,
                     pinned_at=pins.get(room_id),
+                    muted=room_id in muted_ids,
                 )
             )
 
-    if member.has_role_at_least(MemberRole.BOARD):
-        from app.services.discussion_room_service import list_live_rooms_for_member
+    from app.models.discussion_room import DiscussionRoomKind
+    from app.services.discussion_room_service import list_live_rooms_for_member
 
-        for custom in list_live_rooms_for_member(db, member=member):
-            room_id = custom_room_key(custom.id)
-            latest = _latest_message(db, event_id=None, custom_room_id=custom.id)
-            unread = _count_unread(
-                db,
+    is_board = member.has_role_at_least(MemberRole.BOARD)
+    dm_peer_by_room: dict[str, int] = {}
+    for custom in list_live_rooms_for_member(db, member=member):
+        is_dm = custom.kind == DiscussionRoomKind.DM
+        if not is_dm and not is_board:
+            continue
+
+        room_id = custom_room_key(custom.id)
+        latest = _latest_message(db, event_id=None, custom_room_id=custom.id)
+        unread = _count_unread(
+            db,
+            member_id=member.id,
+            event_id=None,
+            custom_room_id=custom.id,
+            last_read_at=reads.get(room_id),
+        )
+
+        label = custom.name
+        peer_user_id: int | None = None
+        if is_dm:
+            peer = next(
+                (
+                    row.member
+                    for row in custom.members
+                    if row.member_id != member.id and row.member is not None
+                ),
+                None,
+            )
+            label = peer.full_name if peer else "Direct message"
+            if peer is not None:
+                peer_user_id = peer.id
+                peer_ids_for_presence.append(peer.id)
+                dm_peer_by_room[room_id] = peer.id
+
+        rooms.append(
+            DiscussionInboxRoomResponse(
+                room_id=room_id,
+                label=label,
                 event_id=None,
-                custom_room_id=custom.id,
-                last_read_at=reads.get(room_id),
+                event_type="dm" if is_dm else "group",
+                href=f"/discussions/room/{custom.id}",
+                last_message_preview=_preview_for_message(latest)
+                if latest
+                else None,
+                last_message_at=latest.created_at if latest else custom.created_at,
+                last_message_author=latest.author.full_name
+                if latest and latest.author
+                else None,
+                unread_count=unread,
+                unread_display=_unread_display(unread),
+                pinned=room_id in pins,
+                pinned_at=pins.get(room_id),
+                muted=room_id in muted_ids,
+                peer_user_id=peer_user_id,
             )
-            rooms.append(
-                DiscussionInboxRoomResponse(
-                    room_id=room_id,
-                    label=custom.name,
-                    event_id=None,
-                    event_type="group",
-                    href=f"/discussions/room/{custom.id}",
-                    last_message_preview=_preview_text(latest.content)
-                    if latest
-                    else None,
-                    last_message_at=latest.created_at if latest else custom.created_at,
-                    last_message_author=latest.author.full_name
-                    if latest and latest.author
-                    else None,
-                    unread_count=unread,
-                    unread_display=_unread_display(unread),
-                    pinned=room_id in pins,
-                    pinned_at=pins.get(room_id),
-                )
+        )
+
+    online_map = users_online(peer_ids_for_presence)
+    if online_map and dm_peer_by_room:
+        updated_rooms: list[DiscussionInboxRoomResponse] = []
+        for room in rooms:
+            peer_id = dm_peer_by_room.get(room.room_id)
+            if peer_id is None:
+                updated_rooms.append(room)
+                continue
+            updated_rooms.append(
+                room.model_copy(update={"peer_online": bool(online_map.get(peer_id))})
             )
+        rooms = updated_rooms
 
     def sort_key(room: DiscussionInboxRoomResponse):
         if room.pinned and room.pinned_at is not None:

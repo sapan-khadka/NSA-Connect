@@ -554,6 +554,27 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
     ),
     EndpointAuthRule(
         "POST",
+        "/api/v1/discussions/mutes/toggle",
+        "Toggle discussion room mute",
+        "member",
+        "get_current_member",
+    ),
+    EndpointAuthRule(
+        "POST",
+        "/api/v1/discussions/ws-ticket",
+        "Issue short-lived discussion WebSocket ticket",
+        "member",
+        "get_current_member",
+    ),
+    EndpointAuthRule(
+        "GET",
+        "/api/v1/discussions/presence",
+        "Lookup global chat presence for member ids",
+        "member",
+        "get_current_member",
+    ),
+    EndpointAuthRule(
+        "POST",
         "/api/v1/discussions/archive",
         "Archive board/event/custom discussion room",
         "task_oversight",

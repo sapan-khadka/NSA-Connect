@@ -44,6 +44,17 @@ vi.mock("./auth-token", () => ({
   getAccessToken: () => "test-token",
 }));
 
+vi.mock("./discussion-api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./discussion-api")>();
+  return {
+    ...actual,
+    fetchDiscussionWsTicket: vi.fn().mockResolvedValue({
+      token: "ws-ticket",
+      expires_at: "2030-01-01T00:02:00Z",
+    }),
+  };
+});
+
 describe("useDiscussion", () => {
   beforeEach(() => {
     sockets.length = 0;
@@ -59,7 +70,7 @@ describe("useDiscussion", () => {
 
     await waitFor(() => expect(sockets).toHaveLength(1));
     expect(sockets[0].url).toContain("/ws/events/12/discussion");
-    expect(sockets[0].url).toContain("token=test-token");
+    expect(sockets[0].url).toContain("token=ws-ticket");
 
     act(() => {
       sockets[0].onmessage?.(
