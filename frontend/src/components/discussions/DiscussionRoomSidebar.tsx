@@ -7,6 +7,7 @@ import {
   Plus,
   Search,
   Users,
+  X,
 } from "lucide-react";
 import { useMemo, useState, type MouseEvent } from "react";
 import { useNavigate } from "react-router-dom";
@@ -32,7 +33,7 @@ function RoomAvatar({ room }: { room: DiscussionInboxRoom }) {
   if (room.room_id === "board") {
     return (
       <span
-        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-badge-teal-bg text-primary"
+        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-badge-teal-bg text-primary"
         aria-hidden="true"
       >
         <AppIcon icon={MessagesSquare} size="sm" />
@@ -44,9 +45,12 @@ function RoomAvatar({ room }: { room: DiscussionInboxRoom }) {
     const initial = (room.label.trim().charAt(0) || "?").toUpperCase();
     const online = Boolean(room.peer_online);
     return (
-      <span className="relative inline-flex h-9 w-9 shrink-0" title="Direct message">
+      <span
+        className="relative inline-flex h-10 w-10 shrink-0"
+        title={online ? "Online" : "Direct message"}
+      >
         <span
-          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold text-white"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold text-white"
           style={{ backgroundColor: DM_AVATAR_COLOR }}
           aria-hidden="true"
         >
@@ -66,7 +70,7 @@ function RoomAvatar({ room }: { room: DiscussionInboxRoom }) {
   if (room.room_id.startsWith("room:") || room.event_type === "group") {
     return (
       <span
-        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white"
+        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white"
         style={{ backgroundColor: GROUP_AVATAR_COLOR }}
         aria-hidden="true"
       >
@@ -81,12 +85,20 @@ function RoomAvatar({ room }: { room: DiscussionInboxRoom }) {
 
   return (
     <span
-      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
+      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
       style={{ backgroundColor: color }}
       aria-hidden="true"
     >
       {initial}
     </span>
+  );
+}
+
+function SectionLabel({ children }: { children: string }) {
+  return (
+    <p className="px-4 pb-1.5 pt-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-400">
+      {children}
+    </p>
   );
 }
 
@@ -106,6 +118,7 @@ function DiscussionSidebarRow({
   const unread = room.unread_count > 0;
   const isBoard = room.room_id === "board";
   const muted = Boolean(room.muted);
+  const isDm = room.event_type === "dm";
 
   function handlePinClick(event: MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
@@ -114,6 +127,12 @@ function DiscussionSidebarRow({
       onTogglePin(room.room_id);
     }
   }
+
+  const preview = room.last_message_preview
+    ? room.last_message_author
+      ? `${room.last_message_author}: ${room.last_message_preview}`
+      : room.last_message_preview
+    : "No messages yet";
 
   return (
     <div
@@ -128,82 +147,95 @@ function DiscussionSidebarRow({
         }
       }}
       className={[
-        "group flex w-full cursor-pointer items-start gap-2.5 px-3 py-2.5 transition-colors",
-        selected ? "bg-badge-teal-bg/50" : "hover:bg-gray-50",
+        "group relative flex w-full cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors",
+        selected
+          ? "bg-surface-muted before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-full before:bg-foreground"
+          : "hover:bg-gray-50",
       ].join(" ")}
     >
       <RoomAvatar room={room} />
+
       <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <p
-            className={[
-              "truncate text-sm text-foreground",
-              unread ? "font-semibold" : "font-normal",
-            ].join(" ")}
-          >
-            {room.label}
-            {room.event_type === "dm" ? (
-              <span className="ml-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-400">
-                Direct
-              </span>
-            ) : null}
+        <div className="flex items-baseline justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <p
+              className={[
+                "truncate text-[13px] leading-5 text-foreground",
+                unread ? "font-semibold" : "font-medium",
+              ].join(" ")}
+            >
+              {room.label}
+            </p>
             {muted ? (
-              <span className="ml-1.5 inline-flex align-middle text-gray-400" title="Muted">
+              <span className="shrink-0 text-gray-400" title="Muted">
                 <AppIcon icon={BellOff} size="xs" />
               </span>
             ) : null}
+          </div>
+          {room.last_message_at ? (
+            <time
+              dateTime={room.last_message_at}
+              className={[
+                "shrink-0 text-[11px] tabular-nums leading-5",
+                unread ? "font-semibold text-foreground" : "text-gray-400",
+              ].join(" ")}
+            >
+              {formatCompactRelativeTimestamp(room.last_message_at)}
+            </time>
+          ) : null}
+        </div>
+
+        <div className="mt-0.5 flex items-center gap-2">
+          <p
+            className={[
+              "min-w-0 flex-1 truncate text-[12px] leading-4",
+              unread ? "font-medium text-gray-700" : "text-gray-500",
+              !room.last_message_preview ? "text-gray-400" : "",
+            ].join(" ")}
+          >
+            {isDm && !unread ? (
+              <span className="mr-1 text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                DM
+              </span>
+            ) : null}
+            {preview}
           </p>
-          <div className="flex shrink-0 items-center gap-1.5">
+
+          <div className="flex shrink-0 items-center gap-1">
             {room.unread_display ? (
-              <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-white">
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-foreground px-1.5 text-[10px] font-semibold tabular-nums text-white">
                 {room.unread_display}
               </span>
             ) : null}
-            {room.last_message_at ? (
-              <time
-                dateTime={room.last_message_at}
-                className="text-xs tabular-nums text-gray-500"
-              >
-                {formatCompactRelativeTimestamp(room.last_message_at)}
-              </time>
-            ) : null}
+            <button
+              type="button"
+              aria-label={
+                isBoard
+                  ? "Board Discussion is always pinned"
+                  : room.pinned
+                    ? `Unpin ${room.label}`
+                    : `Pin ${room.label}`
+              }
+              aria-pressed={room.pinned}
+              disabled={pinDisabled || isBoard}
+              onClick={handlePinClick}
+              className={[
+                "inline-flex h-7 w-7 items-center justify-center rounded-full transition",
+                room.pinned
+                  ? "text-foreground"
+                  : "text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-gray-100 hover:text-foreground max-sm:opacity-100",
+                isBoard ? "cursor-default" : "",
+              ].join(" ")}
+            >
+              <AppIcon
+                icon={Pin}
+                size="xs"
+                className={room.pinned ? "fill-current" : ""}
+              />
+            </button>
           </div>
         </div>
-        {room.last_message_preview ? (
-          <p className="mt-0.5 truncate text-xs text-gray-500">
-            {room.last_message_author
-              ? `${room.last_message_author}: ${room.last_message_preview}`
-              : room.last_message_preview}
-          </p>
-        ) : (
-          <p className="mt-0.5 truncate text-xs text-gray-400">No messages yet</p>
-        )}
       </div>
-      <button
-        type="button"
-        aria-label={
-          isBoard
-            ? "Board Discussion is always pinned"
-            : room.pinned
-              ? `Unpin ${room.label}`
-              : `Pin ${room.label}`
-        }
-        aria-pressed={room.pinned}
-        disabled={pinDisabled || isBoard}
-        onClick={handlePinClick}
-        className={[
-          "mt-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition sm:mt-1 sm:h-7 sm:w-7",
-          room.pinned
-            ? "text-primary"
-            : "text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-gray-100 hover:text-foreground max-sm:opacity-100",
-        ].join(" ")}
-      >
-        <AppIcon
-          icon={Pin}
-          size="xs"
-          className={room.pinned ? "fill-current" : ""}
-        />
-      </button>
     </div>
   );
 }
@@ -220,13 +252,15 @@ function PendingReviewRow({
   onReject: (roomId: number) => void;
 }) {
   return (
-    <div className="border-b border-gray-100 px-3 py-2.5 last:border-b-0">
-      <p className="truncate text-sm font-medium text-foreground">{room.name}</p>
-      <p className="mt-0.5 truncate text-xs text-gray-500">
+    <div className="border-b border-gray-100 px-3 py-3 last:border-b-0">
+      <p className="truncate text-[13px] font-medium text-foreground">
+        {room.name}
+      </p>
+      <p className="mt-0.5 truncate text-[12px] text-gray-500">
         Proposed by {room.created_by_name}
         {room.description ? ` · ${room.description}` : ""}
       </p>
-      <div className="mt-2 flex gap-2">
+      <div className="mt-2.5 flex gap-2">
         <Button
           type="button"
           variant="primary"
@@ -262,15 +296,15 @@ function ArchivedRoomRow({
   onOpen: (roomId: string) => void;
 }) {
   return (
-    <div className="border-b border-gray-100 px-3 py-2.5 last:border-b-0">
+    <div className="border-b border-gray-100 px-3 py-3 last:border-b-0">
       <button
         type="button"
         onClick={() => onOpen(room.room_id)}
-        className="block w-full truncate text-left text-sm font-medium text-foreground hover:text-primary"
+        className="block w-full truncate text-left text-[13px] font-medium text-foreground hover:text-primary"
       >
         {room.label}
       </button>
-      <p className="mt-0.5 text-xs text-gray-500">
+      <p className="mt-0.5 text-[12px] text-gray-500">
         {room.kind === "board"
           ? "Board Discussion"
           : room.kind === "event"
@@ -284,13 +318,52 @@ function ArchivedRoomRow({
         type="button"
         variant="outline"
         size="sm"
-        className="mt-2"
+        className="mt-2.5"
         disabled={busy}
         onClick={() => onRestore(room.room_id)}
       >
         Unarchive
       </Button>
     </div>
+  );
+}
+
+function HeaderIconButton({
+  label,
+  pressed,
+  onClick,
+  icon,
+  badge,
+  emphasize,
+}: {
+  label: string;
+  pressed?: boolean;
+  onClick: () => void;
+  icon: typeof Archive;
+  badge?: number;
+  emphasize?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      aria-pressed={pressed}
+      title={label}
+      className={[
+        "relative inline-flex h-9 w-9 items-center justify-center rounded-full transition",
+        pressed || emphasize
+          ? "bg-surface-muted text-foreground"
+          : "text-gray-500 hover:bg-gray-50 hover:text-foreground",
+      ].join(" ")}
+    >
+      <AppIcon icon={icon} size="xs" />
+      {badge != null && badge > 0 ? (
+        <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-foreground px-1 text-[10px] font-semibold tabular-nums text-white">
+          {badge > 9 ? "9+" : badge}
+        </span>
+      ) : null}
+    </button>
   );
 }
 
@@ -364,6 +437,7 @@ export function DiscussionRoomSidebar({
   const pinned = filteredRooms.filter((room) => room.pinned);
   const unpinned = filteredRooms.filter((room) => !room.pinned);
   const hasSearch = query.trim().length > 0;
+  const unreadTotal = rooms.reduce((sum, room) => sum + room.unread_count, 0);
 
   function handleSelect(roomId: string) {
     navigate(discussionRoomPath(roomId));
@@ -371,80 +445,76 @@ export function DiscussionRoomSidebar({
 
   return (
     <aside
-      className="flex h-full w-full flex-col border-r border-gray-200 bg-white md:w-[320px] md:shrink-0"
+      className="flex h-full w-full flex-col border-r border-gray-200 bg-white md:w-[340px] md:shrink-0"
       aria-label="Discussion rooms"
     >
-      <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-gray-200 px-3">
-        <h1 className="truncate text-base font-medium text-foreground">
-          {showArchived ? "Archived" : "Discussions"}
-        </h1>
-        <div className="flex shrink-0 items-center gap-1">
+      <div className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-gray-200 px-3.5">
+        <div className="min-w-0">
+          <h1 className="truncate text-[15px] font-semibold tracking-tight text-foreground">
+            {showArchived ? "Archived" : "Discussions"}
+          </h1>
+          {!showArchived && unreadTotal > 0 ? (
+            <p className="truncate text-[11px] text-gray-500">
+              {unreadTotal > 99 ? "99+" : unreadTotal} unread
+            </p>
+          ) : null}
+        </div>
+        <div className="flex shrink-0 items-center gap-0.5">
           {canManageArchive && onToggleArchived ? (
-            <Button
-              type="button"
-              variant={showArchived ? "secondary" : "ghost"}
-              size="sm"
-              onClick={onToggleArchived}
-              aria-pressed={showArchived}
-              aria-label={
+            <HeaderIconButton
+              label={
                 showArchived ? "Back to active discussions" : "View archived"
               }
-              className="min-h-11 min-w-11 px-2 sm:min-h-0 sm:min-w-0 sm:px-3"
-            >
-              <AppIcon icon={Archive} size="xs" />
-              <span className="hidden sm:inline">
-                {showArchived ? "Active" : "Archived"}
-              </span>
-              {!showArchived && archived.length > 0 ? (
-                <span className="tabular-nums">{archived.length}</span>
-              ) : null}
-            </Button>
+              pressed={showArchived}
+              onClick={onToggleArchived}
+              icon={Archive}
+              badge={!showArchived ? archived.length : undefined}
+            />
           ) : null}
           {!showArchived && onNewMessage ? (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
+            <HeaderIconButton
+              label="New message"
               onClick={onNewMessage}
-              aria-label="New message"
-              className="min-h-11 min-w-11 px-2 sm:min-h-0 sm:min-w-0 sm:px-3"
-            >
-              <AppIcon icon={MessageSquare} size="xs" />
-              <span className="hidden sm:inline">Message</span>
-            </Button>
+              icon={MessageSquare}
+              emphasize
+            />
           ) : null}
           {!showArchived && canCreateGroup && onCreateGroup ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
+            <HeaderIconButton
+              label="New discussion group"
               onClick={onCreateGroup}
-              aria-label="New discussion group"
-              className="min-h-11 min-w-11 px-2 sm:min-h-0 sm:min-w-0 sm:px-3"
-            >
-              <AppIcon icon={Plus} size="xs" />
-              <span className="hidden sm:inline">Group</span>
-            </Button>
+              icon={Plus}
+            />
           ) : null}
         </div>
       </div>
 
       {!showArchived ? (
-        <div className="shrink-0 border-b border-gray-100 px-3 py-2">
+        <div className="shrink-0 border-b border-gray-100 px-3 py-2.5">
           <label className="relative block">
             <span className="sr-only">Search conversations</span>
             <AppIcon
               icon={Search}
               size="xs"
-              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
             />
             <input
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search chats"
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 py-1.5 pl-8 pr-2.5 text-sm text-foreground outline-none focus:border-primary focus:bg-white"
+              className="w-full rounded-full border border-transparent bg-surface-muted py-2 pl-9 pr-9 text-[13px] text-foreground outline-none placeholder:text-gray-400 focus:border-gray-200 focus:bg-white"
             />
+            {query ? (
+              <button
+                type="button"
+                aria-label="Clear search"
+                onClick={() => setQuery("")}
+                className="absolute right-2 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-foreground"
+              >
+                <AppIcon icon={X} size="xs" />
+              </button>
+            ) : null}
           </label>
         </div>
       ) : null}
@@ -455,10 +525,10 @@ export function DiscussionRoomSidebar({
         aria-label={showArchived ? "Archived rooms" : "Rooms"}
       >
         {loading ? (
-          <p className="px-4 py-3 text-sm text-gray-500">Loading…</p>
+          <p className="px-4 py-4 text-sm text-gray-500">Loading…</p>
         ) : null}
         {error ? (
-          <p className="px-4 py-3 text-sm text-overdue" role="alert">
+          <p className="px-4 py-4 text-sm text-overdue" role="alert">
             {error}
           </p>
         ) : null}
@@ -466,7 +536,7 @@ export function DiscussionRoomSidebar({
         {showArchived ? (
           <>
             {!loading && archived.length === 0 ? (
-              <p className="px-4 py-3 text-sm text-gray-500">
+              <p className="px-4 py-4 text-sm text-gray-500">
                 No archived discussions
               </p>
             ) : null}
@@ -485,10 +555,8 @@ export function DiscussionRoomSidebar({
             {reviewQueue.length > 0 &&
             onApprovePending &&
             onRejectPending ? (
-              <div className="border-b border-gray-200 pt-3">
-                <p className="px-4 pb-1 text-xs font-medium tracking-wide text-gray-400">
-                  PENDING REVIEW
-                </p>
+              <div className="border-b border-gray-100">
+                <SectionLabel>Pending review</SectionLabel>
                 {reviewQueue.map((room) => (
                   <PendingReviewRow
                     key={room.id}
@@ -502,14 +570,14 @@ export function DiscussionRoomSidebar({
             ) : null}
 
             {awaiting.length > 0 ? (
-              <div className="border-b border-gray-200 pt-3">
-                <p className="px-4 pb-1 text-xs font-medium tracking-wide text-gray-400">
-                  AWAITING APPROVAL
-                </p>
+              <div className="border-b border-gray-100">
+                <SectionLabel>Awaiting approval</SectionLabel>
                 {awaiting.map((room) => (
                   <div key={room.id} className="px-3 py-2.5">
-                    <p className="truncate text-sm text-foreground">{room.name}</p>
-                    <p className="mt-0.5 text-xs text-gray-500">
+                    <p className="truncate text-[13px] text-foreground">
+                      {room.name}
+                    </p>
+                    <p className="mt-0.5 text-[12px] text-gray-500">
                       Waiting for President or VP
                     </p>
                   </div>
@@ -522,14 +590,17 @@ export function DiscussionRoomSidebar({
             !hasSearch &&
             rooms.length === 0 &&
             reviewQueue.length === 0 ? (
-              <div className="px-4 py-6 text-center">
+              <div className="px-6 py-10 text-center">
+                <div className="mx-auto mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-surface-muted text-foreground">
+                  <AppIcon icon={MessageSquare} size="sm" />
+                </div>
                 <p className="text-sm font-medium text-foreground">
                   No conversations yet
                 </p>
                 <p className="mt-1 text-xs text-gray-500">
                   Message a member or start a group to begin.
                 </p>
-                <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                   {onNewMessage ? (
                     <Button
                       type="button"
@@ -560,16 +631,14 @@ export function DiscussionRoomSidebar({
             !error &&
             hasSearch &&
             filteredRooms.length === 0 ? (
-              <p className="px-4 py-3 text-sm text-gray-500">
+              <p className="px-4 py-4 text-sm text-gray-500">
                 No chats match “{query.trim()}”.
               </p>
             ) : null}
 
             {pinned.length > 0 ? (
-              <div className="pt-3">
-                <p className="px-4 pb-1 text-xs font-medium tracking-wide text-gray-400">
-                  PINNED
-                </p>
+              <div>
+                <SectionLabel>Pinned</SectionLabel>
                 {pinned.map((room) => (
                   <DiscussionSidebarRow
                     key={room.room_id}
@@ -584,7 +653,8 @@ export function DiscussionRoomSidebar({
             ) : null}
 
             {unpinned.length > 0 ? (
-              <div className={pinned.length > 0 ? "pt-2" : "pt-1"}>
+              <div className={pinned.length > 0 ? "pb-2" : "pb-2"}>
+                {pinned.length > 0 ? <SectionLabel>Chats</SectionLabel> : null}
                 {unpinned.map((room) => (
                   <DiscussionSidebarRow
                     key={room.room_id}
