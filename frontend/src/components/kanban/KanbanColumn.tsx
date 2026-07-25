@@ -1,6 +1,5 @@
 import { useDroppable } from "@dnd-kit/core";
 
-import { getKanbanColumnTheme } from "../../lib/kanban-theme";
 import type { KanbanColumnId, KanbanTask } from "../../lib/kanban-status";
 import { TASK_STATUS_LABELS } from "../../lib/member-workspace-responsibilities";
 import type { EventTaskStatus } from "../../lib/event-tasks-api";
@@ -30,11 +29,10 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
   },
 ];
 
-/** Status dots aligned with EventTaskManager STATUS_BADGE_STYLES tones. */
-const COLUMN_STATUS_DOT_CLASS: Record<EventTaskStatus, string> = {
-  todo: "bg-label",
-  in_progress: "bg-accent",
-  done: "bg-primary",
+const COLUMN_RING_CLASS: Record<EventTaskStatus, string> = {
+  todo: "is-todo",
+  in_progress: "is-progress",
+  done: "is-done",
 };
 
 type KanbanColumnProps = {
@@ -54,7 +52,6 @@ export function KanbanColumn({
   onAddTask,
   hideAssignee = false,
 }: KanbanColumnProps) {
-  const theme = getKanbanColumnTheme(column.id);
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
   });
@@ -65,48 +62,31 @@ export function KanbanColumn({
     <section
       data-kanban-column={column.id}
       className={[
-        "flex flex-col overflow-hidden rounded-kanban border border-kanban-border bg-white transition-colors duration-200",
-        isOver ? "ring-2 ring-accent/20" : "",
+        "pd-deal-column",
+        isOver ? "is-drop-target" : "",
         isEmpty ? "min-h-[10rem]" : "",
-      ].join(" ")}
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
-      <header className="border-b border-kanban-border bg-white px-3 py-2.5">
-        <div className="flex items-center gap-2">
-          <span
-            aria-hidden="true"
-            className={`h-2 w-2 shrink-0 rounded-full ${COLUMN_STATUS_DOT_CLASS[column.id]}`}
-          />
-          <h2 className="text-sm font-semibold text-foreground">
-            {`${statusLabel} · ${tasks.length}`}
-          </h2>
+      <header className="pd-deal-column-header">
+        <div className="min-w-0">
+          <h2 className="pd-deal-column-title">{statusLabel}</h2>
+          <p className="pd-deal-column-subtitle">
+            {tasks.length} {tasks.length === 1 ? "task" : "tasks"}
+          </p>
         </div>
+        <span
+          className={["pd-deal-column-ring", COLUMN_RING_CLASS[column.id]].join(
+            " ",
+          )}
+          aria-hidden="true"
+        />
       </header>
 
-      <div
-        ref={setNodeRef}
-        className={[
-          "flex flex-1 flex-col gap-2 p-2.5 transition-colors duration-200",
-          isOver ? "bg-accent/[0.03]" : "bg-white",
-        ].join(" ")}
-      >
+      <div ref={setNodeRef} className="pd-deal-column-list flex-1">
         {isEmpty ? (
-          <div
-            className={[
-              "rounded-kanban px-3 py-4 text-center",
-              column.id === "todo"
-                ? "border border-dashed border-kanban-border"
-                : "",
-            ].join(" ")}
-            style={
-              column.id === "todo"
-                ? { backgroundColor: theme.emptyBg }
-                : undefined
-            }
-          >
-            <p className="text-xs text-label/80">
-              {isOver ? "Drop task here" : "Empty"}
-            </p>
-          </div>
+          <div className="pd-deal-empty">{isOver ? "Drop task here" : "Empty"}</div>
         ) : (
           tasks.map((task) => (
             <KanbanTaskCard
@@ -123,7 +103,8 @@ export function KanbanColumn({
         <button
           type="button"
           onClick={() => onAddTask?.(column.id)}
-          className="mt-auto rounded-kanban border border-dashed border-kanban-border px-3 py-2 text-left text-xs font-medium text-label transition-colors hover:border-accent/40 hover:bg-accent/[0.03] hover:text-foreground"
+          className="pd-deal-add"
+          disabled={!onAddTask}
         >
           + Add task
         </button>

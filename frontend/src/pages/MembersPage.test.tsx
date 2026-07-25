@@ -178,7 +178,7 @@ function renderMembersPage(
 }
 
 async function openManageMenu(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("button", { name: /Manage/i }));
+  await user.click(screen.getByRole("button", { name: /^Manage$/i }));
 }
 
 async function submitValidInvite(
@@ -199,7 +199,7 @@ async function submitValidInvite(
     setup_email_sent: setupEmailSent,
   });
 
-  await user.click(screen.getByRole("button", { name: "Invite Member" }));
+  await user.click(screen.getByRole("button", { name: /Invite member/i }));
   const dialog = screen.getByRole("dialog", { name: "Invite Member" });
   await user.type(within(dialog).getByLabelText(/First name/i), "New");
   await user.type(within(dialog).getByLabelText(/Last name/i), "Member");
@@ -219,19 +219,19 @@ describe("MembersPage", () => {
     vi.clearAllMocks();
   });
 
-  it("renders a quiet header with invite and manage menu", async () => {
+  it("renders CRM toolbar with invite and manage menu", async () => {
     const user = userEvent.setup();
-    await mockDirectoryApis();
+    await mockDirectoryApis({ members: [directoryMember], total: 12 });
     renderMembersPage();
 
     expect(
       screen.getByRole("heading", { level: 1, name: "Members" }),
     ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("12 members")).toBeInTheDocument();
+    });
     expect(
-      screen.getByText("Review signups, follow up on dues, and browse people."),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Invite Member" }),
+      screen.getByRole("button", { name: /Invite member/i }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Import CSV" })).not.toBeInTheDocument();
 
@@ -321,7 +321,7 @@ describe("MembersPage", () => {
     });
   });
 
-  it("renders a compact status strip with engagement-based active/idle", async () => {
+  it("renders role and focus chips with pending badge", async () => {
     await mockDirectoryApis({
       members: [directoryMember],
       total: 12,
@@ -333,18 +333,31 @@ describe("MembersPage", () => {
     });
     renderMembersPage("president");
 
-    const summary = screen.getByLabelText("Members summary");
+    const roleGroup = screen.getByRole("group", { name: "Filter by role" });
+    expect(within(roleGroup).getByRole("button", { name: "All" })).toBeInTheDocument();
+    expect(within(roleGroup).getByRole("button", { name: "General" })).toBeInTheDocument();
+    expect(within(roleGroup).getByRole("button", { name: "Board" })).toBeInTheDocument();
+    expect(
+      within(roleGroup).queryByRole("button", { name: "Treasurer" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(roleGroup).queryByRole("button", { name: "President" }),
+    ).not.toBeInTheDocument();
+
+    const focusGroup = screen.getByRole("group", { name: "Focus directory" });
+    expect(within(focusGroup).getByRole("button", { name: "Active" })).toBeInTheDocument();
+    expect(within(focusGroup).getByRole("button", { name: /Idle/i })).toBeInTheDocument();
+    expect(within(focusGroup).getByRole("button", { name: /Pending/i })).toBeInTheDocument();
+    expect(within(focusGroup).getByRole("button", { name: "Dues" })).toBeInTheDocument();
+
     await waitFor(() => {
-      expect(summary).toHaveTextContent("12 members");
+      expect(screen.getByRole("button", { name: "2 PENDING" })).toBeInTheDocument();
     });
-    expect(summary).toHaveTextContent("7 active");
-    expect(summary).toHaveTextContent("3 idle");
-    expect(summary).toHaveTextContent("2 pending");
-    expect(summary).toHaveTextContent("4 outstanding dues");
+    expect(screen.queryByLabelText("Members summary")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Statistics")).not.toBeInTheDocument();
   });
 
-  it("hides outstanding dues in the strip without treasury access", async () => {
+  it("hides dues focus chip without treasury access", async () => {
     await mockDirectoryApis({
       members: [directoryMember],
       total: 5,
@@ -353,32 +366,61 @@ describe("MembersPage", () => {
     });
     renderMembersPage("board");
 
-    const summary = await screen.findByLabelText("Members summary");
-    await waitFor(() => {
-      expect(summary).toHaveTextContent("5 members");
-    });
-    expect(summary).toHaveTextContent("5 active");
-    expect(summary).not.toHaveTextContent("outstanding dues");
+    const focusGroup = screen.getByRole("group", { name: "Focus directory" });
+    expect(within(focusGroup).getByRole("button", { name: "Active" })).toBeInTheDocument();
+    expect(within(focusGroup).queryByRole("button", { name: "Dues" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^\d+ PENDING$/ }),
+    ).not.toBeInTheDocument();
   });
 
-  it("renders People filters without hollow committee/attendance controls", async () => {
+  it("opens Filter drawer without hollow committee/attendance controls", async () => {
     const user = userEvent.setup();
-    await mockDirectoryApis();
+    await mockDirectoryApis({ members: [directoryMember], total: 1 });
     renderMembersPage();
 
-    expect(screen.getByLabelText("Search members")).toBeInTheDocument();
-    expect(screen.getByLabelText("Role")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /^Filter$/i }));
+
+    expect(await screen.findByLabelText("Search members")).toBeInTheDocument();
     expect(screen.getByLabelText("Member Status")).toBeInTheDocument();
+    expect(screen.getByLabelText("Payment Status")).toBeInTheDocument();
+    expect(screen.getByLabelText("Graduation Year")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Role")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Committee")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Attendance")).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Reset Filters" }),
     ).toBeDisabled();
+  });
 
-    await user.selectOptions(screen.getByLabelText("Role"), "board");
-    expect(
-      screen.getByRole("button", { name: "Reset Filters" }),
-    ).toBeEnabled();
+  it("filters the directory by role chip", async () => {
+    const user = userEvent.setup();
+    const generalMember: MemberResponse = {
+      ...directoryMember,
+      id: 4,
+      full_name: "Gina General",
+      email: "gina@semo.edu",
+      role: "general",
+    };
+    await mockDirectoryApis({
+      members: [directoryMember, generalMember],
+      total: 2,
+      pendingTotal: 0,
+    });
+    renderMembersPage("board");
+
+    expect(await screen.findByText("Alex Member")).toBeInTheDocument();
+    expect(screen.getByText("Gina General")).toBeInTheDocument();
+
+    await user.click(
+      within(screen.getByRole("group", { name: "Filter by role" })).getByRole(
+        "button",
+        { name: "General" },
+      ),
+    );
+
+    expect(screen.getByText("Gina General")).toBeInTheDocument();
+    expect(screen.queryByText("Alex Member")).not.toBeInTheDocument();
   });
 
   it("auto-opens Needs attention when pending signups exist", async () => {
@@ -392,11 +434,7 @@ describe("MembersPage", () => {
 
     renderMembersPage("board");
 
-    await waitFor(() => {
-      expect(
-        screen.getByRole("tab", { name: /Needs attention/i }),
-      ).toHaveAttribute("aria-selected", "true");
-    });
+    expect(await screen.findByLabelText("Needs attention")).toBeInTheDocument();
     expect(await screen.findByText("Pending Person")).toBeInTheDocument();
   });
 
@@ -411,12 +449,7 @@ describe("MembersPage", () => {
 
     renderMembersPage("board", "/members?tab=pending");
 
-    await waitFor(() => {
-      expect(
-        screen.getByRole("tab", { name: /Needs attention/i }),
-      ).toHaveAttribute("aria-selected", "true");
-    });
-
+    expect(await screen.findByLabelText("Needs attention")).toBeInTheDocument();
     expect(screen.getByText("Pending Person")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /Approve Pending Person/i }),
@@ -439,13 +472,9 @@ describe("MembersPage", () => {
 
     renderMembersPage("board", "/members?tab=pending");
 
-    await waitFor(() => {
-      expect(
-        screen.getByRole("tab", { name: /Needs attention/i }),
-      ).toHaveAttribute("aria-selected", "true");
-    });
+    expect(await screen.findByLabelText("Needs attention")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("tab", { name: "People" }));
+    await user.click(screen.getByRole("button", { name: "Back to directory" }));
     expect(await screen.findByLabelText("Member table")).toBeInTheDocument();
     expect(await screen.findByText("Alex Member")).toBeInTheDocument();
   });
@@ -455,6 +484,7 @@ describe("MembersPage", () => {
       members: [directoryMember],
       total: 1,
       approvedTotal: 1,
+      pendingTotal: 0,
       duesRecords: [
         {
           member_id: 3,
@@ -476,6 +506,9 @@ describe("MembersPage", () => {
       within(table).getByRole("button", { name: /Sort by Name/i }),
     ).toBeInTheDocument();
     expect(within(table).getByText("Outstanding Dues")).toBeInTheDocument();
+    expect(
+      within(table).getByRole("button", { name: "Column settings" }),
+    ).toBeInTheDocument();
     expect(within(table).queryByText("Attendance")).not.toBeInTheDocument();
     expect(
       within(table).queryByLabelText("Select all members"),
@@ -491,11 +524,11 @@ describe("MembersPage", () => {
       total: 1,
       activeCount: 0,
       idleCount: 1,
+      pendingTotal: 0,
     });
 
     renderMembersPage("board");
 
-    await userEvent.click(screen.getByRole("tab", { name: "People" }));
     const tableRegion = await screen.findByLabelText("Member table");
     expect(within(tableRegion).getByText("Idle")).toBeInTheDocument();
   });
@@ -506,6 +539,7 @@ describe("MembersPage", () => {
       members: [directoryMember],
       total: 1,
       approvedTotal: 1,
+      pendingTotal: 0,
     });
 
     renderMembersPage();
@@ -533,7 +567,7 @@ describe("MembersPage", () => {
 
     renderMembersPage();
 
-    await user.click(screen.getByRole("button", { name: "Invite Member" }));
+    await user.click(screen.getByRole("button", { name: /Invite member/i }));
 
     expect(
       screen.getByRole("dialog", { name: "Invite Member" }),

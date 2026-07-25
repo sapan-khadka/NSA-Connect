@@ -9,7 +9,6 @@ import {
   Megaphone,
   MessageSquare,
   Settings,
-  Shield,
   Sparkles,
   Users,
   Wallet,
@@ -27,7 +26,6 @@ import { useLogout } from "../context/useLogout";
 import {
   canAccessFinance,
   canBrowseMemberDirectory,
-  canViewMemberDirectory,
   formatRoleLabel,
   isRoleAtLeast,
 } from "../lib/roles";
@@ -272,7 +270,6 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const showMembers = member ? canBrowseMemberDirectory(member.role) : false;
   const showFinance = member ? canAccessFinance(member.role) : false;
   const showBoardWork = member ? isRoleAtLeast(member.role, "board") : false;
-  const showAdmin = member ? canViewMemberDirectory(member.role) : false;
 
   const myTasksCount = summary.tasks_overdue + summary.tasks_due_today;
   const eventsBadge =
@@ -353,15 +350,6 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       label: "Settings",
       icon: Settings,
     },
-    ...(showAdmin
-      ? [
-          {
-            to: "/members?tab=pending",
-            label: "Roles & Permissions",
-            icon: Shield,
-          } satisfies SidebarLink,
-        ]
-      : []),
   ];
 
   const roleLabel = member ? formatRoleLabel(member.role) : "";

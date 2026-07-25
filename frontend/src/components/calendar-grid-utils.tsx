@@ -27,16 +27,11 @@ type DayCellSurfaceOptions = {
 };
 
 const DAY_CELL_BASE =
-  "relative flex min-h-8 flex-col items-center justify-center gap-0 rounded-[8px] border border-transparent bg-white px-0.5 py-0.5 text-sm transition-all duration-200 ease-out sm:min-h-[2.35rem] sm:py-0.5 hover:-translate-y-px hover:bg-[#F5F9F7] hover:shadow-[0_2px_6px_rgba(2,124,104,0.08)]";
+  "events-calendar-day-cell relative flex h-full min-h-0 flex-col items-center justify-center gap-0 rounded-none bg-transparent px-0.5 py-0.5 text-sm transition-colors duration-150 ease-out hover:bg-[#F7F7F5]";
 
-const DAY_CELL_TILE_SHADOW =
-  "shadow-[0_1px_2px_rgba(0,0,0,0.04),0_3px_8px_rgba(0,0,0,0.04)]";
+const DAY_CELL_TODAY = "is-today bg-[#F3FAF7] text-foreground hover:bg-[#EEF7F3]";
 
-const DAY_CELL_TODAY =
-  "bg-gradient-to-b from-[#E7F4F0] to-[#DCF0E8] shadow-[0_0_0_3px_#E7F4F0,0_3px_10px_rgba(2,124,104,0.18)] hover:-translate-y-px hover:shadow-[0_0_0_3px_#E7F4F0,0_6px_16px_rgba(2,124,104,0.22)]";
-
-const DAY_CELL_SELECTED =
-  "z-10 border-[#7BB8A8] bg-[#EAF6F1] shadow-[0_1px_2px_rgba(2,124,104,0.08),0_4px_12px_rgba(2,124,104,0.12)] hover:-translate-y-px hover:border-[#5FA894] hover:bg-[#E3F3EC] hover:shadow-[0_2px_4px_rgba(2,124,104,0.1),0_8px_16px_rgba(2,124,104,0.16)]";
+const DAY_CELL_SELECTED = "is-selected bg-[#EAF6F1] hover:bg-[#E3F3EC]";
 
 export function getDayCellSurfaceClass({
   isCurrentMonth,
@@ -46,19 +41,15 @@ export function getDayCellSurfaceClass({
   const classes = [DAY_CELL_BASE];
 
   if (!isCurrentMonth) {
-    classes.push("text-label opacity-50");
+    classes.push("is-outside text-label");
   } else {
     classes.push("text-foreground");
   }
 
-  if (isSelected && isToday) {
-    classes.push(DAY_CELL_TODAY, DAY_CELL_SELECTED);
-  } else if (isSelected) {
+  if (isSelected) {
     classes.push(DAY_CELL_SELECTED);
   } else if (isToday) {
     classes.push(DAY_CELL_TODAY);
-  } else {
-    classes.push(DAY_CELL_TILE_SHADOW);
   }
 
   return classes.join(" ");
@@ -79,13 +70,10 @@ type YearMonthTileOptions = {
 };
 
 const YEAR_TILE_BASE =
-  "flex min-h-[5.5rem] flex-col items-center justify-center rounded-[14px] border border-transparent bg-white px-3 py-4 text-center transition-all duration-150 ease-out";
-
-const YEAR_TILE_SHADOW =
-  "shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.05)] hover:-translate-y-0.5 hover:shadow-[0_2px_4px_rgba(0,0,0,0.06),0_10px_22px_rgba(0,0,0,0.08)]";
+  "flex min-h-[4.25rem] flex-col items-center justify-center rounded-lg border border-[#E8E8E6] bg-white px-2.5 py-3 text-center transition-colors duration-150 ease-out hover:bg-[#F7F7F5]";
 
 const YEAR_TILE_CURRENT =
-  "bg-gradient-to-b from-[#E7F4F0] to-[#DCF0E8] shadow-[0_0_0_3px_#E7F4F0,0_3px_10px_rgba(2,124,104,0.18)] hover:-translate-y-0.5 hover:shadow-[0_0_0_3px_#E7F4F0,0_6px_16px_rgba(2,124,104,0.22)]";
+  "border-[#B7D4C9] bg-[#EEF7F3] hover:bg-[#E7F2ED]";
 
 export function getYearMonthTileClass({
   isCurrentMonth,
@@ -94,7 +82,7 @@ export function getYearMonthTileClass({
     return [YEAR_TILE_BASE, YEAR_TILE_CURRENT].join(" ");
   }
 
-  return [YEAR_TILE_BASE, YEAR_TILE_SHADOW].join(" ");
+  return YEAR_TILE_BASE;
 }
 
 export function getYearMonthLabelClass(isCurrentMonth: boolean): string {

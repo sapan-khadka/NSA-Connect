@@ -5,7 +5,10 @@
 
 import {
   AlertCircle,
+  AlertTriangle,
+  ArrowRight,
   CalendarClock,
+  Check,
   ListTodo,
   Plus,
   Search,
@@ -17,7 +20,6 @@ import { Link, useSearchParams } from "react-router-dom";
 import { AppIcon } from "../components/ui/AppIcon";
 import { Card } from "../components/ui/Card";
 import { useAuth } from "../context/useAuth";
-import { useMediaQuery } from "../hooks/useMediaQuery";
 import { getApiErrorMessage } from "../lib/api-error";
 import { isToday } from "../lib/calendar";
 import {
@@ -57,12 +59,6 @@ const URGENCY_LABEL = {
   low: "Low",
 } as const;
 
-const URGENCY_CLASS = {
-  high: "bg-rose-50 text-rose-700",
-  medium: "bg-amber-50 text-amber-800",
-  low: "bg-emerald-50 text-emerald-700",
-} as const;
-
 function flattenOverviewTasks(
   overview: TaskOverviewResponse,
 ): EventTaskResponse[] {
@@ -92,74 +88,63 @@ function OversightTaskCard({ task }: { task: EventTaskResponse }) {
   const checklistDone = task.checklist_items.filter((item) => item.is_completed)
     .length;
   const checklistTotal = task.checklist_items.length;
-  const progress =
+  const isOverdue = task.is_overdue && !task.is_complete;
+  const statusIcon =
     task.status === "done"
-      ? 100
-      : checklistTotal > 0
-        ? Math.round((checklistDone / checklistTotal) * 100)
+      ? Check
+      : isOverdue
+        ? AlertTriangle
         : task.status === "in_progress"
-          ? 50
-          : 0;
+          ? ArrowRight
+          : ArrowRight;
+  const statusTone =
+    task.status === "done"
+      ? "done"
+      : isOverdue
+        ? "overdue"
+        : task.status === "in_progress"
+          ? "progress"
+          : "open";
 
   return (
-    <article className="oversight-task-card">
-      <div className="flex items-start justify-between gap-2">
-        <h3 className="min-w-0 text-sm font-semibold leading-snug text-foreground">
-          {getTaskDisplayName(task)}
-        </h3>
-        <span
-          className={[
-            "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium",
-            URGENCY_CLASS[urgency],
-          ].join(" ")}
-        >
-          {URGENCY_LABEL[urgency]}
-        </span>
-      </div>
-
-      <div className="oversight-task-card-meta">
-        <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-badge-teal-bg text-[10px] font-semibold text-primary">
-          {initials(task.assignee_name)}
-        </span>
-        <span className="min-w-0 truncate text-xs text-gray-600">
-          {task.assignee_name}
-        </span>
-        <span className="oversight-task-card-due truncate text-[11px] text-gray-500">
-          {dueLabel ?? "No due date"}
-          {task.is_overdue && !task.is_complete ? " · Overdue" : ""}
-        </span>
-      </div>
-
-      {task.status !== "todo" || checklistTotal > 0 ? (
-        <div className="oversight-task-card-progress">
-          <div className="mb-1 flex items-center justify-between text-[10px] text-gray-500">
-            <span>
-              {checklistTotal > 0
-                ? `${checklistDone}/${checklistTotal}`
+    <article
+      className={["pd-deal-card", `pd-deal-card--urgency-${urgency}`].join(" ")}
+    >
+      <div
+        className={["pd-deal-card-strip", `is-${urgency}`].join(" ")}
+        aria-hidden="true"
+      />
+      <div className="pd-deal-card-body">
+        <h3 className="pd-deal-card-title">{getTaskDisplayName(task)}</h3>
+        <p className="pd-deal-card-subtitle">{task.assignee_name}</p>
+        <div className="pd-deal-card-footer">
+          <span className="pd-deal-card-avatar" aria-hidden="true">
+            {initials(task.assignee_name)}
+          </span>
+          <span className="pd-deal-card-meta">
+            {dueLabel ?? "No due date"}
+            {checklistTotal > 0 ? ` · ${checklistDone}/${checklistTotal}` : ""}
+          </span>
+          <span
+            className={["pd-deal-card-status", `is-${statusTone}`].join(" ")}
+            title={
+              isOverdue
+                ? "Overdue"
                 : task.status === "done"
-                  ? "Complete"
-                  : "In progress"}
-            </span>
-            <span className="tabular-nums">{progress}%</span>
-          </div>
-          <div className="h-1 overflow-hidden rounded-full bg-gray-100">
-            <div
-              className={[
-                "h-full rounded-full transition-[width]",
-                task.status === "done" ? "bg-emerald-500" : "bg-primary",
-              ].join(" ")}
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+                  ? "Done"
+                  : URGENCY_LABEL[urgency]
+            }
+          >
+            <AppIcon icon={statusIcon} size="xs" className="text-current" />
+          </span>
         </div>
-      ) : null}
+      </div>
     </article>
   );
 }
 
 export function TaskOversightPage() {
   const { member } = useAuth();
-  const isMobile = !useMediaQuery("(min-width: 768px)");
   const [searchParams, setSearchParams] = useSearchParams();
   const [overview, setOverview] = useState<TaskOverviewResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -554,37 +539,38 @@ export function TaskOversightPage() {
                   </label>
                 </div>
 
-                <div
-                  className={
-                    isMobile
-                      ? "oversight-board-mobile"
-                      : "grid grid-cols-1 gap-3 md:grid-cols-3"
-                  }
-                  aria-label="Task board"
-                >
+                <div className="pd-deal-board" aria-label="Task board">
                   {columns.map((column) => (
                     <section
                       key={column.id}
                       aria-label={column.label}
-                      className={
-                        isMobile
-                          ? "oversight-board-mobile-col"
-                          : "rounded-xl border border-gray-100 bg-slate-50/80 p-2.5"
-                      }
+                      className="pd-deal-column"
                     >
-                      <div className="mb-2 flex items-center justify-between gap-2 px-1">
-                        <h2 className="text-sm font-semibold text-foreground">
-                          {column.label}
-                        </h2>
-                        <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-medium tabular-nums text-gray-600 ring-1 ring-inset ring-gray-200">
-                          {column.items.length}
-                        </span>
-                      </div>
-                      <ul className="space-y-2">
+                      <header className="pd-deal-column-header">
+                        <div className="min-w-0">
+                          <h2 className="pd-deal-column-title">
+                            {column.label}
+                          </h2>
+                          <p className="pd-deal-column-subtitle">
+                            {column.items.length}{" "}
+                            {column.items.length === 1 ? "task" : "tasks"}
+                          </p>
+                        </div>
+                        <span
+                          className={[
+                            "pd-deal-column-ring",
+                            column.id === "done"
+                              ? "is-done"
+                              : column.id === "in_progress"
+                                ? "is-progress"
+                                : "is-todo",
+                          ].join(" ")}
+                          aria-hidden="true"
+                        />
+                      </header>
+                      <ul className="pd-deal-column-list">
                         {column.items.length === 0 ? (
-                          <li className="oversight-board-empty">
-                            No tasks
-                          </li>
+                          <li className="pd-deal-empty">No tasks</li>
                         ) : (
                           column.items.map((task) => (
                             <li key={task.id}>

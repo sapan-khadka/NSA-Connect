@@ -202,7 +202,7 @@ describe("HomePage", () => {
     expect(screen.queryByText("Needs Review")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Needs attention")).not.toBeInTheDocument();
     expect(await screen.findByLabelText("Quick stats")).toBeInTheDocument();
-    expect(screen.getByLabelText("Quick actions")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Quick actions")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Recent activity")).toBeInTheDocument();
     expect(screen.getByLabelText("Task summary")).toBeInTheDocument();
     expect(screen.queryByLabelText("Today at a glance")).not.toBeInTheDocument();
@@ -230,7 +230,7 @@ describe("HomePage", () => {
     expect(within(work).getByLabelText("My Tasks")).toBeInTheDocument();
     expect(await within(work).findByLabelText("Task Oversight")).toBeInTheDocument();
     expect(await within(work).findByText("Print flyers")).toBeInTheDocument();
-    expect(await within(work).findByText("Your tasks")).toBeInTheDocument();
+    expect(await within(work).findByText("Task Oversight")).toBeInTheDocument();
 
     expect(screen.queryByLabelText("Today's Timeline")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Organization Health")).not.toBeInTheDocument();
@@ -275,7 +275,7 @@ describe("HomePage", () => {
 
     const summary = await screen.findByLabelText("Task summary");
     expect(within(summary).getByText("Overdue")).toBeInTheDocument();
-    expect(screen.getByLabelText("Quick actions")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Quick actions")).not.toBeInTheDocument();
   });
 
   it("shows personal My tasks and Task Oversight for President", async () => {
@@ -318,7 +318,7 @@ describe("HomePage", () => {
     expect(within(work).queryByText("High")).not.toBeInTheDocument();
   });
 
-  it("shows finance and member quick actions for treasurer", async () => {
+  it("hides quick actions on Home for treasurer", async () => {
     mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
     mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
     mockSummary({ members_pending: 2, finance_pending: 1 });
@@ -331,15 +331,13 @@ describe("HomePage", () => {
       </MemoryRouter>,
     );
 
-    const actions = await screen.findByLabelText("Quick actions");
-    expect(within(actions).getByRole("link", { name: /Add Expense/i })).toBeInTheDocument();
-    expect(within(actions).getByRole("link", { name: /Add Member/i })).toBeInTheDocument();
-    expect(within(actions).getByRole("link", { name: /Post Announcement/i })).toBeInTheDocument();
-    expect(screen.getByLabelText("My Tasks")).toBeInTheDocument();
+    await screen.findByLabelText("My Tasks");
+    expect(screen.queryByLabelText("Quick actions")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Add Expense/i })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Action Center")).not.toBeInTheDocument();
   });
 
-  it("shows create event quick action for board members", async () => {
+  it("hides quick actions on Home for board members", async () => {
     mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
     mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
 
@@ -351,13 +349,11 @@ describe("HomePage", () => {
       </MemoryRouter>,
     );
 
-    const actions = await screen.findByLabelText("Quick actions");
+    await screen.findByLabelText("Work Center");
+    expect(screen.queryByLabelText("Quick actions")).not.toBeInTheDocument();
     expect(
-      within(actions).getByRole("link", { name: /Create Event/i }),
-    ).toHaveAttribute("href", "/events/calendar?create=1");
-    expect(
-      within(actions).getByRole("link", { name: /Post Announcement/i }),
-    ).toBeInTheDocument();
+      screen.queryByRole("link", { name: /Post Announcement/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("cycles featured upcoming events with carousel controls", async () => {
@@ -529,7 +525,7 @@ describe("HomePage", () => {
     expect(within(featured).queryByText("Board Sync")).not.toBeInTheDocument();
     expect(await screen.findByLabelText("Discussions")).toBeInTheDocument();
     expect(screen.getByLabelText("Quick stats")).toBeInTheDocument();
-    expect(screen.getByLabelText("Quick actions")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Quick actions")).not.toBeInTheDocument();
   });
 
   it("marks a simple My Tasks row complete via status done", async () => {
@@ -584,7 +580,7 @@ describe("HomePage", () => {
     await waitFor(() => {
       expect(screen.queryByText("Book venue")).not.toBeInTheDocument();
     });
-    expect(screen.getByText("You're clear")).toBeInTheDocument();
+    expect(screen.getByText("Inbox zero")).toBeInTheDocument();
   });
 
   it("rolls back and shows an error when completing a task fails", async () => {

@@ -1,8 +1,8 @@
 /**
- * Compact kanban card: title, due state, optional assignee avatar, checklist X/Y.
- * Whole card opens details; drag uses PointerSensor distance threshold.
+ * Compact Pipedrive-style kanban card: priority strip, title, event, due, status.
  */
 
+import { AlertTriangle, ArrowRight, Check } from "lucide-react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 
@@ -14,9 +14,8 @@ import {
   type KanbanColumnId,
   type KanbanTask,
 } from "../../lib/kanban-status";
-import { getKanbanColumnTheme } from "../../lib/kanban-theme";
 import { calcChecklistTaskProgress } from "../../lib/task-progress";
-import { AssigneeAvatar } from "../EventTaskManager";
+import { AppIcon } from "../ui/AppIcon";
 
 type KanbanTaskCardProps = {
   task: KanbanTask;
@@ -55,6 +54,17 @@ function getDueDisplay(task: KanbanTask): {
   };
 }
 
+function initials(name: string | null | undefined): string {
+  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) {
+    return "?";
+  }
+  if (parts.length === 1) {
+    return parts[0].slice(0, 1).toUpperCase();
+  }
+  return `${parts[0][0] ?? ""}${parts[parts.length - 1][0] ?? ""}`.toUpperCase();
+}
+
 export function KanbanTaskCard({
   task,
   columnId,
@@ -62,7 +72,6 @@ export function KanbanTaskCard({
   hideAssignee = false,
   onOpenTask,
 }: KanbanTaskCardProps) {
-  const theme = getKanbanColumnTheme(columnId);
   const {
     attributes,
     listeners,
@@ -76,8 +85,6 @@ export function KanbanTaskCard({
 
   const style = {
     transform: CSS.Translate.toString(transform),
-    background: theme.cardGradient,
-    boxShadow: theme.cardShadow,
   };
 
   const title = isSimpleKanbanTask(task)
@@ -87,6 +94,23 @@ export function KanbanTaskCard({
   const checklistProgress = isSimpleKanbanTask(task)
     ? null
     : calcChecklistTaskProgress(task);
+  const open = isTaskOpen(task);
+  const urgency =
+    open && task.is_overdue ? "high" : due?.warning ? "medium" : "low";
+  const statusIcon =
+    columnId === "done"
+      ? Check
+      : open && task.is_overdue
+        ? AlertTriangle
+        : ArrowRight;
+  const statusTone =
+    columnId === "done"
+      ? "done"
+      : open && task.is_overdue
+        ? "overdue"
+        : columnId === "in_progress"
+          ? "progress"
+          : "open";
 
   return (
     <article
@@ -113,55 +137,47 @@ export function KanbanTaskCard({
         }
       }}
       className={[
-        "group touch-none rounded-kanban p-3 outline-none transition-all duration-200",
+        "pd-deal-card",
+        `pd-deal-card--urgency-${urgency}`,
+        "touch-none outline-none focus-visible:outline-none",
         onOpenTask ? "cursor-pointer" : "cursor-grab",
-        "focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
+        "focus-visible:ring-2 focus-visible:ring-primary/20",
         "active:cursor-grabbing",
-        isActivelyDragging || isDragging
-          ? "z-50 scale-[1.02]"
-          : "hover:-translate-y-0.5",
-      ].join(" ")}
+        isActivelyDragging || isDragging ? "z-50 opacity-90" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
-      <div className="flex items-start gap-2.5">
-        <div className="min-w-0 flex-1">
-          <p
-            className="text-[10px] font-bold uppercase tracking-wider"
-            style={{ color: theme.eventLabel }}
+      <div
+        className={["pd-deal-card-strip", `is-${urgency}`].join(" ")}
+        aria-hidden="true"
+      />
+      <div className="pd-deal-card-body">
+        <h3 className="pd-deal-card-title">{title}</h3>
+        <p className="pd-deal-card-subtitle">{task.eventName}</p>
+        <div className="pd-deal-card-footer">
+          {!hideAssignee ? (
+            <span className="pd-deal-card-avatar" aria-hidden="true">
+              {initials(task.assignee_name)}
+            </span>
+          ) : (
+            <span className="pd-deal-card-avatar is-muted" aria-hidden="true">
+              ·
+            </span>
+          )}
+          <span className="pd-deal-card-meta">
+            {due?.label ?? "No due date"}
+            {checklistProgress && checklistProgress.total > 0
+              ? ` · ${checklistProgress.completed}/${checklistProgress.total}`
+              : ""}
+          </span>
+          <span
+            className={["pd-deal-card-status", `is-${statusTone}`].join(" ")}
+            aria-hidden="true"
           >
-            {task.eventName}
-          </p>
-          <h3 className="mt-0.5 line-clamp-2 text-sm font-medium leading-snug text-foreground">
-            {title}
-          </h3>
+            <AppIcon icon={statusIcon} size="xs" className="text-current" />
+          </span>
         </div>
-        {!hideAssignee ? (
-          <AssigneeAvatar name={task.assignee_name} />
-        ) : null}
-      </div>
-
-      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
-        {due ? (
-          <span
-            className={[
-              "rounded-full px-2 py-0.5 font-medium",
-              due.warning
-                ? "bg-overdue-surface text-overdue"
-                : "bg-white",
-            ].join(" ")}
-            style={due.warning ? undefined : { color: theme.pillText }}
-          >
-            {due.label}
-          </span>
-        ) : null}
-        {checklistProgress && checklistProgress.total > 0 ? (
-          <span
-            className="rounded-full bg-white px-2 py-0.5 font-medium"
-            style={{ color: theme.pillText }}
-            aria-label={`${checklistProgress.completed} of ${checklistProgress.total} checklist items complete`}
-          >
-            {checklistProgress.completed}/{checklistProgress.total}
-          </span>
-        ) : null}
       </div>
     </article>
   );

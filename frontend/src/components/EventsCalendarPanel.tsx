@@ -55,7 +55,7 @@ function CalendarViewToggle({
     <div
       role="group"
       aria-label="Calendar view"
-      className="inline-flex rounded-full bg-[#F5F5F7] p-0.5"
+      className="inline-flex rounded-md border border-[#E8E8E6] bg-white p-0.5"
     >
       {(["month", "year"] as const).map((mode) => {
         const active = viewMode === mode;
@@ -66,9 +66,9 @@ function CalendarViewToggle({
             aria-pressed={active}
             onClick={() => onViewModeChange(mode)}
             className={[
-              "min-h-8 rounded-full px-2.5 py-1 text-[13px] font-medium capitalize transition-colors",
+              "min-h-8 rounded px-2.5 py-1 text-[13px] font-medium capitalize transition-colors",
               active
-                ? "bg-primary text-white"
+                ? "bg-[#F3F4F6] text-foreground"
                 : "text-label hover:text-foreground",
             ].join(" ")}
           >
@@ -136,7 +136,7 @@ export function EventsCalendarPanel({
   return (
     <section
       aria-label={viewMode === "month" ? `${getMonthLabel(month)} ${year}` : `${year}`}
-      className="events-calendar-card p-3 sm:p-3.5"
+      className="events-calendar-card"
     >
       <div className="events-calendar-panel-controls">
         <button
@@ -204,21 +204,18 @@ export function EventsCalendarPanel({
       {viewMode === "month" ? (
         <div
           key={`${year}-${month}`}
-          className={[
-            "events-calendar-grid mt-3 grid grid-cols-7 gap-1 sm:gap-1.5",
-            monthAnimationClass,
-          ].join(" ")}
+          className={["events-calendar-grid", monthAnimationClass].join(" ")}
           data-testid="calendar-month-grid"
         >
-          {WEEKDAY_LABELS.map((label) => (
-            <div
-              key={label}
-              className="px-0.5 py-0.5 text-center text-[10px] font-semibold uppercase tracking-wide text-label sm:text-[11px]"
-            >
-              {label}
-            </div>
-          ))}
+          <div className="events-calendar-grid__weekdays" aria-hidden="true">
+            {WEEKDAY_LABELS.map((label) => (
+              <div key={label} className="events-calendar-grid__weekday">
+                {label}
+              </div>
+            ))}
+          </div>
 
+          <div className="events-calendar-grid__days">
           {cells.map((cell) => {
             const isSelected = selectedDate === cell.isoDate;
             const dayEventTypes = eventTypesByDate.get(cell.isoDate) ?? [];
@@ -263,6 +260,7 @@ export function EventsCalendarPanel({
               </button>
             );
           })}
+          </div>
         </div>
       ) : (
         <div className="mt-3">
@@ -277,7 +275,7 @@ export function EventsCalendarPanel({
       )}
 
       {viewMode === "month" ? (
-        <CalendarLegendList className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 border-t border-[#F0F0EE] pt-3 text-[11px] text-label" />
+        <CalendarLegendList className="events-calendar-legend" />
       ) : null}
     </section>
   );

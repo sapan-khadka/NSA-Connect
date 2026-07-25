@@ -16,64 +16,72 @@ describe("calendar-grid-utils", () => {
     expect(dots[4]?.key).toBe("festival");
   });
 
-  it("styles selected day with green tint and soft elevation", () => {
+  it("styles selected day as a flat grid cell", () => {
     const className = getDayCellSurfaceClass({
       isCurrentMonth: true,
       isSelected: true,
       isToday: false,
     });
+    expect(className).toContain("events-calendar-day-cell");
+    expect(className).toContain("is-selected");
     expect(className).toContain("bg-[#EAF6F1]");
-    expect(className).toContain("border-[#7BB8A8]");
+    expect(className).not.toContain("shadow-[");
+    expect(className).not.toContain("translate-y");
   });
 
-  it("styles today with teal gradient and glow", () => {
+  it("styles today as a flat grid cell", () => {
     const className = getDayCellSurfaceClass({
       isCurrentMonth: true,
       isSelected: false,
       isToday: true,
     });
-    expect(className).toContain("from-[#E7F4F0]");
-    expect(className).toContain("0_3px_10px_rgba(2,124,104,0.18)");
+    expect(className).toContain("is-today");
+    expect(className).toContain("bg-[#F3FAF7]");
+    expect(className).not.toContain("from-[#E7F4F0]");
   });
 
-  it("combines today and selected treatments when both apply", () => {
+  it("prefers selected over today when both apply", () => {
     const className = getDayCellSurfaceClass({
       isCurrentMonth: true,
       isSelected: true,
       isToday: true,
     });
-    expect(className).toContain("from-[#E7F4F0]");
-    expect(className).toContain("bg-[#EAF6F1]");
+    expect(className).toContain("is-selected");
+    expect(className).not.toContain("is-today");
   });
 
-  it("gives default day cells a raised tile shadow", () => {
+  it("keeps default day cells flat without hover lift", () => {
     const className = getDayCellSurfaceClass({
       isCurrentMonth: true,
       isSelected: false,
       isToday: false,
     });
-    expect(className).toContain("0_3px_8px_rgba(0,0,0,0.04)");
-    expect(className).toContain("hover:-translate-y-px");
+    expect(className).toContain("bg-transparent");
+    expect(className).not.toContain("shadow-[");
+    expect(className).not.toContain("translate-y");
   });
 
-  it("mutes overflow month days", () => {
+  it("marks overflow month days as outside", () => {
     const className = getDayCellSurfaceClass({
       isCurrentMonth: false,
       isSelected: false,
       isToday: false,
     });
-    expect(className).toContain("opacity-50");
+    expect(className).toContain("is-outside");
   });
 
-  it("styles current year month tiles with teal glow", () => {
+  it("styles current year month tiles flat without glow", () => {
     const className = getYearMonthTileClass({ isCurrentMonth: true });
-    expect(className).toContain("from-[#E7F4F0]");
-    expect(className).toContain("rounded-[14px]");
+    expect(className).toContain("bg-[#EEF7F3]");
+    expect(className).toContain("rounded-lg");
+    expect(className).not.toContain("from-[#E7F4F0]");
+    expect(className).not.toContain("shadow-[");
   });
 
-  it("styles regular year month tiles with raised shadow", () => {
+  it("styles regular year month tiles without raised hover", () => {
     const className = getYearMonthTileClass({ isCurrentMonth: false });
-    expect(className).toContain("0_4px_12px_rgba(0,0,0,0.05)");
-    expect(className).toContain("hover:-translate-y-0.5");
+    expect(className).toContain("border-[#E8E8E6]");
+    expect(className).not.toContain("shadow-[");
+    expect(className).not.toContain("translate-y");
   });
 });

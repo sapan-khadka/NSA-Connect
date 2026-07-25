@@ -633,7 +633,6 @@ export function EventsPage() {
       <div className="events-calendar-columns">
         <div className="events-calendar-column-main min-w-0">
           <EventsStatsStrip
-            className="events-calendar-stats-strip"
             today={today}
             upcomingEventsCount={upcomingEventsCount}
             tasksDueTodayCount={tasksDueTodayCount}
@@ -665,11 +664,11 @@ export function EventsPage() {
         </div>
 
         <div className="events-calendar-column-side min-w-0">
-          <div className="events-calendar-side-scroll hidden md:flex md:flex-col">
+          <div className="events-calendar-side-scroll hidden xl:flex xl:flex-col">
             <EventDayPanel {...panelProps} presentation="aside" />
           </div>
 
-          <div className="md:hidden">
+          <div className="xl:hidden">
             {hasSelection && mobileSheetOpen ? (
               <div className="events-preview-sheet-root">
                 <button

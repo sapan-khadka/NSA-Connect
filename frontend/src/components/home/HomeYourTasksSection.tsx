@@ -19,19 +19,19 @@ function formatTaskDate(isoDate: string | null | undefined): string {
   }).format(new Date(isoDate));
 }
 
-function YourTaskRow({ task }: { task: EventTaskResponse }) {
-  const badge = task.is_overdue
-    ? { label: "Overdue", tone: "action" as const }
+function OversightTaskRow({ task }: { task: EventTaskResponse }) {
+  const status = task.is_overdue
+    ? { label: "Overdue", tone: "overdue" as const }
     : task.status === "in_progress"
-      ? { label: "Review", tone: "review" as const }
-      : { label: "Open", tone: "action" as const };
+      ? { label: "In progress", tone: "progress" as const }
+      : { label: "Open", tone: "open" as const };
 
   return (
     <li>
       <Link to="/events/oversight" className="home-your-task-row">
         <span className="home-your-task-title">{getTaskDisplayName(task)}</span>
-        <span className={`home-your-task-badge is-${badge.tone}`}>
-          {badge.label}
+        <span className={`home-your-task-status is-${status.tone}`}>
+          {status.label}
         </span>
         <span
           className={[
@@ -115,21 +115,21 @@ export function HomeYourTasksSection() {
   return (
     <HomeCard
       padding="sm"
-      className="home-surface-quiet home-your-tasks-card"
+      className="home-surface-quiet home-your-tasks-card home-task-surface"
       aria-label="Task Oversight"
     >
       <div className="home-task-header">
-        <h2 className="home-panel-title">Your tasks</h2>
+        <h2 className="home-panel-title">Task Oversight</h2>
         <ArrowLink to="/events/oversight">View all</ArrowLink>
       </div>
 
       {!isLoading ? (
         <div className="home-your-tasks-summary" aria-label="Oversight summary">
-          <div className="home-your-tasks-summary-box is-open">
+          <div className="home-your-tasks-summary-box">
             <span className="home-your-tasks-summary-value">{openCount}</span>
-            <span className="home-your-tasks-summary-label">Assigned to you</span>
+            <span className="home-your-tasks-summary-label">Open</span>
           </div>
-          <div className="home-your-tasks-summary-box is-progress">
+          <div className="home-your-tasks-summary-box">
             <span className="home-your-tasks-summary-value">
               {dueThisWeekCount}
             </span>
@@ -140,16 +140,16 @@ export function HomeYourTasksSection() {
 
       <div className="home-task-body">
         {isLoading ? (
-          <p className="home-activity-empty">Loading tasks…</p>
+          <p className="home-activity-empty">Loading…</p>
         ) : preview.length === 0 ? (
           <div className="home-task-empty">
-            <p className="home-task-empty-title">All clear</p>
-            <p className="home-task-empty-copy">No open chapter tasks.</p>
+            <p className="home-task-empty-title">Nothing open</p>
+            <p className="home-task-empty-copy">All chapter tasks are clear.</p>
           </div>
         ) : (
           <ul className="home-your-task-list">
             {preview.map((task) => (
-              <YourTaskRow key={task.id} task={task} />
+              <OversightTaskRow key={task.id} task={task} />
             ))}
           </ul>
         )}
@@ -157,7 +157,7 @@ export function HomeYourTasksSection() {
 
       <div className="home-task-footer">
         <Link to="/events/oversight" className="home-panel-footer-link">
-          + Add new task
+          Open oversight
         </Link>
       </div>
     </HomeCard>

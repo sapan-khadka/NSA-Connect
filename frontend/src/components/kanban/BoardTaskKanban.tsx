@@ -104,7 +104,7 @@ export function BoardTaskKanban({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="grid gap-4 overflow-x-hidden xl:grid-cols-3">
+      <div className="pd-deal-board" aria-label="Task board">
         {KANBAN_COLUMNS.map((column) => (
           <KanbanColumn
             key={column.id}

@@ -11,7 +11,6 @@ import { KanbanTaskDetailPanel } from "../components/kanban/KanbanTaskDetailPane
 import { AppIcon } from "../components/ui/AppIcon";
 import { Card } from "../components/ui/Card";
 import { useAuth } from "../context/useAuth";
-import { useMediaQuery } from "../hooks/useMediaQuery";
 import { isToday } from "../lib/calendar";
 import {
   fetchMyEventTasks,
@@ -481,7 +480,6 @@ function MyTasksTaskList({
 
 export function BoardTasksPage() {
   const { member } = useAuth();
-  const isMobile = !useMediaQuery("(min-width: 768px)");
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
   const [movingTaskId, setMovingTaskId] = useState<number | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
@@ -966,7 +964,7 @@ export function BoardTasksPage() {
               <>
                 <MyTasksTaskList
                   tasks={visibleTasks}
-                  isMobile={isMobile}
+                  isMobile={false}
                   movingTaskId={movingTaskId}
                   onOpenTask={setSelectedTaskId}
                   onCompleteTask={(task) => {
@@ -1027,7 +1025,7 @@ export function BoardTasksPage() {
             <>
               <MyTasksTaskList
                 tasks={visibleTasks}
-                isMobile={isMobile}
+                isMobile={false}
                 completedView
                 movingTaskId={movingTaskId}
                 onOpenTask={setSelectedTaskId}

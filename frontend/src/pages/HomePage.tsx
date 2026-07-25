@@ -8,7 +8,6 @@ function homeStage(stage: number): CSSProperties {
 import { CoverBanner } from "../components/CoverBanner";
 import { HomeHeroBrand } from "../components/AppLogo";
 import { HomeFeaturedEvent } from "../components/home/HomeFeaturedEvent";
-import { HomeQuickActions } from "../components/home/HomeQuickActions";
 import { HomeQuickStats } from "../components/home/HomeQuickStats";
 import { HomeRecentActivity } from "../components/home/HomeRecentActivity";
 import { HomeWorkCenter } from "../components/home/HomeWorkCenter";
@@ -101,7 +100,7 @@ function MemberHomeLayout({
   const activityLimit = isMobile ? 6 : 12;
 
   return (
-    <div className="home-dashboard home-dashboard--v4 home-dashboard--apple flex w-full min-w-0 flex-col pb-8">
+    <div className="home-dashboard home-dashboard--v4 home-dashboard--apple home-dashboard--nsa flex w-full min-w-0 flex-col pb-8">
       {loadError ? (
         <div role="alert" className="ds-alert-banner shrink-0">
           {loadError}
@@ -134,7 +133,6 @@ function MemberHomeLayout({
             financePendingCount={financePendingCount}
             isLoadingEvents={isLoading}
           />
-          <HomeQuickActions member={member} />
         </aside>
       </div>
 

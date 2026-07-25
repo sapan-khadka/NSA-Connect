@@ -19,8 +19,6 @@ import {
 } from "../../lib/roles";
 import { AppIcon } from "../ui/AppIcon";
 
-type StatTone = "teal" | "slate" | "amber" | "olive" | "sky";
-
 type StatCard = {
   id: string;
   label: string;
@@ -29,8 +27,10 @@ type StatCard = {
   hintTone?: "muted" | "positive" | "warning" | "negative";
   valueTone?: "default" | "negative";
   icon: typeof Users;
-  tone: StatTone;
   to: string;
+  /** 0–100 quiet progress under the number (DESIGN_SYSTEM.md §4). */
+  progress: number;
+  progressAtRisk?: boolean;
 };
 
 function formatMoney(value: string): string {
@@ -43,6 +43,13 @@ function formatMoney(value: string): string {
     currency: "USD",
     maximumFractionDigits: amount % 1 === 0 ? 0 : 2,
   }).format(amount);
+}
+
+function clampProgress(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.min(100, Math.max(0, Math.round(value)));
 }
 
 export function HomeQuickStats({
@@ -108,6 +115,9 @@ export function HomeQuickStats({
   const cards: StatCard[] = [];
 
   if (canSeeMembers) {
+    const total = memberTotal ?? 0;
+    const pendingShare =
+      total > 0 ? (pendingMemberApprovals / total) * 100 : 0;
     cards.push({
       id: "members",
       label: "Members",
@@ -118,22 +128,34 @@ export function HomeQuickStats({
           : "Active roster",
       hintTone: pendingMemberApprovals > 0 ? "warning" : "muted",
       icon: Users,
-      tone: "teal",
       to: "/members",
+      // Quiet fullness: roster present; at-risk fill when approvals pile up.
+      progress:
+        pendingMemberApprovals > 0
+          ? clampProgress(Math.max(12, pendingShare))
+          : clampProgress(total > 0 ? 72 : 8),
+      progressAtRisk: pendingMemberApprovals > 0,
     });
   } else {
+    const open = tasksSummary.openCount;
+    const overdueShare =
+      open > 0 ? (tasksSummary.overdueCount / open) * 100 : 0;
     cards.push({
       id: "my-tasks",
       label: "My tasks",
-      value: String(tasksSummary.openCount),
+      value: String(open),
       hint:
         tasksSummary.overdueCount > 0
           ? `${tasksSummary.overdueCount} overdue`
           : "Open assignments",
       hintTone: tasksSummary.overdueCount > 0 ? "warning" : "muted",
       icon: CheckCircle2,
-      tone: "teal",
       to: "/events/tasks",
+      progress:
+        tasksSummary.overdueCount > 0
+          ? clampProgress(Math.max(18, overdueShare))
+          : clampProgress(open > 0 ? 55 : 8),
+      progressAtRisk: tasksSummary.overdueCount > 0,
     });
   }
 
@@ -144,22 +166,28 @@ export function HomeQuickStats({
     hint: upcomingEventCount === 1 ? "Upcoming event" : "Upcoming events",
     hintTone: "muted",
     icon: CalendarDays,
-    tone: "sky",
     to: "/events/calendar",
+    progress: clampProgress(
+      upcomingEventCount <= 0 ? 8 : Math.min(100, upcomingEventCount * 22),
+    ),
   });
 
   if (canSeeTreasury) {
     const amount = treasuryBalance == null ? null : Number(treasuryBalance);
+    const isNegative = amount != null && amount < 0;
     cards.push({
       id: "treasury",
       label: "Treasury",
       value: treasuryBalance == null ? "—" : formatMoney(treasuryBalance),
-      hint: "Available balance",
-      hintTone: "muted",
-      valueTone: amount != null && amount < 0 ? "negative" : "default",
+      hint: isNegative ? "Balance is negative" : "Available balance",
+      hintTone: isNegative ? "warning" : "muted",
+      valueTone: isNegative ? "negative" : "default",
       icon: CircleDollarSign,
-      tone: "olive",
       to: FINANCE_PATH,
+      progress: isNegative
+        ? 68
+        : clampProgress(amount == null ? 8 : amount === 0 ? 20 : 64),
+      progressAtRisk: isNegative,
     });
   } else {
     cards.push({
@@ -170,8 +198,13 @@ export function HomeQuickStats({
         tasksSummary.overdueCount > 0 ? "Needs attention" : "You’re caught up",
       hintTone: tasksSummary.overdueCount > 0 ? "warning" : "positive",
       icon: CheckCircle2,
-      tone: "olive",
       to: "/events/tasks",
+      progress: clampProgress(
+        tasksSummary.overdueCount <= 0
+          ? 10
+          : Math.min(100, tasksSummary.overdueCount * 28),
+      ),
+      progressAtRisk: tasksSummary.overdueCount > 0,
     });
   }
 
@@ -183,7 +216,6 @@ export function HomeQuickStats({
       hint: pendingTotal > 0 ? "Requires action" : "No pending items",
       hintTone: pendingTotal > 0 ? "warning" : "muted",
       icon: Clock3,
-      tone: "amber",
       to:
         canSeeMembers && pendingMemberApprovals > 0
           ? "/members?tab=pending"
@@ -192,6 +224,10 @@ export function HomeQuickStats({
             : canSeeMembers
               ? "/members?tab=pending"
               : "/finance/approvals",
+      progress: clampProgress(
+        pendingTotal <= 0 ? 10 : Math.min(100, pendingTotal * 24),
+      ),
+      progressAtRisk: pendingTotal > 0,
     });
   } else {
     cards.push({
@@ -202,8 +238,13 @@ export function HomeQuickStats({
         tasksSummary.dueTodayCount > 0 ? "Focus here first" : "Nothing due today",
       hintTone: tasksSummary.dueTodayCount > 0 ? "warning" : "muted",
       icon: CalendarDays,
-      tone: "amber",
       to: "/events/tasks",
+      progress: clampProgress(
+        tasksSummary.dueTodayCount <= 0
+          ? 10
+          : Math.min(100, tasksSummary.dueTodayCount * 30),
+      ),
+      progressAtRisk: tasksSummary.dueTodayCount > 0,
     });
   }
 
@@ -231,6 +272,20 @@ export function HomeQuickStats({
                 </span>
               </div>
               <p className="home-quick-stat-value">{card.value}</p>
+              <div
+                className="home-quick-stat-progress"
+                aria-hidden="true"
+              >
+                <span
+                  className={[
+                    "home-quick-stat-progress-fill",
+                    card.progressAtRisk ? "is-risk" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  style={{ width: `${card.progress}%` }}
+                />
+              </div>
               <p
                 className={[
                   "home-quick-stat-hint",

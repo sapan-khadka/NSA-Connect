@@ -105,11 +105,10 @@ describe("BoardTaskKanban", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("heading", { name: /To do\s·\s1/ })).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: /In progress\s·\s1/ }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /Done\s·\s1/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "To do" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "In progress" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Done" })).toBeInTheDocument();
+    expect(screen.getAllByText("1 task")).toHaveLength(3);
     expect(screen.getByText("Setup")).toBeInTheDocument();
     expect(screen.getByText("Order catering")).toBeInTheDocument();
     expect(screen.getByText("Food & Beverage")).toBeInTheDocument();

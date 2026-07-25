@@ -131,7 +131,7 @@ function EventsHubTabBar({ tabs }: { tabs: EventsTab[] }) {
     <nav
       aria-label="Events sections"
       className={[
-        "events-hub-tabs sticky top-0 z-10 border-b border-gray-200 bg-surface/95 px-4 pb-0.5 backdrop-blur-sm sm:-mx-1 sm:border-surface-card sm:px-1",
+        "events-hub-tabs sticky top-0 z-10 border-b border-gray-200 bg-surface/95 px-3 pb-0 backdrop-blur-sm sm:-mx-1 sm:border-surface-card sm:px-1",
         canScrollLeft ? "events-hub-tabs--fade-left" : "",
         canScrollRight ? "events-hub-tabs--fade-right" : "",
       ]
@@ -149,7 +149,7 @@ function EventsHubTabBar({ tabs }: { tabs: EventsTab[] }) {
             end={tab.end}
             className={({ isActive }) =>
               [
-                "events-hub-tab inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors",
+                "events-hub-tab inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-2.5 py-2 text-[13px] font-medium transition-colors",
                 isActive
                   ? "border-accent text-accent"
                   : "border-transparent text-label hover:text-accent",
@@ -159,7 +159,7 @@ function EventsHubTabBar({ tabs }: { tabs: EventsTab[] }) {
             <span>{tab.label}</span>
             <NavCountBadge
               count={tab.badgeCount ?? 0}
-              className="h-4 min-w-4 px-1 text-[10px]"
+              className="events-hub-tab-badge h-4 min-w-4 px-1 text-[10px]"
             />
           </NavLink>
         ))}

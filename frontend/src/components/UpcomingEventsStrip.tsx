@@ -3,6 +3,7 @@
  * Compact timeline cards (date · title · location · time · going).
  */
 
+import { Clock3, MapPin } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { toLocalIsoDate } from "../lib/calendar";
@@ -10,33 +11,19 @@ import {
   UPCOMING_GROUP_ORDER,
   groupUpcomingEvents,
 } from "../lib/calendar-upcoming";
-import { EVENT_TYPE_COLOR, type EventType } from "../lib/event-types";
 import {
   fetchEventAttendees,
   type EventResponse,
 } from "../lib/events-api";
+import { AppIcon } from "./ui/AppIcon";
 
 function formatStripDate(startsAt: string): string {
-  const date = new Date(startsAt);
-  const today = new Date();
-  const tomorrow = new Date();
-  tomorrow.setDate(today.getDate() + 1);
-
-  const sameDay = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate();
-
-  if (sameDay(date, today)) {
-    return "Today";
-  }
-  if (sameDay(date, tomorrow)) {
-    return "Tomorrow";
-  }
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
-  }).format(date);
+  })
+    .format(new Date(startsAt))
+    .toUpperCase();
 }
 
 function formatStripTime(startsAt: string): string {
@@ -113,20 +100,21 @@ export function UpcomingEventsStrip({
           onClick={onViewAll}
           className="events-upcoming-strip-view-all"
         >
-          View all →
+          View all
+          <span aria-hidden="true">→</span>
         </button>
       </div>
 
       {loading ? (
-        <p className="text-sm text-label">Loading upcoming events…</p>
+        <p className="events-upcoming-strip-empty">Loading upcoming events…</p>
       ) : stripEvents.length === 0 ? (
-        <p className="text-sm text-label">No upcoming events scheduled yet.</p>
+        <p className="events-upcoming-strip-empty">
+          No upcoming events scheduled yet.
+        </p>
       ) : (
         <ul className="events-upcoming-strip-track">
           {stripEvents.map((event) => {
             const going = goingById[event.id];
-            const accent =
-              EVENT_TYPE_COLOR[(event.event_type ?? "social") as EventType];
             const location = event.location?.trim() || "Location TBA";
             const eventIso = toLocalIsoDate(new Date(event.starts_at));
             const isSelected =
@@ -135,7 +123,7 @@ export function UpcomingEventsStrip({
                 : selectedDate != null && eventIso === selectedDate;
 
             return (
-              <li key={event.id}>
+              <li key={event.id} className="events-upcoming-strip-item">
                 <button
                   type="button"
                   onClick={() => onSelectEvent(event)}
@@ -146,19 +134,42 @@ export function UpcomingEventsStrip({
                     .filter(Boolean)
                     .join(" ")}
                   aria-pressed={isSelected}
-                  style={{ borderLeftColor: accent }}
                 >
                   <p className="events-upcoming-strip-when">
-                    {formatStripDate(event.starts_at)}
+                    <span
+                      className="events-upcoming-strip-dot"
+                      aria-hidden="true"
+                    />
+                    <span>{formatStripDate(event.starts_at)}</span>
                   </p>
                   <p className="events-upcoming-strip-name">{event.name}</p>
-                  <p className="events-upcoming-strip-location truncate">
-                    {location}
+                  <p className="events-upcoming-strip-location">
+                    <AppIcon
+                      icon={MapPin}
+                      size="xs"
+                      className="text-current"
+                    />
+                    <span className="truncate">{location}</span>
                   </p>
-                  <div className="events-upcoming-strip-footer">
-                    <span>{formatStripTime(event.starts_at)}</span>
-                    {going != null ? <span>{going} going</span> : null}
-                  </div>
+                  <p className="events-upcoming-strip-footer">
+                    <span className="events-upcoming-strip-time">
+                      <AppIcon
+                        icon={Clock3}
+                        size="xs"
+                        className="text-current"
+                      />
+                      <span>{formatStripTime(event.starts_at)}</span>
+                    </span>
+                    {going != null ? (
+                      <>
+                        <span
+                          className="events-upcoming-strip-sep"
+                          aria-hidden="true"
+                        />
+                        <span>{going} going</span>
+                      </>
+                    ) : null}
+                  </p>
                 </button>
               </li>
             );

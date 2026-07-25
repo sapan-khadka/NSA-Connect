@@ -280,11 +280,11 @@ export function HomeYourWorkSection({
         {!isLoading && tabTasks.length === 0 ? (
           <div className="home-task-empty">
             <p className="home-task-empty-title">
-              {tasksSummary.openCount === 0 ? "You're clear" : "All clear"}
+              {tasksSummary.openCount === 0 ? "Inbox zero" : "Nothing here"}
             </p>
             <p className="home-task-empty-copy">
               {tasksSummary.openCount === 0
-                ? "No open tasks right now."
+                ? "No open tasks."
                 : emptyCopy}
             </p>
           </div>
@@ -293,7 +293,7 @@ export function HomeYourWorkSection({
 
       <div className="home-task-footer">
         <Link to={tasksPath} className="home-panel-footer-link">
-          + Add new task
+          View tasks
         </Link>
       </div>
     </div>
@@ -310,7 +310,7 @@ export function HomeYourWorkSection({
   return (
     <HomeCard
       padding="sm"
-      className="flex h-full min-h-0 flex-col home-surface-quiet home-task-card"
+      className="flex h-full min-h-0 flex-col home-surface-quiet home-task-card home-task-surface"
       aria-label="My Tasks"
     >
       {body}
