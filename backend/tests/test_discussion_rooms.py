@@ -84,7 +84,8 @@ def test_cannot_message_pending_room(client, db_session):
         headers=headers,
         json={"content": "Hello"},
     )
-    assert response.status_code == 403
+    # Access denied is returned as 404 so private room existence is not leaked.
+    assert response.status_code == 404
 
 
 def test_live_room_messaging_and_inbox(client, db_session):

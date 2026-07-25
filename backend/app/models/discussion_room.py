@@ -30,14 +30,39 @@ class DiscussionRoomMemberRole(StrEnum):
     MEMBER = "member"
 
 
+class DiscussionRoomKind(StrEnum):
+    GROUP = "group"
+    DM = "dm"
+
+
 class DiscussionRoom(Base):
-    """Named custom discussion group (board-proposed; Pres/VP approve)."""
+    """Custom discussion room — board groups (approve) or private 1:1 DMs."""
 
     __tablename__ = "discussion_rooms"
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id",
+            "dm_pair_key",
+            name="uq_discussion_rooms_org_dm_pair",
+        ),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(MAX_DISCUSSION_ROOM_NAME_LENGTH), nullable=False)
     description = Column(Text, nullable=True)
+    kind = Column(
+        SqlEnum(
+            DiscussionRoomKind,
+            values_callable=lambda kinds: [kind.value for kind in kinds],
+            name="discussionroomkind",
+        ),
+        nullable=False,
+        default=DiscussionRoomKind.GROUP,
+        server_default=DiscussionRoomKind.GROUP.value,
+        index=True,
+    )
+    # Sorted "{min_id}:{max_id}" for DMs; null for group rooms.
+    dm_pair_key = Column(String(64), nullable=True, index=True)
     status = Column(
         SqlEnum(
             DiscussionRoomStatus,

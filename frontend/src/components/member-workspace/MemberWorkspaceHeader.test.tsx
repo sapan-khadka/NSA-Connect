@@ -67,7 +67,10 @@ describe("MemberWorkspaceHeader", () => {
       screen.getByRole("button", { name: "Edit Member" }),
     ).toBeEnabled();
     expect(
-      screen.getByRole("link", { name: "Message Alex Member" }),
+      screen.getByRole("button", { name: "Message Alex Member" }),
+    ).toBeEnabled();
+    expect(
+      screen.getByRole("link", { name: "Email Alex Member" }),
     ).toHaveAttribute("href", "mailto:alex@semo.edu");
     expect(
       screen.getByRole("button", { name: "More actions (Coming Soon)" }),
@@ -92,7 +95,10 @@ describe("MemberWorkspaceHeader", () => {
       screen.queryByRole("button", { name: "Edit Member" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Message Alex Member" }),
+      screen.getByRole("button", { name: "Message Alex Member" }),
+    ).toBeEnabled();
+    expect(
+      screen.getByRole("link", { name: "Email Alex Member" }),
     ).toHaveAttribute("href", "mailto:alex@semo.edu");
   });
 

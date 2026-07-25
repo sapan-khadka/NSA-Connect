@@ -8,19 +8,23 @@ import {
   Banknote,
   GraduationCap,
   Mail,
+  MessageSquare,
   Pencil,
   UserRound,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Avatar } from "../design-system/components/Avatar";
 import { Drawer } from "../design-system/components/feedback/Drawer";
+import { useAuth } from "../context/useAuth";
 import type { MemberResponse } from "../lib/auth-api";
+import { getApiErrorMessage } from "../lib/api-error";
 import type { DuesStatus, MemberDuesRecord } from "../lib/dues-api";
 import { formatCurrency } from "../lib/format-currency";
 import { memberMailtoHref } from "../lib/member-mailto";
 import { formatOutstandingDuesCell } from "../lib/members-directory";
+import { openDirectMessage } from "../lib/open-direct-message";
 import {
   formatMemberPositionLabel,
   getRoleBadgeClassName,
@@ -186,6 +190,8 @@ export function MemberQuickViewDrawer({
   onEditMember,
 }: MemberQuickViewDrawerProps) {
   const navigate = useNavigate();
+  const { member: currentMember } = useAuth();
+  const [messageLoading, setMessageLoading] = useState(false);
 
   if (!member || !open) {
     return null;
@@ -195,6 +201,7 @@ export function MemberQuickViewDrawer({
   const dues = formatOutstandingDues(duesRecord);
   const hasActivity = activityItems.length > 0;
   const mailtoHref = memberMailtoHref(member.email);
+  const isSelf = currentMember?.id === member.id;
 
   const stats: QuickStat[] = [
     {
@@ -222,6 +229,21 @@ export function MemberQuickViewDrawer({
   function goToProfile() {
     onClose();
     navigate(profilePath);
+  }
+
+  async function handleMessage() {
+    if (isSelf || messageLoading) {
+      return;
+    }
+    setMessageLoading(true);
+    try {
+      onClose();
+      await openDirectMessage(navigate, member.id);
+    } catch (error) {
+      window.alert(getApiErrorMessage(error));
+    } finally {
+      setMessageLoading(false);
+    }
   }
 
   return (
@@ -288,28 +310,29 @@ export function MemberQuickViewDrawer({
               Edit Member
             </Button>
           ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-label={`Message ${member.full_name}`}
+            disabled={isSelf || messageLoading}
+            onClick={() => {
+              void handleMessage();
+            }}
+          >
+            <AppIcon icon={MessageSquare} size="xs" className="text-current" />
+            Message
+          </Button>
           {mailtoHref ? (
             <a
               href={mailtoHref}
               className="members-quick-view-mailto inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-gray-200 bg-surface-card px-3 py-1.5 text-sm font-medium text-foreground transition duration-200 ease-out hover:border-primary/40 hover:bg-badge-teal-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-2"
-              aria-label={`Send Message to ${member.full_name}`}
+              aria-label={`Email ${member.full_name}`}
             >
               <AppIcon icon={Mail} size="xs" className="text-current" />
-              Send Message
+              Email
             </a>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled
-              title="No email on file"
-              aria-label="Send Message (No email on file)"
-            >
-              <AppIcon icon={Mail} size="xs" className="text-current" />
-              Send Message
-            </Button>
-          )}
+          ) : null}
         </div>
       }
     >

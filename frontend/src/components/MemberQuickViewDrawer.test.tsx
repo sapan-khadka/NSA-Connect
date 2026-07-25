@@ -1,10 +1,12 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactElement } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { MemberResponse } from "../lib/auth-api";
 import type { MemberDuesRecord } from "../lib/dues-api";
+import { MockAuthProvider } from "../test/test-utils";
 import { MemberQuickViewDrawer } from "./MemberQuickViewDrawer";
 
 const member: MemberResponse = {
@@ -14,6 +16,18 @@ const member: MemberResponse = {
   student_id: "S87654321",
   major: "Computer Science",
   graduation_year: 2028,
+  role: "board",
+  status: "approved",
+  position: "member",
+};
+
+const viewer: MemberResponse = {
+  id: 1,
+  full_name: "Board Viewer",
+  email: "board@semo.edu",
+  student_id: "11111111",
+  major: "CS",
+  graduation_year: 2027,
   role: "board",
   status: "approved",
   position: "member",
@@ -34,13 +48,21 @@ const duesRecord: MemberDuesRecord = {
   finance_entry_id: null,
 };
 
+function renderQuickView(ui: ReactElement) {
+  return render(
+    <MockAuthProvider value={{ member: viewer, isAuthenticated: true }}>
+      {ui}
+    </MockAuthProvider>,
+  );
+}
+
 describe("MemberQuickViewDrawer", () => {
   afterEach(() => {
     cleanup();
   });
 
   it("renders header, honest quick stats, empty activity, and actions", () => {
-    render(
+    renderQuickView(
       <MemoryRouter>
         <MemberQuickViewDrawer
           member={member}
@@ -81,8 +103,13 @@ describe("MemberQuickViewDrawer", () => {
       within(dialog).queryByRole("button", { name: "Edit Member" }),
     ).not.toBeInTheDocument();
     expect(
+      within(dialog).getByRole("button", {
+        name: "Message Alex Member",
+      }),
+    ).toBeEnabled();
+    expect(
       within(dialog).getByRole("link", {
-        name: "Send Message to Alex Member",
+        name: "Email Alex Member",
       }),
     ).toHaveAttribute("href", "mailto:alex@semo.edu");
   });
@@ -91,7 +118,7 @@ describe("MemberQuickViewDrawer", () => {
     const user = userEvent.setup();
     const onEditMember = vi.fn();
 
-    render(
+    renderQuickView(
       <MemoryRouter>
         <MemberQuickViewDrawer
           member={member}
@@ -107,7 +134,7 @@ describe("MemberQuickViewDrawer", () => {
   });
 
   it("renders provided activity items when available", () => {
-    render(
+    renderQuickView(
       <MemoryRouter>
         <MemberQuickViewDrawer
           member={member}
@@ -132,7 +159,7 @@ describe("MemberQuickViewDrawer", () => {
   });
 
   it("hides when closed", () => {
-    const { container } = render(
+    const { container } = renderQuickView(
       <MemoryRouter>
         <MemberQuickViewDrawer
           member={member}
@@ -148,7 +175,7 @@ describe("MemberQuickViewDrawer", () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
 
-    render(
+    renderQuickView(
       <MemoryRouter>
         <MemberQuickViewDrawer member={member} open onClose={onClose} />
       </MemoryRouter>,

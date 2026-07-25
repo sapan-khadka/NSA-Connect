@@ -10,12 +10,14 @@ import {
   ChevronsUpDown,
   Eye,
   Mail,
+  MessageSquare,
   MoreHorizontal,
   Pencil,
+  Settings,
   Users,
 } from "lucide-react";
 import { useEffect, useId, useMemo, useState, type KeyboardEvent, type MouseEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { Avatar } from "../design-system/components/Avatar";
 import { EmptyState } from "../design-system/components/data-display/EmptyState";
@@ -27,6 +29,7 @@ import { getApiErrorMessage } from "../lib/api-error";
 import type { DuesStatus, MemberDuesRecord } from "../lib/dues-api";
 import { formatCurrency } from "../lib/format-currency";
 import { memberMailtoHref } from "../lib/member-mailto";
+import { openDirectMessage } from "../lib/open-direct-message";
 import {
   formatOutstandingDuesCell,
   type MemberDuesLookup,
@@ -66,6 +69,11 @@ type MembersTableProps = {
   isFilterEmpty?: boolean;
   /** Bulk selection chrome is hidden until bulk APIs ship. */
   enableBulkSelection?: boolean;
+  /**
+   * Keep the dense CRM table (horizontal scroll) instead of mobile cards.
+   * Members directory always prefers this.
+   */
+  forceTableView?: boolean;
   onInvite?: () => void;
   /** Keep parent directory state in sync after Edit Member saves. */
   onMemberUpdated?: (
@@ -205,13 +213,32 @@ function MembersRowActions({
   alwaysVisible = false,
   canEdit,
   onEdit,
+  isSelf = false,
 }: {
   member: MemberResponse;
   alwaysVisible?: boolean;
   canEdit: boolean;
   onEdit: (member: MemberResponse) => void;
+  isSelf?: boolean;
 }) {
+  const navigate = useNavigate();
   const mailtoHref = memberMailtoHref(member.email);
+  const [messageLoading, setMessageLoading] = useState(false);
+
+  async function handleMessage(event: MouseEvent<HTMLButtonElement>) {
+    event.stopPropagation();
+    if (isSelf || messageLoading) {
+      return;
+    }
+    setMessageLoading(true);
+    try {
+      await openDirectMessage(navigate, member.id);
+    } catch (error) {
+      window.alert(getApiErrorMessage(error));
+    } finally {
+      setMessageLoading(false);
+    }
+  }
 
   return (
     <div
@@ -245,27 +272,29 @@ function MembersRowActions({
           <AppIcon icon={Pencil} size="sm" className="text-current" />
         </button>
       ) : null}
+      <button
+        type="button"
+        className="members-table-icon-action"
+        title="Message"
+        aria-label={`Message ${member.full_name}`}
+        disabled={isSelf || messageLoading}
+        onClick={(event) => {
+          void handleMessage(event);
+        }}
+      >
+        <AppIcon icon={MessageSquare} size="sm" className="text-current" />
+      </button>
       {mailtoHref ? (
         <a
           href={mailtoHref}
           className="members-table-icon-action"
-          title="Send Message"
-          aria-label={`Send Message to ${member.full_name}`}
+          title="Email"
+          aria-label={`Email ${member.full_name}`}
           onClick={(event) => event.stopPropagation()}
         >
           <AppIcon icon={Mail} size="sm" className="text-current" />
         </a>
-      ) : (
-        <button
-          type="button"
-          className="members-table-icon-action"
-          disabled
-          title="No email on file"
-          aria-label={`Send Message to ${member.full_name} (No email on file)`}
-        >
-          <AppIcon icon={Mail} size="sm" className="text-current" />
-        </button>
-      )}
+      ) : null}
       <button
         type="button"
         className="members-table-icon-action"
@@ -495,12 +524,14 @@ export function MembersTable({
   engagementByMemberId,
   isFilterEmpty = false,
   enableBulkSelection = false,
+  forceTableView = false,
   onInvite,
   onMemberUpdated,
 }: MembersTableProps) {
   const { member: currentMember } = useAuth();
   const selectAllId = useId();
-  const isMobile = !useMediaQuery("(min-width: 768px)");
+  const isNarrow = !useMediaQuery("(min-width: 768px)");
+  const isMobile = forceTableView ? false : isNarrow;
   const [internalMembers, setInternalMembers] = useState<MemberResponse[]>([]);
   const [internalLoading, setInternalLoading] = useState(
     controlledMembers === undefined,
@@ -845,6 +876,7 @@ export function MembersTable({
                         alwaysVisible
                         canEdit={canEditMembers}
                         onEdit={openEditMember}
+                        isSelf={currentMember?.id === member.id}
                       />
                     </div>
                   </article>
@@ -912,7 +944,20 @@ export function MembersTable({
                     Outstanding Dues
                   </th>
                   <th scope="col" className="members-table-actions-col">
-                    Actions
+                    <span className="sr-only">Actions</span>
+                    <button
+                      type="button"
+                      className="members-table-settings-btn"
+                      aria-label="Column settings"
+                      title="Column settings coming soon"
+                      disabled
+                    >
+                      <AppIcon
+                        icon={Settings}
+                        size="xs"
+                        className="text-current"
+                      />
+                    </button>
                   </th>
                 </tr>
               </thead>
@@ -995,6 +1040,7 @@ export function MembersTable({
                           member={member}
                           canEdit={canEditMembers}
                           onEdit={openEditMember}
+                          isSelf={currentMember?.id === member.id}
                         />
                       </td>
                     </tr>

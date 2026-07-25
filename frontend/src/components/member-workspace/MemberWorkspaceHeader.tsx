@@ -8,18 +8,21 @@ import {
   ChevronLeft,
   GraduationCap,
   Mail,
+  MessageSquare,
   MoreHorizontal,
   Pencil,
   Phone,
 } from "lucide-react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
 
 import { Avatar } from "../../design-system/components/Avatar";
 import { useAuth } from "../../context/useAuth";
 import type { MemberResponse } from "../../lib/auth-api";
+import { getApiErrorMessage } from "../../lib/api-error";
 import { memberMailtoHref } from "../../lib/member-mailto";
+import { openDirectMessage } from "../../lib/open-direct-message";
 import { canViewMemberDirectory } from "../../lib/roles";
 import { EditMemberDrawer } from "../EditMemberDrawer";
 import { RoleBadge } from "../RoleBadge";
@@ -114,8 +117,10 @@ export function MemberWorkspaceHeader({
   backLabel = "Back to Members",
   onMemberUpdated,
 }: MemberWorkspaceHeaderProps) {
+  const navigate = useNavigate();
   const { member: currentMember } = useAuth();
   const [editOpen, setEditOpen] = useState(false);
+  const [messageLoading, setMessageLoading] = useState(false);
   const committeeLabel = committee?.trim() || null;
   const graduationLabel = member.graduation_year
     ? String(member.graduation_year)
@@ -124,6 +129,21 @@ export function MemberWorkspaceHeader({
   const canEdit = Boolean(
     currentMember && canViewMemberDirectory(currentMember.role),
   );
+  const isSelf = currentMember?.id === member.id;
+
+  async function handleMessage() {
+    if (isSelf || messageLoading) {
+      return;
+    }
+    setMessageLoading(true);
+    try {
+      await openDirectMessage(navigate, member.id);
+    } catch (error) {
+      window.alert(getApiErrorMessage(error));
+    } finally {
+      setMessageLoading(false);
+    }
+  }
 
   return (
     <div className="member-workspace-header-inner">
@@ -150,28 +170,29 @@ export function MemberWorkspaceHeader({
               <span className="member-workspace-action-label">Edit Member</span>
             </Button>
           ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-label={`Message ${member.full_name}`}
+            disabled={isSelf || messageLoading}
+            onClick={() => {
+              void handleMessage();
+            }}
+          >
+            <AppIcon icon={MessageSquare} size="xs" className="text-current" />
+            <span className="member-workspace-action-label">Message</span>
+          </Button>
           {mailtoHref ? (
             <a
               href={mailtoHref}
               className="member-workspace-mailto inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-gray-200 bg-surface-card px-3 py-1.5 text-sm font-medium text-foreground transition duration-200 ease-out hover:border-primary/40 hover:bg-badge-teal-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-2"
-              aria-label={`Message ${member.full_name}`}
+              aria-label={`Email ${member.full_name}`}
             >
               <AppIcon icon={Mail} size="xs" className="text-current" />
-              <span className="member-workspace-action-label">Message</span>
+              <span className="member-workspace-action-label">Email</span>
             </a>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled
-              title="No email on file"
-              aria-label="Message (No email on file)"
-            >
-              <AppIcon icon={Mail} size="xs" className="text-current" />
-              <span className="member-workspace-action-label">Message</span>
-            </Button>
-          )}
+          ) : null}
           <Button
             type="button"
             variant="ghost"

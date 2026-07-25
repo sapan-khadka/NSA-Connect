@@ -5,11 +5,13 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.discussion_room import (
     MAX_DISCUSSION_ROOM_NAME_LENGTH,
     DiscussionRoom,
+    DiscussionRoomKind,
     DiscussionRoomMember,
     DiscussionRoomMemberRole,
     DiscussionRoomStatus,
@@ -46,7 +48,16 @@ def _room_href(room_id: int) -> str:
     return f"/discussions/room/{room_id}"
 
 
-def build_room_response(room: DiscussionRoom) -> DiscussionRoomResponse:
+def dm_pair_key_for(member_a_id: int, member_b_id: int) -> str:
+    low, high = sorted((member_a_id, member_b_id))
+    return f"{low}:{high}"
+
+
+def build_room_response(
+    room: DiscussionRoom,
+    *,
+    viewer_id: int | None = None,
+) -> DiscussionRoomResponse:
     members = sorted(
         room.members,
         key=lambda row: (
@@ -54,10 +65,20 @@ def build_room_response(room: DiscussionRoom) -> DiscussionRoomResponse:
             (row.member.full_name if row.member else "").lower(),
         ),
     )
+    peer_member_id: int | None = None
+    peer_full_name: str | None = None
+    if room.kind == DiscussionRoomKind.DM and viewer_id is not None:
+        for row in members:
+            if row.member_id != viewer_id and row.member is not None:
+                peer_member_id = row.member_id
+                peer_full_name = row.member.full_name
+                break
+
     return DiscussionRoomResponse(
         id=room.id,
         name=room.name,
         description=room.description,
+        kind=room.kind,
         status=room.status,
         room_id=custom_room_key(room.id),
         href=_room_href(room.id),
@@ -77,6 +98,8 @@ def build_room_response(room: DiscussionRoom) -> DiscussionRoomResponse:
             for row in members
             if row.member is not None
         ],
+        peer_member_id=peer_member_id,
+        peer_full_name=peer_full_name,
     )
 
 
@@ -115,6 +138,14 @@ def assert_can_access_custom_room(
     for_messaging: bool = False,
 ) -> DiscussionRoom:
     room = _load_room(db, room_id)
+
+    # DMs are private: membership only (no Pres/VP oversight bypass).
+    if room.kind == DiscussionRoomKind.DM:
+        if not member_is_room_member(db, room_id=room.id, member_id=member.id):
+            raise DiscussionForbiddenError
+        if for_messaging and room.status != DiscussionRoomStatus.LIVE:
+            raise DiscussionForbiddenError
+        return room
 
     if room.status == DiscussionRoomStatus.ARCHIVED and for_messaging:
         raise DiscussionForbiddenError
@@ -169,6 +200,7 @@ def create_discussion_room(
     room = DiscussionRoom(
         name=cleaned_name,
         description=description,
+        kind=DiscussionRoomKind.GROUP,
         status=status,
         created_by_id=creator.id,
         reviewed_by_id=creator.id if auto_live else None,
@@ -216,6 +248,98 @@ def create_discussion_room(
     return _load_room(db, room.id)
 
 
+def get_or_create_dm(
+    db: Session,
+    *,
+    actor: Member,
+    target_member_id: int,
+) -> DiscussionRoom:
+    """Find or create a private live 1:1 DM between two approved members."""
+    if not actor.is_approved:
+        raise DiscussionForbiddenError
+    if target_member_id == actor.id:
+        raise DiscussionValidationError("You cannot message yourself")
+
+    target = db.scalars(
+        select(Member).where(Member.id == target_member_id)
+    ).first()
+    if target is None or not target.is_approved:
+        raise DiscussionValidationError("Member not found")
+    # Same campus only — null/mismatched university_id is denied.
+    if actor.university_id != target.university_id:
+        raise DiscussionForbiddenError
+
+    org_id = get_default_organization_id(db)
+    pair_key = dm_pair_key_for(actor.id, target.id)
+
+    def _find_existing() -> DiscussionRoom | None:
+        return (
+            db.scalars(
+                select(DiscussionRoom)
+                .options(
+                    joinedload(DiscussionRoom.created_by),
+                    joinedload(DiscussionRoom.reviewed_by),
+                    joinedload(DiscussionRoom.members).joinedload(
+                        DiscussionRoomMember.member
+                    ),
+                )
+                .where(
+                    DiscussionRoom.organization_id == org_id,
+                    DiscussionRoom.kind == DiscussionRoomKind.DM,
+                    DiscussionRoom.dm_pair_key == pair_key,
+                )
+            )
+            .unique()
+            .first()
+        )
+
+    existing = _find_existing()
+    if existing is not None:
+        return existing
+
+    now = datetime.now(UTC)
+    peer_label = (target.full_name or "Member").strip() or "Member"
+    room = DiscussionRoom(
+        name=f"DM · {peer_label}"[:MAX_DISCUSSION_ROOM_NAME_LENGTH],
+        description=None,
+        kind=DiscussionRoomKind.DM,
+        dm_pair_key=pair_key,
+        status=DiscussionRoomStatus.LIVE,
+        created_by_id=actor.id,
+        reviewed_by_id=actor.id,
+        reviewed_at=now,
+        created_at=now,
+        organization_id=org_id,
+    )
+    db.add(room)
+    try:
+        db.flush()
+        db.add(
+            DiscussionRoomMember(
+                room_id=room.id,
+                member_id=actor.id,
+                role=DiscussionRoomMemberRole.OWNER,
+                added_by_id=actor.id,
+            )
+        )
+        db.add(
+            DiscussionRoomMember(
+                room_id=room.id,
+                member_id=target.id,
+                role=DiscussionRoomMemberRole.MEMBER,
+                added_by_id=actor.id,
+            )
+        )
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raced = _find_existing()
+        if raced is not None:
+            return raced
+        raise
+    return _load_room(db, room.id)
+
+
 def list_pending_discussion_rooms(db: Session) -> list[DiscussionRoom]:
     return list(
         db.scalars(
@@ -229,6 +353,7 @@ def list_pending_discussion_rooms(db: Session) -> list[DiscussionRoom]:
             )
             .where(
                 DiscussionRoom.status == DiscussionRoomStatus.PENDING,
+                DiscussionRoom.kind == DiscussionRoomKind.GROUP,
                 DiscussionRoom.organization_id == get_default_organization_id(db),
             )
             .order_by(DiscussionRoom.created_at.asc())
@@ -309,6 +434,8 @@ def approve_discussion_room(
         raise DiscussionForbiddenError
 
     room = _load_room(db, room_id)
+    if room.kind == DiscussionRoomKind.DM:
+        raise DiscussionRoomInvalidStateError("Direct messages cannot be reviewed")
     if room.status != DiscussionRoomStatus.PENDING:
         raise DiscussionRoomInvalidStateError("Only pending rooms can be approved")
 
@@ -331,6 +458,8 @@ def reject_discussion_room(
         raise DiscussionForbiddenError
 
     room = _load_room(db, room_id)
+    if room.kind == DiscussionRoomKind.DM:
+        raise DiscussionRoomInvalidStateError("Direct messages cannot be reviewed")
     if room.status != DiscussionRoomStatus.PENDING:
         raise DiscussionRoomInvalidStateError("Only pending rooms can be rejected")
 
@@ -352,6 +481,8 @@ def archive_discussion_room(
         raise DiscussionForbiddenError
 
     room = _load_room(db, room_id)
+    if room.kind == DiscussionRoomKind.DM:
+        raise DiscussionRoomInvalidStateError("Direct messages cannot be archived here")
     if room.status not in {DiscussionRoomStatus.LIVE, DiscussionRoomStatus.PENDING}:
         raise DiscussionRoomInvalidStateError("Only live or pending rooms can be archived")
 
@@ -372,6 +503,8 @@ def unarchive_discussion_room(
         raise DiscussionForbiddenError
 
     room = _load_room(db, room_id)
+    if room.kind == DiscussionRoomKind.DM:
+        raise DiscussionRoomInvalidStateError("Direct messages cannot be restored here")
     if room.status != DiscussionRoomStatus.ARCHIVED:
         raise DiscussionRoomInvalidStateError("Only archived rooms can be restored")
 
@@ -396,6 +529,7 @@ def list_archived_custom_rooms(db: Session) -> list[DiscussionRoom]:
             )
             .where(
                 DiscussionRoom.status == DiscussionRoomStatus.ARCHIVED,
+                DiscussionRoom.kind == DiscussionRoomKind.GROUP,
                 DiscussionRoom.organization_id == get_default_organization_id(db),
             )
             .order_by(DiscussionRoom.reviewed_at.desc().nulls_last())

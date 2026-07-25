@@ -4,9 +4,14 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.discussion_room import (
     MAX_DISCUSSION_ROOM_NAME_LENGTH,
+    DiscussionRoomKind,
     DiscussionRoomMemberRole,
     DiscussionRoomStatus,
 )
+
+
+class DirectMessageCreateRequest(BaseModel):
+    member_id: int = Field(gt=0)
 
 
 class DiscussionRoomCreateRequest(BaseModel):
@@ -54,6 +59,7 @@ class DiscussionRoomResponse(BaseModel):
     id: int
     name: str
     description: str | None
+    kind: DiscussionRoomKind = DiscussionRoomKind.GROUP
     status: DiscussionRoomStatus
     room_id: str
     href: str
@@ -65,6 +71,8 @@ class DiscussionRoomResponse(BaseModel):
     created_at: datetime
     reviewed_at: datetime | None = None
     members: list[DiscussionRoomMemberResponse] = Field(default_factory=list)
+    peer_member_id: int | None = None
+    peer_full_name: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
