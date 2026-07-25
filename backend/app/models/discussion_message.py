@@ -39,6 +39,8 @@ class DiscussionMessage(Base):
         default=lambda: datetime.now(UTC),
         index=True,
     )
+    edited_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)
 
     author = relationship("Member")
     event = relationship("Event")

@@ -60,8 +60,15 @@ def discussion_room_id_for_custom_room(room_id: int) -> str:
     return custom_room_key(room_id)
 
 
+DELETED_MESSAGE_PLACEHOLDER = "This message was deleted"
+MESSAGE_EDIT_WINDOW_SECONDS = 15 * 60
+
+
 def _normalize_content(content: str) -> str:
-    cleaned = content.strip()
+    # Drop C0 controls (keep tab/newline) and DEL; reject empty after strip.
+    cleaned = "".join(
+        ch for ch in content if ch in "\t\n\r" or (ord(ch) >= 32 and ch != "\x7f")
+    ).strip()
     if not cleaned:
         raise DiscussionValidationError("Message content is required")
     if len(cleaned) > MAX_DISCUSSION_CONTENT_LENGTH:
@@ -301,6 +308,19 @@ def _create_message(
     db.commit()
     db.refresh(message)
     _ = message.author
+    try:
+        from app.services.discussion_message_notify_service import (
+            notify_new_discussion_message,
+        )
+
+        notify_new_discussion_message(db, message=message, author=author)
+    except Exception:
+        import logging
+
+        logging.getLogger(__name__).exception(
+            "Failed to create discussion message notifications for message %s",
+            message.id,
+        )
     return message
 
 
@@ -309,14 +329,18 @@ def build_message_response(
     *,
     reactions: dict[str, DiscussionReactionSummary] | None = None,
 ) -> DiscussionMessageResponse:
+    is_deleted = message.deleted_at is not None
     return DiscussionMessageResponse(
         id=message.id,
-        content=message.content,
+        content=DELETED_MESSAGE_PLACEHOLDER if is_deleted else message.content,
         event_id=message.event_id,
         custom_room_id=message.custom_room_id,
         created_at=message.created_at,
+        edited_at=None if is_deleted else message.edited_at,
+        deleted_at=message.deleted_at,
+        is_deleted=is_deleted,
         author=DiscussionMessageAuthor.model_validate(message.author),
-        reactions=reactions or {},
+        reactions={} if is_deleted else (reactions or {}),
     )
 
 
@@ -557,4 +581,105 @@ def upsert_discussion_read_state(
 
     db.commit()
     db.refresh(existing)
+
+    # Keep inbox unread watermark in sync with live read receipts.
+    from app.services.discussion_inbox_service import sync_inbox_read_watermark
+
+    sync_inbox_read_watermark(
+        db,
+        member=member,
+        room_id=room_id,
+        last_read_message_id=last_read_message_id,
+        last_read_at=message.created_at,
+    )
+
     return _read_receipt_response(existing, member)
+
+
+def _load_message_for_author_mutation(
+    db: Session,
+    *,
+    member: Member,
+    message_id: int,
+) -> DiscussionMessage:
+    message = db.scalars(
+        select(DiscussionMessage)
+        .options(joinedload(DiscussionMessage.author))
+        .where(DiscussionMessage.id == message_id)
+    ).first()
+    if message is None:
+        raise DiscussionMessageNotFoundError
+    if message.author_id != member.id:
+        raise DiscussionForbiddenError
+
+    if message.custom_room_id is not None:
+        from app.services.discussion_room_service import assert_can_access_custom_room
+
+        assert_can_access_custom_room(
+            db,
+            room_id=message.custom_room_id,
+            member=member,
+            for_messaging=True,
+        )
+    elif message.event_id is not None:
+        assert_can_access_event_discussion(
+            db,
+            event_id=message.event_id,
+            member=member,
+        )
+    else:
+        assert_can_access_board_discussion(member)
+
+    return message
+
+
+def soft_delete_discussion_message(
+    db: Session,
+    *,
+    member: Member,
+    message_id: int,
+) -> DiscussionMessage:
+    message = _load_message_for_author_mutation(
+        db,
+        member=member,
+        message_id=message_id,
+    )
+    if message.deleted_at is not None:
+        return message
+    message.deleted_at = datetime.now(UTC)
+    message.edited_at = None
+    # Scrub body so deleted private content is not retained in the row.
+    message.content = ""
+    db.commit()
+    db.refresh(message)
+    _ = message.author
+    return message
+
+
+def edit_discussion_message(
+    db: Session,
+    *,
+    member: Member,
+    message_id: int,
+    content: str,
+) -> DiscussionMessage:
+    message = _load_message_for_author_mutation(
+        db,
+        member=member,
+        message_id=message_id,
+    )
+    if message.deleted_at is not None:
+        raise DiscussionValidationError("Deleted messages cannot be edited")
+
+    age = datetime.now(UTC) - message.created_at.astimezone(UTC)
+    if age.total_seconds() > MESSAGE_EDIT_WINDOW_SECONDS:
+        raise DiscussionValidationError(
+            "Messages can only be edited within 15 minutes"
+        )
+
+    message.content = _normalize_content(content)
+    message.edited_at = datetime.now(UTC)
+    db.commit()
+    db.refresh(message)
+    _ = message.author
+    return message

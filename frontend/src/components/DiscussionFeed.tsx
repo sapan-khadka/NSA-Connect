@@ -8,23 +8,29 @@ import {
   type RefObject,
   type TouchEvent as ReactTouchEvent,
 } from "react";
-import { ArrowLeft, Send, Smile, SmilePlus } from "lucide-react";
+import { ArrowLeft, Send, Smile, SmilePlus, Trash2 } from "lucide-react";
 
 import { Avatar } from "../design-system/components/Avatar";
 import { useAuth } from "../context/useAuth";
+import { getApiErrorMessage } from "../lib/api-error";
+import type { MemberResponse } from "../lib/auth-api";
 import {
   DISCUSSION_REACTION_EMOJIS,
   discussionRoomIdFromScope,
   markDiscussionRoomRead,
   type DiscussionMessage,
+  type DiscussionMessageAuthor,
 } from "../lib/discussion-api";
+import { formatRelativeTimestamp } from "../lib/format-datetime";
+import { linkifyText } from "../lib/linkify-text";
+import { fetchMemberById } from "../lib/members-api";
 import {
   useDiscussion,
   type DiscussionPresenceUser,
   type DiscussionReadReceipt,
   type DiscussionStatus,
 } from "../lib/useEventDiscussion";
-import { formatRelativeTimestamp } from "../lib/format-datetime";
+import { MemberQuickViewDrawer } from "./MemberQuickViewDrawer";
 import { AppIcon } from "./ui/AppIcon";
 import { Card } from "./ui/Card";
 
@@ -456,6 +462,8 @@ function MessageBubble({
   onTouchEnd,
   onTouchMove,
   onContextMenu,
+  onAuthorClick,
+  onDeleteMessage,
 }: {
   message: DiscussionMessage;
   showMeta: boolean;
@@ -470,6 +478,8 @@ function MessageBubble({
   onTouchEnd?: (event: ReactTouchEvent) => void;
   onTouchMove?: (event: ReactTouchEvent) => void;
   onContextMenu?: (event: React.MouseEvent) => void;
+  onAuthorClick?: (author: DiscussionMessageAuthor) => void;
+  onDeleteMessage?: (messageId: number) => void;
 }) {
   const hasReactions =
     onToggleReaction != null &&
@@ -498,7 +508,18 @@ function MessageBubble({
         {!isOwn ? (
           <div className="w-7 shrink-0 pt-0.5">
             {showMeta ? (
-              <Avatar name={message.author.full_name} size="sm" />
+              onAuthorClick ? (
+                <button
+                  type="button"
+                  className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
+                  aria-label={`View ${message.author.full_name}'s profile`}
+                  onClick={() => onAuthorClick(message.author)}
+                >
+                  <Avatar name={message.author.full_name} size="sm" />
+                </button>
+              ) : (
+                <Avatar name={message.author.full_name} size="sm" />
+              )
             ) : null}
           </div>
         ) : null}
@@ -506,9 +527,19 @@ function MessageBubble({
         <div className={["min-w-0", isOwn ? "items-end" : "items-start"].join(" ")}>
           {showMeta && !isOwn ? (
             <div className="mb-1 flex items-baseline gap-2 px-1">
-              <span className="text-xs font-medium text-foreground">
-                {message.author.full_name}
-              </span>
+              {onAuthorClick ? (
+                <button
+                  type="button"
+                  className="text-xs font-medium text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
+                  onClick={() => onAuthorClick(message.author)}
+                >
+                  {message.author.full_name}
+                </button>
+              ) : (
+                <span className="text-xs font-medium text-foreground">
+                  {message.author.full_name}
+                </span>
+              )}
               <time
                 dateTime={message.created_at}
                 className="text-[10px] text-gray-400"
@@ -528,7 +559,23 @@ function MessageBubble({
                   : "rounded-bl-md bg-gray-100 text-foreground",
               ].join(" ")}
             >
-              <p className="whitespace-pre-wrap break-words">{message.content}</p>
+              <p
+                className={[
+                  "whitespace-pre-wrap break-words",
+                  message.is_deleted ? "italic text-gray-500" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                {message.is_deleted
+                  ? message.content
+                  : linkifyText(message.content)}
+              </p>
+              {message.edited_at && !message.is_deleted ? (
+                <span className="mt-1 block text-[10px] text-gray-400">
+                  Edited
+                </span>
+              ) : null}
               {isOwn && showMeta ? (
                 <time
                   dateTime={message.created_at}
@@ -539,8 +586,27 @@ function MessageBubble({
                 </time>
               ) : null}
             </div>
+            {isOwn &&
+            !message.is_deleted &&
+            onDeleteMessage &&
+            !reactionsDisabled ? (
+              <button
+                type="button"
+                className="absolute -top-2 right-0 hidden rounded-full bg-white p-1 text-gray-400 shadow-sm ring-1 ring-gray-200 hover:text-[var(--status-danger-text)] group-hover/bubble:inline-flex"
+                aria-label="Delete message"
+                onClick={() => {
+                  if (
+                    window.confirm("Delete this message for everyone?")
+                  ) {
+                    onDeleteMessage(message.id);
+                  }
+                }}
+              >
+                <AppIcon icon={Trash2} size="xs" className="text-current" />
+              </button>
+            ) : null}
 
-            {onToggleReaction ? (
+            {onToggleReaction && !message.is_deleted ? (
               <MessageReactions
                 message={message}
                 disabled={reactionsDisabled}
@@ -733,6 +799,8 @@ function DiscussionShell({
   reactionsDisabled = false,
   seenIndicator = null,
   viewerUserId,
+  onAuthorClick,
+  onDeleteMessage,
 }: {
   title: string;
   description?: string;
@@ -764,6 +832,8 @@ function DiscussionShell({
     readers: DiscussionReadReceipt[];
   } | null;
   viewerUserId: number | null;
+  onAuthorClick?: (author: DiscussionMessageAuthor) => void;
+  onDeleteMessage?: (messageId: number) => void;
 }) {
   const timeline = buildDiscussionTimeline(messages, viewerUserId);
   const isPane = variant === "pane";
@@ -889,6 +959,8 @@ function DiscussionShell({
                   event.preventDefault();
                   setLongPressedMessageId(item.message.id);
                 }}
+                onAuthorClick={onAuthorClick}
+                onDeleteMessage={onDeleteMessage}
               />
             );
           })}
@@ -967,6 +1039,7 @@ function LiveDiscussionFeed({
     error,
     loading,
     sendMessage,
+    deleteMessage,
     toggleReaction,
     markLatestAsRead,
     notifyTypingActivity,
@@ -974,6 +1047,11 @@ function LiveDiscussionFeed({
   const [draft, setDraft] = useState("");
   const [posting, setPosting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [profileMember, setProfileMember] = useState<MemberResponse | null>(
+    null,
+  );
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const nearBottomRef = useRef(true);
@@ -1044,41 +1122,80 @@ function LiveDiscussionFeed({
     }
   }
 
+  async function handleAuthorClick(author: DiscussionMessageAuthor) {
+    if (profileLoading) {
+      return;
+    }
+    setProfileLoading(true);
+    try {
+      const detail = await fetchMemberById(author.id);
+      setProfileMember(detail);
+      setProfileOpen(true);
+    } catch (caught) {
+      window.alert(getApiErrorMessage(caught));
+    } finally {
+      setProfileLoading(false);
+    }
+  }
+
   return (
-    <DiscussionShell
-      title={title}
-      description={description}
-      className={className}
-      variant={variant}
-      onBack={onBack}
-      headerAction={headerAction}
-      scopeKey={scopeKey}
-      messages={messages}
-      loading={loading}
-      loadError={error}
-      emptyLabel={emptyLabel}
-      draft={draft}
-      setDraft={(value) => {
-        setDraft(value);
-        if (value.trim()) {
-          notifyTypingActivity();
-        }
-      }}
-      posting={posting}
-      errorMessage={errorMessage}
-      onSubmit={handleSubmit}
-      bottomRef={bottomRef}
-      listRef={listRef}
-      onListScroll={handleListScroll}
-      statusBadge={<ConnectionStatusBadge status={status} />}
-      presence={<PresenceAvatarStack users={presentUsers} />}
-      typing={<TypingIndicator users={othersTyping} />}
-      sendDisabled={status !== "live"}
-      onToggleReaction={toggleReaction}
-      reactionsDisabled={status !== "live"}
-      seenIndicator={seenIndicator}
-      viewerUserId={member?.id ?? null}
-    />
+    <>
+      <DiscussionShell
+        title={title}
+        description={description}
+        className={className}
+        variant={variant}
+        onBack={onBack}
+        headerAction={headerAction}
+        scopeKey={scopeKey}
+        messages={messages}
+        loading={loading}
+        loadError={error}
+        emptyLabel={emptyLabel}
+        draft={draft}
+        setDraft={(value) => {
+          setDraft(value);
+          if (value.trim()) {
+            notifyTypingActivity();
+          }
+        }}
+        posting={posting}
+        errorMessage={errorMessage}
+        onSubmit={handleSubmit}
+        bottomRef={bottomRef}
+        listRef={listRef}
+        onListScroll={handleListScroll}
+        statusBadge={<ConnectionStatusBadge status={status} />}
+        presence={<PresenceAvatarStack users={presentUsers} />}
+        typing={<TypingIndicator users={othersTyping} />}
+        sendDisabled={status !== "live"}
+        onToggleReaction={toggleReaction}
+        reactionsDisabled={status !== "live"}
+        seenIndicator={seenIndicator}
+        viewerUserId={member?.id ?? null}
+        onAuthorClick={(author) => {
+          void handleAuthorClick(author);
+        }}
+        onDeleteMessage={(messageId) => {
+          try {
+            deleteMessage(messageId);
+          } catch (caught) {
+            setErrorMessage(
+              caught instanceof Error
+                ? caught.message
+                : "Could not delete message",
+            );
+          }
+        }}
+      />
+      <MemberQuickViewDrawer
+        member={profileMember}
+        open={profileOpen && profileMember != null}
+        onClose={() => {
+          setProfileOpen(false);
+        }}
+      />
+    </>
   );
 }
 
