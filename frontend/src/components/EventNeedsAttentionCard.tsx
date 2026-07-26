@@ -38,24 +38,26 @@ export function EventNeedsAttentionCard({
     <Card
       nested
       padding="none"
-      className={["space-y-3 p-3", className].filter(Boolean).join(" ")}
+      className={["event-health-attention-card space-y-2 p-0", className]
+        .filter(Boolean)
+        .join(" ")}
       aria-label="Needs Attention"
     >
-      <h3 className="text-[12px] font-semibold tracking-tight text-foreground">
-        Needs Attention
+      <h3 className="text-[11px] font-semibold tracking-tight text-foreground">
+        Needs attention
       </h3>
 
-      <ul className="space-y-2.5">
+      <ul className="space-y-1.5">
         {items.map((item) => (
-          <li key={item.id} className="flex items-start gap-2.5">
+          <li key={item.id} className="flex items-start gap-2">
             <span
               aria-hidden="true"
               className={[
-                "mt-1.5 h-2 w-2 shrink-0 rounded-full",
+                "mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full",
                 SEVERITY_DOT_CLASS[item.severity],
               ].join(" ")}
             />
-            <span className="min-w-0 text-[13px] leading-snug text-foreground">
+            <span className="min-w-0 text-[12px] leading-snug text-foreground">
               {item.label}
             </span>
           </li>

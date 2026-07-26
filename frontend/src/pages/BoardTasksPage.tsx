@@ -1,11 +1,11 @@
+import { Check, ChevronDown, Search, SlidersHorizontal } from "lucide-react";
 import {
-  Check,
-  ChevronDown,
-  Flag,
-  MoreHorizontal,
-  SlidersHorizontal,
-} from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { KanbanTaskDetailPanel } from "../components/kanban/KanbanTaskDetailPanel";
 import { AppIcon } from "../components/ui/AppIcon";
@@ -17,6 +17,7 @@ import {
   updateEventTask,
   updateEventTaskChecklistItem,
 } from "../lib/event-tasks-api";
+import { EVENT_TYPE_COLOR } from "../lib/event-types";
 import {
   buildMarkTaskCompleteRequest,
   getTaskDisplayName,
@@ -34,20 +35,41 @@ import {
 } from "../lib/kanban-status";
 import { isRoleAtLeast } from "../lib/roles";
 
+const EVENT_ACCENT_PALETTE = Object.values(EVENT_TYPE_COLOR);
+
+function eventAccentColor(eventId: number, eventName: string): string {
+  const seed = `${eventId}:${eventName}`;
+  let hash = 0;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0;
+  }
+  return EVENT_ACCENT_PALETTE[hash % EVENT_ACCENT_PALETTE.length] ?? "#0f766e";
+}
+
 type LoadState =
   | { status: "loading" }
   | { status: "ready"; tasks: KanbanTask[] }
   | { status: "error"; message: string };
 
-type WorkspaceView = "list" | "completed";
 type UrgencyFilter = "all" | "overdue" | "due_today" | "open";
-
-const PAGE_SIZE = 8;
+type TaskSort = "due" | "priority" | "event";
 
 const URGENCY_LABEL: Record<TaskUrgency, string> = {
   high: "High",
   medium: "Medium",
   low: "Low",
+};
+
+const URGENCY_RANK: Record<TaskUrgency, number> = {
+  high: 0,
+  medium: 1,
+  low: 2,
+};
+
+const STATUS_LABEL: Record<KanbanColumnId, string> = {
+  todo: "To do",
+  in_progress: "In progress",
+  done: "Done",
 };
 
 export type BoardTasksStats = {
@@ -56,6 +78,13 @@ export type BoardTasksStats = {
   overdue: number;
   completed: number;
   completedPercent: number;
+};
+
+export type BoardTaskSections = {
+  overdue: KanbanTask[];
+  today: KanbanTask[];
+  upcoming: KanbanTask[];
+  completed: KanbanTask[];
 };
 
 /** Derived from GET /v1/event-tasks/mine — no extra fetch. */
@@ -115,31 +144,80 @@ export function getFocusTasks(
   return [...overdue, ...dueToday];
 }
 
-function formatDueDate(isoDate: string | null, now = new Date()): string {
-  if (!isoDate) {
-    return "—";
+function dueSortKey(task: KanbanTask): number {
+  if (!task.due_date) {
+    return Number.POSITIVE_INFINITY;
   }
-  const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) {
-    return "—";
+  const ms = new Date(task.due_date).getTime();
+  return Number.isNaN(ms) ? Number.POSITIVE_INFINITY : ms;
+}
+
+function sortTasks(tasks: KanbanTask[], sort: TaskSort): KanbanTask[] {
+  const copy = [...tasks];
+  copy.sort((left, right) => {
+    if (sort === "priority") {
+      const urgencyDelta =
+        URGENCY_RANK[getTaskUrgency(left)] - URGENCY_RANK[getTaskUrgency(right)];
+      if (urgencyDelta !== 0) {
+        return urgencyDelta;
+      }
+    }
+    if (sort === "event") {
+      const eventDelta = left.eventName.localeCompare(right.eventName);
+      if (eventDelta !== 0) {
+        return eventDelta;
+      }
+    }
+    const dueDelta = dueSortKey(left) - dueSortKey(right);
+    if (dueDelta !== 0) {
+      return dueDelta;
+    }
+    return getTaskDisplayName(left).localeCompare(getTaskDisplayName(right));
+  });
+  return copy;
+}
+
+/** Split open work into Linear-style buckets; completed is separate. */
+export function partitionBoardTasks(
+  tasks: KanbanTask[],
+  now: Date = new Date(),
+): BoardTaskSections {
+  const overdue: KanbanTask[] = [];
+  const today: KanbanTask[] = [];
+  const upcoming: KanbanTask[] = [];
+  const completed: KanbanTask[] = [];
+
+  for (const task of tasks) {
+    if (getKanbanColumn(task) === "done") {
+      completed.push(task);
+      continue;
+    }
+    if (task.is_overdue) {
+      overdue.push(task);
+      continue;
+    }
+    if (task.due_date && isToday(new Date(task.due_date), now)) {
+      today.push(task);
+      continue;
+    }
+    upcoming.push(task);
   }
-  if (isToday(date, now)) {
-    return "Today";
-  }
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
+
+  return {
+    overdue: sortTasks(overdue, "due"),
+    today: sortTasks(today, "due"),
+    upcoming: sortTasks(upcoming, "due"),
+    completed: sortTasks(completed, "due"),
+  };
 }
 
 function formatShortDue(isoDate: string | null, now = new Date()): string {
   if (!isoDate) {
-    return "—";
+    return "No due date";
   }
   const date = new Date(isoDate);
   if (Number.isNaN(date.getTime())) {
-    return "—";
+    return "No due date";
   }
   if (isToday(date, now)) {
     return "Today";
@@ -181,24 +259,20 @@ function TaskCheck({
   );
 }
 
-function PriorityCell({ urgency }: { urgency: TaskUrgency }) {
+function PriorityBadge({ urgency }: { urgency: TaskUrgency }) {
   return (
     <span
       className={["my-tasks-priority", `is-${urgency}`].join(" ")}
       title="Based on due date urgency"
     >
-      <AppIcon
-        icon={Flag}
-        size="xs"
-        className="my-tasks-priority-flag text-current"
-      />
-      {URGENCY_LABEL[urgency]}
+      <span className="my-tasks-priority-dot" aria-hidden="true" />
+      <span className="my-tasks-priority-label">{URGENCY_LABEL[urgency]}</span>
     </span>
   );
 }
 
-/** Single segmented control — quieter than dual action pills. */
-function StatusSegment({
+/** Compact status control — badge + native select menu. */
+function StatusMenu({
   task,
   busy,
   onSetColumn,
@@ -208,273 +282,175 @@ function StatusSegment({
   onSetColumn: (column: KanbanColumnId) => void;
 }) {
   const column = getKanbanColumn(task);
-  const options: Array<{
-    id: KanbanColumnId;
-    label: string;
-    className?: string;
-  }> = [
-    { id: "todo", label: "To do" },
-    { id: "in_progress", label: "In progress", className: "is-progress" },
-    { id: "done", label: "Done", className: "is-done" },
-  ];
 
   return (
-    <div
-      className="my-tasks-status-seg"
-      role="group"
-      aria-label="Set task status"
+    <label
+      className={["my-tasks-status-menu", `is-${column}`].join(" ")}
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
     >
-      {options.map((option) => {
-        const pressed = column === option.id;
-        return (
-          <button
-            key={option.id}
-            type="button"
-            disabled={busy || pressed}
-            aria-pressed={pressed}
-            className={option.className}
-            onClick={(event) => {
-              event.stopPropagation();
-              onSetColumn(option.id);
-            }}
-          >
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
+      <span className="my-tasks-status-menu__dot" aria-hidden="true" />
+      <select
+        aria-label="Set task status"
+        value={column}
+        disabled={busy}
+        onChange={(event) =>
+          onSetColumn(event.target.value as KanbanColumnId)
+        }
+      >
+        <option value="todo">{STATUS_LABEL.todo}</option>
+        <option value="in_progress">{STATUS_LABEL.in_progress}</option>
+        <option value="done">{STATUS_LABEL.done}</option>
+      </select>
+      <AppIcon
+        icon={ChevronDown}
+        size="xs"
+        className="my-tasks-status-menu__caret text-current"
+      />
+    </label>
   );
 }
 
-const STATUS_LABEL: Record<KanbanColumnId, string> = {
-  todo: "To do",
-  in_progress: "In progress",
-  done: "Done",
-};
-
-type MyTasksTaskListProps = {
-  tasks: KanbanTask[];
-  isMobile: boolean;
+type TaskRowProps = {
+  task: KanbanTask;
   completedView?: boolean;
-  movingTaskId: number | null;
-  onOpenTask: (taskId: number) => void;
-  onCompleteTask: (task: KanbanTask) => void;
-  onMoveTask: (taskId: number, column: KanbanColumnId) => void;
+  busy: boolean;
+  onOpen: () => void;
+  onComplete: () => void;
+  onMove: (column: KanbanColumnId) => void;
 };
 
-/**
- * Desktop: 7-column table. Mobile (< md): MembersTable-style stacked cards.
- */
-function MyTasksTaskList({
-  tasks,
-  isMobile,
+function TaskRow({
+  task,
   completedView = false,
-  movingTaskId,
-  onOpenTask,
-  onCompleteTask,
-  onMoveTask,
-}: MyTasksTaskListProps) {
-  if (isMobile) {
+  busy,
+  onOpen,
+  onComplete,
+  onMove,
+}: TaskRowProps) {
+  const title = getTaskDisplayName(task);
+  const urgency = getTaskUrgency(task);
+  const column = getKanbanColumn(task);
+  const eventColor = eventAccentColor(task.eventId, task.eventName);
+
+  return (
+    <li>
+      <article className="my-tasks-row">
+        <TaskCheck
+          done={column === "done"}
+          busy={busy}
+          label={title}
+          onComplete={completedView ? undefined : onComplete}
+        />
+
+        <button
+          type="button"
+          className="my-tasks-row__main"
+          onClick={onOpen}
+        >
+          <span className="my-tasks-task-name">{title}</span>
+          <span className="my-tasks-task-project">
+            <span
+              className="my-tasks-event-dot"
+              style={{ backgroundColor: eventColor }}
+              aria-hidden="true"
+            />
+            <span className="my-tasks-event-name">{task.eventName}</span>
+            {!isSimpleKanbanTask(task) ? (
+              <span className="my-tasks-event-meta"> · Checklist</span>
+            ) : null}
+          </span>
+        </button>
+
+        <PriorityBadge urgency={urgency} />
+        <span
+          className={[
+            "my-tasks-due",
+            task.is_overdue ? "is-overdue" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          {formatShortDue(task.due_date)}
+        </span>
+
+        <StatusMenu task={task} busy={busy} onSetColumn={onMove} />
+      </article>
+    </li>
+  );
+}
+
+type TaskSectionProps = {
+  id: string;
+  title: string;
+  count: number;
+  tone?: "overdue" | "today" | "upcoming" | "completed";
+  emptyContent?: ReactNode;
+  collapsible?: boolean;
+  defaultOpen?: boolean;
+  children: ReactNode;
+};
+
+function TaskSection({
+  id,
+  title,
+  count,
+  tone = "upcoming",
+  emptyContent,
+  collapsible = false,
+  defaultOpen = true,
+  children,
+}: TaskSectionProps) {
+  if (count === 0 && emptyContent == null) {
+    return null;
+  }
+
+  const head = (
+    <>
+      <h2 id={id} className="my-tasks-section__title">
+        {title}
+      </h2>
+      <span
+        className={["my-tasks-section__count", `is-${tone}`]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        {count}
+      </span>
+    </>
+  );
+
+  const body =
+    count === 0 ? (
+      <div className="my-tasks-section__empty">{emptyContent}</div>
+    ) : (
+      <ul className="my-tasks-row-list">{children}</ul>
+    );
+
+  if (collapsible) {
     return (
-      <ul className="my-tasks-mobile-list">
-        {tasks.map((task) => {
-          const title = getTaskDisplayName(task);
-          const urgency = getTaskUrgency(task);
-          const column = getKanbanColumn(task);
-          const busy = movingTaskId === task.id;
-          const assignee =
-            task.assignee_name?.trim() ||
-            (task.assignee_id != null ? `Member #${task.assignee_id}` : "—");
-
-          return (
-            <li key={task.id}>
-              <article
-                className="my-tasks-card"
-                tabIndex={0}
-                aria-label={`Open ${title}`}
-                onClick={() => onOpenTask(task.id)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    onOpenTask(task.id);
-                  }
-                }}
-              >
-                <div className="my-tasks-card-top">
-                  <TaskCheck
-                    done={column === "done"}
-                    busy={busy}
-                    label={title}
-                    onComplete={
-                      completedView
-                        ? undefined
-                        : () => {
-                            onCompleteTask(task);
-                          }
-                    }
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="my-tasks-card-heading">
-                      <div className="min-w-0">
-                        <p className="my-tasks-task-name">{title}</p>
-                        <p className="my-tasks-task-project">{task.eventName}</p>
-                      </div>
-                      <PriorityCell urgency={urgency} />
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className="my-tasks-row-menu"
-                    aria-label={`Open ${title}`}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onOpenTask(task.id);
-                    }}
-                  >
-                    <AppIcon
-                      icon={MoreHorizontal}
-                      size="sm"
-                      className="text-current"
-                    />
-                  </button>
-                </div>
-
-                <dl className="my-tasks-card-meta">
-                  <div>
-                    <dt>Status</dt>
-                    <dd>{STATUS_LABEL[column]}</dd>
-                  </div>
-                  <div>
-                    <dt>Assignee</dt>
-                    <dd>{assignee}</dd>
-                  </div>
-                  <div>
-                    <dt>Due</dt>
-                    <dd>
-                      <span className="my-tasks-due">
-                        {formatDueDate(task.due_date)}
-                      </span>
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Event</dt>
-                    <dd>{task.eventName || "—"}</dd>
-                  </div>
-                </dl>
-
-                <div
-                  className="my-tasks-card-actions"
-                  onClick={(event) => event.stopPropagation()}
-                  onKeyDown={(event) => event.stopPropagation()}
-                >
-                  <StatusSegment
-                    task={task}
-                    busy={busy}
-                    onSetColumn={(next) => {
-                      onMoveTask(task.id, next);
-                    }}
-                  />
-                </div>
-              </article>
-            </li>
-          );
-        })}
-      </ul>
+      <details
+        className="my-tasks-section my-tasks-section--collapsible"
+        open={defaultOpen}
+      >
+        <summary className="my-tasks-section__head my-tasks-section__summary">
+          {head}
+          <AppIcon
+            icon={ChevronDown}
+            size="xs"
+            className="my-tasks-section__chevron text-label"
+          />
+        </summary>
+        {body}
+      </details>
     );
   }
 
   return (
-    <div className="my-tasks-table-wrap">
-      <table className="my-tasks-table">
-        <thead>
-          <tr>
-            <th scope="col">
-              <span className="sr-only">Complete</span>
-            </th>
-            <th scope="col">Task</th>
-            <th scope="col">Event</th>
-            <th scope="col">Priority</th>
-            <th scope="col">Due date</th>
-            <th scope="col">Status</th>
-            <th scope="col">
-              <span className="sr-only">
-                {completedView ? "Actions" : "Open"}
-              </span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {tasks.map((task) => {
-            const title = getTaskDisplayName(task);
-            const urgency = getTaskUrgency(task);
-            const column = getKanbanColumn(task);
-            const busy = movingTaskId === task.id;
-            return (
-              <tr key={task.id}>
-                <td>
-                  <TaskCheck
-                    done={column === "done"}
-                    busy={busy}
-                    label={title}
-                    onComplete={
-                      completedView
-                        ? undefined
-                        : () => {
-                            onCompleteTask(task);
-                          }
-                    }
-                  />
-                </td>
-                <td>
-                  <div className="my-tasks-table-task">
-                    <button type="button" onClick={() => onOpenTask(task.id)}>
-                      <span className="my-tasks-task-name">{title}</span>
-                      {!completedView && !isSimpleKanbanTask(task) ? (
-                        <span className="my-tasks-task-project">Checklist</span>
-                      ) : null}
-                    </button>
-                  </div>
-                </td>
-                <td>
-                  <span className="text-label">{task.eventName}</span>
-                </td>
-                <td>
-                  <PriorityCell urgency={urgency} />
-                </td>
-                <td>
-                  <span className="my-tasks-due">
-                    {formatDueDate(task.due_date)}
-                  </span>
-                </td>
-                <td>
-                  <StatusSegment
-                    task={task}
-                    busy={busy}
-                    onSetColumn={(next) => {
-                      onMoveTask(task.id, next);
-                    }}
-                  />
-                </td>
-                <td>
-                  <button
-                    type="button"
-                    className="my-tasks-row-menu"
-                    aria-label={`Open ${title}`}
-                    onClick={() => onOpenTask(task.id)}
-                  >
-                    <AppIcon
-                      icon={MoreHorizontal}
-                      size="sm"
-                      className="text-current"
-                    />
-                  </button>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <section className="my-tasks-section" aria-labelledby={id}>
+      <header className="my-tasks-section__head">{head}</header>
+      {body}
+    </section>
   );
 }
 
@@ -484,11 +460,11 @@ export function BoardTasksPage() {
   const [movingTaskId, setMovingTaskId] = useState<number | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [moveError, setMoveError] = useState<string | null>(null);
-  const [view, setView] = useState<WorkspaceView>("list");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [urgencyFilter, setUrgencyFilter] = useState<UrgencyFilter>("all");
   const [eventFilter, setEventFilter] = useState<number | "all">("all");
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<TaskSort>("due");
 
   const loadTasks = useCallback(async () => {
     setLoadState({ status: "loading" });
@@ -510,10 +486,6 @@ export function BoardTasksPage() {
   useEffect(() => {
     void loadTasks();
   }, [loadTasks]);
-
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [view, urgencyFilter, eventFilter]);
 
   function replaceTask(updated: KanbanTask) {
     setLoadState((current) => {
@@ -628,7 +600,6 @@ export function BoardTasksPage() {
 
   const tasks = loadState.status === "ready" ? loadState.tasks : [];
   const stats = useMemo(() => calcBoardTasksStats(tasks), [tasks]);
-  const focusTasks = useMemo(() => getFocusTasks(tasks), [tasks]);
   const selectedTask =
     selectedTaskId !== null
       ? (tasks.find((task) => task.id === selectedTaskId) ?? null)
@@ -644,66 +615,74 @@ export function BoardTasksPage() {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [tasks]);
 
-  const filteredOpenTasks = useMemo(() => {
+  const filteredTasks = useMemo(() => {
+    const query = search.trim().toLowerCase();
     return tasks.filter((task) => {
-      if (getKanbanColumn(task) === "done") {
+      if (eventFilter !== "all" && task.eventId !== eventFilter) {
         return false;
       }
-      if (eventFilter !== "all" && task.eventId !== eventFilter) {
+      if (query) {
+        const haystack = `${getTaskDisplayName(task)} ${task.eventName}`.toLowerCase();
+        if (!haystack.includes(query)) {
+          return false;
+        }
+      }
+      const column = getKanbanColumn(task);
+      if (urgencyFilter === "open" && column === "done") {
         return false;
       }
       if (urgencyFilter === "overdue") {
-        return task.is_overdue;
+        return column !== "done" && task.is_overdue;
       }
       if (urgencyFilter === "due_today") {
-        return Boolean(
-          task.due_date && isToday(new Date(task.due_date)) && !task.is_overdue,
-        );
-      }
-      if (urgencyFilter === "open") {
-        return true;
-      }
-      return true;
-    });
-  }, [tasks, eventFilter, urgencyFilter]);
-
-  const filteredCompletedTasks = useMemo(() => {
-    return tasks.filter((task) => {
-      if (getKanbanColumn(task) !== "done") {
-        return false;
-      }
-      if (eventFilter !== "all" && task.eventId !== eventFilter) {
-        return false;
-      }
-      return true;
-    });
-  }, [tasks, eventFilter]);
-
-  const attentionTasks = useMemo(() => {
-    return focusTasks.filter((task) => {
-      if (eventFilter !== "all" && task.eventId !== eventFilter) {
-        return false;
-      }
-      if (urgencyFilter === "overdue") {
-        return task.is_overdue;
-      }
-      if (urgencyFilter === "due_today") {
-        return Boolean(
-          task.due_date && isToday(new Date(task.due_date)) && !task.is_overdue,
+        return (
+          column !== "done" &&
+          Boolean(
+            task.due_date &&
+              isToday(new Date(task.due_date)) &&
+              !task.is_overdue,
+          )
         );
       }
       return true;
     });
-  }, [focusTasks, eventFilter, urgencyFilter]);
+  }, [tasks, eventFilter, urgencyFilter, search]);
 
-  const listSource =
-    view === "completed" ? filteredCompletedTasks : filteredOpenTasks;
-  const visibleTasks = listSource.slice(0, visibleCount);
-  const canLoadMore = visibleCount < listSource.length;
-  const filtersActive = urgencyFilter !== "all" || eventFilter !== "all";
+  const sections = useMemo(() => {
+    const partitioned = partitionBoardTasks(filteredTasks);
+    return {
+      overdue: sortTasks(partitioned.overdue, sort),
+      today: sortTasks(partitioned.today, sort),
+      upcoming: sortTasks(partitioned.upcoming, sort),
+      completed: sortTasks(partitioned.completed, sort),
+    };
+  }, [filteredTasks, sort]);
+
+  const filtersActive =
+    urgencyFilter !== "all" || eventFilter !== "all" || search.trim() !== "";
+  const openCount =
+    sections.overdue.length + sections.today.length + sections.upcoming.length;
 
   if (!member) {
     return null;
+  }
+
+  function renderRows(sectionTasks: KanbanTask[], completedView = false) {
+    return sectionTasks.map((task) => (
+      <TaskRow
+        key={task.id}
+        task={task}
+        completedView={completedView}
+        busy={movingTaskId === task.id}
+        onOpen={() => setSelectedTaskId(task.id)}
+        onComplete={() => {
+          void handleCompleteTask(task);
+        }}
+        onMove={(column) => {
+          void handleMoveTask(task.id, column);
+        }}
+      />
+    ));
   }
 
   return (
@@ -712,25 +691,89 @@ export function BoardTasksPage() {
         <div>
           <h1 className="my-tasks-title">My Tasks</h1>
           <p className="my-tasks-subtitle">
-            Assigned work across your events — clear overdue items first, then
-            keep the rest moving.
+            What needs your attention first — then today, upcoming, and done.
           </p>
         </div>
-        <button
-          type="button"
-          className="my-tasks-filter-btn"
-          aria-expanded={filtersOpen}
-          onClick={() => setFiltersOpen((open) => !open)}
-        >
-          <AppIcon icon={SlidersHorizontal} size="sm" className="text-current" />
-          Filters
-          {filtersActive ? (
-            <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-white">
-              On
-            </span>
-          ) : null}
-        </button>
       </header>
+
+      <section className="my-tasks-kpi" aria-label="My tasks summary">
+        <article className="my-tasks-kpi__cell">
+          <p className="my-tasks-kpi__value">{stats.assigned}</p>
+          <p className="my-tasks-kpi__label">Total</p>
+        </article>
+        <article
+          className={[
+            "my-tasks-kpi__cell",
+            stats.overdue > 0 ? "is-overdue" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          <p className="my-tasks-kpi__value">{stats.overdue}</p>
+          <p className="my-tasks-kpi__label">Overdue</p>
+        </article>
+        <article
+          className={[
+            "my-tasks-kpi__cell",
+            stats.dueToday > 0 ? "is-today" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          <p className="my-tasks-kpi__value">{stats.dueToday}</p>
+          <p className="my-tasks-kpi__label">Due today</p>
+        </article>
+        <article className="my-tasks-kpi__cell is-done">
+          <p className="my-tasks-kpi__value">{stats.completedPercent}%</p>
+          <p className="my-tasks-kpi__label">Completed</p>
+        </article>
+      </section>
+
+      <div className="my-tasks-toolbar-bar">
+        <label className="my-tasks-search">
+          <AppIcon icon={Search} size="sm" className="text-label" />
+          <span className="sr-only">Search tasks</span>
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search tasks…"
+          />
+        </label>
+
+        <div className="my-tasks-toolbar-bar__actions">
+          <button
+            type="button"
+            className="my-tasks-filter-btn"
+            aria-expanded={filtersOpen}
+            onClick={() => setFiltersOpen((open) => !open)}
+          >
+            <AppIcon
+              icon={SlidersHorizontal}
+              size="sm"
+              className="text-current"
+            />
+            Filter
+            {filtersActive ? (
+              <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                On
+              </span>
+            ) : null}
+          </button>
+
+          <label className="my-tasks-sort">
+            <span className="sr-only">Sort</span>
+            <select
+              value={sort}
+              onChange={(event) => setSort(event.target.value as TaskSort)}
+            >
+              <option value="due">Sort: Due date</option>
+              <option value="priority">Sort: Priority</option>
+              <option value="event">Sort: Event</option>
+            </select>
+          </label>
+        </div>
+      </div>
 
       {filtersOpen ? (
         <div className="my-tasks-filter-panel" aria-label="Task filters">
@@ -743,7 +786,7 @@ export function BoardTasksPage() {
                 setUrgencyFilter(event.target.value as UrgencyFilter)
               }
             >
-              <option value="all">All open</option>
+              <option value="all">All</option>
               <option value="overdue">Overdue</option>
               <option value="due_today">Due today</option>
               <option value="open">Open only</option>
@@ -773,68 +816,13 @@ export function BoardTasksPage() {
             onClick={() => {
               setUrgencyFilter("all");
               setEventFilter("all");
+              setSearch("");
             }}
           >
             Reset
           </button>
         </div>
       ) : null}
-
-      <div className="my-tasks-toolbar">
-        <div
-          role="tablist"
-          aria-label="Task views"
-          className="my-tasks-tabs"
-        >
-          {(
-            [
-              ["list", "List"],
-              ["completed", "Completed"],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              id={`my-tasks-tab-${id}`}
-              aria-selected={view === id}
-              className="my-tasks-tab"
-              onClick={() => setView(id)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        <div className="my-tasks-stats" aria-label="My tasks summary">
-          <span className="my-tasks-stat">
-            <strong>{stats.assigned}</strong> Total
-          </span>
-          <span
-            className={[
-              "my-tasks-stat",
-              stats.overdue > 0 ? "is-overdue" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-          >
-            <strong>{stats.overdue}</strong> Overdue
-          </span>
-          <span
-            className={[
-              "my-tasks-stat",
-              stats.dueToday > 0 ? "is-today" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-          >
-            <strong>{stats.dueToday}</strong> Due today
-          </span>
-          <span className="my-tasks-stat is-done">
-            <strong>{stats.completedPercent}%</strong> Completed
-          </span>
-        </div>
-      </div>
 
       {moveError ? (
         <div role="alert" className="ds-alert-banner">
@@ -867,202 +855,72 @@ export function BoardTasksPage() {
         </div>
       ) : null}
 
-      {loadState.status === "ready" &&
-      tasks.length > 0 &&
-      view === "list" ? (
-        <>
-          {attentionTasks.length > 0 ? (
-            <section className="my-tasks-panel" aria-label="Needs attention">
-              <div className="my-tasks-panel-head">
-                <h2 className="my-tasks-panel-title">Needs attention</h2>
-                <span className="my-tasks-count-badge">
-                  {attentionTasks.length}
-                </span>
+      {loadState.status === "ready" && tasks.length > 0 ? (
+        <div className="my-tasks-sections">
+          {openCount === 0 && sections.completed.length === 0 ? (
+            <div className="my-tasks-panel">
+              <div className="my-tasks-empty">
+                <h3>No tasks match these filters</h3>
+                <p>Reset filters or clear search to see your full list.</p>
               </div>
-              <ul className="my-tasks-attention-list">
-                {attentionTasks.map((task) => {
-                  const title = getTaskDisplayName(task);
-                  const urgency = getTaskUrgency(task);
-                  const busy = movingTaskId === task.id;
-                  return (
-                    <li key={task.id}>
-                      <div className="my-tasks-attention-row">
-                        <TaskCheck
-                          done={false}
-                          busy={busy}
-                          label={title}
-                          onComplete={() => {
-                            void handleCompleteTask(task);
-                          }}
-                        />
-                        <span
-                          aria-hidden="true"
-                          className={[
-                            "my-tasks-dot",
-                            task.is_overdue ? "is-overdue" : "is-today",
-                          ].join(" ")}
-                        />
-                        <button
-                          type="button"
-                          className="my-tasks-cell-main border-0 bg-transparent p-0 text-left"
-                          onClick={() => setSelectedTaskId(task.id)}
-                        >
-                          <p className="my-tasks-task-name">{title}</p>
-                          <p className="my-tasks-task-project">
-                            {task.eventName}
-                          </p>
-                        </button>
-                        <div className="my-tasks-attention-meta contents max-[900px]:flex">
-                          <span
-                            className={
-                              task.is_overdue
-                                ? "my-tasks-pill is-overdue"
-                                : "my-tasks-pill is-today"
-                            }
-                          >
-                            {task.is_overdue ? "Overdue" : "Due today"}
-                          </span>
-                          <PriorityCell urgency={urgency} />
-                          <span className="my-tasks-due">
-                            {formatShortDue(task.due_date)}
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          className="my-tasks-row-menu"
-                          aria-label={`Open ${title}`}
-                          onClick={() => setSelectedTaskId(task.id)}
-                        >
-                          <AppIcon
-                            icon={MoreHorizontal}
-                            size="sm"
-                            className="text-current"
-                          />
-                        </button>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
+            </div>
           ) : null}
 
-          <section className="my-tasks-panel" aria-label="All tasks">
-            <div className="my-tasks-panel-head">
-              <h2 className="my-tasks-panel-title">All tasks</h2>
-              <span className="text-xs font-medium tabular-nums text-label">
-                {filteredOpenTasks.length}
-              </span>
-            </div>
+          <TaskSection
+            id="my-tasks-overdue"
+            title="Overdue"
+            count={sections.overdue.length}
+            tone="overdue"
+            emptyContent={
+              filtersActive ? undefined : (
+                <p className="my-tasks-section__empty-title">Nothing overdue</p>
+              )
+            }
+          >
+            {renderRows(sections.overdue)}
+          </TaskSection>
 
-            {filteredOpenTasks.length === 0 ? (
-              <div className="my-tasks-empty">
-                <h3>No open tasks match these filters</h3>
-                <p>Reset filters or switch to Completed to review finished work.</p>
-              </div>
-            ) : (
-              <>
-                <MyTasksTaskList
-                  tasks={visibleTasks}
-                  isMobile={false}
-                  movingTaskId={movingTaskId}
-                  onOpenTask={setSelectedTaskId}
-                  onCompleteTask={(task) => {
-                    void handleCompleteTask(task);
-                  }}
-                  onMoveTask={(taskId, column) => {
-                    void handleMoveTask(taskId, column);
-                  }}
-                />
-
-                <div className="my-tasks-footer">
-                  <p className="my-tasks-footer-meta">
-                    Showing 1 to {Math.min(visibleCount, listSource.length)} of{" "}
-                    {listSource.length} tasks
+          <TaskSection
+            id="my-tasks-today"
+            title="Today"
+            count={sections.today.length}
+            tone="today"
+            emptyContent={
+              filtersActive ? undefined : (
+                <>
+                  <p className="my-tasks-section__empty-title">
+                    You’re all caught up today
                   </p>
-                  {canLoadMore ? (
-                    <button
-                      type="button"
-                      className="my-tasks-load-more"
-                      onClick={() =>
-                        setVisibleCount((count) => count + PAGE_SIZE)
-                      }
-                    >
-                      Load more
-                      <AppIcon
-                        icon={ChevronDown}
-                        size="sm"
-                        className="text-current"
-                      />
-                    </button>
-                  ) : (
-                    <span />
-                  )}
-                </div>
-              </>
-            )}
-          </section>
-        </>
-      ) : null}
+                  <p className="my-tasks-section__empty-copy">
+                    Enjoy the rest of your day.
+                  </p>
+                </>
+              )
+            }
+          >
+            {renderRows(sections.today)}
+          </TaskSection>
 
-      {loadState.status === "ready" &&
-      tasks.length > 0 &&
-      view === "completed" ? (
-        <section className="my-tasks-panel" aria-label="Completed tasks">
-          <div className="my-tasks-panel-head">
-            <h2 className="my-tasks-panel-title">Completed</h2>
-            <span className="text-xs font-medium tabular-nums text-label">
-              {filteredCompletedTasks.length}
-            </span>
-          </div>
+          <TaskSection
+            id="my-tasks-upcoming"
+            title="Upcoming"
+            count={sections.upcoming.length}
+            tone="upcoming"
+          >
+            {renderRows(sections.upcoming)}
+          </TaskSection>
 
-          {filteredCompletedTasks.length === 0 ? (
-            <div className="my-tasks-empty">
-              <h3>No completed tasks yet</h3>
-              <p>Finished work will land here so you can reopen details anytime.</p>
-            </div>
-          ) : (
-            <>
-              <MyTasksTaskList
-                tasks={visibleTasks}
-                isMobile={false}
-                completedView
-                movingTaskId={movingTaskId}
-                onOpenTask={setSelectedTaskId}
-                onCompleteTask={(task) => {
-                  void handleCompleteTask(task);
-                }}
-                onMoveTask={(taskId, column) => {
-                  void handleMoveTask(taskId, column);
-                }}
-              />
-              <div className="my-tasks-footer">
-                <p className="my-tasks-footer-meta">
-                  Showing 1 to {Math.min(visibleCount, listSource.length)} of{" "}
-                  {listSource.length} tasks
-                </p>
-                {canLoadMore ? (
-                  <button
-                    type="button"
-                    className="my-tasks-load-more"
-                    onClick={() =>
-                      setVisibleCount((count) => count + PAGE_SIZE)
-                    }
-                  >
-                    Load more
-                    <AppIcon
-                      icon={ChevronDown}
-                      size="sm"
-                      className="text-current"
-                    />
-                  </button>
-                ) : (
-                  <span />
-                )}
-              </div>
-            </>
-          )}
-        </section>
+          <TaskSection
+            id="my-tasks-completed"
+            title="Completed"
+            count={sections.completed.length}
+            tone="completed"
+            collapsible
+            defaultOpen={false}
+          >
+            {renderRows(sections.completed, true)}
+          </TaskSection>
+        </div>
       ) : null}
 
       {selectedTask ? (

@@ -1,7 +1,12 @@
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createMockMember, renderWithRouter } from "../test/test-utils";
+
+async function eventsNav() {
+  return within(await screen.findByRole("navigation", { name: "Events sections" }));
+}
 
 vi.mock("../lib/events-api", () => ({
   fetchEvents: vi.fn().mockResolvedValue({ events: [], total: 0 }),
@@ -91,7 +96,7 @@ describe("EventsHubLayout", () => {
     cleanup();
   });
 
-  it("shows Calendar and My tasks tabs for general members", async () => {
+  it("shows compact primary tabs for general members", async () => {
     renderWithRouter(undefined, {
       initialEntries: ["/events/calendar"],
       auth: {
@@ -100,22 +105,26 @@ describe("EventsHubLayout", () => {
       },
     });
 
-    expect(await screen.findByRole("link", { name: /Calendar/ })).toHaveAttribute(
+    const nav = await eventsNav();
+    expect(nav.getByRole("link", { name: /Calendar/ })).toHaveAttribute(
       "href",
       "/events/calendar",
     );
-    expect(screen.getByRole("link", { name: /My tasks/ })).toHaveAttribute(
+    expect(nav.getByRole("link", { name: /^Tasks/ })).toHaveAttribute(
       "href",
       "/events/tasks",
     );
-    expect(screen.getByRole("link", { name: /Photo archive/ })).toHaveAttribute(
+    expect(nav.getByRole("link", { name: /Archive/ })).toHaveAttribute(
       "href",
       "/events/photos",
     );
+    expect(nav.getByRole("button", { name: /More events sections/i })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Events" })).not.toBeInTheDocument();
+    expect(nav.queryByRole("link", { name: /Photo archive/ })).not.toBeInTheDocument();
+    expect(nav.queryByRole("link", { name: /My tasks/ })).not.toBeInTheDocument();
   });
 
-  it("shows My tasks tab for board members", async () => {
+  it("shows Tasks tab for board members", async () => {
     renderWithRouter(undefined, {
       initialEntries: ["/events/tasks"],
       auth: {
@@ -124,12 +133,13 @@ describe("EventsHubLayout", () => {
       },
     });
 
-    const myTasksTab = await screen.findByRole("link", { name: /My tasks/ });
-    expect(myTasksTab).toHaveAttribute("href", "/events/tasks");
-    expect(myTasksTab.className).toContain("border-accent");
+    const nav = await eventsNav();
+    const tasksTab = nav.getByRole("link", { name: /^Tasks/ });
+    expect(tasksTab).toHaveAttribute("href", "/events/tasks");
+    expect(tasksTab.className).toContain("border-accent");
   });
 
-  it("shows Past events for board members", async () => {
+  it("keeps Meetings and Archive primary for board members", async () => {
     renderWithRouter(undefined, {
       initialEntries: ["/events/calendar"],
       auth: {
@@ -138,15 +148,21 @@ describe("EventsHubLayout", () => {
       },
     });
 
-    expect(await screen.findByRole("link", { name: /Past events/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Board meetings/ })).toHaveAttribute(
+    const nav = await eventsNav();
+    expect(nav.getByRole("link", { name: /Meetings/ })).toHaveAttribute(
       "href",
       "/events/meetings",
     );
-    expect(screen.queryByRole("link", { name: /Task oversight/ })).not.toBeInTheDocument();
+    expect(nav.getByRole("link", { name: /Archive/ })).toHaveAttribute(
+      "href",
+      "/events/photos",
+    );
+    expect(nav.queryByRole("link", { name: /Past events/ })).not.toBeInTheDocument();
+    expect(nav.queryByRole("link", { name: /Task oversight/ })).not.toBeInTheDocument();
   });
 
-  it("shows section badges for My tasks, Suggestions, and Task oversight", async () => {
+  it("puts Suggestions and Task oversight under More for presidents", async () => {
+    const user = userEvent.setup();
     renderWithRouter(undefined, {
       initialEntries: ["/events/calendar"],
       auth: {
@@ -155,15 +171,20 @@ describe("EventsHubLayout", () => {
       },
     });
 
-    const myTasks = await screen.findByRole("link", { name: /My tasks/ });
-    expect(myTasks).toHaveTextContent("2");
-    expect(screen.getByRole("link", { name: /Suggestions/ })).toHaveTextContent("2");
-    expect(screen.getByRole("link", { name: /Task oversight/ })).toHaveTextContent(
+    const nav = await eventsNav();
+    const more = nav.getByRole("button", { name: /More events sections/i });
+    expect(more).toHaveTextContent("5");
+    await user.click(more);
+
+    const suggestions = await screen.findByRole("menuitem", { name: /Suggestions/ });
+    expect(suggestions).toHaveTextContent("2");
+    expect(screen.getByRole("menuitem", { name: /Task oversight/ })).toHaveTextContent(
       "3",
     );
+    expect(screen.getByRole("menuitem", { name: /Past events/ })).toBeInTheDocument();
   });
 
-  it("shows Task oversight for president and highlights it on /events/oversight", async () => {
+  it("highlights More when Task oversight is active", async () => {
     renderWithRouter(undefined, {
       initialEntries: ["/events/oversight"],
       auth: {
@@ -172,12 +193,15 @@ describe("EventsHubLayout", () => {
       },
     });
 
-    const oversightTab = await screen.findByRole("link", { name: /Task oversight/ });
-    expect(oversightTab).toHaveAttribute("href", "/events/oversight");
-    expect(oversightTab.className).toContain("border-accent");
+    const nav = await eventsNav();
+    const more = nav.getByRole("button", { name: /More events sections/i });
+    expect(more).toHaveAttribute("aria-current", "page");
+    expect(more).toHaveTextContent("Task oversight");
+    expect(more.className).toContain("border-accent");
   });
 
-  it("shows Task oversight for vice president", async () => {
+  it("shows Task oversight under More for vice president", async () => {
+    const user = userEvent.setup();
     renderWithRouter(undefined, {
       initialEntries: ["/events/oversight"],
       auth: {
@@ -186,13 +210,13 @@ describe("EventsHubLayout", () => {
       },
     });
 
-    expect(await screen.findByRole("link", { name: /Task oversight/ })).toHaveAttribute(
-      "href",
-      "/events/oversight",
-    );
+    const nav = await eventsNav();
+    await user.click(nav.getByRole("button", { name: /More events sections/i }));
+    expect(screen.getByRole("menuitem", { name: /Task oversight/ })).toBeInTheDocument();
   });
 
-  it("hides Past events for general members", async () => {
+  it("hides board-only destinations for general members", async () => {
+    const user = userEvent.setup();
     renderWithRouter(undefined, {
       initialEntries: ["/events/calendar"],
       auth: {
@@ -201,10 +225,14 @@ describe("EventsHubLayout", () => {
       },
     });
 
-    await screen.findByRole("link", { name: /Calendar/ });
-    expect(screen.queryByRole("link", { name: /Past events/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /Board meetings/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /Task oversight/ })).not.toBeInTheDocument();
+    const nav = await eventsNav();
+    expect(nav.queryByRole("link", { name: /Meetings/ })).not.toBeInTheDocument();
+    expect(nav.queryByRole("link", { name: /Past events/ })).not.toBeInTheDocument();
+    expect(nav.queryByRole("link", { name: /Task oversight/ })).not.toBeInTheDocument();
+
+    await user.click(nav.getByRole("button", { name: /More events sections/i }));
+    expect(screen.getByRole("menuitem", { name: /Suggestions/ })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /Past events/ })).not.toBeInTheDocument();
   });
 
   it("hides the tab bar on event manage pages", async () => {

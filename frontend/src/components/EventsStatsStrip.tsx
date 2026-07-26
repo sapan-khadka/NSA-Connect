@@ -14,27 +14,19 @@ export type EventsStatsStripProps = {
   tasksDueTodayCount: number;
   financeApprovalCount: number;
   meetingsTodayCount: number;
-  /** Override for “Today’s Focus” (defaults to now). */
+  /** Override for “Today” date cell (defaults to now). */
   today?: Date;
   className?: string;
 };
 
 type StatTone = "teal" | "purple" | "coral" | "green" | "blue";
 
-function formatFocusDate(date: Date): string {
-  return new Intl.DateTimeFormat(undefined, {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-  }).format(date);
+function formatWeekdayShort(date: Date): string {
+  return new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(date);
 }
 
-function formatFocusDateShort(date: Date): string {
-  return new Intl.DateTimeFormat(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  }).format(date);
+function formatMonthShort(date: Date): string {
+  return new Intl.DateTimeFormat(undefined, { month: "short" }).format(date);
 }
 
 function StatCell({
@@ -43,17 +35,19 @@ function StatCell({
   valueShort,
   label,
   tone,
+  ariaLabel,
 }: {
   icon: LucideIcon;
   value: string | number;
   valueShort?: string | number;
   label: string;
   tone: StatTone;
+  ariaLabel?: string;
 }) {
   return (
     <article
       className={`events-kpi-cell events-kpi-cell--${tone}`}
-      aria-label={`${label}: ${value}`}
+      aria-label={ariaLabel ?? `${label}: ${value}`}
     >
       <span className="events-kpi-cell__icon" aria-hidden="true">
         <AppIcon icon={icon} size="sm" className="text-current" />
@@ -75,6 +69,7 @@ function StatCell({
 
 /**
  * Events dashboard KPI row — icon · value · label with vertical dividers.
+ * All five cells share the same number-first rhythm.
  */
 export function EventsStatsStrip({
   upcomingEventsCount,
@@ -84,16 +79,16 @@ export function EventsStatsStrip({
   today = new Date(),
   className = "",
 }: EventsStatsStripProps) {
-  const focusLong = formatFocusDate(today);
-  const focusShort = formatFocusDateShort(today);
+  const dayNumber = String(today.getDate());
+  const dateLabel = `${formatWeekdayShort(today)} · ${formatMonthShort(today)}`;
 
   const items = [
     {
       icon: Calendar,
-      value: focusLong,
-      valueShort: focusShort,
-      label: "Today's Focus",
+      value: dayNumber,
+      label: dateLabel,
       tone: "teal" as const,
+      ariaLabel: `Today: ${formatWeekdayShort(today)} ${formatMonthShort(today)} ${dayNumber}`,
     },
     {
       icon: CalendarDays,
@@ -132,9 +127,9 @@ export function EventsStatsStrip({
             key={item.label}
             icon={item.icon}
             value={item.value}
-            valueShort={item.valueShort}
             label={item.label}
             tone={item.tone}
+            ariaLabel={item.ariaLabel}
           />
         ))}
       </div>

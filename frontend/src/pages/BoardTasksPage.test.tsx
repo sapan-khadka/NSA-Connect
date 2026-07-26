@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import type { KanbanTask } from "../lib/kanban-status";
-import { calcBoardTasksStats, getFocusTasks } from "./BoardTasksPage";
+import {
+  calcBoardTasksStats,
+  getFocusTasks,
+  partitionBoardTasks,
+} from "./BoardTasksPage";
 
 function task(overrides: Partial<KanbanTask> = {}): KanbanTask {
   return {
@@ -157,5 +161,51 @@ describe("getFocusTasks", () => {
         now,
       ),
     ).toEqual([]);
+  });
+});
+
+describe("partitionBoardTasks", () => {
+  const now = new Date(2030, 4, 20, 15, 0, 0);
+
+  it("buckets tasks into overdue, today, upcoming, and completed without duplicates", () => {
+    const dueTodayIso = new Date(2030, 4, 20, 18, 0, 0).toISOString();
+    const overdueIso = new Date(2030, 4, 18, 12, 0, 0).toISOString();
+    const upcomingIso = new Date(2030, 4, 25, 12, 0, 0).toISOString();
+
+    const sections = partitionBoardTasks(
+      [
+        task({
+          id: 1,
+          title: "Today",
+          due_date: dueTodayIso,
+          is_overdue: false,
+        }),
+        task({
+          id: 2,
+          title: "Overdue",
+          due_date: overdueIso,
+          is_overdue: true,
+        }),
+        task({
+          id: 3,
+          title: "Later",
+          due_date: upcomingIso,
+          is_overdue: false,
+        }),
+        task({
+          id: 4,
+          title: "Done",
+          status: "done",
+          is_complete: true,
+          due_date: overdueIso,
+        }),
+      ],
+      now,
+    );
+
+    expect(sections.overdue.map((entry) => entry.id)).toEqual([2]);
+    expect(sections.today.map((entry) => entry.id)).toEqual([1]);
+    expect(sections.upcoming.map((entry) => entry.id)).toEqual([3]);
+    expect(sections.completed.map((entry) => entry.id)).toEqual([4]);
   });
 });

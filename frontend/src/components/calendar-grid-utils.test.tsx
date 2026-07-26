@@ -24,7 +24,7 @@ describe("calendar-grid-utils", () => {
     });
     expect(className).toContain("events-calendar-day-cell");
     expect(className).toContain("is-selected");
-    expect(className).toContain("bg-[#EAF6F1]");
+    expect(className).not.toContain("bg-transparent");
     expect(className).not.toContain("shadow-[");
     expect(className).not.toContain("translate-y");
   });
@@ -36,7 +36,6 @@ describe("calendar-grid-utils", () => {
       isToday: true,
     });
     expect(className).toContain("is-today");
-    expect(className).toContain("bg-[#F3FAF7]");
     expect(className).not.toContain("from-[#E7F4F0]");
   });
 
@@ -56,7 +55,7 @@ describe("calendar-grid-utils", () => {
       isSelected: false,
       isToday: false,
     });
-    expect(className).toContain("bg-transparent");
+    expect(className).toContain("events-calendar-day-cell");
     expect(className).not.toContain("shadow-[");
     expect(className).not.toContain("translate-y");
   });

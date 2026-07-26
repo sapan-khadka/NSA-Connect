@@ -27,11 +27,11 @@ type DayCellSurfaceOptions = {
 };
 
 const DAY_CELL_BASE =
-  "events-calendar-day-cell relative flex h-full min-h-0 flex-col items-center justify-center gap-0 rounded-none bg-transparent px-0.5 py-0.5 text-sm transition-colors duration-150 ease-out hover:bg-[#F7F7F5]";
+  "events-calendar-day-cell relative flex h-full min-h-0 flex-col items-center justify-center gap-0 rounded-none px-0.5 py-0.5 text-sm transition-colors duration-150 ease-out hover:bg-[#F7F7F5]";
 
-const DAY_CELL_TODAY = "is-today bg-[#F3FAF7] text-foreground hover:bg-[#EEF7F3]";
+const DAY_CELL_TODAY = "is-today text-foreground hover:bg-[#EEF7F3]";
 
-const DAY_CELL_SELECTED = "is-selected bg-[#EAF6F1] hover:bg-[#E3F3EC]";
+const DAY_CELL_SELECTED = "is-selected hover:bg-[color-mix(in_srgb,var(--color-primary,#0f766e)_7%,#fff)]";
 
 export function getDayCellSurfaceClass({
   isCurrentMonth,
@@ -131,16 +131,21 @@ export function CalendarCategoryDots({
   const visible = dots.slice(0, 4);
   const overflow = dots.length - visible.length;
 
+  const stackVertically = visible.length > 1;
+
   return (
     <div
       aria-hidden="true"
-      className="mt-0.5 flex items-center justify-center gap-[3px]"
+      className={[
+        "mt-0.5 flex items-center justify-center",
+        stackVertically ? "flex-col gap-[2px]" : "gap-[3px]",
+      ].join(" ")}
       data-testid="calendar-category-dots"
     >
       {visible.map((dot) => (
         <span
           key={dot.key}
-          className={`h-[5px] w-[5px] rounded-full ${dot.className}`}
+          className={`h-[7px] w-[7px] rounded-full ${dot.className}`}
         />
       ))}
       {overflow > 0 ? (
@@ -159,7 +164,7 @@ export function CalendarLegendList({ className }: { className?: string }) {
         <li key={eventType} className="flex items-center gap-1.5">
           <span
             aria-hidden="true"
-            className={`h-[5px] w-[5px] rounded-full ${EVENT_TYPE_DOT_CLASS[eventType]}`}
+            className={`h-[7px] w-[7px] rounded-full ${EVENT_TYPE_DOT_CLASS[eventType]}`}
           />
           {EVENT_TYPE_LABELS[eventType]}
         </li>
@@ -167,7 +172,7 @@ export function CalendarLegendList({ className }: { className?: string }) {
       <li className="flex items-center gap-1.5">
         <span
           aria-hidden="true"
-          className={`h-[5px] w-[5px] rounded-full ${FESTIVAL_DOT_CLASS}`}
+          className={`h-[7px] w-[7px] rounded-full ${FESTIVAL_DOT_CLASS}`}
         />
         Nepali festival
       </li>

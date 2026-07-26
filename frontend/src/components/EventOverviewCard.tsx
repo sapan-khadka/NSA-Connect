@@ -15,6 +15,7 @@ import { Avatar } from "../design-system/components/Avatar";
 import { useAuth } from "../context/useAuth";
 import type { EventType } from "../lib/event-types";
 import { eventDetailPath } from "../lib/event-links";
+import { computeEventHealth } from "../lib/event-health";
 import { isEventUpcoming } from "../lib/event-rsvp";
 import { summarizeVolunteerSlots } from "../lib/event-volunteer-summary";
 import {
@@ -43,11 +44,11 @@ import {
 } from "./details-panel";
 import { EventAttendeeStack } from "./EventAttendeeStack";
 import { EventBanner } from "./EventBanner";
-import { EventHealthCard } from "./EventHealthCard";
 import {
-  EventNeedsAttentionCard,
-  type NeedsAttentionItem,
-} from "./EventNeedsAttentionCard";
+  EventHealthBadgePill,
+  EventHealthCard,
+} from "./EventHealthCard";
+import { type NeedsAttentionItem } from "./EventNeedsAttentionCard";
 import { EventRsvpSegmented } from "./EventRsvpSegmented";
 
 const AVATAR_STACK_MAX = 4;
@@ -271,6 +272,9 @@ export function EventOverviewCard({
     taskStats && taskStats.total > 0
       ? Math.round((taskStats.done / taskStats.total) * 100)
       : 0;
+  const checklistDone = taskStats?.done ?? 0;
+  const checklistTotal = taskStats?.total ?? 0;
+  const overdueTasks = taskStats?.overdue ?? 0;
 
   const plannedBudget = budget ? Number(budget.planned_budget) || 0 : 0;
   const spentBudget = budget ? Number(budget.actual_expense) || 0 : 0;
@@ -280,13 +284,13 @@ export function EventOverviewCard({
       return [];
     }
     const items: NeedsAttentionItem[] = [];
-    if (taskStats && taskStats.overdue > 0) {
+    if (overdueTasks > 0) {
       items.push({
         id: "overdue-tasks",
         label:
-          taskStats.overdue === 1
+          overdueTasks === 1
             ? "1 task overdue"
-            : `${taskStats.overdue} tasks overdue`,
+            : `${overdueTasks} tasks overdue`,
         severity: "urgent",
       });
     }
@@ -297,18 +301,21 @@ export function EventOverviewCard({
         severity: "urgent",
       });
     }
-    if (volunteersTargetSet) {
-      const volunteerShortfall = Math.max(
-        0,
-        volunteersNeeded - volunteersFilled,
-      );
-      if (volunteerShortfall > 0) {
+    if (!volunteersTargetSet) {
+      items.push({
+        id: "volunteers-unset",
+        label: "Volunteer targets not set",
+        severity: "pending",
+      });
+    } else {
+      const shortfall = Math.max(0, volunteersNeeded - volunteersFilled);
+      if (shortfall > 0) {
         items.push({
           id: "volunteers-short",
           label:
-            volunteerShortfall === 1
+            shortfall === 1
               ? "Need 1 more volunteer"
-              : `Need ${volunteerShortfall} more volunteers`,
+              : `Need ${shortfall} more volunteers`,
           severity: "pending",
         });
       }
@@ -316,13 +323,39 @@ export function EventOverviewCard({
     return items;
   }, [
     canManage,
-    taskStats,
+    overdueTasks,
     plannedBudget,
     spentBudget,
     volunteersFilled,
     volunteersNeeded,
     volunteersTargetSet,
   ]);
+
+  const healthBadge = useMemo(
+    () =>
+      computeEventHealth({
+        preparationPct,
+        checklistDone,
+        checklistTotal,
+        overdueTasks,
+        budgetSpent: spentBudget,
+        budgetCap: plannedBudget,
+        volunteersFilled,
+        volunteersNeeded,
+        volunteersTargetSet,
+      }),
+    [
+      preparationPct,
+      checklistDone,
+      checklistTotal,
+      overdueTasks,
+      spentBudget,
+      plannedBudget,
+      volunteersFilled,
+      volunteersNeeded,
+      volunteersTargetSet,
+    ],
+  );
 
   const stackAttendees = useMemo(
     () =>
@@ -488,7 +521,7 @@ export function EventOverviewCard({
               />
             </DetailsSection>
 
-            <div className="space-y-2" data-testid="event-attendees-row">
+            <div className="mt-3.5 space-y-2" data-testid="event-attendees-row">
               {attendeeTotal > 0 ? (
                 <>
                   <EventAttendeeStack
@@ -523,21 +556,32 @@ export function EventOverviewCard({
             {canManage ? (
               <details className="event-health-disclosure">
                 <summary className="event-health-disclosure-summary">
-                  Event health
+                  <span className="event-health-disclosure-summary__row">
+                    <span>Event health</span>
+                    <EventHealthBadgePill
+                      level={healthBadge.level}
+                      label={healthBadge.label}
+                    />
+                  </span>
                 </summary>
                 <div className="event-health-disclosure-body">
                   <EventHealthCard
                     preparationPct={preparationPct}
+                    checklistDone={checklistDone}
+                    checklistTotal={checklistTotal}
+                    overdueTasks={overdueTasks}
                     budgetSpent={spentBudget}
                     budgetCap={plannedBudget}
                     volunteersFilled={volunteersFilled}
                     volunteersNeeded={volunteersNeeded}
                     volunteersTargetSet={volunteersTargetSet}
+                    attentionItems={attentionItems}
+                    manageHref={
+                      manageEventId != null
+                        ? `/events/${manageEventId}/manage`
+                        : null
+                    }
                     showHeading={false}
-                    className="border-0 bg-transparent p-0"
-                  />
-                  <EventNeedsAttentionCard
-                    items={attentionItems}
                     className="border-0 bg-transparent p-0"
                   />
                 </div>
@@ -545,6 +589,15 @@ export function EventOverviewCard({
             ) : null}
 
             <DetailsActions className="details-panel-actions--stack details-panel-actions--dense">
+              <Link
+                to={eventDetailPath(previewEvent.id)}
+                className={detailsActionClass(
+                  "primary",
+                  "details-panel-btn--dominant w-full",
+                )}
+              >
+                Open Workspace
+              </Link>
               {canManage && manageEventId != null ? (
                 <Link
                   to={`/events/${manageEventId}/manage`}
@@ -556,15 +609,6 @@ export function EventOverviewCard({
                   Manage Event
                 </Link>
               ) : null}
-              <Link
-                to={eventDetailPath(previewEvent.id)}
-                className={detailsActionClass(
-                  "primary",
-                  "details-panel-btn--dominant w-full",
-                )}
-              >
-                Open Workspace
-              </Link>
             </DetailsActions>
           </div>
         </div>

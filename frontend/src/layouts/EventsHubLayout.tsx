@@ -1,12 +1,15 @@
+import { ChevronDown } from "lucide-react";
 import {
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useRef,
   useState,
 } from "react";
-import { NavLink, Outlet, useLocation, useMatch } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useMatch, useNavigate } from "react-router-dom";
 
+import { AppIcon } from "../components/ui/AppIcon";
 import {
   NavCountBadge,
   useNotificationSummary,
@@ -24,6 +27,11 @@ type EventsTab = {
   badgeCount?: number;
 };
 
+type EventsTabPlan = {
+  primary: EventsTab[];
+  more: EventsTab[];
+};
+
 function buildEventsTabs(
   member: NonNullable<ReturnType<typeof useAuth>["member"]>,
   counts: {
@@ -31,42 +39,165 @@ function buildEventsTabs(
     suggestions: number;
     oversight: number;
   },
-): EventsTab[] {
-  const tabs: EventsTab[] = [{ label: "Calendar", to: "/events/calendar" }];
+): EventsTabPlan {
+  const primary: EventsTab[] = [
+    { label: "Calendar", to: "/events/calendar" },
+    {
+      label: "Tasks",
+      to: "/events/tasks",
+      badgeCount: counts.myTasks,
+    },
+  ];
 
-  tabs.push({
-    label: "My tasks",
-    to: "/events/tasks",
-    badgeCount: counts.myTasks,
-  });
-
-  tabs.push({ label: "Photo archive", to: "/events/photos" });
-  tabs.push({
-    label: "Suggestions",
-    to: "/events/suggestions",
-    badgeCount: counts.suggestions,
-  });
+  const more: EventsTab[] = [
+    {
+      label: "Suggestions",
+      to: "/events/suggestions",
+      badgeCount: counts.suggestions,
+    },
+  ];
 
   if (canViewMemberDirectory(member.role)) {
-    tabs.push({ label: "Board meetings", to: "/events/meetings" });
+    primary.push({ label: "Meetings", to: "/events/meetings" });
+    primary.push({ label: "Archive", to: "/events/photos" });
+
     if (canViewTaskOversight(member.role, member.position)) {
-      tabs.push({
+      more.push({
         label: "Task oversight",
         to: "/events/oversight",
         badgeCount: counts.oversight,
       });
     }
-    tabs.push({ label: "Past events", to: "/events/past" });
+    more.push({ label: "Past events", to: "/events/past" });
+  } else {
+    primary.push({ label: "Archive", to: "/events/photos" });
   }
 
-  return tabs;
+  return { primary, more };
+}
+
+function isTabActive(pathname: string, tab: EventsTab): boolean {
+  if (tab.end) {
+    return pathname === tab.to;
+  }
+  return pathname === tab.to || pathname.startsWith(`${tab.to}/`);
+}
+
+function EventsMoreMenu({ items }: { items: EventsTab[] }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const menuId = useId();
+
+  const activeItem = items.find((item) => isTabActive(location.pathname, item));
+  const moreBadge = items.reduce((sum, item) => sum + (item.badgeCount ?? 0), 0);
+  const isActive = Boolean(activeItem);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handlePointerDown(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [open]);
+
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <div ref={rootRef} className="relative shrink-0">
+      <button
+        type="button"
+        aria-label="More events sections"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-controls={menuId}
+        aria-current={isActive ? "page" : undefined}
+        onClick={() => setOpen((current) => !current)}
+        className={[
+          "events-hub-tab inline-flex shrink-0 items-center gap-1 whitespace-nowrap border-b-2 px-2.5 py-2 text-[13px] font-medium transition-colors",
+          isActive
+            ? "border-accent text-accent"
+            : "border-transparent text-label hover:text-accent",
+        ].join(" ")}
+      >
+        <span>{activeItem ? activeItem.label : "More"}</span>
+        <AppIcon icon={ChevronDown} size="xs" className="text-current opacity-70" />
+        <NavCountBadge
+          count={moreBadge}
+          className="events-hub-tab-badge h-4 min-w-4 px-1 text-[10px]"
+        />
+      </button>
+      {open ? (
+        <div
+          id={menuId}
+          role="menu"
+          aria-label="More events sections"
+          className="absolute right-0 top-full z-30 mt-1 min-w-[11rem] rounded-lg border border-gray-200 bg-white py-1 shadow-md"
+        >
+          {items.map((item) => {
+            const active = isTabActive(location.pathname, item);
+            return (
+              <button
+                key={item.to}
+                type="button"
+                role="menuitem"
+                aria-current={active ? "page" : undefined}
+                className={[
+                  "flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-[13px] transition-colors",
+                  active
+                    ? "bg-badge-teal-bg font-medium text-accent"
+                    : "text-foreground hover:bg-surface-muted",
+                ].join(" ")}
+                onClick={() => {
+                  setOpen(false);
+                  navigate(item.to);
+                }}
+              >
+                <span>{item.label}</span>
+                <NavCountBadge
+                  count={item.badgeCount ?? 0}
+                  className="h-4 min-w-4 px-1 text-[10px]"
+                />
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 /**
  * Underline tab row with horizontal scroll + edge fades when more tabs exist.
  * Keeps the existing tab language (vs converting to pills).
  */
-function EventsHubTabBar({ tabs }: { tabs: EventsTab[] }) {
+function EventsHubTabBar({
+  primary,
+  more,
+}: {
+  primary: EventsTab[];
+  more: EventsTab[];
+}) {
   const location = useLocation();
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -105,7 +236,7 @@ function EventsHubTabBar({ tabs }: { tabs: EventsTab[] }) {
       observer?.disconnect();
       window.removeEventListener("resize", updateOverflow);
     };
-  }, [tabs, updateOverflow]);
+  }, [primary, more, updateOverflow]);
 
   useLayoutEffect(() => {
     const el = scrollerRef.current;
@@ -125,7 +256,7 @@ function EventsHubTabBar({ tabs }: { tabs: EventsTab[] }) {
       }
     }
     updateOverflow();
-  }, [location.pathname, tabs, updateOverflow]);
+  }, [location.pathname, primary, more, updateOverflow]);
 
   return (
     <nav
@@ -138,11 +269,8 @@ function EventsHubTabBar({ tabs }: { tabs: EventsTab[] }) {
         .filter(Boolean)
         .join(" ")}
     >
-      <div
-        ref={scrollerRef}
-        className="events-hub-tabs-scroller"
-      >
-        {tabs.map((tab) => (
+      <div ref={scrollerRef} className="events-hub-tabs-scroller">
+        {primary.map((tab) => (
           <NavLink
             key={tab.to}
             to={tab.to}
@@ -163,6 +291,7 @@ function EventsHubTabBar({ tabs }: { tabs: EventsTab[] }) {
             />
           </NavLink>
         ))}
+        <EventsMoreMenu items={more} />
       </div>
       <span className="events-hub-tabs-fade events-hub-tabs-fade--left" aria-hidden="true" />
       <span className="events-hub-tabs-fade events-hub-tabs-fade--right" aria-hidden="true" />
@@ -192,17 +321,20 @@ export function EventsHubLayout() {
       ? summary.tasks_oversight_overdue
       : 0;
 
-  const tabs = member
+  const plan = member
     ? buildEventsTabs(member, {
         myTasks: myTasksCount,
         suggestions: suggestionsCount,
         oversight: oversightCount,
       })
-    : [{ label: "Calendar", to: "/events/calendar" }];
+    : {
+        primary: [{ label: "Calendar", to: "/events/calendar" }],
+        more: [] as EventsTab[],
+      };
 
   return (
     <div className="events-hub-shell">
-      <EventsHubTabBar tabs={tabs} />
+      <EventsHubTabBar primary={plan.primary} more={plan.more} />
       <Outlet />
     </div>
   );
