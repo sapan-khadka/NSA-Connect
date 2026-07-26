@@ -7,6 +7,7 @@ from app.models.event_suggestion import EventSuggestionStatus
 from app.models.event_suggestion_interest import EventSuggestionInterestVote
 from app.models.member import Member, MemberRole
 from app.schemas.event_suggestion import (
+    EventSuggestionActivityResponse,
     EventSuggestionBoardReviewRequest,
     EventSuggestionCommentCreateRequest,
     EventSuggestionCommentListResponse,
@@ -17,8 +18,23 @@ from app.schemas.event_suggestion import (
     EventSuggestionInterestUpdateRequest,
     EventSuggestionListResponse,
     EventSuggestionMemberResponse,
+    EventSuggestionPollCreateRequest,
+    EventSuggestionPollGetResponse,
+    EventSuggestionPollResponse,
+    EventSuggestionPollVoteRequest,
+    EventSuggestionRelatedResponse,
     EventSuggestionResponse,
     EventSuggestionStatusUpdateRequest,
+)
+from app.services.event_suggestion_polish_service import (
+    EventSuggestionPollError,
+    build_event_suggestion_activity,
+    close_event_suggestion_poll,
+    create_event_suggestion_poll,
+    get_event_suggestion_poll,
+    list_related_event_suggestions,
+    record_event_suggestion_view,
+    vote_event_suggestion_poll,
 )
 from app.services.event_suggestion_comment_service import (
     EventSuggestionCommentClosedError,
@@ -81,6 +97,7 @@ def _to_response(
         board_note=suggestion.board_note if can_board_review else None,
         can_board_review=can_board_review,
         converted_event_id=suggestion.converted_event_id,
+        view_count=int(suggestion.view_count or 0),
         interest_counts=interest_counts or empty_interest_counts(),
         my_interest=my_interest.value if my_interest is not None else None,
     )
@@ -129,7 +146,11 @@ def get_event_suggestion_endpoint(
     db: Session = Depends(get_db),
 ):
     try:
-        suggestion = get_event_suggestion(db, suggestion_id=suggestion_id)
+        suggestion = record_event_suggestion_view(
+            db,
+            suggestion_id=suggestion_id,
+            member=current_member,
+        )
     except EventSuggestionNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -437,3 +458,150 @@ def clear_event_suggestion_interest_endpoint(
         ) from None
 
     return _responses_for(db, [suggestion], member=current_member)[0]
+
+
+@router.get(
+    "/{suggestion_id}/activity",
+    response_model=EventSuggestionActivityResponse,
+)
+def list_event_suggestion_activity_endpoint(
+    suggestion_id: int,
+    _: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    try:
+        items = build_event_suggestion_activity(db, suggestion_id=suggestion_id)
+    except EventSuggestionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event idea not found",
+        ) from None
+    return EventSuggestionActivityResponse(items=items)
+
+
+@router.get(
+    "/{suggestion_id}/related",
+    response_model=EventSuggestionRelatedResponse,
+)
+def list_related_event_suggestions_endpoint(
+    suggestion_id: int,
+    _: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    try:
+        ideas = list_related_event_suggestions(db, suggestion_id=suggestion_id)
+    except EventSuggestionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event idea not found",
+        ) from None
+    return EventSuggestionRelatedResponse(ideas=ideas)
+
+
+@router.get(
+    "/{suggestion_id}/poll",
+    response_model=EventSuggestionPollGetResponse,
+)
+def get_event_suggestion_poll_endpoint(
+    suggestion_id: int,
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    try:
+        poll = get_event_suggestion_poll(
+            db,
+            suggestion_id=suggestion_id,
+            member=current_member,
+        )
+    except EventSuggestionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event idea not found",
+        ) from None
+    return EventSuggestionPollGetResponse(poll=poll)
+
+
+@router.post(
+    "/{suggestion_id}/poll",
+    response_model=EventSuggestionPollResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_event_suggestion_poll_endpoint(
+    suggestion_id: int,
+    data: EventSuggestionPollCreateRequest,
+    current_member: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    try:
+        return create_event_suggestion_poll(
+            db,
+            suggestion_id=suggestion_id,
+            board_member=current_member,
+            data=data,
+        )
+    except EventSuggestionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event idea not found",
+        ) from None
+    except EventSuggestionPollError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unable to create poll for this idea",
+        ) from None
+
+
+@router.put(
+    "/{suggestion_id}/poll/vote",
+    response_model=EventSuggestionPollResponse,
+)
+def vote_event_suggestion_poll_endpoint(
+    suggestion_id: int,
+    data: EventSuggestionPollVoteRequest,
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    try:
+        return vote_event_suggestion_poll(
+            db,
+            suggestion_id=suggestion_id,
+            member=current_member,
+            option_id=data.option_id,
+        )
+    except EventSuggestionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event idea not found",
+        ) from None
+    except EventSuggestionPollError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unable to record poll vote",
+        ) from None
+
+
+@router.post(
+    "/{suggestion_id}/poll/close",
+    response_model=EventSuggestionPollResponse,
+)
+def close_event_suggestion_poll_endpoint(
+    suggestion_id: int,
+    current_member: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    try:
+        return close_event_suggestion_poll(
+            db,
+            suggestion_id=suggestion_id,
+            board_member=current_member,
+        )
+    except EventSuggestionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event idea not found",
+        ) from None
+    except EventSuggestionPollError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unable to close poll",
+        ) from None

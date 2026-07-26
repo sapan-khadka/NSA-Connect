@@ -43,6 +43,7 @@ export type EventSuggestion = {
   board_note: string | null;
   can_board_review: boolean;
   converted_event_id: number | null;
+  view_count: number;
   interest_counts: IdeaInterestCounts;
   my_interest: IdeaInterestVote | null;
 };

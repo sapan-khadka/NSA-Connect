@@ -59,6 +59,7 @@ class EventSuggestionResponse(BaseModel):
     board_note: str | None = None
     can_board_review: bool = False
     converted_event_id: int | None = None
+    view_count: int = 0
     interest_counts: EventSuggestionInterestCounts = Field(
         default_factory=EventSuggestionInterestCounts
     )
@@ -157,3 +158,59 @@ class EventSuggestionCommentResponse(BaseModel):
 class EventSuggestionCommentListResponse(BaseModel):
     comments: list[EventSuggestionCommentResponse]
     total: int
+
+
+class EventSuggestionActivityItem(BaseModel):
+    kind: str
+    summary: str
+    created_at: datetime
+    actor: EventSuggestionMemberResponse | None = None
+
+
+class EventSuggestionActivityResponse(BaseModel):
+    items: list[EventSuggestionActivityItem]
+
+
+class EventSuggestionRelatedItem(BaseModel):
+    id: int
+    title: str
+    status: EventSuggestionStatusValue
+    preferred_timing: str | None
+    interested_count: int = 0
+    suggested_by: EventSuggestionMemberResponse
+
+
+class EventSuggestionRelatedResponse(BaseModel):
+    ideas: list[EventSuggestionRelatedItem]
+
+
+class EventSuggestionPollOptionResponse(BaseModel):
+    id: int
+    label: str
+    sort_order: int
+    vote_count: int = 0
+
+
+class EventSuggestionPollResponse(BaseModel):
+    id: int
+    suggestion_id: int
+    question: str
+    is_open: bool
+    created_at: datetime
+    created_by: EventSuggestionMemberResponse
+    my_option_id: int | None = None
+    total_votes: int = 0
+    options: list[EventSuggestionPollOptionResponse] = Field(default_factory=list)
+
+
+class EventSuggestionPollGetResponse(BaseModel):
+    poll: EventSuggestionPollResponse | None = None
+
+
+class EventSuggestionPollCreateRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=255)
+    options: list[str] = Field(min_length=2, max_length=6)
+
+
+class EventSuggestionPollVoteRequest(BaseModel):
+    option_id: int

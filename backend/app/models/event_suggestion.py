@@ -52,6 +52,7 @@ class EventSuggestion(Base):
         nullable=True,
         index=True,
     )
+    view_count = Column(Integer, nullable=False, default=0, server_default="0")
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,
@@ -70,4 +71,15 @@ class EventSuggestion(Base):
         "EventSuggestionComment",
         back_populates="suggestion",
         cascade="all, delete-orphan",
+    )
+    views = relationship(
+        "EventSuggestionView",
+        back_populates="suggestion",
+        cascade="all, delete-orphan",
+    )
+    poll = relationship(
+        "EventSuggestionPoll",
+        back_populates="suggestion",
+        cascade="all, delete-orphan",
+        uselist=False,
     )

@@ -27,6 +27,12 @@ from app.models.event_suggestion_interest import (
     EventSuggestionInterest,
     EventSuggestionInterestVote,
 )
+from app.models.event_suggestion_poll import (
+    EventSuggestionPoll,
+    EventSuggestionPollOption,
+    EventSuggestionPollVote,
+)
+from app.models.event_suggestion_view import EventSuggestionView
 from app.models.event_task import (
     EventTask,
     EventTaskChecklistItem,
@@ -92,7 +98,11 @@ __all__ = [
     "EventSuggestionComment",
     "EventSuggestionInterest",
     "EventSuggestionInterestVote",
+    "EventSuggestionPoll",
+    "EventSuggestionPollOption",
+    "EventSuggestionPollVote",
     "EventSuggestionStatus",
+    "EventSuggestionView",
     "EventVolunteerSignup",
     "EventFeedback",
     "EventGuestCheckIn",

@@ -156,6 +156,17 @@ function IdeaRow({
               </span>
             </>
           ) : null}
+          {suggestion.view_count > 0 ? (
+            <>
+              <span className="ideas-row__sep" aria-hidden="true">
+                ·
+              </span>
+              <span>
+                {suggestion.view_count}{" "}
+                {suggestion.view_count === 1 ? "view" : "views"}
+              </span>
+            </>
+          ) : null}
         </p>
 
         {errorMessage ? (

@@ -540,3 +540,75 @@ def test_cannot_convert_non_approved_idea(client, board_headers, db_session):
         },
     )
     assert response.status_code == 400
+
+
+def test_viewing_idea_increments_unique_view_count(client, member_headers, db_session):
+    member = db_session.scalar(select(Member).where(Member.email == "sapan@semo.edu"))
+    suggestion = EventSuggestion(
+        title="Viewed idea",
+        description="Track opens.",
+        suggested_by_id=member.id,
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(suggestion)
+    db_session.commit()
+    db_session.refresh(suggestion)
+
+    first = client.get(
+        f"/api/v1/event-suggestions/{suggestion.id}",
+        headers=member_headers,
+    )
+    second = client.get(
+        f"/api/v1/event-suggestions/{suggestion.id}",
+        headers=member_headers,
+    )
+
+    assert first.status_code == 200
+    assert first.json()["view_count"] == 1
+    assert second.status_code == 200
+    assert second.json()["view_count"] == 1
+
+
+def test_board_can_create_and_member_can_vote_poll(
+    client, member_headers, board_headers, db_session
+):
+    member = db_session.scalar(select(Member).where(Member.email == "sapan@semo.edu"))
+    suggestion = EventSuggestion(
+        title="Poll idea",
+        description="When?",
+        suggested_by_id=member.id,
+        status=EventSuggestionStatus.UNDER_DISCUSSION,
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(suggestion)
+    db_session.commit()
+    db_session.refresh(suggestion)
+
+    create_response = client.post(
+        f"/api/v1/event-suggestions/{suggestion.id}/poll",
+        headers=board_headers,
+        json={
+            "question": "Best night?",
+            "options": ["Friday", "Saturday"],
+        },
+    )
+    assert create_response.status_code == 201
+    poll = create_response.json()
+    option_id = poll["options"][0]["id"]
+
+    vote_response = client.put(
+        f"/api/v1/event-suggestions/{suggestion.id}/poll/vote",
+        headers=member_headers,
+        json={"option_id": option_id},
+    )
+    assert vote_response.status_code == 200
+    assert vote_response.json()["my_option_id"] == option_id
+    assert vote_response.json()["total_votes"] == 1
+
+    activity = client.get(
+        f"/api/v1/event-suggestions/{suggestion.id}/activity",
+        headers=member_headers,
+    )
+    assert activity.status_code == 200
+    assert any(item["kind"] == "poll" for item in activity.json()["items"])
+    assert any(item["kind"] == "created" for item in activity.json()["items"])

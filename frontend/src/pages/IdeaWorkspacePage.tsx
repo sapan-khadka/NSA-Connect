@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 
 import { IdeaBoardReviewSection } from "../components/IdeaBoardReviewSection";
 import { IdeaDiscussionSection } from "../components/IdeaDiscussionSection";
+import { IdeaPolishSections } from "../components/IdeaPolishSections";
 import { getApiErrorMessage } from "../lib/api-error";
 import {
   clearEventSuggestionInterest,
@@ -235,6 +236,16 @@ export function IdeaWorkspacePage() {
               </span>
             </>
           ) : null}
+          {idea.view_count > 0 ? (
+            <>
+              <span className="idea-workspace-sep" aria-hidden="true">
+                ·
+              </span>
+              <span>
+                {idea.view_count} {idea.view_count === 1 ? "view" : "views"}
+              </span>
+            </>
+          ) : null}
         </p>
       </header>
 
@@ -250,6 +261,11 @@ export function IdeaWorkspacePage() {
       <InterestSection idea={idea} onUpdated={setIdea} />
 
       <IdeaDiscussionSection suggestionId={idea.id} status={idea.status} />
+
+      <IdeaPolishSections
+        suggestionId={idea.id}
+        canManage={idea.can_board_review}
+      />
 
       <IdeaBoardReviewSection idea={idea} onUpdated={setIdea} />
     </div>
