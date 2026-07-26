@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_member, require_board
+from app.models.event_suggestion import EventSuggestionStatus
 from app.models.member import Member
 from app.schemas.event_suggestion import (
     EventSuggestionCreateRequest,
@@ -12,10 +13,12 @@ from app.schemas.event_suggestion import (
     EventSuggestionStatusUpdateRequest,
 )
 from app.services.event_suggestion_service import (
+    EventSuggestionInvalidStatusError,
     EventSuggestionNotFoundError,
     create_event_suggestion,
+    get_event_suggestion,
     list_event_suggestions,
-    mark_event_suggestion_noted,
+    update_event_suggestion_status,
 )
 
 router = APIRouter(prefix="/event-suggestions", tags=["event-suggestions"])
@@ -53,6 +56,23 @@ def list_event_suggestions_endpoint(
     )
 
 
+@router.get("/{suggestion_id}", response_model=EventSuggestionResponse)
+def get_event_suggestion_endpoint(
+    suggestion_id: int,
+    _: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    try:
+        suggestion = get_event_suggestion(db, suggestion_id=suggestion_id)
+    except EventSuggestionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event idea not found",
+        ) from None
+
+    return _to_response(suggestion)
+
+
 @router.post(
     "", response_model=EventSuggestionResponse, status_code=status.HTTP_201_CREATED
 )
@@ -73,15 +93,21 @@ def update_event_suggestion_status_endpoint(
     db: Session = Depends(get_db),
 ):
     try:
-        suggestion = mark_event_suggestion_noted(
+        suggestion = update_event_suggestion_status(
             db,
             suggestion_id=suggestion_id,
             board_member=current_member,
+            status=EventSuggestionStatus(data.status),
         )
     except EventSuggestionNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Event suggestion not found",
+            detail="Event idea not found",
+        ) from None
+    except EventSuggestionInvalidStatusError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid status update",
         ) from None
 
     return _to_response(suggestion)

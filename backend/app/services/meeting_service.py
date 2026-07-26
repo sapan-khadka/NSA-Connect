@@ -116,6 +116,8 @@ def _build_meeting_summary(
     raw_notes = (record.raw_notes or "").strip() if record else ""
     has_minutes = bool(raw_notes)
     has_summary = bool(record and record.summary)
+    action_items = (record.action_items or []) if record else []
+    action_item_count = len(action_items) if isinstance(action_items, list) else 0
 
     return MeetingSummaryResponse(
         event_id=event.id,
@@ -130,6 +132,7 @@ def _build_meeting_summary(
         absent_count=absent_count,
         excused_count=excused_count,
         unmarked_count=unmarked_count,
+        action_item_count=action_item_count,
         minutes_updated_at=record.updated_at if record else None,
     )
 

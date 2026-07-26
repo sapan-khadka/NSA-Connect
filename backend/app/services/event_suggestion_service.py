@@ -8,8 +8,21 @@ from app.models.member import Member
 from app.schemas.event_suggestion import EventSuggestionCreateRequest
 from app.services.organization_context import get_default_organization_id
 
+BOARD_UPDATABLE_STATUSES = frozenset(
+    {
+        EventSuggestionStatus.UNDER_DISCUSSION,
+        EventSuggestionStatus.APPROVED,
+        EventSuggestionStatus.REJECTED,
+        EventSuggestionStatus.ARCHIVED,
+    }
+)
+
 
 class EventSuggestionNotFoundError(Exception):
+    pass
+
+
+class EventSuggestionInvalidStatusError(Exception):
     pass
 
 
@@ -40,6 +53,15 @@ def list_event_suggestions(db: Session) -> list[EventSuggestion]:
     )
 
 
+def get_event_suggestion(db: Session, *, suggestion_id: int) -> EventSuggestion:
+    suggestion = _load_suggestion(db, suggestion_id)
+    if suggestion is None:
+        raise EventSuggestionNotFoundError
+    if suggestion.organization_id != get_default_organization_id(db):
+        raise EventSuggestionNotFoundError
+    return suggestion
+
+
 def create_event_suggestion(
     db: Session,
     *,
@@ -55,7 +77,7 @@ def create_event_suggestion(
         title=data.title.strip(),
         description=data.description.strip(),
         preferred_timing=preferred_timing,
-        status=EventSuggestionStatus.SUBMITTED,
+        status=EventSuggestionStatus.PENDING_REVIEW,
         suggested_by_id=member.id,
         created_at=now,
         organization_id=get_default_organization_id(db),
@@ -79,20 +101,28 @@ def create_event_suggestion(
     return loaded
 
 
-def mark_event_suggestion_noted(
+def update_event_suggestion_status(
     db: Session,
     *,
     suggestion_id: int,
     board_member: Member,
+    status: EventSuggestionStatus,
 ) -> EventSuggestion:
+    if status not in BOARD_UPDATABLE_STATUSES:
+        raise EventSuggestionInvalidStatusError
+
     suggestion = _load_suggestion(db, suggestion_id)
     if suggestion is None:
         raise EventSuggestionNotFoundError
+    if suggestion.organization_id != get_default_organization_id(db):
+        raise EventSuggestionNotFoundError
 
-    if suggestion.status != EventSuggestionStatus.NOTED:
-        suggestion.status = EventSuggestionStatus.NOTED
-        suggestion.noted_at = datetime.now(UTC)
-        suggestion.noted_by_id = board_member.id
+    previous_status = suggestion.status
+    if suggestion.status != status:
+        suggestion.status = status
+        if suggestion.noted_at is None:
+            suggestion.noted_at = datetime.now(UTC)
+            suggestion.noted_by_id = board_member.id
         db.commit()
         db.refresh(suggestion)
 
@@ -100,7 +130,11 @@ def mark_event_suggestion_noted(
     if loaded is None:
         raise EventSuggestionNotFoundError
 
-    if loaded.suggested_by_id is not None:
+    if (
+        previous_status == EventSuggestionStatus.PENDING_REVIEW
+        and loaded.status == EventSuggestionStatus.UNDER_DISCUSSION
+        and loaded.suggested_by_id is not None
+    ):
         from app.services.inbox_notification_service import notify_suggestion_noted
 
         notify_suggestion_noted(
@@ -110,3 +144,18 @@ def mark_event_suggestion_noted(
             title=loaded.title,
         )
     return loaded
+
+
+def mark_event_suggestion_noted(
+    db: Session,
+    *,
+    suggestion_id: int,
+    board_member: Member,
+) -> EventSuggestion:
+    """Compatibility helper: board review opens discussion."""
+    return update_event_suggestion_status(
+        db,
+        suggestion_id=suggestion_id,
+        board_member=board_member,
+        status=EventSuggestionStatus.UNDER_DISCUSSION,
+    )

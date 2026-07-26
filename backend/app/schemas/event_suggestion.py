@@ -3,6 +3,22 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+EventSuggestionStatusValue = Literal[
+    "pending_review",
+    "under_discussion",
+    "approved",
+    "rejected",
+    "converted",
+    "archived",
+]
+
+BoardUpdatableStatusValue = Literal[
+    "under_discussion",
+    "approved",
+    "rejected",
+    "archived",
+]
+
 
 class EventSuggestionMemberResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -18,7 +34,7 @@ class EventSuggestionResponse(BaseModel):
     title: str
     description: str
     preferred_timing: str | None
-    status: Literal["submitted", "noted"]
+    status: EventSuggestionStatusValue
     suggested_by: EventSuggestionMemberResponse
     noted_by: EventSuggestionMemberResponse | None = None
     created_at: datetime
@@ -37,4 +53,4 @@ class EventSuggestionCreateRequest(BaseModel):
 
 
 class EventSuggestionStatusUpdateRequest(BaseModel):
-    status: Literal["noted"]
+    status: BoardUpdatableStatusValue

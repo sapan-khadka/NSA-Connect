@@ -1,18 +1,27 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Plus, Search, SlidersHorizontal } from "lucide-react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+  type MouseEvent,
+} from "react";
+import { useNavigate } from "react-router-dom";
 
+import { AppIcon } from "../components/ui/AppIcon";
+import { Button } from "../components/ui/Button";
+import { inputFieldClassName } from "../components/ui/Input";
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage } from "../lib/api-error";
 import {
   createEventSuggestion,
   fetchEventSuggestions,
+  IDEA_STATUS_LABEL,
   markEventSuggestionNoted,
   type EventSuggestion,
+  type EventSuggestionStatus,
 } from "../lib/event-suggestions-api";
-import { Button } from "../components/ui/Button";
-import { Card } from "../components/ui/Card";
-import { inputFieldClassName } from "../components/ui/Input";
-import { formatEventDateTime } from "../lib/format-datetime";
 import { isRoleAtLeast } from "../lib/roles";
 
 const TIMING_SUGGESTIONS = [
@@ -22,24 +31,45 @@ const TIMING_SUGGESTIONS = [
   "Spring",
 ] as const;
 
-function SuggestionCard({
+type StatusFilter = "all" | EventSuggestionStatus;
+type SortOption = "newest" | "oldest" | "title";
+
+function formatShortDate(isoDate: string): string {
+  const parsed = Date.parse(isoDate);
+  if (Number.isNaN(parsed)) {
+    return "";
+  }
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+  }).format(new Date(parsed));
+}
+
+function IdeaRow({
   suggestion,
   canManage,
-  onNoted,
+  onReviewed,
 }: {
   suggestion: EventSuggestion;
   canManage: boolean;
-  onNoted: (updated: EventSuggestion) => void;
+  onReviewed: (updated: EventSuggestion) => void;
 }) {
+  const navigate = useNavigate();
   const [marking, setMarking] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const isPending = suggestion.status === "pending_review";
+  const timing = suggestion.preferred_timing?.trim() || "Any semester";
+  const when = formatShortDate(suggestion.created_at);
+  const href = `/events/ideas/${suggestion.id}`;
 
-  async function handleMarkNoted() {
+  async function handleOpenDiscussion(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
     setMarking(true);
     setErrorMessage(null);
     try {
       const updated = await markEventSuggestionNoted(suggestion.id);
-      onNoted(updated);
+      onReviewed(updated);
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error));
     } finally {
@@ -47,62 +77,84 @@ function SuggestionCard({
     }
   }
 
-  const isNoted = suggestion.status === "noted";
+  function openIdea() {
+    navigate(href);
+  }
+
+  function handleRowKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openIdea();
+    }
+  }
 
   return (
-    <article className="overflow-hidden rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-lg font-medium text-foreground">{suggestion.title}</h2>
-            {isNoted ? (
-              <span className="rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent">
-                Noted
-              </span>
+    <li>
+      <article
+        className={[
+          "ideas-row",
+          "is-link",
+          isPending ? "" : "is-reviewed",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        role="link"
+        tabIndex={0}
+        aria-label={`Open idea: ${suggestion.title}`}
+        onClick={openIdea}
+        onKeyDown={handleRowKeyDown}
+      >
+        <div className="ideas-row__top">
+          <h2 className="ideas-row__title">{suggestion.title}</h2>
+          <div className="ideas-row__actions">
+            <span
+              className={[
+                "ideas-row__status",
+                `is-${suggestion.status}`,
+              ].join(" ")}
+            >
+              {IDEA_STATUS_LABEL[suggestion.status]}
+            </span>
+            {canManage && isPending ? (
+              <button
+                type="button"
+                className="ideas-row__action"
+                disabled={marking}
+                onClick={(event) => void handleOpenDiscussion(event)}
+              >
+                {marking ? "Saving…" : "Open discussion"}
+              </button>
             ) : null}
           </div>
-          <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-            {suggestion.description}
-          </p>
-          {suggestion.preferred_timing ? (
-            <p className="mt-3 text-sm text-label">
-              Preferred timing: {suggestion.preferred_timing}
-            </p>
-          ) : null}
         </div>
-        {canManage && !isNoted ? (
-          <Button
-            type="button"
-            onClick={() => void handleMarkNoted()}
-            disabled={marking}
-            loading={marking}
-            variant="outline"
-            size="lg"
-            className="shrink-0"
-          >
-            Mark noted
-          </Button>
-        ) : null}
-      </div>
 
-      {errorMessage ? (
-        <p className="mt-3 text-sm text-overdue" role="alert">
-          {errorMessage}
+        {suggestion.description.trim() ? (
+          <p className="ideas-row__desc">{suggestion.description.trim()}</p>
+        ) : null}
+
+        <p className="ideas-row__meta">
+          <span>{timing}</span>
+          <span className="ideas-row__sep" aria-hidden="true">
+            ·
+          </span>
+          <span>{suggestion.suggested_by.full_name}</span>
+          {when ? (
+            <>
+              <span className="ideas-row__sep" aria-hidden="true">
+                ·
+              </span>
+              <span>{when}</span>
+            </>
+          ) : null}
         </p>
-      ) : null}
 
-      <p className="mt-4 text-xs text-label">
-        Suggested by {suggestion.suggested_by.full_name} ·{" "}
-        {formatEventDateTime(suggestion.created_at)}
-        {isNoted && suggestion.noted_at ? (
-          <>
-            {" "}
-            · Noted {formatEventDateTime(suggestion.noted_at)}
-            {suggestion.noted_by ? ` by ${suggestion.noted_by.full_name}` : ""}
-          </>
+        {errorMessage ? (
+          <p className="ideas-row__error" role="alert">
+            {errorMessage}
+          </p>
         ) : null}
-      </p>
-    </article>
+      </article>
+    </li>
   );
 }
 
@@ -119,8 +171,14 @@ export function EventSuggestionsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [semesterFilter, setSemesterFilter] = useState<string>("all");
+  const [sort, setSort] = useState<SortOption>("newest");
+  const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
 
   const canManage = member ? isRoleAtLeast(member.role, "board") : false;
+  const moreFiltersActive = semesterFilter !== "all";
 
   useEffect(() => {
     let cancelled = false;
@@ -151,6 +209,63 @@ export function EventSuggestionsPage() {
     };
   }, []);
 
+  const stats = useMemo(() => {
+    const total = suggestions.length;
+    const inDiscussion = suggestions.filter(
+      (row) => row.status === "under_discussion",
+    ).length;
+    const pending = suggestions.filter(
+      (row) => row.status === "pending_review",
+    ).length;
+    return { total, inDiscussion, pending };
+  }, [suggestions]);
+
+  const semesterOptions = useMemo(() => {
+    const values = new Set<string>();
+    for (const suggestion of suggestions) {
+      const timing = suggestion.preferred_timing?.trim();
+      if (timing) {
+        values.add(timing);
+      }
+    }
+    return [...values].sort((left, right) => left.localeCompare(right));
+  }, [suggestions]);
+
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    const rows = suggestions.filter((suggestion) => {
+      if (statusFilter !== "all" && suggestion.status !== statusFilter) {
+        return false;
+      }
+      if (semesterFilter !== "all") {
+        const timing = suggestion.preferred_timing?.trim() || "";
+        if (timing !== semesterFilter) {
+          return false;
+        }
+      }
+      if (!query) {
+        return true;
+      }
+      const haystack =
+        `${suggestion.title} ${suggestion.description} ${suggestion.suggested_by.full_name}`.toLowerCase();
+      return haystack.includes(query);
+    });
+
+    rows.sort((left, right) => {
+      if (sort === "title") {
+        return left.title.localeCompare(right.title);
+      }
+      const leftMs = Date.parse(left.created_at);
+      const rightMs = Date.parse(right.created_at);
+      if (sort === "oldest") {
+        return leftMs - rightMs;
+      }
+      return rightMs - leftMs;
+    });
+
+    return rows;
+  }, [suggestions, search, statusFilter, semesterFilter, sort]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmedTitle = title.trim();
@@ -180,7 +295,7 @@ export function EventSuggestionsPage() {
       setPreferredTiming("");
       setCustomTiming("");
       setShowForm(false);
-      setSubmitSuccess("Thanks — your suggestion was submitted.");
+      setSubmitSuccess("Thanks — your idea was submitted.");
     } catch (error) {
       setSubmitError(getApiErrorMessage(error));
     } finally {
@@ -189,64 +304,70 @@ export function EventSuggestionsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-surface-card pb-6">
+    <div className="ideas-page">
+      <header className="ideas-header">
         <div>
-          <p className="ds-section-label">Events</p>
-          <h1 className="mt-1 text-2xl font-light tracking-headline text-foreground">
-            Event suggestions
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm font-light text-label">
-            Share ideas for future NSA events. All members can browse suggestions for inspiration.
+          <h1 className="ideas-title">Ideas</h1>
+          <p className="ideas-subtitle">
+            Member ideas for future NSA events — discuss, gauge interest, then
+            plan.
           </p>
         </div>
-        <Button
+        <button
           type="button"
+          className="ideas-cta"
           onClick={() => {
             setShowForm((current) => !current);
             setSubmitError(null);
             setSubmitSuccess(null);
           }}
-          size="lg"
-          className="w-full min-[400px]:w-auto"
         >
-          {showForm ? "Close form" : "Suggest an event"}
-        </Button>
-      </div>
+          <AppIcon icon={Plus} size="sm" className="text-current" />
+          {showForm ? "Close" : "New idea"}
+        </button>
+      </header>
+
+      {suggestions.length > 0 || loading ? (
+        <p className="ideas-summary" aria-label="Ideas summary">
+          <span>
+            {stats.total} {stats.total === 1 ? "idea" : "ideas"}
+          </span>
+          <span className="ideas-summary__dot" aria-hidden="true">
+            ·
+          </span>
+          <span>{stats.pending} pending</span>
+          <span className="ideas-summary__dot" aria-hidden="true">
+            ·
+          </span>
+          <span>{stats.inDiscussion} in discussion</span>
+        </p>
+      ) : null}
 
       {submitSuccess ? (
-        <Card
-          as="div"
-          padding="none"
-          className="rounded-lg px-4 py-3 text-sm text-primary"
-        >
+        <p className="ideas-banner is-success" role="status">
           {submitSuccess}
-        </Card>
+        </p>
       ) : null}
 
       {showForm ? (
-        <Card
-          as="form"
-          padding="none"
-          className="p-4 sm:p-6"
+        <form
+          className="ideas-form"
           onSubmit={(event) => void handleSubmit(event)}
         >
-          <h2 className="text-lg font-light tracking-subhead text-foreground">
-            Suggest an event
-          </h2>
-          <p className="mt-1 text-sm text-label">
-            Share a title, what you have in mind, and optional timing preferences.
+          <h2 className="ideas-form__title">New idea</h2>
+          <p className="ideas-form__copy">
+            Share a title, what you have in mind, and optional timing.
           </p>
 
           {submitError ? (
-            <p className="mt-4 text-sm text-overdue" role="alert">
+            <p className="ideas-banner is-error" role="alert">
               {submitError}
             </p>
           ) : null}
 
-          <div className="mt-6 space-y-4">
+          <div className="ideas-form__fields">
             <label className="block">
-              <span className="text-sm font-medium text-foreground">Title</span>
+              <span className="ideas-form__label">Title</span>
               <input
                 type="text"
                 value={title}
@@ -258,20 +379,21 @@ export function EventSuggestionsPage() {
             </label>
 
             <label className="block">
-              <span className="text-sm font-medium text-foreground">Description</span>
+              <span className="ideas-form__label">Description</span>
               <textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 required
-                rows={5}
+                rows={4}
                 className={`${inputFieldClassName} mt-1`}
-                placeholder="What would this event look like? Why would members enjoy it?"
+                placeholder="What would this look like?"
               />
             </label>
 
             <label className="block">
-              <span className="text-sm font-medium text-foreground">
-                Preferred timing <span className="text-label">(optional)</span>
+              <span className="ideas-form__label">
+                Preferred timing{" "}
+                <span className="text-label">(optional)</span>
               </span>
               <select
                 value={preferredTiming}
@@ -290,9 +412,7 @@ export function EventSuggestionsPage() {
 
             {preferredTiming === "custom" ? (
               <label className="block">
-                <span className="text-sm font-medium text-foreground">
-                  Your timing idea
-                </span>
+                <span className="ideas-form__label">Your timing idea</span>
                 <input
                   type="text"
                   value={customTiming}
@@ -304,24 +424,100 @@ export function EventSuggestionsPage() {
             ) : null}
           </div>
 
-          <div className="mt-6">
+          <div className="mt-4">
             <Button
               type="submit"
               disabled={submitting}
               loading={submitting}
               size="lg"
-              className="w-full sm:w-auto"
             >
-              Submit suggestion
+              Submit idea
             </Button>
           </div>
-        </Card>
+        </form>
       ) : null}
 
-      {canManage ? (
-        <p className="text-sm text-label">
-          Board view: mark suggestions as noted when you&apos;ve reviewed them for planning.
-        </p>
+      {suggestions.length > 0 ? (
+        <>
+          <div className="ideas-filters">
+            <label className="ideas-search">
+              <AppIcon icon={Search} size="sm" className="text-label" />
+              <span className="sr-only">Search ideas</span>
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search ideas…"
+              />
+            </label>
+            <label className="ideas-select">
+              <span className="sr-only">Status</span>
+              <select
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(event.target.value as StatusFilter)
+                }
+              >
+                <option value="all">Status: All</option>
+                <option value="pending_review">Status: Pending review</option>
+                <option value="under_discussion">
+                  Status: Under discussion
+                </option>
+                <option value="approved">Status: Approved</option>
+                <option value="rejected">Status: Rejected</option>
+                <option value="converted">Status: Converted</option>
+                <option value="archived">Status: Archived</option>
+              </select>
+            </label>
+            <label className="ideas-select">
+              <span className="sr-only">Sort</span>
+              <select
+                value={sort}
+                onChange={(event) => setSort(event.target.value as SortOption)}
+              >
+                <option value="newest">Sort: Newest</option>
+                <option value="oldest">Sort: Oldest</option>
+                <option value="title">Sort: Title</option>
+              </select>
+            </label>
+            {semesterOptions.length > 0 ? (
+              <button
+                type="button"
+                className="ideas-more-filters"
+                aria-expanded={moreFiltersOpen}
+                onClick={() => setMoreFiltersOpen((open) => !open)}
+              >
+                <AppIcon
+                  icon={SlidersHorizontal}
+                  size="sm"
+                  className="text-current"
+                />
+                Filter
+                {moreFiltersActive ? (
+                  <span className="ideas-more-filters__on">On</span>
+                ) : null}
+              </button>
+            ) : null}
+          </div>
+          {moreFiltersOpen && semesterOptions.length > 0 ? (
+            <div className="ideas-more-panel" aria-label="More filters">
+              <label className="ideas-select">
+                <span className="ideas-form__label">Semester</span>
+                <select
+                  value={semesterFilter}
+                  onChange={(event) => setSemesterFilter(event.target.value)}
+                >
+                  <option value="all">Any</option>
+                  {semesterOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          ) : null}
+        </>
       ) : null}
 
       {errorMessage ? (
@@ -331,44 +527,47 @@ export function EventSuggestionsPage() {
       ) : null}
 
       {loading ? (
-        <p className="text-sm text-label">Loading suggestions…</p>
+        <p className="ideas-loading">Loading ideas…</p>
       ) : suggestions.length === 0 ? (
-        <Card as="div" padding="lg" className="text-center">
-          <p className="text-sm text-label">No suggestions yet.</p>
-          <p className="mt-2 text-sm text-label">
+        <div className="ideas-empty">
+          <h3>No ideas yet</h3>
+          <p>
             Be the first to{" "}
             <button
               type="button"
               onClick={() => setShowForm(true)}
-              className="text-accent hover:underline"
+              className="ideas-empty__link"
             >
-              suggest an event
+              share one
             </button>
             .
           </p>
-        </Card>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="ideas-empty is-soft">
+          <h3>No ideas match these filters</h3>
+          <p>Try clearing search or resetting status and semester.</p>
+        </div>
       ) : (
-        <div className="space-y-4">
-          {suggestions.map((suggestion) => (
-            <SuggestionCard
-              key={suggestion.id}
-              suggestion={suggestion}
-              canManage={canManage}
-              onNoted={(updated) =>
-                setSuggestions((current) =>
-                  current.map((item) => (item.id === updated.id ? updated : item)),
-                )
-              }
-            />
-          ))}
+        <div className="ideas-document">
+          <ul className="ideas-list">
+            {filtered.map((suggestion) => (
+              <IdeaRow
+                key={suggestion.id}
+                suggestion={suggestion}
+                canManage={canManage}
+                onReviewed={(updated) =>
+                  setSuggestions((current) =>
+                    current.map((item) =>
+                      item.id === updated.id ? updated : item,
+                    ),
+                  )
+                }
+              />
+            ))}
+          </ul>
         </div>
       )}
-
-      <p className="text-sm text-label">
-        <Link to="/events/calendar" className="text-accent hover:underline">
-          ← Back to calendar
-        </Link>
-      </p>
     </div>
   );
 }

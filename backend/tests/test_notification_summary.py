@@ -10,6 +10,7 @@ from conftest import (
 from app.core.security import hash_password
 from app.models.event_suggestion import EventSuggestion, EventSuggestionStatus
 from app.models.member import Member, MemberStatus
+from app.services.organization_context import ensure_membership_for_member
 
 VALID_EMAIL = "sapan@semo.edu"
 
@@ -27,6 +28,8 @@ def _add_pending_member(db_session) -> Member:
     db_session.add(pending)
     db_session.commit()
     db_session.refresh(pending)
+    ensure_membership_for_member(db_session, pending)
+    db_session.commit()
     return pending
 
 
@@ -41,7 +44,7 @@ def test_general_member_summary_zeros_board_counts(client, db_session):
         EventSuggestion(
             title="Hack night",
             description="Build something",
-            status=EventSuggestionStatus.SUBMITTED,
+            status=EventSuggestionStatus.PENDING_REVIEW,
             suggested_by_id=member.id,
         )
     )
@@ -73,7 +76,7 @@ def test_board_summary_includes_pending_members_and_suggestions(client, db_sessi
         EventSuggestion(
             title="Hack night",
             description="Build something",
-            status=EventSuggestionStatus.SUBMITTED,
+            status=EventSuggestionStatus.PENDING_REVIEW,
             suggested_by_id=board.id,
         )
     )
@@ -81,7 +84,7 @@ def test_board_summary_includes_pending_members_and_suggestions(client, db_sessi
         EventSuggestion(
             title="Already noted",
             description="Done",
-            status=EventSuggestionStatus.NOTED,
+            status=EventSuggestionStatus.UNDER_DISCUSSION,
             suggested_by_id=board.id,
         )
     )

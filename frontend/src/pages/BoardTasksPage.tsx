@@ -9,7 +9,6 @@ import {
 
 import { KanbanTaskDetailPanel } from "../components/kanban/KanbanTaskDetailPanel";
 import { AppIcon } from "../components/ui/AppIcon";
-import { Card } from "../components/ui/Card";
 import { useAuth } from "../context/useAuth";
 import { isToday } from "../lib/calendar";
 import {
@@ -17,7 +16,6 @@ import {
   updateEventTask,
   updateEventTaskChecklistItem,
 } from "../lib/event-tasks-api";
-import { EVENT_TYPE_COLOR } from "../lib/event-types";
 import {
   buildMarkTaskCompleteRequest,
   getTaskDisplayName,
@@ -34,17 +32,6 @@ import {
   type KanbanTask,
 } from "../lib/kanban-status";
 import { isRoleAtLeast } from "../lib/roles";
-
-const EVENT_ACCENT_PALETTE = Object.values(EVENT_TYPE_COLOR);
-
-function eventAccentColor(eventId: number, eventName: string): string {
-  const seed = `${eventId}:${eventName}`;
-  let hash = 0;
-  for (let index = 0; index < seed.length; index += 1) {
-    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0;
-  }
-  return EVENT_ACCENT_PALETTE[hash % EVENT_ACCENT_PALETTE.length] ?? "#0f766e";
-}
 
 type LoadState =
   | { status: "loading" }
@@ -259,19 +246,7 @@ function TaskCheck({
   );
 }
 
-function PriorityBadge({ urgency }: { urgency: TaskUrgency }) {
-  return (
-    <span
-      className={["my-tasks-priority", `is-${urgency}`].join(" ")}
-      title="Based on due date urgency"
-    >
-      <span className="my-tasks-priority-dot" aria-hidden="true" />
-      <span className="my-tasks-priority-label">{URGENCY_LABEL[urgency]}</span>
-    </span>
-  );
-}
-
-/** Compact status control — badge + native select menu. */
+/** Quiet status control — plain text in the metadata line. */
 function StatusMenu({
   task,
   busy,
@@ -289,7 +264,6 @@ function StatusMenu({
       onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => event.stopPropagation()}
     >
-      <span className="my-tasks-status-menu__dot" aria-hidden="true" />
       <select
         aria-label="Set task status"
         value={column}
@@ -302,11 +276,6 @@ function StatusMenu({
         <option value="in_progress">{STATUS_LABEL.in_progress}</option>
         <option value="done">{STATUS_LABEL.done}</option>
       </select>
-      <AppIcon
-        icon={ChevronDown}
-        size="xs"
-        className="my-tasks-status-menu__caret text-current"
-      />
     </label>
   );
 }
@@ -331,50 +300,70 @@ function TaskRow({
   const title = getTaskDisplayName(task);
   const urgency = getTaskUrgency(task);
   const column = getKanbanColumn(task);
-  const eventColor = eventAccentColor(task.eventId, task.eventName);
+  const dueLabel = formatShortDue(task.due_date);
+  const metaParts = [
+    task.eventName,
+    dueLabel,
+    URGENCY_LABEL[urgency],
+    !isSimpleKanbanTask(task) ? "Checklist" : null,
+  ].filter(Boolean);
 
   return (
     <li>
-      <article className="my-tasks-row">
-        <TaskCheck
-          done={column === "done"}
-          busy={busy}
-          label={title}
-          onComplete={completedView ? undefined : onComplete}
-        />
-
-        <button
-          type="button"
-          className="my-tasks-row__main"
-          onClick={onOpen}
-        >
-          <span className="my-tasks-task-name">{title}</span>
-          <span className="my-tasks-task-project">
-            <span
-              className="my-tasks-event-dot"
-              style={{ backgroundColor: eventColor }}
-              aria-hidden="true"
+      <article
+        className={["my-tasks-row", column === "done" ? "is-complete" : ""]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        <div className="my-tasks-row__top">
+          <div className="my-tasks-row__heading">
+            <TaskCheck
+              done={column === "done"}
+              busy={busy}
+              label={title}
+              onComplete={completedView ? undefined : onComplete}
             />
-            <span className="my-tasks-event-name">{task.eventName}</span>
-            {!isSimpleKanbanTask(task) ? (
-              <span className="my-tasks-event-meta"> · Checklist</span>
-            ) : null}
+            <button
+              type="button"
+              className="my-tasks-row__title"
+              onClick={onOpen}
+            >
+              {title}
+            </button>
+          </div>
+          <button
+            type="button"
+            className="my-tasks-row__open"
+            onClick={onOpen}
+          >
+            Open →
+          </button>
+        </div>
+
+        <p className="my-tasks-row__meta">
+          {metaParts.map((part, index) => (
+            <span key={`${part}-${index}`}>
+              {index > 0 ? (
+                <span className="my-tasks-row__sep" aria-hidden="true">
+                  ·
+                </span>
+              ) : null}
+              <span
+                className={
+                  part === dueLabel && task.is_overdue
+                    ? "my-tasks-due is-overdue"
+                    : undefined
+                }
+              >
+                {part}
+              </span>
+            </span>
+          ))}
+          <span className="my-tasks-row__sep" aria-hidden="true">
+            ·
           </span>
-        </button>
-
-        <PriorityBadge urgency={urgency} />
-        <span
-          className={[
-            "my-tasks-due",
-            task.is_overdue ? "is-overdue" : "",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-        >
-          {formatShortDue(task.due_date)}
-        </span>
-
-        <StatusMenu task={task} busy={busy} onSetColumn={onMove} />
+          <StatusMenu task={task} busy={busy} onSetColumn={onMove} />
+        </p>
       </article>
     </li>
   );
@@ -406,23 +395,15 @@ function TaskSection({
   }
 
   const head = (
-    <>
-      <h2 id={id} className="my-tasks-section__title">
-        {title}
-      </h2>
-      <span
-        className={["my-tasks-section__count", `is-${tone}`]
-          .filter(Boolean)
-          .join(" ")}
-      >
-        {count}
-      </span>
-    </>
+    <h2 id={id} className="my-tasks-section__title">
+      {title}
+      <span className="my-tasks-section__count"> ({count})</span>
+    </h2>
   );
 
   const body =
     count === 0 ? (
-      <div className="my-tasks-section__empty">{emptyContent}</div>
+      <p className="my-tasks-section__empty">{emptyContent}</p>
     ) : (
       <ul className="my-tasks-row-list">{children}</ul>
     );
@@ -430,7 +411,11 @@ function TaskSection({
   if (collapsible) {
     return (
       <details
-        className="my-tasks-section my-tasks-section--collapsible"
+        className={[
+          "my-tasks-section",
+          "my-tasks-section--collapsible",
+          `is-${tone}`,
+        ].join(" ")}
         open={defaultOpen}
       >
         <summary className="my-tasks-section__head my-tasks-section__summary">
@@ -447,7 +432,10 @@ function TaskSection({
   }
 
   return (
-    <section className="my-tasks-section" aria-labelledby={id}>
+    <section
+      className={["my-tasks-section", `is-${tone}`].join(" ")}
+      aria-labelledby={id}
+    >
       <header className="my-tasks-section__head">{head}</header>
       {body}
     </section>
@@ -687,141 +675,126 @@ export function BoardTasksPage() {
 
   return (
     <div className="my-tasks-page">
-      <header className="my-tasks-header">
-        <div>
-          <h1 className="my-tasks-title">My Tasks</h1>
-          <p className="my-tasks-subtitle">
-            What needs your attention first — then today, upcoming, and done.
-          </p>
-        </div>
-      </header>
+      <h1 className="sr-only">My Tasks</h1>
 
-      <section className="my-tasks-kpi" aria-label="My tasks summary">
-        <article className="my-tasks-kpi__cell">
-          <p className="my-tasks-kpi__value">{stats.assigned}</p>
-          <p className="my-tasks-kpi__label">Total</p>
-        </article>
-        <article
-          className={[
-            "my-tasks-kpi__cell",
-            stats.overdue > 0 ? "is-overdue" : "",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-        >
-          <p className="my-tasks-kpi__value">{stats.overdue}</p>
-          <p className="my-tasks-kpi__label">Overdue</p>
-        </article>
-        <article
-          className={[
-            "my-tasks-kpi__cell",
-            stats.dueToday > 0 ? "is-today" : "",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-        >
-          <p className="my-tasks-kpi__value">{stats.dueToday}</p>
-          <p className="my-tasks-kpi__label">Due today</p>
-        </article>
-        <article className="my-tasks-kpi__cell is-done">
-          <p className="my-tasks-kpi__value">{stats.completedPercent}%</p>
-          <p className="my-tasks-kpi__label">Completed</p>
-        </article>
-      </section>
+      {loadState.status === "ready" && tasks.length > 0 ? (
+        <p className="my-tasks-summary" aria-label="My tasks summary">
+          <span>Mine</span>
+          <span className="my-tasks-summary__dot" aria-hidden="true">
+            ·
+          </span>
+          <span>
+            {stats.assigned} {stats.assigned === 1 ? "task" : "tasks"}
+          </span>
+          <span className="my-tasks-summary__dot" aria-hidden="true">
+            ·
+          </span>
+          <span className={stats.overdue > 0 ? "is-overdue" : undefined}>
+            {stats.overdue} overdue
+          </span>
+          <span className="my-tasks-summary__dot" aria-hidden="true">
+            ·
+          </span>
+          <span>{stats.completedPercent}% complete</span>
+        </p>
+      ) : null}
 
-      <div className="my-tasks-toolbar-bar">
-        <label className="my-tasks-search">
-          <AppIcon icon={Search} size="sm" className="text-label" />
-          <span className="sr-only">Search tasks</span>
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search tasks…"
-          />
-        </label>
-
-        <div className="my-tasks-toolbar-bar__actions">
-          <button
-            type="button"
-            className="my-tasks-filter-btn"
-            aria-expanded={filtersOpen}
-            onClick={() => setFiltersOpen((open) => !open)}
-          >
-            <AppIcon
-              icon={SlidersHorizontal}
-              size="sm"
-              className="text-current"
-            />
-            Filter
-            {filtersActive ? (
-              <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                On
-              </span>
-            ) : null}
-          </button>
-
-          <label className="my-tasks-sort">
-            <span className="sr-only">Sort</span>
-            <select
-              value={sort}
-              onChange={(event) => setSort(event.target.value as TaskSort)}
-            >
-              <option value="due">Sort: Due date</option>
-              <option value="priority">Sort: Priority</option>
-              <option value="event">Sort: Event</option>
-            </select>
-          </label>
-        </div>
-      </div>
-
-      {filtersOpen ? (
-        <div className="my-tasks-filter-panel" aria-label="Task filters">
-          <div className="my-tasks-filter-field">
-            <label htmlFor="my-tasks-filter-urgency">Urgency</label>
-            <select
-              id="my-tasks-filter-urgency"
-              value={urgencyFilter}
-              onChange={(event) =>
-                setUrgencyFilter(event.target.value as UrgencyFilter)
-              }
-            >
-              <option value="all">All</option>
-              <option value="overdue">Overdue</option>
-              <option value="due_today">Due today</option>
-              <option value="open">Open only</option>
-            </select>
+      {loadState.status === "ready" && tasks.length > 0 ? (
+        <>
+          <div className="board-meetings-toolbar">
+            <label className="board-meetings-search">
+              <AppIcon icon={Search} size="sm" className="text-label" />
+              <span className="sr-only">Search tasks</span>
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search tasks…"
+              />
+            </label>
+            <div className="board-meetings-toolbar__actions">
+              <button
+                type="button"
+                className="board-meetings-filter-btn"
+                aria-expanded={filtersOpen}
+                onClick={() => setFiltersOpen((open) => !open)}
+              >
+                <AppIcon
+                  icon={SlidersHorizontal}
+                  size="sm"
+                  className="text-current"
+                />
+                Filter
+                {filtersActive ? (
+                  <span className="board-meetings-filter-btn__on">On</span>
+                ) : null}
+              </button>
+              <label className="my-tasks-sort">
+                <span className="sr-only">Sort</span>
+                <select
+                  value={sort}
+                  onChange={(event) => setSort(event.target.value as TaskSort)}
+                >
+                  <option value="due">Sort: Due date</option>
+                  <option value="priority">Sort: Priority</option>
+                  <option value="event">Sort: Event</option>
+                </select>
+              </label>
+            </div>
           </div>
-          <div className="my-tasks-filter-field">
-            <label htmlFor="my-tasks-filter-event">Event</label>
-            <select
-              id="my-tasks-filter-event"
-              value={eventFilter === "all" ? "all" : String(eventFilter)}
-              onChange={(event) => {
-                const value = event.target.value;
-                setEventFilter(value === "all" ? "all" : Number(value));
-              }}
+
+          {filtersOpen ? (
+            <div
+              className="board-meetings-filter-panel"
+              aria-label="Task filters"
             >
-              <option value="all">All events</option>
-              {eventOptions.map((event) => (
-                <option key={event.id} value={event.id}>
-                  {event.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <button
-            type="button"
-            className="my-tasks-filter-btn"
-            onClick={() => {
-              setUrgencyFilter("all");
-              setEventFilter("all");
-              setSearch("");
-            }}
-          >
-            Reset
-          </button>
-        </div>
+              <div className="board-meetings-filter-field">
+                <label htmlFor="my-tasks-filter-urgency">Urgency</label>
+                <select
+                  id="my-tasks-filter-urgency"
+                  value={urgencyFilter}
+                  onChange={(event) =>
+                    setUrgencyFilter(event.target.value as UrgencyFilter)
+                  }
+                >
+                  <option value="all">All</option>
+                  <option value="overdue">Overdue</option>
+                  <option value="due_today">Due today</option>
+                  <option value="open">Open only</option>
+                </select>
+              </div>
+              <div className="board-meetings-filter-field">
+                <label htmlFor="my-tasks-filter-event">Event</label>
+                <select
+                  id="my-tasks-filter-event"
+                  value={eventFilter === "all" ? "all" : String(eventFilter)}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setEventFilter(value === "all" ? "all" : Number(value));
+                  }}
+                >
+                  <option value="all">All events</option>
+                  {eventOptions.map((event) => (
+                    <option key={event.id} value={event.id}>
+                      {event.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="button"
+                className="board-meetings-filter-btn"
+                onClick={() => {
+                  setUrgencyFilter("all");
+                  setEventFilter("all");
+                  setSearch("");
+                }}
+              >
+                Reset
+              </button>
+            </div>
+          ) : null}
+        </>
       ) : null}
 
       {moveError ? (
@@ -831,9 +804,7 @@ export function BoardTasksPage() {
       ) : null}
 
       {loadState.status === "loading" ? (
-        <Card as="div" padding="none" className="p-16 text-center text-label">
-          Loading your tasks…
-        </Card>
+        <p className="my-tasks-loading">Loading your tasks…</p>
       ) : null}
 
       {loadState.status === "error" ? (
@@ -843,26 +814,22 @@ export function BoardTasksPage() {
       ) : null}
 
       {loadState.status === "ready" && tasks.length === 0 ? (
-        <div className="my-tasks-panel">
-          <div className="my-tasks-empty">
-            <h3>No tasks assigned to you yet</h3>
-            <p>
-              {isRoleAtLeast(member.role, "board")
-                ? "Create work from an event workspace — assigned tasks will show up here."
-                : "When someone assigns you event work, it will show up here automatically."}
-            </p>
-          </div>
+        <div className="my-tasks-empty">
+          <h3>No tasks assigned to you yet</h3>
+          <p>
+            {isRoleAtLeast(member.role, "board")
+              ? "Create work from an event workspace — assigned tasks will show up here."
+              : "When someone assigns you event work, it will show up here automatically."}
+          </p>
         </div>
       ) : null}
 
       {loadState.status === "ready" && tasks.length > 0 ? (
         <div className="my-tasks-sections">
           {openCount === 0 && sections.completed.length === 0 ? (
-            <div className="my-tasks-panel">
-              <div className="my-tasks-empty">
-                <h3>No tasks match these filters</h3>
-                <p>Reset filters or clear search to see your full list.</p>
-              </div>
+            <div className="my-tasks-empty">
+              <h3>No tasks match these filters</h3>
+              <p>Reset filters or clear search to see your full list.</p>
             </div>
           ) : null}
 
@@ -871,11 +838,6 @@ export function BoardTasksPage() {
             title="Overdue"
             count={sections.overdue.length}
             tone="overdue"
-            emptyContent={
-              filtersActive ? undefined : (
-                <p className="my-tasks-section__empty-title">Nothing overdue</p>
-              )
-            }
           >
             {renderRows(sections.overdue)}
           </TaskSection>
@@ -885,18 +847,6 @@ export function BoardTasksPage() {
             title="Today"
             count={sections.today.length}
             tone="today"
-            emptyContent={
-              filtersActive ? undefined : (
-                <>
-                  <p className="my-tasks-section__empty-title">
-                    You’re all caught up today
-                  </p>
-                  <p className="my-tasks-section__empty-copy">
-                    Enjoy the rest of your day.
-                  </p>
-                </>
-              )
-            }
           >
             {renderRows(sections.today)}
           </TaskSection>

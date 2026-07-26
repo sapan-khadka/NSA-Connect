@@ -1,6 +1,17 @@
 import api from "./api";
 
-export type EventSuggestionStatus = "submitted" | "noted";
+export type EventSuggestionStatus =
+  | "pending_review"
+  | "under_discussion"
+  | "approved"
+  | "rejected"
+  | "converted"
+  | "archived";
+
+export type BoardUpdatableIdeaStatus = Exclude<
+  EventSuggestionStatus,
+  "pending_review" | "converted"
+>;
 
 export type EventSuggestionMember = {
   id: number;
@@ -30,9 +41,27 @@ export type EventSuggestionCreatePayload = {
   preferred_timing?: string | null;
 };
 
+export const IDEA_STATUS_LABEL: Record<EventSuggestionStatus, string> = {
+  pending_review: "Pending review",
+  under_discussion: "Under discussion",
+  approved: "Approved",
+  rejected: "Rejected",
+  converted: "Converted",
+  archived: "Archived",
+};
+
 export async function fetchEventSuggestions(): Promise<EventSuggestionListResponse> {
   const response = await api.get<EventSuggestionListResponse>(
     "/v1/event-suggestions",
+  );
+  return response.data;
+}
+
+export async function fetchEventSuggestion(
+  suggestionId: number,
+): Promise<EventSuggestion> {
+  const response = await api.get<EventSuggestion>(
+    `/v1/event-suggestions/${suggestionId}`,
   );
   return response.data;
 }
@@ -47,12 +76,20 @@ export async function createEventSuggestion(
   return response.data;
 }
 
-export async function markEventSuggestionNoted(
+export async function updateEventSuggestionStatus(
   suggestionId: number,
+  status: BoardUpdatableIdeaStatus,
 ): Promise<EventSuggestion> {
   const response = await api.patch<EventSuggestion>(
     `/v1/event-suggestions/${suggestionId}/status`,
-    { status: "noted" },
+    { status },
   );
   return response.data;
+}
+
+/** Board review opens the idea for discussion. */
+export async function markEventSuggestionNoted(
+  suggestionId: number,
+): Promise<EventSuggestion> {
+  return updateEventSuggestionStatus(suggestionId, "under_discussion");
 }

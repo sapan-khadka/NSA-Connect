@@ -22,6 +22,7 @@ const meeting: MeetingSummary = {
   absent_count: 0,
   excused_count: 0,
   unmarked_count: 5,
+  action_item_count: 0,
   minutes_updated_at: null,
 };
 

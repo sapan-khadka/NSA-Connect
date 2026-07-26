@@ -48,6 +48,7 @@ export type MeetingSummary = {
   absent_count: number;
   excused_count: number;
   unmarked_count: number;
+  action_item_count: number;
   minutes_updated_at: string | null;
 };
 

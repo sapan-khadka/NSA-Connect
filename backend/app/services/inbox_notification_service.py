@@ -233,9 +233,9 @@ def notify_board_of_suggestion(
         db,
         recipients=recipients,
         type=InboxNotificationType.SUGGESTION_SUBMITTED,
-        title=f"New event suggestion: {title}",
+        title=f"New event idea: {title}",
         body=f"Submitted by {suggested_by.full_name}.",
-        href="/events/suggestions",
+        href=f"/events/ideas/{suggestion_id}",
         dedupe_key_for=lambda recipient: (
             f"suggestion_submitted:{suggestion_id}:{recipient.id}"
         ),
@@ -253,9 +253,9 @@ def notify_suggestion_noted(
         db,
         member_id=suggested_by_id,
         type=InboxNotificationType.SUGGESTION_NOTED,
-        title=f"Your suggestion was noted: {title}",
-        body="The board marked your event suggestion as noted.",
-        href="/events/suggestions",
+        title=f"Your idea is under discussion: {title}",
+        body="The board opened your event idea for discussion.",
+        href=f"/events/ideas/{suggestion_id}",
         dedupe_key=f"suggestion_noted:{suggestion_id}",
     )
 

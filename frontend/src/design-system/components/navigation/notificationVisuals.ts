@@ -67,13 +67,13 @@ const BY_TYPE: Record<string, NotificationVisual> = {
     chipClass: "bg-badge-teal-bg",
   },
   suggestion_submitted: {
-    label: "Suggestion",
+    label: "Idea",
     icon: Sparkles,
     iconClass: "text-accent",
     chipClass: "bg-accent/10",
   },
   suggestion_noted: {
-    label: "Suggestion",
+    label: "Idea",
     icon: CheckCircle2,
     iconClass: "text-primary",
     chipClass: "bg-badge-teal-bg",

@@ -56,6 +56,7 @@ class MeetingSummaryResponse(BaseModel):
     absent_count: int
     excused_count: int
     unmarked_count: int
+    action_item_count: int = 0
     minutes_updated_at: datetime | None = None
 
 

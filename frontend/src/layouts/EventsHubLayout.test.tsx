@@ -96,7 +96,7 @@ describe("EventsHubLayout", () => {
     cleanup();
   });
 
-  it("shows compact primary tabs for general members", async () => {
+  it("shows Ideas and Photos as primary tabs for general members", async () => {
     renderWithRouter(undefined, {
       initialEntries: ["/events/calendar"],
       auth: {
@@ -114,14 +114,18 @@ describe("EventsHubLayout", () => {
       "href",
       "/events/tasks",
     );
-    expect(nav.getByRole("link", { name: /Archive/ })).toHaveAttribute(
+    expect(nav.getByRole("link", { name: /^Ideas/ })).toHaveAttribute(
+      "href",
+      "/events/ideas",
+    );
+    expect(nav.getByRole("link", { name: /Photos/ })).toHaveAttribute(
       "href",
       "/events/photos",
     );
-    expect(nav.getByRole("button", { name: /More events sections/i })).toBeInTheDocument();
+    expect(
+      nav.queryByRole("button", { name: /More events sections/i }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Events" })).not.toBeInTheDocument();
-    expect(nav.queryByRole("link", { name: /Photo archive/ })).not.toBeInTheDocument();
-    expect(nav.queryByRole("link", { name: /My tasks/ })).not.toBeInTheDocument();
   });
 
   it("shows Tasks tab for board members", async () => {
@@ -139,7 +143,7 @@ describe("EventsHubLayout", () => {
     expect(tasksTab.className).toContain("border-accent");
   });
 
-  it("keeps Meetings and Archive primary for board members", async () => {
+  it("keeps Meetings, Ideas, and Photos primary for board members", async () => {
     renderWithRouter(undefined, {
       initialEntries: ["/events/calendar"],
       auth: {
@@ -153,16 +157,19 @@ describe("EventsHubLayout", () => {
       "href",
       "/events/meetings",
     );
-    expect(nav.getByRole("link", { name: /Archive/ })).toHaveAttribute(
+    expect(nav.getByRole("link", { name: /^Ideas/ })).toHaveAttribute(
+      "href",
+      "/events/ideas",
+    );
+    expect(nav.getByRole("link", { name: /Photos/ })).toHaveAttribute(
       "href",
       "/events/photos",
     );
     expect(nav.queryByRole("link", { name: /Past events/ })).not.toBeInTheDocument();
-    expect(nav.queryByRole("link", { name: /Task oversight/ })).not.toBeInTheDocument();
+    expect(nav.queryByRole("link", { name: /Oversight/ })).not.toBeInTheDocument();
   });
 
-  it("puts Suggestions and Task oversight under More for presidents", async () => {
-    const user = userEvent.setup();
+  it("shows Ideas and Oversight as primary tabs for presidents", async () => {
     renderWithRouter(undefined, {
       initialEntries: ["/events/calendar"],
       auth: {
@@ -172,19 +179,23 @@ describe("EventsHubLayout", () => {
     });
 
     const nav = await eventsNav();
-    const more = nav.getByRole("button", { name: /More events sections/i });
-    expect(more).toHaveTextContent("5");
-    await user.click(more);
-
-    const suggestions = await screen.findByRole("menuitem", { name: /Suggestions/ });
-    expect(suggestions).toHaveTextContent("2");
-    expect(screen.getByRole("menuitem", { name: /Task oversight/ })).toHaveTextContent(
-      "3",
+    expect(nav.getByRole("link", { name: /^Ideas/ })).toHaveAttribute(
+      "href",
+      "/events/ideas",
     );
+    expect(nav.getByRole("link", { name: /^Oversight/ })).toHaveAttribute(
+      "href",
+      "/events/oversight",
+    );
+    expect(nav.getByRole("link", { name: /^Ideas/ })).toHaveTextContent("2");
+    expect(nav.getByRole("link", { name: /^Oversight/ })).toHaveTextContent("3");
+
+    const user = userEvent.setup();
+    await user.click(nav.getByRole("button", { name: /More events sections/i }));
     expect(screen.getByRole("menuitem", { name: /Past events/ })).toBeInTheDocument();
   });
 
-  it("highlights More when Task oversight is active", async () => {
+  it("highlights Oversight when task oversight is active", async () => {
     renderWithRouter(undefined, {
       initialEntries: ["/events/oversight"],
       auth: {
@@ -194,14 +205,12 @@ describe("EventsHubLayout", () => {
     });
 
     const nav = await eventsNav();
-    const more = nav.getByRole("button", { name: /More events sections/i });
-    expect(more).toHaveAttribute("aria-current", "page");
-    expect(more).toHaveTextContent("Task oversight");
-    expect(more.className).toContain("border-accent");
+    const oversight = nav.getByRole("link", { name: /^Oversight/ });
+    expect(oversight).toHaveAttribute("aria-current", "page");
+    expect(oversight.className).toContain("border-accent");
   });
 
-  it("shows Task oversight under More for vice president", async () => {
-    const user = userEvent.setup();
+  it("shows Oversight as a primary tab for vice president", async () => {
     renderWithRouter(undefined, {
       initialEntries: ["/events/oversight"],
       auth: {
@@ -211,12 +220,13 @@ describe("EventsHubLayout", () => {
     });
 
     const nav = await eventsNav();
-    await user.click(nav.getByRole("button", { name: /More events sections/i }));
-    expect(screen.getByRole("menuitem", { name: /Task oversight/ })).toBeInTheDocument();
+    expect(nav.getByRole("link", { name: /^Oversight/ })).toHaveAttribute(
+      "href",
+      "/events/oversight",
+    );
   });
 
   it("hides board-only destinations for general members", async () => {
-    const user = userEvent.setup();
     renderWithRouter(undefined, {
       initialEntries: ["/events/calendar"],
       auth: {
@@ -228,11 +238,8 @@ describe("EventsHubLayout", () => {
     const nav = await eventsNav();
     expect(nav.queryByRole("link", { name: /Meetings/ })).not.toBeInTheDocument();
     expect(nav.queryByRole("link", { name: /Past events/ })).not.toBeInTheDocument();
-    expect(nav.queryByRole("link", { name: /Task oversight/ })).not.toBeInTheDocument();
-
-    await user.click(nav.getByRole("button", { name: /More events sections/i }));
-    expect(screen.getByRole("menuitem", { name: /Suggestions/ })).toBeInTheDocument();
-    expect(screen.queryByRole("menuitem", { name: /Past events/ })).not.toBeInTheDocument();
+    expect(nav.queryByRole("link", { name: /Oversight/ })).not.toBeInTheDocument();
+    expect(nav.getByRole("link", { name: /^Ideas/ })).toBeInTheDocument();
   });
 
   it("hides the tab bar on event manage pages", async () => {

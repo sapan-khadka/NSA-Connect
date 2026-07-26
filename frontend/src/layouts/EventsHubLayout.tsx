@@ -49,28 +49,31 @@ function buildEventsTabs(
     },
   ];
 
-  const more: EventsTab[] = [
-    {
-      label: "Suggestions",
-      to: "/events/suggestions",
-      badgeCount: counts.suggestions,
-    },
-  ];
+  const more: EventsTab[] = [];
 
   if (canViewMemberDirectory(member.role)) {
     primary.push({ label: "Meetings", to: "/events/meetings" });
-    primary.push({ label: "Archive", to: "/events/photos" });
+  }
 
-    if (canViewTaskOversight(member.role, member.position)) {
-      more.push({
-        label: "Task oversight",
-        to: "/events/oversight",
-        badgeCount: counts.oversight,
-      });
-    }
+  if (canViewTaskOversight(member.role, member.position)) {
+    primary.push({
+      label: "Oversight",
+      to: "/events/oversight",
+      badgeCount: counts.oversight,
+    });
+  }
+
+  primary.push({ label: "Photos", to: "/events/photos" });
+
+  // Keep Ideas last among primary tabs.
+  primary.push({
+    label: "Ideas",
+    to: "/events/ideas",
+    badgeCount: counts.suggestions,
+  });
+
+  if (canViewMemberDirectory(member.role)) {
     more.push({ label: "Past events", to: "/events/past" });
-  } else {
-    primary.push({ label: "Archive", to: "/events/photos" });
   }
 
   return { primary, more };
@@ -152,7 +155,7 @@ function EventsMoreMenu({ items }: { items: EventsTab[] }) {
           id={menuId}
           role="menu"
           aria-label="More events sections"
-          className="absolute right-0 top-full z-30 mt-1 min-w-[11rem] rounded-lg border border-gray-200 bg-white py-1 shadow-md"
+          className="absolute right-0 top-full z-50 mt-1 min-w-[11rem] rounded-lg border border-gray-200 bg-white py-1 shadow-md"
         >
           {items.map((item) => {
             const active = isTabActive(location.pathname, item);
@@ -262,39 +265,50 @@ function EventsHubTabBar({
     <nav
       aria-label="Events sections"
       className={[
-        "events-hub-tabs sticky top-0 z-10 border-b border-gray-200 bg-surface/95 px-3 pb-0 backdrop-blur-sm sm:-mx-1 sm:border-surface-card sm:px-1",
+        "events-hub-tabs sticky top-0 z-20 border-b border-gray-200 bg-surface/95 px-3 pb-0 backdrop-blur-sm sm:-mx-1 sm:border-surface-card sm:px-1",
         canScrollLeft ? "events-hub-tabs--fade-left" : "",
         canScrollRight ? "events-hub-tabs--fade-right" : "",
       ]
         .filter(Boolean)
         .join(" ")}
     >
-      <div ref={scrollerRef} className="events-hub-tabs-scroller">
-        {primary.map((tab) => (
-          <NavLink
-            key={tab.to}
-            to={tab.to}
-            end={tab.end}
-            className={({ isActive }) =>
-              [
-                "events-hub-tab inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-2.5 py-2 text-[13px] font-medium transition-colors",
-                isActive
-                  ? "border-accent text-accent"
-                  : "border-transparent text-label hover:text-accent",
-              ].join(" ")
-            }
-          >
-            <span>{tab.label}</span>
-            <NavCountBadge
-              count={tab.badgeCount ?? 0}
-              className="events-hub-tab-badge h-4 min-w-4 px-1 text-[10px]"
-            />
-          </NavLink>
-        ))}
+      {/* Keep More outside the overflow scroller so its dropdown isn't clipped. */}
+      <div className="events-hub-tabs-row">
+        <div className="events-hub-tabs-scroll-wrap">
+          <div ref={scrollerRef} className="events-hub-tabs-scroller">
+            {primary.map((tab) => (
+              <NavLink
+                key={tab.to}
+                to={tab.to}
+                end={tab.end}
+                className={({ isActive }) =>
+                  [
+                    "events-hub-tab inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-2.5 py-2 text-[13px] font-medium transition-colors",
+                    isActive
+                      ? "border-accent text-accent"
+                      : "border-transparent text-label hover:text-accent",
+                  ].join(" ")
+                }
+              >
+                <span>{tab.label}</span>
+                <NavCountBadge
+                  count={tab.badgeCount ?? 0}
+                  className="events-hub-tab-badge h-4 min-w-4 px-1 text-[10px]"
+                />
+              </NavLink>
+            ))}
+          </div>
+          <span
+            className="events-hub-tabs-fade events-hub-tabs-fade--left"
+            aria-hidden="true"
+          />
+          <span
+            className="events-hub-tabs-fade events-hub-tabs-fade--right"
+            aria-hidden="true"
+          />
+        </div>
         <EventsMoreMenu items={more} />
       </div>
-      <span className="events-hub-tabs-fade events-hub-tabs-fade--left" aria-hidden="true" />
-      <span className="events-hub-tabs-fade events-hub-tabs-fade--right" aria-hidden="true" />
     </nav>
   );
 }

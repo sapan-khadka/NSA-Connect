@@ -1,4 +1,5 @@
 import { cleanup, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createMockMember, renderWithRouter } from "../test/test-utils";
@@ -17,7 +18,8 @@ describe("BoardMeetingsPage", () => {
     vi.clearAllMocks();
   });
 
-  it("lists upcoming and past meetings with status", async () => {
+  it("lists meetings with calm hierarchy and unique KPI filters", async () => {
+    const user = userEvent.setup();
     mockedFetchMeetings.mockResolvedValue({
       total: 2,
       meetings: [
@@ -34,6 +36,7 @@ describe("BoardMeetingsPage", () => {
           absent_count: 0,
           excused_count: 0,
           unmarked_count: 3,
+          action_item_count: 0,
           minutes_updated_at: null,
         },
         {
@@ -43,13 +46,14 @@ describe("BoardMeetingsPage", () => {
           is_past: true,
           agenda: "Budget review",
           has_attendance: true,
-          has_minutes: true,
-          has_summary: true,
+          has_minutes: false,
+          has_summary: false,
           present_count: 5,
           absent_count: 1,
           excused_count: 0,
           unmarked_count: 0,
-          minutes_updated_at: "2030-05-01T20:00:00+00:00",
+          action_item_count: 2,
+          minutes_updated_at: null,
         },
       ],
     });
@@ -62,11 +66,24 @@ describe("BoardMeetingsPage", () => {
       },
     });
 
-    expect(await screen.findByRole("heading", { name: "Board meetings" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Board meetings" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("April Board Meeting")).toBeInTheDocument();
     expect(screen.getByText("March Board Meeting")).toBeInTheDocument();
-    expect(screen.getByText("Attendance recorded")).toBeInTheDocument();
-    expect(screen.getByText("Minutes published")).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: "View meeting" })).toHaveLength(2);
+    expect(screen.getByText("Scheduled")).toBeInTheDocument();
+    expect(screen.getByText("Attendance")).toBeInTheDocument();
+    expect(screen.getByText("Minutes")).toBeInTheDocument();
+    expect(screen.getByText("May 2030")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /April Board Meeting/i }),
+    ).toHaveAttribute("href", "/events/meetings/2");
+    expect(
+      screen.getByRole("link", { name: /March Board Meeting/i }),
+    ).toHaveAttribute("href", "/events/meetings/1");
+
+    await user.click(screen.getByRole("button", { name: /Missing minutes/i }));
+    expect(screen.queryByText("April Board Meeting")).not.toBeInTheDocument();
+    expect(screen.getByText("March Board Meeting")).toBeInTheDocument();
   });
 });

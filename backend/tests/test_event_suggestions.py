@@ -42,7 +42,7 @@ def test_any_member_can_submit_suggestion(client, member_headers):
     body = response.json()
     assert body["title"] == "Holi celebration"
     assert body["preferred_timing"] == "This semester"
-    assert body["status"] == "submitted"
+    assert body["status"] == "pending_review"
     assert body["suggested_by"]["full_name"]
 
 
@@ -83,7 +83,37 @@ def test_all_members_can_list_suggestions(
     assert member_response.json()["suggestions"][0]["title"] == "Existing idea"
 
 
-def test_board_can_mark_suggestion_noted(client, board_headers, db_session):
+def test_member_can_get_suggestion_detail(client, member_headers, db_session):
+    member = db_session.scalar(select(Member).where(Member.email == "sapan@semo.edu"))
+    suggestion = EventSuggestion(
+        title="Cultural night",
+        description="Music and food.",
+        preferred_timing="Fall",
+        suggested_by_id=member.id,
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(suggestion)
+    db_session.commit()
+    db_session.refresh(suggestion)
+
+    response = client.get(
+        f"/api/v1/event-suggestions/{suggestion.id}",
+        headers=member_headers,
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["id"] == suggestion.id
+    assert body["title"] == "Cultural night"
+    assert body["status"] == "pending_review"
+
+
+def test_get_missing_suggestion_returns_404(client, member_headers):
+    response = client.get("/api/v1/event-suggestions/99999", headers=member_headers)
+    assert response.status_code == 404
+
+
+def test_board_can_open_suggestion_for_discussion(client, board_headers, db_session):
     member = db_session.scalar(select(Member).where(Member.email == "board@semo.edu"))
     suggestion = EventSuggestion(
         title="Board social",
@@ -98,17 +128,40 @@ def test_board_can_mark_suggestion_noted(client, board_headers, db_session):
     response = client.patch(
         f"/api/v1/event-suggestions/{suggestion.id}/status",
         headers=board_headers,
-        json={"status": "noted"},
+        json={"status": "under_discussion"},
     )
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "noted"
+    assert body["status"] == "under_discussion"
     assert body["noted_by"] is not None
     assert body["noted_at"] is not None
 
 
-def test_member_cannot_mark_suggestion_noted(client, member_headers, db_session):
+def test_board_can_approve_suggestion(client, board_headers, db_session):
+    member = db_session.scalar(select(Member).where(Member.email == "board@semo.edu"))
+    suggestion = EventSuggestion(
+        title="Approved idea",
+        description="Ready for planning.",
+        suggested_by_id=member.id,
+        status=EventSuggestionStatus.UNDER_DISCUSSION,
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(suggestion)
+    db_session.commit()
+    db_session.refresh(suggestion)
+
+    response = client.patch(
+        f"/api/v1/event-suggestions/{suggestion.id}/status",
+        headers=board_headers,
+        json={"status": "approved"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "approved"
+
+
+def test_member_cannot_update_suggestion_status(client, member_headers, db_session):
     member = db_session.scalar(select(Member).where(Member.email == "sapan@semo.edu"))
     suggestion = EventSuggestion(
         title="Game night",
@@ -123,10 +176,10 @@ def test_member_cannot_mark_suggestion_noted(client, member_headers, db_session)
     response = client.patch(
         f"/api/v1/event-suggestions/{suggestion.id}/status",
         headers=member_headers,
-        json={"status": "noted"},
+        json={"status": "under_discussion"},
     )
 
     assert response.status_code == 403
 
     db_session.refresh(suggestion)
-    assert suggestion.status == EventSuggestionStatus.SUBMITTED
+    assert suggestion.status == EventSuggestionStatus.PENDING_REVIEW

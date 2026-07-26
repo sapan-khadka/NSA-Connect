@@ -9,8 +9,12 @@ from app.models.base import Base
 
 
 class EventSuggestionStatus(StrEnum):
-    SUBMITTED = "submitted"
-    NOTED = "noted"
+    PENDING_REVIEW = "pending_review"
+    UNDER_DISCUSSION = "under_discussion"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    CONVERTED = "converted"
+    ARCHIVED = "archived"
 
 
 class EventSuggestion(Base):
@@ -33,8 +37,8 @@ class EventSuggestion(Base):
             values_callable=lambda types: [item.value for item in types],
         ),
         nullable=False,
-        default=EventSuggestionStatus.SUBMITTED,
-        server_default=EventSuggestionStatus.SUBMITTED.value,
+        default=EventSuggestionStatus.PENDING_REVIEW,
+        server_default=EventSuggestionStatus.PENDING_REVIEW.value,
     )
     suggested_by_id = Column(
         Integer, ForeignKey("users.id"), nullable=False, index=True

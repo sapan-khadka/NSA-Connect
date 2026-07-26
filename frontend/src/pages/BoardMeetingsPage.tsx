@@ -1,71 +1,82 @@
+import { Search, SlidersHorizontal } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { MeetingStatusChips } from "../components/MeetingStatusChips";
-import { PageHeader } from "../components/PageHeader";
+import { AppIcon } from "../components/ui/AppIcon";
 import { getApiErrorMessage } from "../lib/api-error";
+import {
+  calcBoardMeetingsStats,
+  filterMeetings,
+  formatMeetingWhen,
+  getMeetingStatusMarks,
+  groupMeetingsBySemester,
+  meetingIsComplete,
+  meetingSubtitle,
+  meetingYearOptions,
+  type MeetingMissingFilter,
+  type MeetingStatusFilter,
+} from "../lib/board-meetings";
 import { fetchMeetings, type MeetingSummary } from "../lib/meetings-api";
-import { formatEventDateTime } from "../lib/format-datetime";
-import { Card } from "../components/ui/Card";
 
-function groupMeetings(meetings: MeetingSummary[]) {
-  const upcoming = meetings.filter((meeting) => !meeting.is_past);
-  const past = meetings.filter((meeting) => meeting.is_past);
-  return { upcoming, past };
-}
+type KpiKey = "all" | "minutes" | "attendance" | "ready";
 
-function MeetingListSection({
-  title,
-  meetings,
-}: {
-  title: string;
-  meetings: MeetingSummary[];
-}) {
-  if (meetings.length === 0) {
-    return null;
-  }
+function MeetingRow({ meeting }: { meeting: MeetingSummary }) {
+  const complete = meetingIsComplete(meeting);
+  const when = formatMeetingWhen(meeting.starts_at);
+  const subtitle = meetingSubtitle(meeting);
+  const marks = getMeetingStatusMarks(meeting);
 
   return (
-    <section className="space-y-4">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-label">
-        {title}
-      </h2>
-      <div className="grid gap-4">
-        {meetings.map((meeting) => (
-          <Card
-            key={meeting.event_id}
-            as="article"
-            padding="md"
-          >
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="min-w-0 space-y-2">
-                <div>
-                  <h3 className="text-xl font-semibold text-foreground">
-                    {meeting.event_name}
-                  </h3>
-                  <p className="mt-1 text-sm text-label">
-                    {formatEventDateTime(meeting.starts_at)}
-                  </p>
-                </div>
-                {meeting.agenda ? (
-                  <p className="line-clamp-2 text-sm text-label">
-                    <span className="font-medium text-foreground">Agenda:</span>{" "}
-                    {meeting.agenda}
-                  </p>
-                ) : null}
-                <MeetingStatusChips meeting={meeting} />
-              </div>
-              <Link
-                to={`/events/meetings/${meeting.event_id}`}
-                className="shrink-0 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-foreground transition hover:border-accent hover:bg-accent/5"
+    <li>
+      <Link
+        to={`/events/meetings/${meeting.event_id}`}
+        aria-label={`${meeting.event_name}. Open workspace`}
+        className={[
+          "board-meetings-row",
+          complete ? "is-complete" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        <div className="board-meetings-row__top">
+          <h3 className="board-meetings-row__title">{meeting.event_name}</h3>
+          <span className="board-meetings-row__open" aria-hidden="true">
+            Open →
+          </span>
+        </div>
+        <p className="board-meetings-row__meta">
+          <span>{subtitle}</span>
+          {when ? (
+            <>
+              <span className="board-meetings-row__sep" aria-hidden="true">
+                ·
+              </span>
+              <span>{when}</span>
+            </>
+          ) : null}
+        </p>
+        {marks ? (
+          <p className="board-meetings-row__status" aria-label="Record status">
+            {marks.map((mark) => (
+              <span
+                key={mark.key}
+                className={[
+                  "board-meetings-mark",
+                  mark.done ? "is-done" : "is-open",
+                ].join(" ")}
               >
-                View meeting
-              </Link>
-            </div>
-          </Card>
-        ))}
-      </div>
-    </section>
+                <span className="board-meetings-mark__icon" aria-hidden="true">
+                  {mark.done ? "✓" : "○"}
+                </span>
+                <span className="board-meetings-mark__label">{mark.label}</span>
+              </span>
+            ))}
+          </p>
+        ) : (
+          <p className="board-meetings-row__status">Scheduled</p>
+        )}
+      </Link>
+    </li>
   );
 }
 
@@ -73,6 +84,13 @@ export function BoardMeetingsPage() {
   const [meetings, setMeetings] = useState<MeetingSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [statusFilter, setStatusFilter] =
+    useState<MeetingStatusFilter>("all");
+  const [yearFilter, setYearFilter] = useState<"all" | number>("all");
+  const [missingFilter, setMissingFilter] =
+    useState<MeetingMissingFilter>("all");
 
   useEffect(() => {
     let cancelled = false;
@@ -104,58 +122,293 @@ export function BoardMeetingsPage() {
     };
   }, []);
 
-  const { upcoming, past } = useMemo(() => groupMeetings(meetings), [meetings]);
-  const recordedCount = meetings.filter(
-    (meeting) => meeting.has_attendance || meeting.has_minutes,
-  ).length;
+  const stats = useMemo(() => calcBoardMeetingsStats(meetings), [meetings]);
+  const yearOptions = useMemo(() => meetingYearOptions(meetings), [meetings]);
+
+  const activeKpi: KpiKey =
+    missingFilter === "minutes"
+      ? "minutes"
+      : missingFilter === "attendance"
+        ? "attendance"
+        : missingFilter === "ready"
+          ? "ready"
+          : "all";
+
+  function selectKpi(key: KpiKey) {
+    if (key === "all") {
+      setStatusFilter("all");
+      setMissingFilter("all");
+      return;
+    }
+    if (key === "minutes") {
+      const next = activeKpi === "minutes" ? "all" : "minutes";
+      setStatusFilter("all");
+      setMissingFilter(next === "all" ? "all" : "minutes");
+      return;
+    }
+    if (key === "attendance") {
+      const next = activeKpi === "attendance" ? "all" : "attendance";
+      setStatusFilter("all");
+      setMissingFilter(next === "all" ? "all" : "attendance");
+      return;
+    }
+    const next = activeKpi === "ready" ? "all" : "ready";
+    setStatusFilter("all");
+    setMissingFilter(next === "all" ? "all" : "ready");
+  }
+
+  const filtered = useMemo(
+    () =>
+      filterMeetings(meetings, {
+        search,
+        status: statusFilter,
+        year: yearFilter,
+        missing: missingFilter,
+      }),
+    [meetings, search, statusFilter, yearFilter, missingFilter],
+  );
+
+  const groups = useMemo(
+    () => groupMeetingsBySemester(filtered),
+    [filtered],
+  );
+
+  const filtersActive =
+    statusFilter !== "all" ||
+    yearFilter !== "all" ||
+    missingFilter !== "all";
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Board meetings"
-        description="Official record of NSA board meetings — agenda, attendance, and minutes from calendar events."
-      />
+    <div className="board-meetings-page">
+      <header className="board-meetings-header">
+        <div>
+          <h1 className="board-meetings-title">Board meetings</h1>
+          <p className="board-meetings-subtitle">
+            Official record of NSA board meetings — agenda, attendance, and
+            minutes.
+          </p>
+        </div>
+      </header>
 
       {!isLoading && meetings.length > 0 ? (
-        <p className="text-sm text-label">
-          {recordedCount} of {meetings.length} meeting
-          {meetings.length === 1 ? "" : "s"} have attendance or minutes on file.
-        </p>
+        <section className="board-meetings-kpi" aria-label="Meetings summary">
+          <button
+            type="button"
+            className="board-meetings-kpi__cell"
+            aria-pressed={activeKpi === "all"}
+            onClick={() => selectKpi("all")}
+          >
+            <span className="board-meetings-kpi__value">{stats.total}</span>
+            <span className="board-meetings-kpi__label">Meetings</span>
+          </button>
+          <button
+            type="button"
+            className={[
+              "board-meetings-kpi__cell",
+              activeKpi === "minutes" ? "is-active" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            aria-pressed={activeKpi === "minutes"}
+            onClick={() => selectKpi("minutes")}
+          >
+            <span className="board-meetings-kpi__value">{stats.needMinutes}</span>
+            <span className="board-meetings-kpi__label">Missing minutes</span>
+          </button>
+          <button
+            type="button"
+            className={[
+              "board-meetings-kpi__cell",
+              activeKpi === "attendance" ? "is-active" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            aria-pressed={activeKpi === "attendance"}
+            onClick={() => selectKpi("attendance")}
+          >
+            <span className="board-meetings-kpi__value">
+              {stats.needAttendance}
+            </span>
+            <span className="board-meetings-kpi__label">Missing attendance</span>
+          </button>
+          <button
+            type="button"
+            className={[
+              "board-meetings-kpi__cell",
+              activeKpi === "ready" ? "is-active" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            aria-pressed={activeKpi === "ready"}
+            onClick={() => selectKpi("ready")}
+          >
+            <span className="board-meetings-kpi__value">{stats.ready}</span>
+            <span className="board-meetings-kpi__label">Completed</span>
+          </button>
+        </section>
+      ) : null}
+
+      {!isLoading && meetings.length > 0 ? (
+        <>
+          <div className="board-meetings-toolbar">
+            <label className="board-meetings-search">
+              <AppIcon icon={Search} size="sm" className="text-label" />
+              <span className="sr-only">Search meetings</span>
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search meetings…"
+              />
+            </label>
+            <div className="board-meetings-toolbar__actions">
+              <button
+                type="button"
+                className="board-meetings-filter-btn"
+                aria-expanded={filtersOpen}
+                onClick={() => setFiltersOpen((open) => !open)}
+              >
+                <AppIcon
+                  icon={SlidersHorizontal}
+                  size="sm"
+                  className="text-current"
+                />
+                Filter
+                {filtersActive ? (
+                  <span className="board-meetings-filter-btn__on">On</span>
+                ) : null}
+              </button>
+            </div>
+          </div>
+
+          {filtersOpen ? (
+            <div
+              className="board-meetings-filter-panel"
+              aria-label="Meeting filters"
+            >
+              <div className="board-meetings-filter-field">
+                <label htmlFor="board-meetings-filter-status">Status</label>
+                <select
+                  id="board-meetings-filter-status"
+                  value={statusFilter}
+                  onChange={(event) =>
+                    setStatusFilter(event.target.value as MeetingStatusFilter)
+                  }
+                >
+                  <option value="all">All</option>
+                  <option value="upcoming">Upcoming</option>
+                  <option value="completed">Completed</option>
+                  <option value="needs_attention">Needs attention</option>
+                </select>
+              </div>
+              <div className="board-meetings-filter-field">
+                <label htmlFor="board-meetings-filter-year">Year</label>
+                <select
+                  id="board-meetings-filter-year"
+                  value={yearFilter === "all" ? "all" : String(yearFilter)}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setYearFilter(value === "all" ? "all" : Number(value));
+                  }}
+                >
+                  <option value="all">All years</option>
+                  {yearOptions.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="board-meetings-filter-field">
+                <label htmlFor="board-meetings-filter-missing">
+                  Missing records
+                </label>
+                <select
+                  id="board-meetings-filter-missing"
+                  value={missingFilter}
+                  onChange={(event) =>
+                    setMissingFilter(event.target.value as MeetingMissingFilter)
+                  }
+                >
+                  <option value="all">All</option>
+                  <option value="either">Anything missing</option>
+                  <option value="minutes">Minutes missing</option>
+                  <option value="attendance">Attendance missing</option>
+                  <option value="ready">Complete records</option>
+                </select>
+              </div>
+              <button
+                type="button"
+                className="board-meetings-filter-btn"
+                onClick={() => {
+                  setStatusFilter("all");
+                  setYearFilter("all");
+                  setMissingFilter("all");
+                  setSearch("");
+                }}
+              >
+                Reset
+              </button>
+            </div>
+          ) : null}
+        </>
       ) : null}
 
       {isLoading ? (
-        <p className="text-sm text-label">Loading board meetings…</p>
+        <p className="board-meetings-loading">Loading board meetings…</p>
       ) : null}
 
       {error ? (
-        <div
-          role="alert"
-          className="ds-alert-banner p-6"
-        >
+        <div role="alert" className="ds-alert-banner p-6">
           {error}
         </div>
       ) : null}
 
       {!isLoading && !error && meetings.length === 0 ? (
-        <section className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center">
-          <p className="text-lg font-light tracking-subhead text-foreground">No board meetings yet</p>
-          <p className="mt-2 text-label">
+        <section className="board-meetings-empty">
+          <p className="board-meetings-empty__title">No board meetings yet</p>
+          <p className="board-meetings-empty__copy">
             Create a meeting event on the calendar, then record attendance and
             minutes from the meeting page.
           </p>
-          <Link
-            to="/events/calendar"
-            className="mt-4 inline-block ds-link"
-          >
+          <Link to="/events/calendar" className="mt-4 inline-block ds-link">
             Open calendar
           </Link>
         </section>
       ) : null}
 
-      {!isLoading && !error && meetings.length > 0 ? (
-        <div className="space-y-8">
-          <MeetingListSection title="Upcoming" meetings={upcoming} />
-          <MeetingListSection title="Past" meetings={past} />
+      {!isLoading && !error && meetings.length > 0 && filtered.length === 0 ? (
+        <section className="board-meetings-empty is-soft">
+          <p className="board-meetings-empty__title">No matching meetings</p>
+          <p className="board-meetings-empty__copy">
+            Try clearing search or filters to see the full list.
+          </p>
+        </section>
+      ) : null}
+
+      {!isLoading && !error && groups.length > 0 ? (
+        <div className="board-meetings-groups">
+          {groups.map((group) => (
+            <section
+              key={group.key}
+              className="board-meetings-group"
+              aria-label={group.label}
+            >
+              <header className="board-meetings-group__head">
+                <h2 className="board-meetings-group__title">{group.label}</h2>
+              </header>
+              {group.months.map((month) => (
+                <div key={month.key} className="board-meetings-month">
+                  <h3 className="board-meetings-month__title">{month.label}</h3>
+                  <ul className="board-meetings-list">
+                    {month.meetings.map((meeting) => (
+                      <MeetingRow key={meeting.event_id} meeting={meeting} />
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </section>
+          ))}
         </div>
       ) : null}
     </div>

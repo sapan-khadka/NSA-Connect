@@ -87,7 +87,7 @@ describe("TaskOversightPage", () => {
     expect(mockedOverview).not.toHaveBeenCalled();
   });
 
-  it("scopes the board to the selected event", async () => {
+  it("scopes operations to the selected event", async () => {
     const user = userEvent.setup();
     mockedOverview.mockResolvedValue({
       total_tasks: 3,
@@ -153,18 +153,19 @@ describe("TaskOversightPage", () => {
 
     const eventSelect = await screen.findByLabelText("Event");
     expect(eventSelect).toHaveValue("10");
+
+    const ops = screen.getByLabelText("Event operations");
     expect(
-      screen.getByText("Track progress for Dashain."),
-    ).toBeInTheDocument();
+      within(ops).getByLabelText("Upcoming"),
+    ).toHaveTextContent("Social Media Campaign");
+    expect(
+      within(ops).getByLabelText("Completed"),
+    ).toHaveTextContent("Book venue");
+    expect(within(ops).queryByText("Holidays Flyer")).not.toBeInTheDocument();
 
-    const board = screen.getByLabelText("Task board");
-    expect(within(board).getByText("Social Media Campaign")).toBeInTheDocument();
-    expect(within(board).getByText("Book venue")).toBeInTheDocument();
-    expect(within(board).queryByText("Holidays Flyer")).not.toBeInTheDocument();
-
-    expect(screen.getByText("Needs Attention")).toBeInTheDocument();
-    expect(screen.getByText("Open")).toBeInTheDocument();
-    expect(screen.getByLabelText("Event health")).toBeInTheDocument();
+    expect(screen.getByLabelText("Progress")).toBeInTheDocument();
+    expect(screen.getByText(/tasks completed/i)).toBeInTheDocument();
+    expect(screen.getByLabelText("Issues")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /New Task/i })).toHaveAttribute(
       "href",
       "/events/10/manage",
@@ -172,90 +173,47 @@ describe("TaskOversightPage", () => {
 
     await user.selectOptions(eventSelect, "22");
 
+    expect(eventSelect).toHaveValue("22");
+    const nextOps = screen.getByLabelText("Event operations");
+    expect(within(nextOps).getByText("Holidays Flyer")).toBeInTheDocument();
     expect(
-      screen.getByText("Track progress for Tihar."),
-    ).toBeInTheDocument();
-    expect(within(board).getByText("Holidays Flyer")).toBeInTheDocument();
-    expect(within(board).queryByText("Social Media Campaign")).not.toBeInTheDocument();
-    expect(within(board).queryByText("Book venue")).not.toBeInTheDocument();
+      within(nextOps).queryByText("Social Media Campaign"),
+    ).not.toBeInTheDocument();
+    expect(within(nextOps).queryByText("Book venue")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /New Task/i })).toHaveAttribute(
       "href",
       "/events/22/manage",
     );
   });
 
-  it("filters the selected event board by search", async () => {
-    const user = userEvent.setup();
+  it("surfaces overdue work in Issues", async () => {
     mockedOverview.mockResolvedValue({
-      total_tasks: 2,
+      total_tasks: 1,
       completed_tasks: 0,
       members: [
         {
-          member_id: 5,
-          full_name: "Board Member",
+          member_id: 2,
+          full_name: "Needs Help",
           role: "board",
-          position: "event_manager",
-          total: 2,
+          position: "member",
+          total: 1,
           completed: 0,
           in_progress: 0,
-          todo: 2,
+          todo: 1,
           completion_percent: 0,
           tasks: [
             taskFixture({
-              id: 1,
-              title: "Design Event Poster",
+              id: 3,
+              title: "Holidays Flyer",
               status: "todo",
+              is_overdue: true,
               is_complete: false,
+              due_date: "2020-01-01T12:00:00.000Z",
+              assignee_id: 2,
+              assignee_name: "Needs Help",
+              event_id: 22,
+              event_name: "Tihar",
             }),
-            taskFixture({
-              id: 2,
-              title: "Confirm Venue Booking",
-              status: "todo",
-              is_complete: false,
-            }),
-          ],
-        },
-      ],
-    });
-
-    renderPage("vice_president", "vice_president");
-
-    expect(await screen.findByText("Design Event Poster")).toBeInTheDocument();
-    expect(screen.getByText("Confirm Venue Booking")).toBeInTheDocument();
-
-    await user.type(
-      screen.getByPlaceholderText("Search tasks or members…"),
-      "poster",
-    );
-
-    expect(screen.getByText("Design Event Poster")).toBeInTheDocument();
-    expect(screen.queryByText("Confirm Venue Booking")).not.toBeInTheDocument();
-  });
-
-  it("filters the selected event board by status", async () => {
-    const user = userEvent.setup();
-    mockedOverview.mockResolvedValue({
-      total_tasks: 2,
-      completed_tasks: 1,
-      members: [
-        {
-          member_id: 5,
-          full_name: "Board Member",
-          role: "board",
-          position: "event_manager",
-          total: 2,
-          completed: 1,
-          in_progress: 0,
-          todo: 1,
-          completion_percent: 50,
-          tasks: [
-            taskFixture({
-              id: 1,
-              title: "Open task",
-              status: "todo",
-              is_complete: false,
-            }),
-            taskFixture({ id: 2, title: "Finished task", status: "done" }),
           ],
         },
       ],
@@ -263,12 +221,9 @@ describe("TaskOversightPage", () => {
 
     renderPage("president", "member");
 
-    expect(await screen.findByText("Open task")).toBeInTheDocument();
-    expect(screen.getByText("Finished task")).toBeInTheDocument();
-
-    await user.selectOptions(screen.getByLabelText("Status"), "done");
-
-    expect(screen.queryByText("Open task")).not.toBeInTheDocument();
-    expect(screen.getByText("Finished task")).toBeInTheDocument();
+    const issues = await screen.findByLabelText("Issues");
+    expect(within(issues).getByText("Holidays Flyer")).toBeInTheDocument();
+    expect(within(issues).getByText(/Needs Help/)).toBeInTheDocument();
+    expect(within(issues).getByText(/overdue/i)).toBeInTheDocument();
   });
 });

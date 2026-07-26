@@ -66,12 +66,22 @@ const ROUTES: RouteMeta[] = [
     ],
   },
   {
-    pattern: /^\/events\/suggestions\/?$/,
-    title: "Event suggestions",
+    pattern: /^\/events\/ideas\/?$/,
+    title: "Ideas",
     crumbs: () => [
       DASHBOARD,
       { id: "events", label: "Events", to: "/events/calendar" },
-      leaf("suggestions", "Suggestions"),
+      leaf("ideas", "Ideas"),
+    ],
+  },
+  {
+    pattern: /^\/events\/ideas\/[^/]+\/?$/,
+    title: "Idea",
+    crumbs: () => [
+      DASHBOARD,
+      { id: "events", label: "Events", to: "/events/calendar" },
+      { id: "ideas", label: "Ideas", to: "/events/ideas" },
+      leaf("idea", "Workspace"),
     ],
   },
   {

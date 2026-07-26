@@ -12,61 +12,78 @@ type MeetingStatusChipsProps = {
     | "excused_count"
     | "unmarked_count"
   >;
+  /** Dense list rows hide the attendance count line (shown separately). */
+  compact?: boolean;
 };
 
-export function MeetingStatusChips({ meeting }: MeetingStatusChipsProps) {
-  const chips: { label: string; className: string }[] = [];
+type Chip = {
+  key: string;
+  label: string;
+  tone: "ok" | "warn" | "muted" | "scheduled";
+};
 
-  chips.push({
-    label: meeting.is_past ? "Completed" : "Scheduled",
-    className: meeting.is_past
-      ? "bg-surface-muted text-foreground"
-      : "bg-mint text-primary",
-  });
+export function MeetingStatusChips({
+  meeting,
+  compact = false,
+}: MeetingStatusChipsProps) {
+  const chips: Chip[] = [];
+
+  // Skip redundant "Completed" — past meetings already live in semester groups.
+  if (!meeting.is_past) {
+    chips.push({ key: "status", label: "Scheduled", tone: "scheduled" });
+  }
 
   if (meeting.has_attendance) {
-    chips.push({
-      label: "Attendance recorded",
-      className: "bg-mint text-primary",
-    });
+    chips.push({ key: "attendance", label: "Attendance", tone: "ok" });
   } else if (meeting.is_past) {
     chips.push({
+      key: "attendance",
       label: "Attendance missing",
-      className: "bg-surface-card text-label",
+      tone: "warn",
     });
   }
 
   if (meeting.has_summary) {
-    chips.push({
-      label: "Minutes published",
-      className: "bg-mint text-primary",
-    });
+    chips.push({ key: "minutes", label: "Minutes", tone: "ok" });
   } else if (meeting.has_minutes) {
-    chips.push({
-      label: "Draft saved",
-      className: "bg-surface-muted text-foreground",
-    });
+    chips.push({ key: "minutes", label: "Draft minutes", tone: "muted" });
   } else if (meeting.is_past) {
-    chips.push({
-      label: "Minutes missing",
-      className: "bg-surface-card text-label",
-    });
+    chips.push({ key: "minutes", label: "Minutes missing", tone: "warn" });
+  }
+
+  if (chips.length === 0) {
+    return null;
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div
+      className={[
+        "meeting-status-chips",
+        compact ? "is-compact" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       {chips.map((chip) => (
         <span
-          key={chip.label}
-          className={`rounded-full px-2.5 py-0.5 text-xs ${chip.className}`}
+          key={chip.key}
+          className={`meeting-status-chip is-${chip.tone}`}
         >
+          {chip.tone === "ok" ? (
+            <span aria-hidden="true">✓</span>
+          ) : null}
+          {chip.tone === "warn" ? (
+            <span aria-hidden="true">⚠</span>
+          ) : null}
           {chip.label}
         </span>
       ))}
-      {meeting.has_attendance ? (
-        <span className="text-xs text-label">
-          {meeting.present_count} present · {meeting.absent_count} absent ·{" "}
-          {meeting.excused_count} excused
+      {!compact && meeting.has_attendance ? (
+        <span className="meeting-status-chips__meta">
+          {meeting.present_count} Present · {meeting.absent_count} Absent
+          {meeting.excused_count > 0
+            ? ` · ${meeting.excused_count} Excused`
+            : ""}
           {meeting.unmarked_count > 0
             ? ` · ${meeting.unmarked_count} unmarked`
             : ""}
