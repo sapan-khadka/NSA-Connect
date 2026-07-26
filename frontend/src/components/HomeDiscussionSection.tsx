@@ -1,7 +1,8 @@
-import { Plus } from "lucide-react";
+import { MessagesSquare, Plus, Users } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
+import { avatarColorFromSeed } from "../lib/avatar-color";
 import {
   fetchDiscussionInbox,
   type DiscussionInboxRoom,
@@ -11,6 +12,63 @@ import { formatRelativeTimestamp } from "../lib/format-datetime";
 import { ArrowLink } from "./ui/ArrowLink";
 import { AppIcon } from "./ui/AppIcon";
 import { HomeCard } from "./ui/HomeCard";
+
+function initialsFromLabel(label: string): string {
+  const parts = label.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) {
+    return "?";
+  }
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  return `${parts[0][0] ?? ""}${parts[parts.length - 1][0] ?? ""}`.toUpperCase();
+}
+
+function DiscussionAvatar({ room }: { room: DiscussionInboxRoom }) {
+  if (room.room_id === "board") {
+    return (
+      <span className="home-discussion-avatar is-board" aria-hidden="true">
+        <AppIcon icon={MessagesSquare} size="xs" className="text-current" />
+      </span>
+    );
+  }
+  if (room.event_type === "dm") {
+    const palette = avatarColorFromSeed(
+      room.peer_user_id != null
+        ? `user:${room.peer_user_id}`
+        : room.label,
+    );
+    return (
+      <span
+        className="home-discussion-avatar is-dm"
+        style={{ backgroundColor: palette.background, color: palette.color }}
+        aria-hidden="true"
+      >
+        {initialsFromLabel(room.label)}
+      </span>
+    );
+  }
+  if (room.event_type === "group" || room.room_id.startsWith("room:")) {
+    return (
+      <span className="home-discussion-avatar is-group" aria-hidden="true">
+        <AppIcon icon={Users} size="xs" className="text-current" />
+      </span>
+    );
+  }
+  const eventPalette = avatarColorFromSeed(room.label || room.room_id);
+  return (
+    <span
+      className="home-discussion-avatar is-event"
+      style={{
+        backgroundColor: eventPalette.background,
+        color: eventPalette.color,
+      }}
+      aria-hidden="true"
+    >
+      {initialsFromLabel(room.label).slice(0, 1)}
+    </span>
+  );
+}
 
 const INBOX_PATH = "/discussions";
 const INBOX_POLL_MS = 12_000;
@@ -53,32 +111,42 @@ export function selectHomeInboxRooms(
 }
 
 function DiscussionRoomRow({ room }: { room: DiscussionInboxRoom }) {
+  const author = room.last_message_author?.trim() || null;
+  const preview = room.last_message_preview?.trim() || null;
+  const metaParts: string[] = [];
+  if (room.unread_count > 0) {
+    metaParts.push(
+      `${room.unread_display ?? room.unread_count} unread`,
+    );
+  } else if (room.event_type === "dm") {
+    metaParts.push("Direct");
+  } else if (room.event_type === "group") {
+    metaParts.push("Group");
+  }
+  if (room.last_message_at) {
+    metaParts.push(formatRelativeTimestamp(room.last_message_at));
+  }
+
   return (
     <Link to={discussionRoomPath(room.room_id)} className="home-discussion-row">
+      <DiscussionAvatar room={room} />
       <div className="home-discussion-copy">
         <div className="home-discussion-title-row">
           <p className="home-discussion-title">{room.label}</p>
-          {room.unread_display ? (
-            <span className="home-discussion-unread">{room.unread_display}</span>
-          ) : room.unread_count > 0 ? (
-            <span className="home-discussion-dot" aria-hidden="true" />
+          {room.unread_count > 0 ? (
+            <span className="home-discussion-unread" aria-hidden="true">
+              {room.unread_display ?? room.unread_count}
+            </span>
           ) : null}
         </div>
-        {room.last_message_preview ? (
-          <p className="home-discussion-preview">
-            {room.last_message_author
-              ? `${room.last_message_author}: ${room.last_message_preview}`
-              : room.last_message_preview}
-          </p>
-        ) : (
-          <p className="home-discussion-preview">No messages yet</p>
-        )}
+        {author ? <p className="home-discussion-author">{author}</p> : null}
+        <p className="home-discussion-preview">
+          {preview ?? "No messages yet"}
+        </p>
+        {metaParts.length > 0 ? (
+          <p className="home-discussion-meta">{metaParts.join(" · ")}</p>
+        ) : null}
       </div>
-      {room.last_message_at ? (
-        <time dateTime={room.last_message_at} className="home-discussion-time">
-          {formatRelativeTimestamp(room.last_message_at)}
-        </time>
-      ) : null}
     </Link>
   );
 }

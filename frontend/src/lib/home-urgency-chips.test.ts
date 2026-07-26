@@ -7,9 +7,15 @@ const emptySummary: MyTasksSummary = {
   openCount: 0,
   overdueCount: 0,
   dueTodayCount: 0,
+  upcomingCount: 0,
+  completedTodayCount: 0,
   nextTask: null,
   overdueTask: null,
   previewTasks: [],
+  overdueTasks: [],
+  dueTodayTasks: [],
+  upcomingTasks: [],
+  completedTodayTasks: [],
 };
 
 describe("buildHomeUrgencyChips", () => {

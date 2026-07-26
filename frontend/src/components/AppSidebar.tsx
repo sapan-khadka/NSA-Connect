@@ -23,6 +23,7 @@ import {
 } from "../context/NotificationSummaryProvider";
 import { useAuth } from "../context/useAuth";
 import { useLogout } from "../context/useLogout";
+import { avatarColorFromSeed } from "../lib/avatar-color";
 import {
   canAccessFinance,
   canBrowseMemberDirectory,
@@ -56,8 +57,11 @@ const navItemBaseClass = [
 const navItemIdleClass =
   "text-label hover:bg-surface-muted hover:text-foreground";
 
-const navItemActiveClass =
-  "bg-badge-teal-bg font-semibold text-primary before:absolute before:inset-y-1.5 before:left-0 before:w-[2px] before:rounded-full before:bg-primary";
+const navItemActiveClass = [
+  "bg-gray-200/80 font-semibold text-foreground",
+  "before:absolute before:inset-y-1 before:left-0 before:w-[3px] before:rounded-full before:bg-primary",
+  "shadow-[inset_0_0_0_1px_rgba(17,24,39,0.08)]",
+].join(" ");
 
 function getInitials(fullName: string): string {
   return fullName
@@ -90,6 +94,7 @@ function SidebarAccountMenu({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
+  const palette = avatarColorFromSeed(fullName);
 
   useEffect(() => {
     if (!open) {
@@ -132,7 +137,13 @@ function SidebarAccountMenu({
           open ? "bg-surface-muted" : "",
         ].join(" ")}
       >
-        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-badge-teal-bg text-[11px] font-semibold text-badge-teal ring-1 ring-inset ring-primary/10">
+        <span
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+          style={{
+            backgroundColor: palette.background,
+            color: palette.color,
+          }}
+        >
           {getInitials(fullName)}
         </span>
         <span className="min-w-0 flex-1">
@@ -224,7 +235,7 @@ function SidebarNavLink({
             size="md"
             className={
               isActive
-                ? "text-primary"
+                ? "text-foreground"
                 : "text-label transition-colors group-hover:text-foreground"
             }
           />

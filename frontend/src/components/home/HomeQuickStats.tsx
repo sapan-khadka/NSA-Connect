@@ -19,18 +19,14 @@ import {
 } from "../../lib/roles";
 import { AppIcon } from "../ui/AppIcon";
 
-type StatCard = {
+type OverviewMetric = {
   id: string;
   label: string;
   value: string;
   hint: string;
-  hintTone?: "muted" | "positive" | "warning" | "negative";
-  valueTone?: "default" | "negative";
+  valueTone?: "default" | "negative" | "warning";
   icon: typeof Users;
   to: string;
-  /** 0–100 quiet progress under the number (DESIGN_SYSTEM.md §4). */
-  progress: number;
-  progressAtRisk?: boolean;
 };
 
 function formatMoney(value: string): string {
@@ -43,13 +39,6 @@ function formatMoney(value: string): string {
     currency: "USD",
     maximumFractionDigits: amount % 1 === 0 ? 0 : 2,
   }).format(amount);
-}
-
-function clampProgress(value: number): number {
-  if (!Number.isFinite(value)) {
-    return 0;
-  }
-  return Math.min(100, Math.max(0, Math.round(value)));
 }
 
 export function HomeQuickStats({
@@ -112,13 +101,10 @@ export function HomeQuickStats({
     (canSeeMembers ? pendingMemberApprovals : 0) +
     (canSeeTreasury ? financePendingCount : 0);
 
-  const cards: StatCard[] = [];
+  const metrics: OverviewMetric[] = [];
 
   if (canSeeMembers) {
-    const total = memberTotal ?? 0;
-    const pendingShare =
-      total > 0 ? (pendingMemberApprovals / total) * 100 : 0;
-    cards.push({
+    metrics.push({
       id: "members",
       label: "Members",
       value: memberTotal == null ? "—" : String(memberTotal),
@@ -126,95 +112,66 @@ export function HomeQuickStats({
         pendingMemberApprovals > 0
           ? `${pendingMemberApprovals} awaiting approval`
           : "Active roster",
-      hintTone: pendingMemberApprovals > 0 ? "warning" : "muted",
+      valueTone: pendingMemberApprovals > 0 ? "warning" : "default",
       icon: Users,
       to: "/members",
-      // Quiet fullness: roster present; at-risk fill when approvals pile up.
-      progress:
-        pendingMemberApprovals > 0
-          ? clampProgress(Math.max(12, pendingShare))
-          : clampProgress(total > 0 ? 72 : 8),
-      progressAtRisk: pendingMemberApprovals > 0,
     });
   } else {
-    const open = tasksSummary.openCount;
-    const overdueShare =
-      open > 0 ? (tasksSummary.overdueCount / open) * 100 : 0;
-    cards.push({
+    metrics.push({
       id: "my-tasks",
       label: "My tasks",
-      value: String(open),
+      value: String(tasksSummary.openCount),
       hint:
         tasksSummary.overdueCount > 0
           ? `${tasksSummary.overdueCount} overdue`
           : "Open assignments",
-      hintTone: tasksSummary.overdueCount > 0 ? "warning" : "muted",
+      valueTone: tasksSummary.overdueCount > 0 ? "warning" : "default",
       icon: CheckCircle2,
       to: "/events/tasks",
-      progress:
-        tasksSummary.overdueCount > 0
-          ? clampProgress(Math.max(18, overdueShare))
-          : clampProgress(open > 0 ? 55 : 8),
-      progressAtRisk: tasksSummary.overdueCount > 0,
     });
   }
 
-  cards.push({
+  metrics.push({
     id: "events",
     label: "Events",
     value: isLoadingEvents ? "—" : String(upcomingEventCount),
     hint: upcomingEventCount === 1 ? "Upcoming event" : "Upcoming events",
-    hintTone: "muted",
     icon: CalendarDays,
     to: "/events/calendar",
-    progress: clampProgress(
-      upcomingEventCount <= 0 ? 8 : Math.min(100, upcomingEventCount * 22),
-    ),
   });
 
   if (canSeeTreasury) {
     const amount = treasuryBalance == null ? null : Number(treasuryBalance);
     const isNegative = amount != null && amount < 0;
-    cards.push({
+    metrics.push({
       id: "treasury",
       label: "Treasury",
       value: treasuryBalance == null ? "—" : formatMoney(treasuryBalance),
       hint: isNegative ? "Balance is negative" : "Available balance",
-      hintTone: isNegative ? "warning" : "muted",
       valueTone: isNegative ? "negative" : "default",
       icon: CircleDollarSign,
       to: FINANCE_PATH,
-      progress: isNegative
-        ? 68
-        : clampProgress(amount == null ? 8 : amount === 0 ? 20 : 64),
-      progressAtRisk: isNegative,
     });
   } else {
-    cards.push({
+    metrics.push({
       id: "overdue",
       label: "Overdue",
       value: String(tasksSummary.overdueCount),
       hint:
         tasksSummary.overdueCount > 0 ? "Needs attention" : "You’re caught up",
-      hintTone: tasksSummary.overdueCount > 0 ? "warning" : "positive",
+      valueTone: tasksSummary.overdueCount > 0 ? "warning" : "default",
       icon: CheckCircle2,
       to: "/events/tasks",
-      progress: clampProgress(
-        tasksSummary.overdueCount <= 0
-          ? 10
-          : Math.min(100, tasksSummary.overdueCount * 28),
-      ),
-      progressAtRisk: tasksSummary.overdueCount > 0,
     });
   }
 
   if (canSeeMembers || canSeeTreasury) {
-    cards.push({
+    metrics.push({
       id: "pending",
       label: "Pending",
       value: String(pendingTotal),
       hint: pendingTotal > 0 ? "Requires action" : "No pending items",
-      hintTone: pendingTotal > 0 ? "warning" : "muted",
+      valueTone: pendingTotal > 0 ? "warning" : "default",
       icon: Clock3,
       to:
         canSeeMembers && pendingMemberApprovals > 0
@@ -224,78 +181,56 @@ export function HomeQuickStats({
             : canSeeMembers
               ? "/members?tab=pending"
               : "/finance/approvals",
-      progress: clampProgress(
-        pendingTotal <= 0 ? 10 : Math.min(100, pendingTotal * 24),
-      ),
-      progressAtRisk: pendingTotal > 0,
     });
   } else {
-    cards.push({
+    metrics.push({
       id: "due-today",
       label: "Due today",
       value: String(tasksSummary.dueTodayCount),
       hint:
-        tasksSummary.dueTodayCount > 0 ? "Focus here first" : "Nothing due today",
-      hintTone: tasksSummary.dueTodayCount > 0 ? "warning" : "muted",
+        tasksSummary.dueTodayCount > 0
+          ? "Focus here first"
+          : "Nothing due today",
+      valueTone: tasksSummary.dueTodayCount > 0 ? "warning" : "default",
       icon: CalendarDays,
       to: "/events/tasks",
-      progress: clampProgress(
-        tasksSummary.dueTodayCount <= 0
-          ? 10
-          : Math.min(100, tasksSummary.dueTodayCount * 30),
-      ),
-      progressAtRisk: tasksSummary.dueTodayCount > 0,
     });
   }
 
   return (
     <section
-      className="home-quick-stats home-quick-stats--tiles home-quick-stats--kpi home-quick-stats--companion"
-      aria-label="Quick stats"
+      className="home-org-overview"
+      aria-label="Organization overview"
     >
-      <ul className="home-quick-stats-grid">
-        {cards.map((card) => (
-          <li key={card.id}>
+      <header className="home-org-overview-head">
+        <h2 className="home-org-overview-title">Organization overview</h2>
+        <p className="home-org-overview-sub">Live chapter pulse</p>
+      </header>
+      <ul className="home-org-overview-grid">
+        {metrics.map((metric) => (
+          <li key={metric.id}>
             <Link
-              to={card.to}
+              to={metric.to}
               className={[
-                "home-quick-stat",
-                card.valueTone === "negative" ? "home-quick-stat--negative" : "",
+                "home-org-overview-metric",
+                metric.valueTone === "negative"
+                  ? "home-org-overview-metric--negative"
+                  : "",
+                metric.valueTone === "warning"
+                  ? "home-org-overview-metric--warning"
+                  : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
             >
-              <div className="home-quick-stat-top">
-                <p className="home-quick-stat-category">{card.label}</p>
-                <span className="home-quick-stat-icon" aria-hidden="true">
-                  <AppIcon icon={card.icon} size="xs" className="text-current" />
-                </span>
-              </div>
-              <p className="home-quick-stat-value">{card.value}</p>
-              <div
-                className="home-quick-stat-progress"
-                aria-hidden="true"
-              >
-                <span
-                  className={[
-                    "home-quick-stat-progress-fill",
-                    card.progressAtRisk ? "is-risk" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  style={{ width: `${card.progress}%` }}
-                />
-              </div>
-              <p
-                className={[
-                  "home-quick-stat-hint",
-                  card.hintTone === "warning" ? "is-warning" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-              >
-                {card.hint}
-              </p>
+              <span className="home-org-overview-metric-value">
+                {metric.value}
+              </span>
+              <span className="home-org-overview-metric-label">
+                <AppIcon icon={metric.icon} size="xs" className="text-current" />
+                {metric.label}
+              </span>
+              <span className="home-org-overview-metric-hint">{metric.hint}</span>
             </Link>
           </li>
         ))}

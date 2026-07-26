@@ -10,6 +10,7 @@ import { HomeHeroBrand } from "../components/AppLogo";
 import { HomeFeaturedEvent } from "../components/home/HomeFeaturedEvent";
 import { HomeQuickStats } from "../components/home/HomeQuickStats";
 import { HomeRecentActivity } from "../components/home/HomeRecentActivity";
+import { HomeTeamPulse } from "../components/home/HomeTeamPulse";
 import { HomeWorkCenter } from "../components/home/HomeWorkCenter";
 import { HomeDiscussionSection } from "../components/HomeDiscussionSection";
 import { useAuth } from "../context/useAuth";
@@ -148,7 +149,6 @@ function MemberHomeLayout({
         <div className="home-col home-col--tasks min-h-0">
           <HomeWorkCenter
             member={member}
-            showOversight={showTaskOversight}
             tasksSummary={tasksSummary}
             tasksPath={tasksPath}
             isLoading={isLoading}
@@ -165,7 +165,12 @@ function MemberHomeLayout({
         ) : null}
 
         <div className="home-col home-col--rail min-h-0">
-          <HomeRecentActivity memberId={member.id} limit={activityLimit} />
+          <HomeRecentActivity
+            memberId={member.id}
+            memberName={member.full_name}
+            limit={activityLimit}
+          />
+          {showTaskOversight ? <HomeTeamPulse /> : null}
         </div>
       </div>
     </div>

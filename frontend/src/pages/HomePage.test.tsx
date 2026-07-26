@@ -201,7 +201,9 @@ describe("HomePage", () => {
     expect(screen.queryByText("Active Tasks")).not.toBeInTheDocument();
     expect(screen.queryByText("Needs Review")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Needs attention")).not.toBeInTheDocument();
-    expect(await screen.findByLabelText("Quick stats")).toBeInTheDocument();
+    expect(
+      await screen.findByLabelText("Organization overview"),
+    ).toBeInTheDocument();
     expect(screen.queryByLabelText("Quick actions")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Recent activity")).toBeInTheDocument();
     expect(screen.getByLabelText("Task summary")).toBeInTheDocument();
@@ -215,8 +217,7 @@ describe("HomePage", () => {
       within(featured).getByRole("link", { name: /Open event/i }),
     ).toHaveAttribute("href", "/events/5");
     expect(within(featured).getByText(/Going/i)).toBeInTheDocument();
-    expect(within(featured).getByText(/Maybe/i)).toBeInTheDocument();
-    expect(within(featured).getByText(/^RSVP$/i)).toBeInTheDocument();
+    expect(within(featured).getByText(/RSVP/i)).toBeInTheDocument();
     expect(within(featured).getByText(/Budget/i)).toBeInTheDocument();
     expect(within(featured).queryByText("Preparation")).not.toBeInTheDocument();
     expect(
@@ -228,9 +229,10 @@ describe("HomePage", () => {
 
     const work = await screen.findByLabelText("Work Center");
     expect(within(work).getByLabelText("My Tasks")).toBeInTheDocument();
-    expect(await within(work).findByLabelText("Task Oversight")).toBeInTheDocument();
-    expect(await within(work).findByText("Print flyers")).toBeInTheDocument();
-    expect(await within(work).findByText("Task Oversight")).toBeInTheDocument();
+    expect(within(work).queryByLabelText("Task Oversight")).not.toBeInTheDocument();
+    const teamPulse = await screen.findByLabelText("Team pulse");
+    expect(within(teamPulse).getByText("Print flyers")).toBeInTheDocument();
+    expect(within(teamPulse).getByText("Team pulse")).toBeInTheDocument();
 
     expect(screen.queryByLabelText("Today's Timeline")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Organization Health")).not.toBeInTheDocument();
@@ -278,7 +280,7 @@ describe("HomePage", () => {
     expect(screen.queryByLabelText("Quick actions")).not.toBeInTheDocument();
   });
 
-  it("shows personal My tasks and Task Oversight for President", async () => {
+  it("shows personal My tasks and Team pulse for President", async () => {
     const openTask = {
       id: 1,
       event_id: 5,
@@ -314,7 +316,8 @@ describe("HomePage", () => {
 
     const work = await screen.findByLabelText("Work Center");
     expect(await within(work).findByText("Book venue")).toBeInTheDocument();
-    expect(within(work).getByLabelText("Task Oversight")).toBeInTheDocument();
+    expect(within(work).queryByLabelText("Task Oversight")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Team pulse")).toBeInTheDocument();
     expect(within(work).queryByText("High")).not.toBeInTheDocument();
   });
 
@@ -524,7 +527,7 @@ describe("HomePage", () => {
     expect(within(featured).getByText(sampleEvent.name)).toBeInTheDocument();
     expect(within(featured).queryByText("Board Sync")).not.toBeInTheDocument();
     expect(await screen.findByLabelText("Discussions")).toBeInTheDocument();
-    expect(screen.getByLabelText("Quick stats")).toBeInTheDocument();
+    expect(screen.getByLabelText("Organization overview")).toBeInTheDocument();
     expect(screen.queryByLabelText("Quick actions")).not.toBeInTheDocument();
   });
 

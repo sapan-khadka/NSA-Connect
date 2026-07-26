@@ -14,6 +14,10 @@ import { NotificationMenu } from "../design-system/components/navigation/Notific
 import { isEventFinanceEditable } from "../lib/event-finance";
 import { fetchEvents } from "../lib/events-api";
 import { canManageTreasury } from "../lib/roles";
+import {
+  formatSemesterLabel,
+  getCurrentSemesterSlug,
+} from "../lib/semester";
 import { AccountMenu } from "./AppNav";
 import { CreateMenu } from "./CreateMenu";
 import { GlobalSearch } from "./GlobalSearch";
@@ -49,6 +53,12 @@ export function AppTopBar({
 
   const canLog =
     member != null && canManageTreasury(member.role, member.position);
+  const todayLabel = new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  }).format(new Date());
+  const semesterLabel = formatSemesterLabel(getCurrentSemesterSlug());
 
   useEffect(() => {
     if (!canLog || !isLogOpen) {
@@ -158,10 +168,33 @@ export function AppTopBar({
             aria-label="Search events, members, announcements"
             className="ds-topbar-search"
           />
-          <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-md border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-label sm:inline">
-            ⌘ K
-          </kbd>
         </form>
+
+        <div className="ds-topbar-context hidden shrink-0 items-center gap-2 lg:flex">
+          <p
+            className="text-xs font-medium tabular-nums text-label"
+            aria-label="Today’s date"
+          >
+            {todayLabel}
+          </p>
+          <span className="h-3 w-px bg-gray-200" aria-hidden="true" />
+          <p
+            className="rounded-full border border-gray-200 bg-surface-muted px-2.5 py-1 text-[11px] font-semibold tracking-wide text-foreground"
+            aria-label="Current semester"
+          >
+            {semesterLabel}
+          </p>
+          <button
+            type="button"
+            onClick={openSearch}
+            className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-1.5 py-1 text-[10px] font-medium text-label transition hover:border-gray-300 hover:text-foreground"
+            aria-label="Open command search"
+            title="Search (⌘K)"
+          >
+            <kbd className="font-semibold">⌘</kbd>
+            <kbd className="font-semibold">K</kbd>
+          </button>
+        </div>
 
         <div className="flex shrink-0 items-center gap-1 sm:gap-2 md:ml-auto">
           <CreateMenu

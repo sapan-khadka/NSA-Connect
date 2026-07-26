@@ -1,9 +1,12 @@
 import {
   Calendar,
+  Check,
   ChevronLeft,
   ChevronRight,
+  CircleDollarSign,
   ExternalLink,
   MapPin,
+  Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -113,8 +116,8 @@ function FeaturedCarouselControls({
           <span
             key={dotIndex}
             className={[
-              "h-1.5 rounded-full transition-all duration-300",
-              dotIndex === index ? "w-4 bg-white" : "w-1.5 bg-white/35",
+              "h-1.5 rounded-full shadow-[0_0_0_1px_rgba(0,0,0,0.25)] transition-all duration-300",
+              dotIndex === index ? "w-4 bg-white" : "w-1.5 bg-white/70",
             ].join(" ")}
           />
         ))}
@@ -305,6 +308,14 @@ export function HomeFeaturedEvent({
       <img src={photoUrl} alt="" className="home-featured-photo" />
       <div className="home-featured-hero-scrim" aria-hidden="true" />
 
+      <FeaturedCarouselControls
+        index={safeIndex}
+        total={events.length}
+        onPrev={goPrev}
+        onNext={goNext}
+        className="home-featured-carousel"
+      />
+
       <div className="home-featured-hero-content">
         <div className="home-featured-info">
           <div className="home-featured-info-top">
@@ -312,12 +323,6 @@ export function HomeFeaturedEvent({
               <p className="home-featured-eyebrow">Upcoming event</p>
               <span className="home-featured-countdown">{countdown}</span>
             </div>
-            <FeaturedCarouselControls
-              index={safeIndex}
-              total={events.length}
-              onPrev={goPrev}
-              onNext={goNext}
-            />
           </div>
 
           <div className="home-featured-info-body">
@@ -341,52 +346,59 @@ export function HomeFeaturedEvent({
                   <span>{location}</span>
                 </li>
               </ul>
+              <div className="home-featured-badges" aria-label="Event status">
+                <span className="home-featured-badge">
+                  <AppIcon icon={Users} size="xs" className="text-white/80" />
+                  <span className="home-featured-badge-value">
+                    {goingCount ?? "—"} Going
+                  </span>
+                </span>
+                <span className="home-featured-badge">
+                  <AppIcon icon={Check} size="xs" className="text-white/80" />
+                  <span className="home-featured-badge-value">
+                    {rsvpHealth == null ? "— RSVP" : `${rsvpHealth}% RSVP`}
+                  </span>
+                </span>
+                <span className="home-featured-badge">
+                  <AppIcon
+                    icon={CircleDollarSign}
+                    size="xs"
+                    className="text-white/80"
+                  />
+                  <span className="home-featured-badge-value">
+                    Budget {budgetLabel}
+                    {budgetProgress != null ? (
+                      <span className="home-featured-badge-meta">
+                        · {budgetProgress}%
+                      </span>
+                    ) : null}
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
 
-          <dl className="home-featured-metrics">
-            <div className="home-featured-metric">
-              <dt>Going</dt>
-              <dd>{goingCount ?? "—"}</dd>
-            </div>
-            <div className="home-featured-metric">
-              <dt>Maybe</dt>
-              <dd>{maybeCount ?? "—"}</dd>
-            </div>
-            <div className="home-featured-metric">
-              <dt>RSVP</dt>
-              <dd>{rsvpHealth == null ? "—" : `${rsvpHealth}%`}</dd>
-            </div>
-            <div className="home-featured-metric home-featured-metric--budget">
-              <dt>Budget</dt>
-              <dd>
-                <span>{budgetLabel}</span>
-                <span className="home-featured-prep-track" aria-hidden="true">
-                  <span
-                    className="home-featured-prep-fill"
-                    style={{ width: `${budgetProgress ?? 0}%` }}
-                  />
-                </span>
-              </dd>
-            </div>
-          </dl>
-
           <div className="home-featured-actions">
-            <Link
-              to={eventPath}
-              className="home-featured-btn home-featured-btn--primary"
-            >
-              Open Event
-              <AppIcon icon={ExternalLink} size="xs" className="text-current" />
-            </Link>
             {canManage ? (
               <Link
                 to={managePath}
-                className="home-featured-btn home-featured-btn--ghost"
+                className="home-featured-btn home-featured-btn--primary"
               >
                 Manage
               </Link>
             ) : null}
+            <Link
+              to={eventPath}
+              className={[
+                "home-featured-btn",
+                canManage
+                  ? "home-featured-btn--ghost"
+                  : "home-featured-btn--primary",
+              ].join(" ")}
+            >
+              Open Event
+              <AppIcon icon={ExternalLink} size="xs" className="text-current" />
+            </Link>
           </div>
         </div>
       </div>

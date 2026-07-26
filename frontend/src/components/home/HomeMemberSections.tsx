@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import type { MemberResponse } from "../../lib/auth-api";
+import { avatarColorFromSeed } from "../../lib/avatar-color";
 import type { EventTaskResponse } from "../../lib/event-tasks-api";
 import type { EventResponse } from "../../lib/events-api";
 import { FINANCE_APPROVALS_PATH } from "../../lib/finance-routes";
@@ -20,6 +21,15 @@ import {
 import { AppIcon } from "../ui/AppIcon";
 import { ArrowLink } from "../ui/ArrowLink";
 import { HomeCard } from "../ui/HomeCard";
+
+function initialsFromName(fullName: string): string {
+  return fullName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
 
 function greetingForNow(now = new Date()): string {
   const hour = now.getHours();
@@ -112,6 +122,21 @@ function TaskRow({
   ]
     .filter(Boolean)
     .join(" ");
+  const badge = task.is_overdue
+    ? "Overdue"
+    : dueToday
+      ? "Due today"
+      : task.status === "in_progress"
+        ? "In progress"
+        : null;
+  const assigneeName = task.assignee_name?.trim() || null;
+  const assigneePalette = avatarColorFromSeed(
+    assigneeName
+      ? task.assignee_id != null
+        ? `user:${task.assignee_id}`
+        : assigneeName
+      : "unassigned",
+  );
 
   return (
     <li className="home-task-row">
@@ -132,7 +157,44 @@ function TaskRow({
           }
         />
       </button>
-      <p className="home-task-title">{getTaskDisplayName(task)}</p>
+      <div className="home-task-main">
+        <p className="home-task-title">{getTaskDisplayName(task)}</p>
+        <div className="home-task-meta">
+          {task.event_name ? (
+            <span className="home-task-meta-event">{task.event_name}</span>
+          ) : null}
+          {badge ? (
+            <span
+              className={[
+                "home-task-badge",
+                task.is_overdue ? "is-overdue" : "",
+                dueToday && !task.is_overdue ? "is-today" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              {badge}
+            </span>
+          ) : null}
+        </div>
+      </div>
+      {assigneeName ? (
+        <span
+          className="home-task-assignee"
+          title={assigneeName}
+          style={{
+            backgroundColor: assigneePalette.background,
+            color: assigneePalette.color,
+          }}
+          aria-label={`Assigned to ${assigneeName}`}
+        >
+          {initialsFromName(assigneeName)}
+        </span>
+      ) : (
+        <span className="home-task-assignee is-empty" aria-hidden="true">
+          ?
+        </span>
+      )}
       <span className={dueClass}>{dateLabel}</span>
     </li>
   );
@@ -176,6 +238,8 @@ export function HomeYourWorkSection({
   }, [isLoading, tasksSummary, userPickedTab]);
 
   const tabTasks = filterTasksForTab(tasksSummary, tab).slice(0, 6);
+  const completedToday = tasksSummary.completedTodayTasks.slice(0, 3);
+  const showCompletedToday = !isLoading && completedToday.length > 0;
   const emptyCopy =
     tab === "overdue"
       ? "No overdue tasks."
@@ -248,7 +312,7 @@ export function HomeYourWorkSection({
       <div className="home-task-body">
         {isLoading ? (
           <ul className="home-task-list" aria-label="Loading tasks">
-            {[0, 1, 2].map((row) => (
+            {[0, 1, 2, 3].map((row) => (
               <li key={row} className="home-task-skeleton">
                 <span className="h-4 w-4 animate-pulse rounded-[0.3rem] bg-slate-200/80" />
                 <span className="block h-2.5 w-3/5 animate-pulse rounded bg-slate-200/80" />
@@ -289,6 +353,31 @@ export function HomeYourWorkSection({
             </p>
           </div>
         ) : null}
+
+        {showCompletedToday ? (
+          <div className="home-task-completed">
+            <p className="home-task-completed-label">
+              Completed today
+              <span className="home-task-completed-count">
+                {tasksSummary.completedTodayCount}
+              </span>
+            </p>
+            <ul className="home-task-completed-list">
+              {completedToday.map((task) => (
+                <li key={task.id} className="home-task-completed-row">
+                  <AppIcon
+                    icon={Check}
+                    size="xs"
+                    className="home-task-completed-icon"
+                  />
+                  <span className="home-task-completed-title">
+                    {getTaskDisplayName(task)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </div>
 
       <div className="home-task-footer">
@@ -310,7 +399,7 @@ export function HomeYourWorkSection({
   return (
     <HomeCard
       padding="sm"
-      className="flex h-full min-h-0 flex-col home-surface-quiet home-task-card home-task-surface"
+      className="flex flex-col home-surface-quiet home-task-card home-task-surface"
       aria-label="My Tasks"
     >
       {body}

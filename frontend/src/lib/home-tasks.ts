@@ -59,6 +59,7 @@ export function buildMarkTaskCompleteRequest(
 export function applyOptimisticTaskComplete(
   task: EventTaskResponse,
 ): EventTaskResponse {
+  const completed_at = task.completed_at ?? new Date().toISOString();
   if (task.task_kind === "checklist") {
     const checklist_items = task.checklist_items.map((item) => ({
       ...item,
@@ -69,9 +70,10 @@ export function applyOptimisticTaskComplete(
       checklist_items,
       is_complete: checklist_items.length > 0,
       status: "done",
+      completed_at,
     };
   }
-  return { ...task, is_complete: true, status: "done" };
+  return { ...task, is_complete: true, status: "done", completed_at };
 }
 
 export type MyTasksTab = "overdue" | "today" | "upcoming";
@@ -81,6 +83,7 @@ export type MyTasksSummary = {
   overdueCount: number;
   dueTodayCount: number;
   upcomingCount: number;
+  completedTodayCount: number;
   nextTask: EventTaskResponse | null;
   overdueTask: EventTaskResponse | null;
   /** Open tasks: overdue first, then soonest due date. */
@@ -88,6 +91,7 @@ export type MyTasksSummary = {
   overdueTasks: EventTaskResponse[];
   dueTodayTasks: EventTaskResponse[];
   upcomingTasks: EventTaskResponse[];
+  completedTodayTasks: EventTaskResponse[];
 };
 
 export function filterTasksForTab(
@@ -124,6 +128,16 @@ export function sortOpenTasksForPreview(
     });
 }
 
+function isCompletedToday(
+  task: EventTaskResponse,
+  now = new Date(),
+): boolean {
+  if (!task.is_complete || !task.completed_at) {
+    return false;
+  }
+  return isToday(new Date(task.completed_at), now);
+}
+
 export function summarizeMyTasks(
   tasks: EventTaskResponse[],
   now = new Date(),
@@ -142,6 +156,17 @@ export function summarizeMyTasks(
       !task.is_overdue &&
       !(task.due_date != null && isToday(new Date(task.due_date), now)),
   );
+  const completedTodayTasks = tasks
+    .filter((task) => isCompletedToday(task, now))
+    .sort((left, right) => {
+      const leftAt = left.completed_at
+        ? new Date(left.completed_at).getTime()
+        : 0;
+      const rightAt = right.completed_at
+        ? new Date(right.completed_at).getTime()
+        : 0;
+      return rightAt - leftAt;
+    });
   const withDue = open
     .filter((task) => task.due_date)
     .sort(
@@ -154,12 +179,14 @@ export function summarizeMyTasks(
     overdueCount: overdueTasks.length,
     dueTodayCount: dueTodayTasks.length,
     upcomingCount: upcomingTasks.length,
+    completedTodayCount: completedTodayTasks.length,
     nextTask: withDue[0] ?? open[0] ?? null,
     overdueTask: overdueTasks[0] ?? null,
     previewTasks: sortedOpen.slice(0, PREVIEW_LIMIT),
     overdueTasks,
     dueTodayTasks,
     upcomingTasks,
+    completedTodayTasks,
   };
 }
 

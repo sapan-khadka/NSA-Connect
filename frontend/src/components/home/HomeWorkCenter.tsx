@@ -1,11 +1,9 @@
 import type { MemberResponse } from "../../lib/auth-api";
 import type { MyTasksSummary } from "../../lib/home-tasks";
 import { HomeYourWorkSection } from "./HomeMemberSections";
-import { HomeYourTasksSection } from "./HomeYourTasksSection";
 
 export function HomeWorkCenter({
   member,
-  showOversight,
   tasksSummary,
   tasksPath,
   isLoading,
@@ -14,7 +12,6 @@ export function HomeWorkCenter({
   onCompleteTask,
 }: {
   member: MemberResponse;
-  showOversight: boolean;
   tasksSummary: MyTasksSummary;
   tasksPath: string;
   isLoading: boolean;
@@ -33,7 +30,6 @@ export function HomeWorkCenter({
         taskCompleteError={taskCompleteError}
         onCompleteTask={onCompleteTask}
       />
-      {showOversight ? <HomeYourTasksSection /> : null}
     </div>
   );
 }

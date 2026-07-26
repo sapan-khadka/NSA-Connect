@@ -77,6 +77,34 @@ describe("home-tasks", () => {
     ]);
   });
 
+  it("tracks tasks completed today", () => {
+    const now = new Date("2026-07-25T15:00:00");
+    const summary = summarizeMyTasks(
+      [
+        makeTask({
+          id: 1,
+          title: "Done today",
+          is_complete: true,
+          status: "done",
+          completed_at: "2026-07-25T10:00:00",
+        }),
+        makeTask({
+          id: 2,
+          title: "Done yesterday",
+          is_complete: true,
+          status: "done",
+          completed_at: "2026-07-24T10:00:00",
+        }),
+      ],
+      now,
+    );
+
+    expect(summary.completedTodayCount).toBe(1);
+    expect(summary.completedTodayTasks.map((task) => task.title)).toEqual([
+      "Done today",
+    ]);
+  });
+
   it("routes every member role to the shared kanban tasks page", () => {
     expect(getMyTasksPath("general")).toBe("/events/tasks");
     expect(getMyTasksPath("board")).toBe("/events/tasks");
