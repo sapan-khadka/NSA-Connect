@@ -146,6 +146,16 @@ function IdeaRow({
               <span>{when}</span>
             </>
           ) : null}
+          {suggestion.interest_counts.interested > 0 ? (
+            <>
+              <span className="ideas-row__sep" aria-hidden="true">
+                ·
+              </span>
+              <span>
+                {suggestion.interest_counts.interested} interested
+              </span>
+            </>
+          ) : null}
         </p>
 
         {errorMessage ? (

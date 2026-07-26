@@ -22,6 +22,10 @@ from app.models.event_participant_invitation import EventParticipantInvitation
 from app.models.event_photo import EventPhoto
 from app.models.event_rsvp import EventRsvp, RsvpStatus
 from app.models.event_suggestion import EventSuggestion, EventSuggestionStatus
+from app.models.event_suggestion_interest import (
+    EventSuggestionInterest,
+    EventSuggestionInterestVote,
+)
 from app.models.event_task import (
     EventTask,
     EventTaskChecklistItem,
@@ -84,6 +88,8 @@ __all__ = [
     "Event",
     "EventCheckIn",
     "EventSuggestion",
+    "EventSuggestionInterest",
+    "EventSuggestionInterestVote",
     "EventSuggestionStatus",
     "EventVolunteerSignup",
     "EventFeedback",

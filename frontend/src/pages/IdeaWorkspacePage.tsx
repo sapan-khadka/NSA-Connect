@@ -3,9 +3,16 @@ import { Link, useParams } from "react-router-dom";
 
 import { getApiErrorMessage } from "../lib/api-error";
 import {
+  clearEventSuggestionInterest,
   fetchEventSuggestion,
+  IDEA_INTEREST_LABEL,
+  IDEA_INTEREST_OPTIONS,
   IDEA_STATUS_LABEL,
+  isIdeaInterestOpen,
+  setEventSuggestionInterest,
+  totalIdeaInterest,
   type EventSuggestion,
+  type IdeaInterestVote,
 } from "../lib/event-suggestions-api";
 
 function formatDate(isoDate: string): string {
@@ -18,6 +25,106 @@ function formatDate(isoDate: string): string {
     day: "numeric",
     year: "numeric",
   }).format(new Date(parsed));
+}
+
+function InterestSection({
+  idea,
+  onUpdated,
+}: {
+  idea: EventSuggestion;
+  onUpdated: (updated: EventSuggestion) => void;
+}) {
+  const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const open = isIdeaInterestOpen(idea.status);
+  const total = totalIdeaInterest(idea.interest_counts);
+
+  async function handleVote(vote: IdeaInterestVote) {
+    if (!open || saving) {
+      return;
+    }
+
+    setSaving(true);
+    setErrorMessage(null);
+    try {
+      const updated =
+        idea.my_interest === vote
+          ? await clearEventSuggestionInterest(idea.id)
+          : await setEventSuggestionInterest(idea.id, vote);
+      onUpdated(updated);
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="idea-workspace-section" aria-labelledby="idea-interest">
+      <div className="idea-interest-heading">
+        <h2 id="idea-interest" className="idea-workspace-section__title">
+          Interest
+        </h2>
+        <p className="idea-interest-summary">
+          {total === 0
+            ? "No votes yet"
+            : `${idea.interest_counts.interested} interested · ${idea.interest_counts.maybe} maybe · ${idea.interest_counts.not_interested} not`}
+        </p>
+      </div>
+
+      {open ? (
+        <div
+          className="idea-interest-options"
+          role="group"
+          aria-label="Your interest"
+        >
+          {IDEA_INTEREST_OPTIONS.map((vote) => {
+            const selected = idea.my_interest === vote;
+            return (
+              <button
+                key={vote}
+                type="button"
+                className={[
+                  "idea-interest-option",
+                  `is-${vote}`,
+                  selected ? "is-selected" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                aria-pressed={selected}
+                disabled={saving}
+                onClick={() => void handleVote(vote)}
+              >
+                <span className="idea-interest-option__label">
+                  {IDEA_INTEREST_LABEL[vote]}
+                </span>
+                <span className="idea-interest-option__count">
+                  {idea.interest_counts[vote]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="idea-workspace-placeholder">
+          Interest voting is closed for this idea.
+        </p>
+      )}
+
+      {open && idea.my_interest ? (
+        <p className="idea-interest-yours">
+          Your vote: {IDEA_INTEREST_LABEL[idea.my_interest]}. Click again to
+          clear.
+        </p>
+      ) : null}
+
+      {errorMessage ? (
+        <p className="idea-workspace-error" role="alert">
+          {errorMessage}
+        </p>
+      ) : null}
+    </section>
+  );
 }
 
 export function IdeaWorkspacePage() {
@@ -82,6 +189,7 @@ export function IdeaWorkspacePage() {
 
   const timing = idea.preferred_timing?.trim() || "Any semester";
   const created = formatDate(idea.created_at);
+  const interestedCount = idea.interest_counts.interested;
 
   return (
     <div className="idea-workspace">
@@ -115,6 +223,16 @@ export function IdeaWorkspacePage() {
               <span>{created}</span>
             </>
           ) : null}
+          {interestedCount > 0 ? (
+            <>
+              <span className="idea-workspace-sep" aria-hidden="true">
+                ·
+              </span>
+              <span>
+                {interestedCount} interested
+              </span>
+            </>
+          ) : null}
         </p>
       </header>
 
@@ -127,15 +245,7 @@ export function IdeaWorkspacePage() {
         </p>
       </section>
 
-      <section className="idea-workspace-section" aria-labelledby="idea-interest">
-        <h2 id="idea-interest" className="idea-workspace-section__title">
-          Interest
-        </h2>
-        <p className="idea-workspace-placeholder">
-          Interest voting comes in a later phase — members will be able to mark
-          Interested, Maybe, or Not interested.
-        </p>
-      </section>
+      <InterestSection idea={idea} onUpdated={setIdea} />
 
       <section
         className="idea-workspace-section"

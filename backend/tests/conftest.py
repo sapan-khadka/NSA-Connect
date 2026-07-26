@@ -15,6 +15,7 @@ import app.models.custom_board_position  # noqa: F401 — register table for cre
 import app.models.member_note  # noqa: F401 — register table for create_all
 import app.models.organization  # noqa: F401 — register table for create_all
 import app.models.organization_membership  # noqa: F401 — register table for create_all
+import app.models.event_suggestion_interest  # noqa: F401 — register table for create_all
 import app.models.password_reset_token  # noqa: F401 — register table for create_all
 import app.models.university  # noqa: F401 — register table for create_all
 from app.core.config import settings

@@ -19,12 +19,24 @@ BoardUpdatableStatusValue = Literal[
     "archived",
 ]
 
+EventSuggestionInterestVoteValue = Literal[
+    "interested",
+    "maybe",
+    "not_interested",
+]
+
 
 class EventSuggestionMemberResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     full_name: str
+
+
+class EventSuggestionInterestCounts(BaseModel):
+    interested: int = Field(ge=0, default=0)
+    maybe: int = Field(ge=0, default=0)
+    not_interested: int = Field(ge=0, default=0)
 
 
 class EventSuggestionResponse(BaseModel):
@@ -39,6 +51,10 @@ class EventSuggestionResponse(BaseModel):
     noted_by: EventSuggestionMemberResponse | None = None
     created_at: datetime
     noted_at: datetime | None = None
+    interest_counts: EventSuggestionInterestCounts = Field(
+        default_factory=EventSuggestionInterestCounts
+    )
+    my_interest: EventSuggestionInterestVoteValue | None = None
 
 
 class EventSuggestionListResponse(BaseModel):
@@ -54,3 +70,7 @@ class EventSuggestionCreateRequest(BaseModel):
 
 class EventSuggestionStatusUpdateRequest(BaseModel):
     status: BoardUpdatableStatusValue
+
+
+class EventSuggestionInterestUpdateRequest(BaseModel):
+    vote: EventSuggestionInterestVoteValue

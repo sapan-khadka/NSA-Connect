@@ -13,9 +13,20 @@ export type BoardUpdatableIdeaStatus = Exclude<
   "pending_review" | "converted"
 >;
 
+export type IdeaInterestVote =
+  | "interested"
+  | "maybe"
+  | "not_interested";
+
 export type EventSuggestionMember = {
   id: number;
   full_name: string;
+};
+
+export type IdeaInterestCounts = {
+  interested: number;
+  maybe: number;
+  not_interested: number;
 };
 
 export type EventSuggestion = {
@@ -28,6 +39,8 @@ export type EventSuggestion = {
   noted_by: EventSuggestionMember | null;
   created_at: string;
   noted_at: string | null;
+  interest_counts: IdeaInterestCounts;
+  my_interest: IdeaInterestVote | null;
 };
 
 export type EventSuggestionListResponse = {
@@ -49,6 +62,30 @@ export const IDEA_STATUS_LABEL: Record<EventSuggestionStatus, string> = {
   converted: "Converted",
   archived: "Archived",
 };
+
+export const IDEA_INTEREST_LABEL: Record<IdeaInterestVote, string> = {
+  interested: "Interested",
+  maybe: "Maybe",
+  not_interested: "Not interested",
+};
+
+export const IDEA_INTEREST_OPTIONS: IdeaInterestVote[] = [
+  "interested",
+  "maybe",
+  "not_interested",
+];
+
+export function isIdeaInterestOpen(status: EventSuggestionStatus): boolean {
+  return (
+    status === "pending_review" ||
+    status === "under_discussion" ||
+    status === "approved"
+  );
+}
+
+export function totalIdeaInterest(counts: IdeaInterestCounts): number {
+  return counts.interested + counts.maybe + counts.not_interested;
+}
 
 export async function fetchEventSuggestions(): Promise<EventSuggestionListResponse> {
   const response = await api.get<EventSuggestionListResponse>(
@@ -92,4 +129,24 @@ export async function markEventSuggestionNoted(
   suggestionId: number,
 ): Promise<EventSuggestion> {
   return updateEventSuggestionStatus(suggestionId, "under_discussion");
+}
+
+export async function setEventSuggestionInterest(
+  suggestionId: number,
+  vote: IdeaInterestVote,
+): Promise<EventSuggestion> {
+  const response = await api.put<EventSuggestion>(
+    `/v1/event-suggestions/${suggestionId}/interest`,
+    { vote },
+  );
+  return response.data;
+}
+
+export async function clearEventSuggestionInterest(
+  suggestionId: number,
+): Promise<EventSuggestion> {
+  const response = await api.delete<EventSuggestion>(
+    `/v1/event-suggestions/${suggestionId}/interest`,
+  );
+  return response.data;
 }

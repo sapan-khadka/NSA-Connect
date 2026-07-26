@@ -53,3 +53,8 @@ class EventSuggestion(Base):
 
     suggested_by = relationship("Member", foreign_keys=[suggested_by_id])
     noted_by = relationship("Member", foreign_keys=[noted_by_id])
+    interests = relationship(
+        "EventSuggestionInterest",
+        back_populates="suggestion",
+        cascade="all, delete-orphan",
+    )

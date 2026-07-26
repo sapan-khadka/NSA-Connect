@@ -1,11 +1,19 @@
+from collections import defaultdict
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.event_suggestion import EventSuggestion, EventSuggestionStatus
+from app.models.event_suggestion_interest import (
+    EventSuggestionInterest,
+    EventSuggestionInterestVote,
+)
 from app.models.member import Member
-from app.schemas.event_suggestion import EventSuggestionCreateRequest
+from app.schemas.event_suggestion import (
+    EventSuggestionCreateRequest,
+    EventSuggestionInterestCounts,
+)
 from app.services.organization_context import get_default_organization_id
 
 BOARD_UPDATABLE_STATUSES = frozenset(
@@ -17,12 +25,24 @@ BOARD_UPDATABLE_STATUSES = frozenset(
     }
 )
 
+INTEREST_OPEN_STATUSES = frozenset(
+    {
+        EventSuggestionStatus.PENDING_REVIEW,
+        EventSuggestionStatus.UNDER_DISCUSSION,
+        EventSuggestionStatus.APPROVED,
+    }
+)
+
 
 class EventSuggestionNotFoundError(Exception):
     pass
 
 
 class EventSuggestionInvalidStatusError(Exception):
+    pass
+
+
+class EventSuggestionInterestClosedError(Exception):
     pass
 
 
@@ -159,3 +179,118 @@ def mark_event_suggestion_noted(
         board_member=board_member,
         status=EventSuggestionStatus.UNDER_DISCUSSION,
     )
+
+
+def empty_interest_counts() -> EventSuggestionInterestCounts:
+    return EventSuggestionInterestCounts()
+
+
+def get_interest_counts_by_suggestion(
+    db: Session,
+    *,
+    suggestion_ids: list[int],
+) -> dict[int, EventSuggestionInterestCounts]:
+    if not suggestion_ids:
+        return {}
+
+    rows = db.execute(
+        select(
+            EventSuggestionInterest.suggestion_id,
+            EventSuggestionInterest.vote,
+            func.count(),
+        )
+        .where(EventSuggestionInterest.suggestion_id.in_(suggestion_ids))
+        .group_by(
+            EventSuggestionInterest.suggestion_id,
+            EventSuggestionInterest.vote,
+        )
+    ).all()
+
+    counts: dict[int, dict[str, int]] = defaultdict(
+        lambda: {"interested": 0, "maybe": 0, "not_interested": 0}
+    )
+    for suggestion_id, vote, total in rows:
+        vote_key = vote.value if hasattr(vote, "value") else str(vote)
+        counts[suggestion_id][vote_key] = int(total)
+
+    return {
+        suggestion_id: EventSuggestionInterestCounts(**values)
+        for suggestion_id, values in counts.items()
+    }
+
+
+def get_my_interest_by_suggestion(
+    db: Session,
+    *,
+    suggestion_ids: list[int],
+    member_id: int,
+) -> dict[int, EventSuggestionInterestVote]:
+    if not suggestion_ids:
+        return {}
+
+    rows = db.scalars(
+        select(EventSuggestionInterest).where(
+            EventSuggestionInterest.suggestion_id.in_(suggestion_ids),
+            EventSuggestionInterest.member_id == member_id,
+        )
+    ).all()
+    return {row.suggestion_id: row.vote for row in rows}
+
+
+def set_event_suggestion_interest(
+    db: Session,
+    *,
+    suggestion_id: int,
+    member: Member,
+    vote: EventSuggestionInterestVote,
+) -> EventSuggestion:
+    suggestion = get_event_suggestion(db, suggestion_id=suggestion_id)
+    if suggestion.status not in INTEREST_OPEN_STATUSES:
+        raise EventSuggestionInterestClosedError
+
+    now = datetime.now(UTC)
+    existing = db.scalar(
+        select(EventSuggestionInterest).where(
+            EventSuggestionInterest.suggestion_id == suggestion_id,
+            EventSuggestionInterest.member_id == member.id,
+        )
+    )
+    if existing is None:
+        db.add(
+            EventSuggestionInterest(
+                suggestion_id=suggestion_id,
+                member_id=member.id,
+                vote=vote,
+                created_at=now,
+                updated_at=now,
+            )
+        )
+    else:
+        existing.vote = vote
+        existing.updated_at = now
+
+    db.commit()
+    return get_event_suggestion(db, suggestion_id=suggestion_id)
+
+
+def clear_event_suggestion_interest(
+    db: Session,
+    *,
+    suggestion_id: int,
+    member: Member,
+) -> EventSuggestion:
+    suggestion = get_event_suggestion(db, suggestion_id=suggestion_id)
+    if suggestion.status not in INTEREST_OPEN_STATUSES:
+        raise EventSuggestionInterestClosedError
+
+    existing = db.scalar(
+        select(EventSuggestionInterest).where(
+            EventSuggestionInterest.suggestion_id == suggestion_id,
+            EventSuggestionInterest.member_id == member.id,
+        )
+    )
+    if existing is not None:
+        db.delete(existing)
+        db.commit()
+
+    return get_event_suggestion(db, suggestion_id=suggestion_id)
