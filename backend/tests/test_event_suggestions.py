@@ -394,3 +394,82 @@ def test_discussion_closed_for_archived_idea(client, member_headers, db_session)
     )
     assert response.status_code == 400
     assert "closed" in response.json()["detail"].lower()
+
+
+def test_board_can_review_with_note_and_approve(client, board_headers, db_session):
+    member = db_session.scalar(select(Member).where(Member.email == "board@semo.edu"))
+    suggestion = EventSuggestion(
+        title="Reviewable idea",
+        description="Needs a decision.",
+        suggested_by_id=member.id,
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(suggestion)
+    db_session.commit()
+    db_session.refresh(suggestion)
+
+    response = client.patch(
+        f"/api/v1/event-suggestions/{suggestion.id}/review",
+        headers=board_headers,
+        json={
+            "status": "approved",
+            "board_note": "Strong interest. Plan for fall.",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "approved"
+    assert body["board_note"] == "Strong interest. Plan for fall."
+    assert body["can_board_review"] is True
+    assert body["noted_by"] is not None
+
+
+def test_member_cannot_see_board_note(client, member_headers, board_headers, db_session):
+    member = db_session.scalar(select(Member).where(Member.email == "sapan@semo.edu"))
+    suggestion = EventSuggestion(
+        title="Private note idea",
+        description="Board only note.",
+        suggested_by_id=member.id,
+        board_note="Internal concern",
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(suggestion)
+    db_session.commit()
+    db_session.refresh(suggestion)
+
+    member_response = client.get(
+        f"/api/v1/event-suggestions/{suggestion.id}",
+        headers=member_headers,
+    )
+    board_response = client.get(
+        f"/api/v1/event-suggestions/{suggestion.id}",
+        headers=board_headers,
+    )
+
+    assert member_response.status_code == 200
+    assert member_response.json()["board_note"] is None
+    assert member_response.json()["can_board_review"] is False
+    assert board_response.status_code == 200
+    assert board_response.json()["board_note"] == "Internal concern"
+    assert board_response.json()["can_board_review"] is True
+
+
+def test_member_cannot_board_review(client, member_headers, db_session):
+    member = db_session.scalar(select(Member).where(Member.email == "sapan@semo.edu"))
+    suggestion = EventSuggestion(
+        title="No access",
+        description="Members cannot review.",
+        suggested_by_id=member.id,
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(suggestion)
+    db_session.commit()
+    db_session.refresh(suggestion)
+
+    response = client.patch(
+        f"/api/v1/event-suggestions/{suggestion.id}/review",
+        headers=member_headers,
+        json={"status": "approved"},
+    )
+    assert response.status_code == 403

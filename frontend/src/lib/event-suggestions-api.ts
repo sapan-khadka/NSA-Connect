@@ -39,8 +39,15 @@ export type EventSuggestion = {
   noted_by: EventSuggestionMember | null;
   created_at: string;
   noted_at: string | null;
+  board_note: string | null;
+  can_board_review: boolean;
   interest_counts: IdeaInterestCounts;
   my_interest: IdeaInterestVote | null;
+};
+
+export type IdeaBoardReviewPayload = {
+  status?: BoardUpdatableIdeaStatus;
+  board_note?: string | null;
 };
 
 export type EventSuggestionListResponse = {
@@ -134,6 +141,17 @@ export async function markEventSuggestionNoted(
   suggestionId: number,
 ): Promise<EventSuggestion> {
   return updateEventSuggestionStatus(suggestionId, "under_discussion");
+}
+
+export async function reviewEventSuggestion(
+  suggestionId: number,
+  payload: IdeaBoardReviewPayload,
+): Promise<EventSuggestion> {
+  const response = await api.patch<EventSuggestion>(
+    `/v1/event-suggestions/${suggestionId}/review`,
+    payload,
+  );
+  return response.data;
 }
 
 export async function setEventSuggestionInterest(

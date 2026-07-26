@@ -15543,6 +15543,109 @@
     margin-top: 0.4rem;
   }
 
+  .idea-board-copy {
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: #6b7280;
+  }
+
+  .idea-board-outcome {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #374151;
+  }
+
+  .idea-board-note {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .idea-board-note__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+  }
+
+  .idea-board-note textarea {
+    width: 100%;
+    resize: vertical;
+    min-height: 5rem;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.55rem;
+    background: #fff;
+    font: inherit;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: #111827;
+  }
+
+  .idea-board-note textarea:focus {
+    outline: 2px solid color-mix(in srgb, var(--color-primary, #0f766e) 35%, transparent);
+    outline-offset: 1px;
+  }
+
+  .idea-board-note__actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .idea-board-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  .idea-board-action {
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    background: #fff;
+    padding: 0.45rem 0.7rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+  }
+
+  .idea-board-action:hover:not(:disabled) {
+    border-color: #d1d5db;
+    background: #fafafa;
+  }
+
+  .idea-board-action:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+
+  .idea-board-action.is-primary {
+    border-color: color-mix(in srgb, var(--color-primary, #0f766e) 45%, #d1d5db);
+    color: var(--color-primary, #0f766e);
+  }
+
+  .idea-board-action.is-danger {
+    border-color: color-mix(in srgb, var(--color-overdue, #b91c1c) 35%, #d1d5db);
+    color: var(--color-overdue, #b91c1c);
+  }
+
+  .idea-board-action.is-muted {
+    color: #6b7280;
+  }
+
+  .idea-board-action.is-current {
+    background: #f3f4f6;
+  }
+
+  .idea-board-banner {
+    margin: 0;
+    font-size: 0.8125rem;
+  }
+
+  .idea-board-banner.is-success {
+    color: #047857;
+  }
+
   .ideas-row__desc {
     margin: 0.12rem 0 0;
     max-width: 42rem;

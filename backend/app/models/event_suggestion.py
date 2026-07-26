@@ -45,6 +45,7 @@ class EventSuggestion(Base):
     )
     noted_at = Column(DateTime(timezone=True), nullable=True)
     noted_by_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    board_note = Column(Text, nullable=True)
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,

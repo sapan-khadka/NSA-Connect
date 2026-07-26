@@ -51,6 +51,8 @@ class EventSuggestionResponse(BaseModel):
     noted_by: EventSuggestionMemberResponse | None = None
     created_at: datetime
     noted_at: datetime | None = None
+    board_note: str | None = None
+    can_board_review: bool = False
     interest_counts: EventSuggestionInterestCounts = Field(
         default_factory=EventSuggestionInterestCounts
     )
@@ -70,6 +72,13 @@ class EventSuggestionCreateRequest(BaseModel):
 
 class EventSuggestionStatusUpdateRequest(BaseModel):
     status: BoardUpdatableStatusValue
+
+
+class EventSuggestionBoardReviewRequest(BaseModel):
+    """Board-only review update. Provide status and/or board_note."""
+
+    status: BoardUpdatableStatusValue | None = None
+    board_note: str | None = Field(default=None, max_length=2000)
 
 
 class EventSuggestionInterestUpdateRequest(BaseModel):

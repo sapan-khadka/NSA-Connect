@@ -7,6 +7,7 @@ from app.models.event_suggestion import EventSuggestionStatus
 from app.models.event_suggestion_interest import EventSuggestionInterestVote
 from app.models.member import Member, MemberRole
 from app.schemas.event_suggestion import (
+    EventSuggestionBoardReviewRequest,
     EventSuggestionCommentCreateRequest,
     EventSuggestionCommentListResponse,
     EventSuggestionCommentResponse,
@@ -34,6 +35,8 @@ from app.services.event_suggestion_service import (
     EventSuggestionInterestClosedError,
     EventSuggestionInvalidStatusError,
     EventSuggestionNotFoundError,
+    EventSuggestionReviewEmptyError,
+    apply_event_suggestion_board_review,
     clear_event_suggestion_interest,
     create_event_suggestion,
     empty_interest_counts,
@@ -51,9 +54,11 @@ router = APIRouter(prefix="/event-suggestions", tags=["event-suggestions"])
 def _to_response(
     suggestion,
     *,
+    member: Member,
     interest_counts: EventSuggestionInterestCounts | None = None,
     my_interest: EventSuggestionInterestVote | None = None,
 ) -> EventSuggestionResponse:
+    can_board_review = member.has_role_at_least(MemberRole.BOARD)
     return EventSuggestionResponse(
         id=suggestion.id,
         title=suggestion.title,
@@ -70,6 +75,8 @@ def _to_response(
         ),
         created_at=suggestion.created_at,
         noted_at=suggestion.noted_at,
+        board_note=suggestion.board_note if can_board_review else None,
+        can_board_review=can_board_review,
         interest_counts=interest_counts or empty_interest_counts(),
         my_interest=my_interest.value if my_interest is not None else None,
     )
@@ -91,6 +98,7 @@ def _responses_for(
     return [
         _to_response(
             row,
+            member=member,
             interest_counts=counts.get(row.id),
             my_interest=mine.get(row.id),
         )
@@ -162,6 +170,44 @@ def update_event_suggestion_status_endpoint(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid status update",
+        ) from None
+
+    return _responses_for(db, [suggestion], member=current_member)[0]
+
+
+@router.patch("/{suggestion_id}/review", response_model=EventSuggestionResponse)
+def review_event_suggestion_endpoint(
+    suggestion_id: int,
+    data: EventSuggestionBoardReviewRequest,
+    current_member: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    update_board_note = "board_note" in data.model_fields_set
+    try:
+        suggestion = apply_event_suggestion_board_review(
+            db,
+            suggestion_id=suggestion_id,
+            board_member=current_member,
+            status=(
+                EventSuggestionStatus(data.status) if data.status is not None else None
+            ),
+            board_note=data.board_note,
+            update_board_note=update_board_note,
+        )
+    except EventSuggestionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event idea not found",
+        ) from None
+    except EventSuggestionReviewEmptyError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Provide a status and/or board note",
+        ) from None
+    except EventSuggestionInvalidStatusError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid review status",
         ) from None
 
     return _responses_for(db, [suggestion], member=current_member)[0]

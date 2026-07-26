@@ -46,6 +46,10 @@ class EventSuggestionInterestClosedError(Exception):
     pass
 
 
+class EventSuggestionReviewEmptyError(Exception):
+    pass
+
+
 def _load_suggestion(db: Session, suggestion_id: int) -> EventSuggestion | None:
     return db.scalar(
         select(EventSuggestion)
@@ -179,6 +183,71 @@ def mark_event_suggestion_noted(
         board_member=board_member,
         status=EventSuggestionStatus.UNDER_DISCUSSION,
     )
+
+
+def apply_event_suggestion_board_review(
+    db: Session,
+    *,
+    suggestion_id: int,
+    board_member: Member,
+    status: EventSuggestionStatus | None = None,
+    board_note: str | None = None,
+    update_board_note: bool = False,
+) -> EventSuggestion:
+    """Apply board review: optional status change and/or internal note."""
+    if status is None and not update_board_note:
+        raise EventSuggestionReviewEmptyError
+
+    if status is not None and status not in BOARD_UPDATABLE_STATUSES:
+        raise EventSuggestionInvalidStatusError
+
+    suggestion = _load_suggestion(db, suggestion_id)
+    if suggestion is None:
+        raise EventSuggestionNotFoundError
+    if suggestion.organization_id != get_default_organization_id(db):
+        raise EventSuggestionNotFoundError
+
+    if suggestion.status == EventSuggestionStatus.CONVERTED:
+        if status is not None and status != EventSuggestionStatus.ARCHIVED:
+            raise EventSuggestionInvalidStatusError
+
+    previous_status = suggestion.status
+    now = datetime.now(UTC)
+    changed = False
+
+    if status is not None and suggestion.status != status:
+        suggestion.status = status
+        suggestion.noted_at = now
+        suggestion.noted_by_id = board_member.id
+        changed = True
+
+    if update_board_note:
+        cleaned = board_note.strip() if board_note else ""
+        suggestion.board_note = cleaned or None
+        changed = True
+
+    if changed:
+        db.commit()
+        db.refresh(suggestion)
+
+    loaded = _load_suggestion(db, suggestion.id)
+    if loaded is None:
+        raise EventSuggestionNotFoundError
+
+    if (
+        previous_status == EventSuggestionStatus.PENDING_REVIEW
+        and loaded.status == EventSuggestionStatus.UNDER_DISCUSSION
+        and loaded.suggested_by_id is not None
+    ):
+        from app.services.inbox_notification_service import notify_suggestion_noted
+
+        notify_suggestion_noted(
+            db,
+            suggestion_id=loaded.id,
+            suggested_by_id=loaded.suggested_by_id,
+            title=loaded.title,
+        )
+    return loaded
 
 
 def empty_interest_counts() -> EventSuggestionInterestCounts:

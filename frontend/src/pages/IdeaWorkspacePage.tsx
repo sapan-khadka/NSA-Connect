@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
+import { IdeaBoardReviewSection } from "../components/IdeaBoardReviewSection";
 import { IdeaDiscussionSection } from "../components/IdeaDiscussionSection";
 import { getApiErrorMessage } from "../lib/api-error";
 import {
@@ -250,21 +251,7 @@ export function IdeaWorkspacePage() {
 
       <IdeaDiscussionSection suggestionId={idea.id} status={idea.status} />
 
-      <section className="idea-workspace-section" aria-labelledby="idea-board">
-        <h2 id="idea-board" className="idea-workspace-section__title">
-          Board review
-        </h2>
-        <p className="idea-workspace-placeholder">
-          Approve, reject, and convert-to-event actions will land here once the
-          review workflow is ready.
-        </p>
-        {idea.noted_by ? (
-          <p className="idea-workspace-note">
-            Reviewed by {idea.noted_by.full_name}
-            {idea.noted_at ? ` · ${formatDate(idea.noted_at)}` : ""}
-          </p>
-        ) : null}
-      </section>
+      <IdeaBoardReviewSection idea={idea} onUpdated={setIdea} />
     </div>
   );
 }
