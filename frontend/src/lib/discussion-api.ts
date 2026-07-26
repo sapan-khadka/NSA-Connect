@@ -55,6 +55,7 @@ export type DiscussionRoom = {
   members: DiscussionRoomMember[];
   peer_member_id?: number | null;
   peer_full_name?: string | null;
+  avatar_url?: string | null;
 };
 
 export type DiscussionRoomListResponse = {
@@ -93,7 +94,9 @@ export type DiscussionInboxRoom = {
   pinned_at: string | null;
   muted?: boolean;
   peer_user_id?: number | null;
+  peer_avatar_url?: string | null;
   peer_online?: boolean | null;
+  avatar_url?: string | null;
 };
 
 export type DiscussionArchivedRoom = {
@@ -244,6 +247,29 @@ export async function createDiscussionRoom(payload: {
   member_ids?: number[];
 }): Promise<DiscussionRoom> {
   const response = await api.post<DiscussionRoom>("/v1/discussions/rooms", payload);
+  return response.data;
+}
+
+export async function uploadGroupRoomAvatar(
+  roomId: number,
+  file: File,
+): Promise<DiscussionRoom> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await api.post<DiscussionRoom>(
+    `/v1/discussions/rooms/${roomId}/avatar`,
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return response.data;
+}
+
+export async function deleteGroupRoomAvatar(
+  roomId: number,
+): Promise<DiscussionRoom> {
+  const response = await api.delete<DiscussionRoom>(
+    `/v1/discussions/rooms/${roomId}/avatar`,
+  );
   return response.data;
 }
 

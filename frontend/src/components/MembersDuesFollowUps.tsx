@@ -94,7 +94,12 @@ export function MembersDuesFollowUps({
               to={`/members/${member.id}`}
               className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-surface-muted/50 sm:px-5"
             >
-              <Avatar name={member.full_name} size="sm" className="shrink-0" />
+              <Avatar
+                name={member.full_name}
+                src={member.avatar_url}
+                size="sm"
+                className="shrink-0"
+              />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium text-foreground">
                   {member.full_name}

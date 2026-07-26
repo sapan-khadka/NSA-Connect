@@ -63,6 +63,7 @@ export type MemberResponse = {
   email_visibility?: ProfileFieldVisibility;
   phone_visibility?: ProfileFieldVisibility;
   social_handle_visibility?: ProfileFieldVisibility;
+  avatar_url?: string | null;
   organization?: { id: number; slug: string; name: string } | null;
 };
 

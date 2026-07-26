@@ -70,6 +70,8 @@ def reset_settings_cache(monkeypatch, request):
         "app.services.event_photo_upload_service",
         "app.services.event_photo_service",
         "app.services.local_event_photo_storage",
+        "app.services.local_avatar_storage",
+        "app.services.avatar_upload_service",
         "app.services.member_document_service",
         "app.services.email_service",
         "app.services.constitution_ingest_service",

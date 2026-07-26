@@ -822,6 +822,7 @@ export function MembersTable({
                       ) : null}
                       <Avatar
                         name={member.full_name}
+                        src={member.avatar_url}
                         size="md"
                         className="members-table-avatar"
                       />
@@ -996,6 +997,7 @@ export function MembersTable({
                       <td className="members-table-avatar-col">
                         <Avatar
                           name={member.full_name}
+                          src={member.avatar_url}
                           size="md"
                           className="members-table-avatar"
                         />

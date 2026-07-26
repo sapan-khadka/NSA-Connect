@@ -82,11 +82,13 @@ function SidebarSectionLabel({ children }: { children: string }) {
 
 function SidebarAccountMenu({
   fullName,
+  avatarUrl = null,
   roleLabel,
   onLogout,
   onNavigate,
 }: {
   fullName: string;
+  avatarUrl?: string | null;
   roleLabel: string;
   onLogout: () => void;
   onNavigate?: () => void;
@@ -95,6 +97,8 @@ function SidebarAccountMenu({
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
   const palette = avatarColorFromSeed(fullName);
+  const [imageFailed, setImageFailed] = useState(false);
+  const showImage = Boolean(avatarUrl) && !imageFailed;
 
   useEffect(() => {
     if (!open) {
@@ -138,13 +142,26 @@ function SidebarAccountMenu({
         ].join(" ")}
       >
         <span
-          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
-          style={{
-            backgroundColor: palette.background,
-            color: palette.color,
-          }}
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-[11px] font-semibold"
+          style={
+            showImage
+              ? undefined
+              : {
+                  backgroundColor: palette.background,
+                  color: palette.color,
+                }
+          }
         >
-          {getInitials(fullName)}
+          {showImage ? (
+            <img
+              src={avatarUrl ?? undefined}
+              alt=""
+              className="h-full w-full object-cover"
+              onError={() => setImageFailed(true)}
+            />
+          ) : (
+            getInitials(fullName)
+          )}
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[13px] font-semibold text-foreground">
@@ -420,6 +437,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         {member ? (
           <SidebarAccountMenu
             fullName={member.full_name}
+            avatarUrl={member.avatar_url}
             roleLabel={roleLabel}
             onLogout={logout}
             onNavigate={onNavigate}

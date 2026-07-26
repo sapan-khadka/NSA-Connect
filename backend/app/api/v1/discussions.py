@@ -1,6 +1,15 @@
 from typing import NoReturn
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+    status,
+)
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -11,8 +20,13 @@ from app.core.dependencies import (
     require_task_oversight,
 )
 from app.core.rate_limit import limit
+from app.integrations.cloudinary_client import CloudinaryUploadError
 from app.models.member import Member
 from app.core.security import create_ws_ticket
+from app.services.avatar_upload_service import (
+    AvatarUploadUnavailableError,
+    AvatarValidationError,
+)
 from app.schemas.discussion import (
     DiscussionArchiveResponse,
     DiscussionInboxResponse,
@@ -50,11 +64,13 @@ from app.services.discussion_room_service import (
     archive_discussion_room,
     assert_can_access_custom_room,
     build_room_response,
+    clear_group_room_avatar,
     create_discussion_room,
     get_or_create_dm,
     list_my_discussion_rooms,
     list_pending_discussion_rooms,
     reject_discussion_room,
+    set_group_room_avatar,
 )
 from app.services.discussion_service import (
     DEFAULT_DISCUSSION_LIMIT,
@@ -515,6 +531,65 @@ def get_discussion_room_endpoint(
             db,
             room_id=room_id,
             member=current_member,
+        )
+    except (DiscussionRoomNotFoundError, DiscussionForbiddenError) as exc:
+        _handle_room_admin_errors(exc)
+    return build_room_response(room, viewer_id=current_member.id)
+
+
+@router.post(
+    "/discussions/rooms/{room_id}/avatar",
+    response_model=DiscussionRoomResponse,
+)
+async def upload_discussion_room_avatar_endpoint(
+    room_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_member: Member = Depends(get_current_member),
+):
+    file_bytes = await file.read()
+    try:
+        room = set_group_room_avatar(
+            db,
+            room_id=room_id,
+            actor=current_member,
+            file_bytes=file_bytes,
+            content_type=file.content_type,
+        )
+    except (DiscussionRoomNotFoundError, DiscussionForbiddenError) as exc:
+        _handle_room_admin_errors(exc)
+    except AvatarValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    except AvatarUploadUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Photo upload is not configured",
+        ) from exc
+    except CloudinaryUploadError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to upload photo",
+        ) from exc
+    return build_room_response(room, viewer_id=current_member.id)
+
+
+@router.delete(
+    "/discussions/rooms/{room_id}/avatar",
+    response_model=DiscussionRoomResponse,
+)
+def delete_discussion_room_avatar_endpoint(
+    room_id: int,
+    db: Session = Depends(get_db),
+    current_member: Member = Depends(get_current_member),
+):
+    try:
+        room = clear_group_room_avatar(
+            db,
+            room_id=room_id,
+            actor=current_member,
         )
     except (DiscussionRoomNotFoundError, DiscussionForbiddenError) as exc:
         _handle_room_admin_errors(exc)

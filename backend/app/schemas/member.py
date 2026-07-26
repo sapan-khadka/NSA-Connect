@@ -207,6 +207,7 @@ class MemberResponse(BaseModel):
     email_visibility: ProfileFieldVisibility = ProfileFieldVisibility.PUBLIC
     phone_visibility: ProfileFieldVisibility = ProfileFieldVisibility.BOARD_ONLY
     social_handle_visibility: ProfileFieldVisibility = ProfileFieldVisibility.BOARD_ONLY
+    avatar_url: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -317,6 +318,7 @@ class MemberResponse(BaseModel):
             email_visibility=email_visibility,
             phone_visibility=phone_visibility,
             social_handle_visibility=social_handle_visibility,
+            avatar_url=member.avatar_url,
         )
 
 

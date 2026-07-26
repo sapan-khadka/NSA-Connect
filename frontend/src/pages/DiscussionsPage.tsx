@@ -580,6 +580,10 @@ export function DiscussionsPage() {
         roomId={activeCustomRoomId}
         onClose={() => setMembersOpen(false)}
         onLoaded={setActiveRoomDetail}
+        onRoomUpdated={(room) => {
+          setActiveRoomDetail(room);
+          void reloadInboxSilent();
+        }}
       />
 
       {member ? (

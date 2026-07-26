@@ -137,6 +137,14 @@ class Settings(BaseSettings):
         default="nsa-connect/member-documents",
         description="Cloudinary folder for member document uploads",
     )
+    CLOUDINARY_MEMBER_AVATARS_FOLDER: str = Field(
+        default="nsa-connect/member-avatars",
+        description="Cloudinary folder for member profile avatars",
+    )
+    CLOUDINARY_GROUP_AVATARS_FOLDER: str = Field(
+        default="nsa-connect/group-avatars",
+        description="Cloudinary folder for group discussion avatars",
+    )
     DEV_UPLOAD_BASE_URL: str = Field(
         default="http://127.0.0.1:8000",
         description=(

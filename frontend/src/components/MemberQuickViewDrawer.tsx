@@ -260,6 +260,7 @@ export function MemberQuickViewDrawer({
           <span className="members-quick-view-title-row">
             <Avatar
               name={member.full_name}
+              src={member.avatar_url}
               size="lg"
               className="members-quick-view-avatar"
               aria-hidden="true"

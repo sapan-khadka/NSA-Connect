@@ -161,7 +161,9 @@ class DiscussionInboxRoomResponse(BaseModel):
     pinned_at: datetime | None = None
     muted: bool = False
     peer_user_id: int | None = None
+    peer_avatar_url: str | None = None
     peer_online: bool | None = None
+    avatar_url: str | None = None
 
 
 class DiscussionInboxResponse(BaseModel):

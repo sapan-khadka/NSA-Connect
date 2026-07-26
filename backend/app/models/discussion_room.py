@@ -90,6 +90,8 @@ class DiscussionRoom(Base):
         default=lambda: datetime.now(UTC),
     )
     reviewed_at = Column(DateTime(timezone=True), nullable=True)
+    avatar_url = Column(String(2048), nullable=True)
+    avatar_public_id = Column(String(512), nullable=True)
 
     created_by = relationship("Member", foreign_keys=[created_by_id])
     reviewed_by = relationship("Member", foreign_keys=[reviewed_by_id])

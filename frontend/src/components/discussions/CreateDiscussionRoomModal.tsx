@@ -2,7 +2,11 @@ import { useEffect, useState, type FormEvent } from "react";
 
 import type { MemberResponse } from "../../lib/auth-api";
 import { getApiErrorMessage } from "../../lib/api-error";
-import { createDiscussionRoom, type DiscussionRoom } from "../../lib/discussion-api";
+import {
+  createDiscussionRoom,
+  uploadGroupRoomAvatar,
+  type DiscussionRoom,
+} from "../../lib/discussion-api";
 import { fetchAssignableMembers } from "../../lib/members-api";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
@@ -23,6 +27,7 @@ export function CreateDiscussionRoomModal({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [memberIds, setMemberIds] = useState<number[]>([]);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [candidates, setCandidates] = useState<MemberResponse[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -35,6 +40,7 @@ export function CreateDiscussionRoomModal({
     setName("");
     setDescription("");
     setMemberIds([]);
+    setPhotoFile(null);
     setError(null);
 
     let cancelled = false;
@@ -81,11 +87,18 @@ export function CreateDiscussionRoomModal({
     setSubmitting(true);
     setError(null);
     try {
-      const room = await createDiscussionRoom({
+      let room = await createDiscussionRoom({
         name: trimmedName,
         description: description.trim() || undefined,
         member_ids: memberIds,
       });
+      if (photoFile) {
+        try {
+          room = await uploadGroupRoomAvatar(room.id, photoFile);
+        } catch {
+          // Room exists; photo can be set later from members drawer.
+        }
+      }
       onCreated(room);
       onClose();
     } catch (caught) {
@@ -130,6 +143,24 @@ export function CreateDiscussionRoomModal({
             className="resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
             placeholder="What is this group for?"
           />
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-foreground">
+            Group photo{" "}
+            <span className="font-normal text-gray-400">(optional)</span>
+          </span>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/heic,image/heif"
+            onChange={(event) =>
+              setPhotoFile(event.target.files?.[0] ?? null)
+            }
+            className="block w-full text-sm text-gray-600 file:mr-3 file:rounded-md file:border-0 file:bg-badge-teal-bg file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-primary"
+          />
+          {photoFile ? (
+            <span className="text-xs text-gray-500">{photoFile.name}</span>
+          ) : null}
         </label>
 
         <fieldset className="flex flex-col gap-1.5">

@@ -113,6 +113,7 @@ function getInitials(fullName: string): string {
 
 type AccountMenuProps = {
   fullName: string;
+  avatarUrl?: string | null;
   onLogout: () => void;
   /** Header variant: avatar only (name lives in the sidebar profile). */
   avatarOnly?: boolean;
@@ -120,6 +121,7 @@ type AccountMenuProps = {
 
 export function AccountMenu({
   fullName,
+  avatarUrl = null,
   onLogout,
   avatarOnly = false,
 }: AccountMenuProps) {
@@ -127,6 +129,8 @@ export function AccountMenu({
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
   const palette = avatarColorFromSeed(fullName);
+  const [imageFailed, setImageFailed] = useState(false);
+  const showImage = Boolean(avatarUrl) && !imageFailed;
 
   useEffect(() => {
     if (!open) {
@@ -171,10 +175,23 @@ export function AccountMenu({
       >
         <span
           aria-hidden="true"
-          className="ds-nav-account-avatar"
-          style={{ backgroundColor: palette.background, color: palette.color }}
+          className="ds-nav-account-avatar overflow-hidden"
+          style={
+            showImage
+              ? undefined
+              : { backgroundColor: palette.background, color: palette.color }
+          }
         >
-          {getInitials(fullName)}
+          {showImage ? (
+            <img
+              src={avatarUrl ?? undefined}
+              alt=""
+              className="h-full w-full object-cover"
+              onError={() => setImageFailed(true)}
+            />
+          ) : (
+            getInitials(fullName)
+          )}
         </span>
         {!avatarOnly ? (
           <>

@@ -10,6 +10,7 @@ import {
   profileFormValuesToRequest,
   type MemberProfileFormValues,
 } from "../components/MemberProfileForm";
+import { ProfilePhotoCard } from "../components/ProfilePhotoCard";
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage } from "../lib/api-error";
 import { fetchMyProfile, updateMyProfile } from "../lib/members-api";
@@ -114,6 +115,14 @@ export function ProfilePage() {
           {successMessage}
         </Card>
       ) : null}
+
+      <ProfilePhotoCard
+        member={member}
+        onMemberUpdated={(updated) => {
+          updateMember(updated);
+          setValues(memberToProfileFormValues(updated));
+        }}
+      />
 
       <Card
         as="form"

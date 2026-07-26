@@ -73,6 +73,7 @@ class DiscussionRoomResponse(BaseModel):
     members: list[DiscussionRoomMemberResponse] = Field(default_factory=list)
     peer_member_id: int | None = None
     peer_full_name: str | None = None
+    avatar_url: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

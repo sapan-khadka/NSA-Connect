@@ -270,6 +270,20 @@ export async function updateMyProfile(
   return response.data;
 }
 
+export async function uploadMyAvatar(file: File): Promise<MemberResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await api.post<MemberResponse>("/v1/members/me/avatar", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data;
+}
+
+export async function deleteMyAvatar(): Promise<MemberResponse> {
+  const response = await api.delete<MemberResponse>("/v1/members/me/avatar");
+  return response.data;
+}
+
 export async function updateMemberProfile(
   memberId: number,
   data: UpdateProfileRequest,

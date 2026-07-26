@@ -21,6 +21,11 @@ from app.schemas.discussion_room import (
     DiscussionRoomMemberResponse,
     DiscussionRoomResponse,
 )
+from app.services.avatar_upload_service import (
+    AvatarKind,
+    delete_avatar_asset,
+    upload_avatar_file,
+)
 from app.services.discussion_service import (
     DiscussionForbiddenError,
     DiscussionValidationError,
@@ -100,7 +105,76 @@ def build_room_response(
         ],
         peer_member_id=peer_member_id,
         peer_full_name=peer_full_name,
+        avatar_url=room.avatar_url,
     )
+
+
+def assert_can_manage_group_avatar(
+    db: Session,
+    *,
+    room_id: int,
+    member: Member,
+) -> DiscussionRoom:
+    """Owner or board+ may set avatars on group rooms (not DMs)."""
+    room = assert_can_access_custom_room(db, room_id=room_id, member=member)
+    if room.kind != DiscussionRoomKind.GROUP:
+        raise DiscussionForbiddenError
+    if room.status not in {
+        DiscussionRoomStatus.LIVE,
+        DiscussionRoomStatus.PENDING,
+    }:
+        raise DiscussionForbiddenError
+
+    is_board = member.has_role_at_least(MemberRole.BOARD)
+    is_owner = any(
+        row.member_id == member.id and row.role == DiscussionRoomMemberRole.OWNER
+        for row in room.members
+    )
+    if not (is_board or is_owner):
+        raise DiscussionForbiddenError
+    return room
+
+
+def set_group_room_avatar(
+    db: Session,
+    *,
+    room_id: int,
+    actor: Member,
+    file_bytes: bytes,
+    content_type: str | None,
+) -> DiscussionRoom:
+    room = assert_can_manage_group_avatar(db, room_id=room_id, member=actor)
+    previous_public_id = room.avatar_public_id
+
+    upload_result = upload_avatar_file(
+        kind=AvatarKind.GROUP,
+        file_bytes=file_bytes,
+        content_type=content_type,
+    )
+    room.avatar_url = upload_result.image_url
+    room.avatar_public_id = upload_result.public_id
+    db.commit()
+
+    if previous_public_id and previous_public_id != upload_result.public_id:
+        delete_avatar_asset(kind=AvatarKind.GROUP, public_id=previous_public_id)
+
+    return _load_room(db, room.id)
+
+
+def clear_group_room_avatar(
+    db: Session,
+    *,
+    room_id: int,
+    actor: Member,
+) -> DiscussionRoom:
+    room = assert_can_manage_group_avatar(db, room_id=room_id, member=actor)
+    previous_public_id = room.avatar_public_id
+    room.avatar_url = None
+    room.avatar_public_id = None
+    db.commit()
+
+    delete_avatar_asset(kind=AvatarKind.GROUP, public_id=previous_public_id)
+    return _load_room(db, room.id)
 
 
 def _load_room(db: Session, room_id: int) -> DiscussionRoom:

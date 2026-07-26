@@ -33,6 +33,16 @@ function DiscussionAvatar({ room }: { room: DiscussionInboxRoom }) {
     );
   }
   if (room.event_type === "dm") {
+    if (room.peer_avatar_url) {
+      return (
+        <img
+          src={room.peer_avatar_url}
+          alt=""
+          className="home-discussion-avatar is-dm object-cover"
+          aria-hidden="true"
+        />
+      );
+    }
     const palette = avatarColorFromSeed(
       room.peer_user_id != null
         ? `user:${room.peer_user_id}`
@@ -49,6 +59,16 @@ function DiscussionAvatar({ room }: { room: DiscussionInboxRoom }) {
     );
   }
   if (room.event_type === "group" || room.room_id.startsWith("room:")) {
+    if (room.avatar_url) {
+      return (
+        <img
+          src={room.avatar_url}
+          alt=""
+          className="home-discussion-avatar is-group object-cover"
+          aria-hidden="true"
+        />
+      );
+    }
     return (
       <span className="home-discussion-avatar is-group" aria-hidden="true">
         <AppIcon icon={Users} size="xs" className="text-current" />

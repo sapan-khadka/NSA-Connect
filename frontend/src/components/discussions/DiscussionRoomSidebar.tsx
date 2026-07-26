@@ -54,13 +54,25 @@ function RoomAvatar({ room }: { room: DiscussionInboxRoom }) {
         className="relative inline-flex h-10 w-10 shrink-0"
         title={online ? "Online" : "Direct message"}
       >
-        <span
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold"
-          style={{ backgroundColor: palette.background, color: palette.color }}
-          aria-hidden="true"
-        >
-          {initial}
-        </span>
+        {room.peer_avatar_url ? (
+          <img
+            src={room.peer_avatar_url}
+            alt=""
+            className="h-10 w-10 rounded-full object-cover"
+            aria-hidden="true"
+          />
+        ) : (
+          <span
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold"
+            style={{
+              backgroundColor: palette.background,
+              color: palette.color,
+            }}
+            aria-hidden="true"
+          >
+            {initial}
+          </span>
+        )}
         <span
           className={[
             "absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white",
@@ -73,6 +85,16 @@ function RoomAvatar({ room }: { room: DiscussionInboxRoom }) {
   }
 
   if (room.room_id.startsWith("room:") || room.event_type === "group") {
+    if (room.avatar_url) {
+      return (
+        <img
+          src={room.avatar_url}
+          alt=""
+          className="h-10 w-10 shrink-0 rounded-full object-cover"
+          aria-hidden="true"
+        />
+      );
+    }
     return (
       <span
         className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white"

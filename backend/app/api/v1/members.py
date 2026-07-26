@@ -26,6 +26,14 @@ from app.integrations.cloudinary_client import CloudinaryUploadError
 from app.lib.member_talents import ALL_MEMBER_TALENTS, MEMBER_TALENT_LABELS
 from app.lib.semester import get_current_semester_slug
 from app.models.member import Member, MemberRole, MemberStatus
+from app.services.avatar_upload_service import (
+    AvatarUploadUnavailableError,
+    AvatarValidationError,
+)
+from app.services.member_avatar_service import (
+    clear_member_avatar,
+    set_member_avatar,
+)
 from app.services.member_engagement_service import (
     DEFAULT_ENGAGEMENT_WINDOW_DAYS,
     build_members_engagement,
@@ -187,6 +195,48 @@ def update_my_profile(
             detail="Email already registered",
         ) from None
 
+    return MemberResponse.from_member(member, viewer=current_member)
+
+
+@router.post("/me/avatar", response_model=MemberResponse)
+async def upload_my_avatar(
+    file: UploadFile = File(...),
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    file_bytes = await file.read()
+    try:
+        member = set_member_avatar(
+            db,
+            current_member.id,
+            file_bytes=file_bytes,
+            content_type=file.content_type,
+        )
+    except AvatarValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    except AvatarUploadUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Photo upload is not configured",
+        ) from exc
+    except CloudinaryUploadError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to upload photo",
+        ) from exc
+
+    return MemberResponse.from_member(member, viewer=current_member)
+
+
+@router.delete("/me/avatar", response_model=MemberResponse)
+def delete_my_avatar(
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    member = clear_member_avatar(db, current_member.id)
     return MemberResponse.from_member(member, viewer=current_member)
 
 

@@ -658,6 +658,7 @@ def list_discussion_inbox(
 
         label = custom.name
         peer_user_id: int | None = None
+        peer_avatar_url: str | None = None
         if is_dm:
             peer = next(
                 (
@@ -670,6 +671,7 @@ def list_discussion_inbox(
             label = peer.full_name if peer else "Direct message"
             if peer is not None:
                 peer_user_id = peer.id
+                peer_avatar_url = peer.avatar_url
                 peer_ids_for_presence.append(peer.id)
                 dm_peer_by_room[room_id] = peer.id
 
@@ -693,6 +695,8 @@ def list_discussion_inbox(
                 pinned_at=pins.get(room_id),
                 muted=room_id in muted_ids,
                 peer_user_id=peer_user_id,
+                peer_avatar_url=peer_avatar_url,
+                avatar_url=None if is_dm else custom.avatar_url,
             )
         )
 

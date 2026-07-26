@@ -210,6 +210,7 @@ export function MemberWorkspaceHeader({
       <div className="member-workspace-header-main">
         <Avatar
           name={member.full_name}
+          src={member.avatar_url}
           size="xl"
           className="member-workspace-avatar"
         />

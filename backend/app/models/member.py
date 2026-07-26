@@ -201,6 +201,8 @@ class Member(Base):
         unique=True,
         index=True,
     )
+    avatar_url = Column(String(2048), nullable=True)
+    avatar_public_id = Column(String(512), nullable=True)
 
     password_reset_tokens = relationship(
         "PasswordResetToken",

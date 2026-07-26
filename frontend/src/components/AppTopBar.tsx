@@ -221,6 +221,7 @@ export function AppTopBar({
           {member ? (
             <AccountMenu
               fullName={member.full_name}
+              avatarUrl={member.avatar_url}
               onLogout={logout}
               avatarOnly
             />

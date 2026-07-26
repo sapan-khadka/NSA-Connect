@@ -24,6 +24,12 @@ from app.core.rate_limit_handlers import (
 from app.core.validation_errors import request_validation_exception_handler
 from app.lifespan import lifespan
 from app.middleware.global_rate_limit import GlobalRateLimitMiddleware
+from app.services.local_avatar_storage import (
+    AvatarKind,
+    avatar_upload_dir,
+    avatar_url_prefix,
+    is_local_avatar_storage_enabled,
+)
 from app.services.local_event_photo_storage import (
     DEV_EVENT_PHOTOS_URL_PREFIX,
     event_photos_upload_dir,
@@ -58,6 +64,19 @@ if is_local_event_photo_storage_enabled():
         StaticFiles(directory=Path(upload_dir)),
         name="dev-event-photos",
     )
+
+if is_local_avatar_storage_enabled() or is_local_event_photo_storage_enabled():
+    for kind, mount_name in (
+        (AvatarKind.MEMBER, "dev-member-avatars"),
+        (AvatarKind.GROUP, "dev-group-avatars"),
+    ):
+        avatar_dir = avatar_upload_dir(kind)
+        avatar_dir.mkdir(parents=True, exist_ok=True)
+        app.mount(
+            avatar_url_prefix(kind),
+            StaticFiles(directory=Path(avatar_dir)),
+            name=mount_name,
+        )
 
 
 @app.get("/")
