@@ -4,6 +4,8 @@ from datetime import UTC, datetime
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
+from app.lib.event_photo_archive import default_show_in_photo_archive
+from app.models.event import Event, EventType
 from app.models.event_suggestion import EventSuggestion, EventSuggestionStatus
 from app.models.event_suggestion_interest import (
     EventSuggestionInterest,
@@ -11,6 +13,7 @@ from app.models.event_suggestion_interest import (
 )
 from app.models.member import Member
 from app.schemas.event_suggestion import (
+    EventSuggestionConvertRequest,
     EventSuggestionCreateRequest,
     EventSuggestionInterestCounts,
 )
@@ -47,6 +50,10 @@ class EventSuggestionInterestClosedError(Exception):
 
 
 class EventSuggestionReviewEmptyError(Exception):
+    pass
+
+
+class EventSuggestionNotConvertibleError(Exception):
     pass
 
 
@@ -247,6 +254,62 @@ def apply_event_suggestion_board_review(
             suggested_by_id=loaded.suggested_by_id,
             title=loaded.title,
         )
+    return loaded
+
+
+def convert_event_suggestion_to_event(
+    db: Session,
+    *,
+    suggestion_id: int,
+    board_member: Member,
+    data: EventSuggestionConvertRequest,
+) -> EventSuggestion:
+    suggestion = _load_suggestion(db, suggestion_id)
+    if suggestion is None:
+        raise EventSuggestionNotFoundError
+    if suggestion.organization_id != get_default_organization_id(db):
+        raise EventSuggestionNotFoundError
+
+    if (
+        suggestion.status != EventSuggestionStatus.APPROVED
+        or suggestion.converted_event_id is not None
+    ):
+        raise EventSuggestionNotConvertibleError
+
+    name = (data.name or suggestion.title).strip()
+    description = (data.description or suggestion.description).strip()
+    if not name or not description:
+        raise EventSuggestionNotConvertibleError
+
+    now = datetime.now(UTC)
+    event = Event(
+        title=name,
+        description=description,
+        event_type=data.event_type,
+        starts_at=data.starts_at,
+        location=data.location,
+        capacity=data.capacity,
+        budget=data.budget,
+        show_in_photo_archive=default_show_in_photo_archive(data.event_type),
+        meeting_visibility=(
+            data.meeting_visibility if data.event_type == EventType.MEETING else None
+        ),
+        created_by_id=board_member.id,
+        organization_id=get_default_organization_id(db),
+    )
+    db.add(event)
+    db.flush()
+
+    suggestion.status = EventSuggestionStatus.CONVERTED
+    suggestion.converted_event_id = event.id
+    suggestion.noted_at = now
+    suggestion.noted_by_id = board_member.id
+    db.commit()
+    db.refresh(suggestion)
+
+    loaded = _load_suggestion(db, suggestion.id)
+    if loaded is None:
+        raise EventSuggestionNotFoundError
     return loaded
 
 

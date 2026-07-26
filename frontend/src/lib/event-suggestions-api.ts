@@ -1,4 +1,5 @@
 import api from "./api";
+import type { EventType, MeetingVisibility } from "./event-types";
 
 export type EventSuggestionStatus =
   | "pending_review"
@@ -41,6 +42,7 @@ export type EventSuggestion = {
   noted_at: string | null;
   board_note: string | null;
   can_board_review: boolean;
+  converted_event_id: number | null;
   interest_counts: IdeaInterestCounts;
   my_interest: IdeaInterestVote | null;
 };
@@ -48,6 +50,17 @@ export type EventSuggestion = {
 export type IdeaBoardReviewPayload = {
   status?: BoardUpdatableIdeaStatus;
   board_note?: string | null;
+};
+
+export type IdeaConvertPayload = {
+  name?: string | null;
+  description?: string | null;
+  starts_at: string;
+  event_type: EventType;
+  location?: string | null;
+  capacity?: number | null;
+  budget?: string;
+  meeting_visibility?: MeetingVisibility | null;
 };
 
 export type EventSuggestionListResponse = {
@@ -149,6 +162,17 @@ export async function reviewEventSuggestion(
 ): Promise<EventSuggestion> {
   const response = await api.patch<EventSuggestion>(
     `/v1/event-suggestions/${suggestionId}/review`,
+    payload,
+  );
+  return response.data;
+}
+
+export async function convertEventSuggestion(
+  suggestionId: number,
+  payload: IdeaConvertPayload,
+): Promise<EventSuggestion> {
+  const response = await api.post<EventSuggestion>(
+    `/v1/event-suggestions/${suggestionId}/convert`,
     payload,
   );
   return response.data;

@@ -11,6 +11,7 @@ from app.schemas.event_suggestion import (
     EventSuggestionCommentCreateRequest,
     EventSuggestionCommentListResponse,
     EventSuggestionCommentResponse,
+    EventSuggestionConvertRequest,
     EventSuggestionCreateRequest,
     EventSuggestionInterestCounts,
     EventSuggestionInterestUpdateRequest,
@@ -34,10 +35,12 @@ from app.services.event_suggestion_comment_service import (
 from app.services.event_suggestion_service import (
     EventSuggestionInterestClosedError,
     EventSuggestionInvalidStatusError,
+    EventSuggestionNotConvertibleError,
     EventSuggestionNotFoundError,
     EventSuggestionReviewEmptyError,
     apply_event_suggestion_board_review,
     clear_event_suggestion_interest,
+    convert_event_suggestion_to_event,
     create_event_suggestion,
     empty_interest_counts,
     get_event_suggestion,
@@ -77,6 +80,7 @@ def _to_response(
         noted_at=suggestion.noted_at,
         board_note=suggestion.board_note if can_board_review else None,
         can_board_review=can_board_review,
+        converted_event_id=suggestion.converted_event_id,
         interest_counts=interest_counts or empty_interest_counts(),
         my_interest=my_interest.value if my_interest is not None else None,
     )
@@ -208,6 +212,38 @@ def review_event_suggestion_endpoint(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid review status",
+        ) from None
+
+    return _responses_for(db, [suggestion], member=current_member)[0]
+
+
+@router.post(
+    "/{suggestion_id}/convert",
+    response_model=EventSuggestionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def convert_event_suggestion_endpoint(
+    suggestion_id: int,
+    data: EventSuggestionConvertRequest,
+    current_member: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    try:
+        suggestion = convert_event_suggestion_to_event(
+            db,
+            suggestion_id=suggestion_id,
+            board_member=current_member,
+            data=data,
+        )
+    except EventSuggestionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event idea not found",
+        ) from None
+    except EventSuggestionNotConvertibleError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only approved ideas can be converted to events",
         ) from None
 
     return _responses_for(db, [suggestion], member=current_member)[0]

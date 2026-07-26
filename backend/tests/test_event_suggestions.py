@@ -473,3 +473,70 @@ def test_member_cannot_board_review(client, member_headers, db_session):
         json={"status": "approved"},
     )
     assert response.status_code == 403
+
+
+def test_board_can_convert_approved_idea(client, board_headers, db_session):
+    member = db_session.scalar(select(Member).where(Member.email == "board@semo.edu"))
+    suggestion = EventSuggestion(
+        title="Holi Night",
+        description="Colors and music.",
+        preferred_timing="Spring",
+        suggested_by_id=member.id,
+        status=EventSuggestionStatus.APPROVED,
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(suggestion)
+    db_session.commit()
+    db_session.refresh(suggestion)
+
+    response = client.post(
+        f"/api/v1/event-suggestions/{suggestion.id}/convert",
+        headers=board_headers,
+        json={
+            "starts_at": "2030-03-15T18:00:00+00:00",
+            "event_type": "cultural",
+            "budget": "0.00",
+            "location": "Student Center",
+        },
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["status"] == "converted"
+    assert body["converted_event_id"] is not None
+
+    event_response = client.get(
+        f"/api/v1/events/{body['converted_event_id']}",
+        headers=board_headers,
+    )
+    assert event_response.status_code == 200
+    event = event_response.json()
+    assert event["name"] == "Holi Night"
+    assert event["description"] == "Colors and music."
+    assert event["event_type"] == "cultural"
+    assert event["location"] == "Student Center"
+
+
+def test_cannot_convert_non_approved_idea(client, board_headers, db_session):
+    member = db_session.scalar(select(Member).where(Member.email == "board@semo.edu"))
+    suggestion = EventSuggestion(
+        title="Too early",
+        description="Still cooking.",
+        suggested_by_id=member.id,
+        status=EventSuggestionStatus.UNDER_DISCUSSION,
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(suggestion)
+    db_session.commit()
+    db_session.refresh(suggestion)
+
+    response = client.post(
+        f"/api/v1/event-suggestions/{suggestion.id}/convert",
+        headers=board_headers,
+        json={
+            "starts_at": "2030-03-15T18:00:00+00:00",
+            "event_type": "social",
+            "budget": "0.00",
+        },
+    )
+    assert response.status_code == 400

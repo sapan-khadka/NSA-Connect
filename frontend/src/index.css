@@ -15646,6 +15646,104 @@
     color: #047857;
   }
 
+  .idea-board-converted {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #374151;
+  }
+
+  .idea-board-converted__link {
+    font-weight: 500;
+    color: var(--color-primary, #0f766e);
+    text-decoration: none;
+  }
+
+  .idea-board-converted__link:hover {
+    text-decoration: underline;
+  }
+
+  .idea-convert {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    padding: 0.85rem 0.9rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.65rem;
+    background: #fafafa;
+  }
+
+  .idea-convert__heading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .idea-convert__title {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #111827;
+  }
+
+  .idea-convert__copy {
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: #6b7280;
+  }
+
+  .idea-convert__fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .idea-convert__fields label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+  }
+
+  .idea-convert__fields label em {
+    font-style: normal;
+    font-weight: 400;
+    color: #9ca3af;
+  }
+
+  .idea-convert__fields input,
+  .idea-convert__fields select,
+  .idea-convert__fields textarea {
+    width: 100%;
+    padding: 0.5rem 0.65rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    background: #fff;
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: #111827;
+  }
+
+  .idea-convert__row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.55rem;
+  }
+
+  .idea-convert__actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  @media (max-width: 560px) {
+    .idea-convert__row {
+      grid-template-columns: 1fr;
+    }
+  }
+
   .ideas-row__desc {
     margin: 0.12rem 0 0;
     max-width: 42rem;

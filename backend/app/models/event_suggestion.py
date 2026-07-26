@@ -46,6 +46,12 @@ class EventSuggestion(Base):
     noted_at = Column(DateTime(timezone=True), nullable=True)
     noted_by_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     board_note = Column(Text, nullable=True)
+    converted_event_id = Column(
+        Integer,
+        ForeignKey("events.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,
@@ -54,6 +60,7 @@ class EventSuggestion(Base):
 
     suggested_by = relationship("Member", foreign_keys=[suggested_by_id])
     noted_by = relationship("Member", foreign_keys=[noted_by_id])
+    converted_event = relationship("Event", foreign_keys=[converted_event_id])
     interests = relationship(
         "EventSuggestionInterest",
         back_populates="suggestion",
