@@ -2,6 +2,7 @@ import { ChevronDown } from "lucide-react";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 
+import { avatarColorFromSeed } from "../lib/avatar-color";
 import { AppIcon } from "./ui/AppIcon";
 
 type NavDropdownItem = {
@@ -125,6 +126,7 @@ export function AccountMenu({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
+  const palette = avatarColorFromSeed(fullName);
 
   useEffect(() => {
     if (!open) {
@@ -167,7 +169,11 @@ export function AccountMenu({
             : "ds-nav-account-trigger"
         }
       >
-        <span aria-hidden="true" className="ds-nav-account-avatar">
+        <span
+          aria-hidden="true"
+          className="ds-nav-account-avatar"
+          style={{ backgroundColor: palette.background, color: palette.color }}
+        >
           {getInitials(fullName)}
         </span>
         {!avatarOnly ? (

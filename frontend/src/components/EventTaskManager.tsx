@@ -10,6 +10,7 @@ import { Trash2 } from "lucide-react";
 
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/api-error";
+import { avatarColorFromSeed } from "../lib/avatar-color";
 import { AppIcon } from "./ui/AppIcon";
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
@@ -85,10 +86,12 @@ function calcTaskCompletionSummary(tasks: EventTaskResponse[]): {
 
 /** Shared initials chip — same look for Event Manage and Kanban cards. */
 export function AssigneeAvatar({ name }: { name: string | null }) {
+  const palette = avatarColorFromSeed(name || "?");
   return (
     <span
       aria-hidden="true"
-      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-medium text-accent"
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+      style={{ backgroundColor: palette.background, color: palette.color }}
     >
       {name ? getInitials(name) : "?"}
     </span>

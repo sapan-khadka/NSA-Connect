@@ -1,5 +1,6 @@
 import { useState, type HTMLAttributes } from "react";
 
+import { avatarColorFromSeed } from "../../lib/avatar-color";
 import { cx } from "../cx";
 
 export type AvatarSize = "sm" | "md" | "lg" | "xl";
@@ -45,16 +46,22 @@ export function Avatar({
   const showImage = Boolean(src) && !failed;
   const initials = name ? initialsFromName(name) : "?";
   const label = alt || name || "Avatar";
+  const palette = avatarColorFromSeed(name || alt || "member");
 
   return (
     <span
       role="img"
       aria-label={label}
       className={cx(
-        "inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-badge-teal-bg font-semibold text-badge-teal",
+        "inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold",
         SIZE_CLASS[size],
         className,
       )}
+      style={
+        showImage
+          ? undefined
+          : { backgroundColor: palette.background, color: palette.color }
+      }
       {...rest}
     >
       {showImage ? (

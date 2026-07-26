@@ -12,6 +12,7 @@ import {
 import { useMemo, useState, type MouseEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { avatarColorFromSeed } from "../../lib/avatar-color";
 import {
   EVENT_TYPE_COLOR,
   type EventType,
@@ -27,7 +28,6 @@ import { AppIcon } from "../ui/AppIcon";
 import { Button } from "../ui/Button";
 
 const GROUP_AVATAR_COLOR = "#0F766E";
-const DM_AVATAR_COLOR = "#111113";
 
 function RoomAvatar({ room }: { room: DiscussionInboxRoom }) {
   if (room.room_id === "board") {
@@ -44,14 +44,19 @@ function RoomAvatar({ room }: { room: DiscussionInboxRoom }) {
   if (room.event_type === "dm") {
     const initial = (room.label.trim().charAt(0) || "?").toUpperCase();
     const online = Boolean(room.peer_online);
+    const palette = avatarColorFromSeed(
+      room.peer_user_id != null
+        ? `user:${room.peer_user_id}`
+        : room.label,
+    );
     return (
       <span
         className="relative inline-flex h-10 w-10 shrink-0"
         title={online ? "Online" : "Direct message"}
       >
         <span
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold text-white"
-          style={{ backgroundColor: DM_AVATAR_COLOR }}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold"
+          style={{ backgroundColor: palette.background, color: palette.color }}
           aria-hidden="true"
         >
           {initial}
