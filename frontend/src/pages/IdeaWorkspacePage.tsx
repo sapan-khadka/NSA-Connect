@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
+import { IdeaDiscussionSection } from "../components/IdeaDiscussionSection";
 import { getApiErrorMessage } from "../lib/api-error";
 import {
   clearEventSuggestionInterest,
@@ -247,18 +248,7 @@ export function IdeaWorkspacePage() {
 
       <InterestSection idea={idea} onUpdated={setIdea} />
 
-      <section
-        className="idea-workspace-section"
-        aria-labelledby="idea-discussion"
-      >
-        <h2 id="idea-discussion" className="idea-workspace-section__title">
-          Discussion
-        </h2>
-        <p className="idea-workspace-placeholder">
-          Threaded comments will live here so members can shape the idea before
-          board review.
-        </p>
-      </section>
+      <IdeaDiscussionSection suggestionId={idea.id} status={idea.status} />
 
       <section className="idea-workspace-section" aria-labelledby="idea-board">
         <h2 id="idea-board" className="idea-workspace-section__title">

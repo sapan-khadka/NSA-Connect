@@ -5,8 +5,11 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_member, require_board
 from app.models.event_suggestion import EventSuggestionStatus
 from app.models.event_suggestion_interest import EventSuggestionInterestVote
-from app.models.member import Member
+from app.models.member import Member, MemberRole
 from app.schemas.event_suggestion import (
+    EventSuggestionCommentCreateRequest,
+    EventSuggestionCommentListResponse,
+    EventSuggestionCommentResponse,
     EventSuggestionCreateRequest,
     EventSuggestionInterestCounts,
     EventSuggestionInterestUpdateRequest,
@@ -14,6 +17,18 @@ from app.schemas.event_suggestion import (
     EventSuggestionMemberResponse,
     EventSuggestionResponse,
     EventSuggestionStatusUpdateRequest,
+)
+from app.services.event_suggestion_comment_service import (
+    EventSuggestionCommentClosedError,
+    EventSuggestionCommentEmptyError,
+    EventSuggestionCommentForbiddenError,
+    EventSuggestionCommentInvalidParentError,
+    EventSuggestionCommentNotFoundError,
+    build_comment_threads,
+    comment_display_content,
+    create_event_suggestion_comment,
+    list_event_suggestion_comments,
+    soft_delete_event_suggestion_comment,
 )
 from app.services.event_suggestion_service import (
     EventSuggestionInterestClosedError,
@@ -150,6 +165,142 @@ def update_event_suggestion_status_endpoint(
         ) from None
 
     return _responses_for(db, [suggestion], member=current_member)[0]
+
+
+def _comment_to_response(
+    comment,
+    *,
+    member: Member,
+    replies: list | None = None,
+) -> EventSuggestionCommentResponse:
+    can_delete = comment.deleted_at is None and (
+        comment.author_id == member.id
+        or member.has_role_at_least(MemberRole.BOARD)
+    )
+    return EventSuggestionCommentResponse(
+        id=comment.id,
+        suggestion_id=comment.suggestion_id,
+        parent_id=comment.parent_id,
+        content=comment_display_content(comment),
+        author=EventSuggestionMemberResponse.model_validate(comment.author),
+        created_at=comment.created_at,
+        deleted_at=comment.deleted_at,
+        is_deleted=comment.deleted_at is not None,
+        can_delete=can_delete,
+        replies=[
+            _comment_to_response(reply, member=member, replies=[])
+            for reply in (replies or [])
+        ],
+    )
+
+
+@router.get(
+    "/{suggestion_id}/comments",
+    response_model=EventSuggestionCommentListResponse,
+)
+def list_event_suggestion_comments_endpoint(
+    suggestion_id: int,
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    try:
+        rows = list_event_suggestion_comments(db, suggestion_id=suggestion_id)
+    except EventSuggestionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event idea not found",
+        ) from None
+
+    top_level, replies_by_parent, live_total = build_comment_threads(rows)
+    return EventSuggestionCommentListResponse(
+        comments=[
+            _comment_to_response(
+                comment,
+                member=current_member,
+                replies=replies_by_parent.get(comment.id, []),
+            )
+            for comment in top_level
+        ],
+        total=live_total,
+    )
+
+
+@router.post(
+    "/{suggestion_id}/comments",
+    response_model=EventSuggestionCommentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_event_suggestion_comment_endpoint(
+    suggestion_id: int,
+    data: EventSuggestionCommentCreateRequest,
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    try:
+        comment = create_event_suggestion_comment(
+            db,
+            suggestion_id=suggestion_id,
+            member=current_member,
+            data=data,
+        )
+    except EventSuggestionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event idea not found",
+        ) from None
+    except EventSuggestionCommentClosedError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Discussion is closed for this idea",
+        ) from None
+    except EventSuggestionCommentEmptyError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Comment cannot be empty",
+        ) from None
+    except EventSuggestionCommentInvalidParentError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid parent comment",
+        ) from None
+
+    return _comment_to_response(comment, member=current_member, replies=[])
+
+
+@router.delete(
+    "/{suggestion_id}/comments/{comment_id}",
+    response_model=EventSuggestionCommentResponse,
+)
+def delete_event_suggestion_comment_endpoint(
+    suggestion_id: int,
+    comment_id: int,
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    try:
+        comment = soft_delete_event_suggestion_comment(
+            db,
+            suggestion_id=suggestion_id,
+            comment_id=comment_id,
+            member=current_member,
+        )
+    except EventSuggestionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event idea not found",
+        ) from None
+    except EventSuggestionCommentNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Comment not found",
+        ) from None
+    except EventSuggestionCommentForbiddenError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You cannot delete this comment",
+        ) from None
+
+    return _comment_to_response(comment, member=current_member, replies=[])
 
 
 @router.put("/{suggestion_id}/interest", response_model=EventSuggestionResponse)

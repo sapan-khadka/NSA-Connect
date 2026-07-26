@@ -269,3 +269,128 @@ def test_interest_closed_for_rejected_idea(client, member_headers, db_session):
 
     assert response.status_code == 400
     assert "closed" in response.json()["detail"].lower()
+
+
+def test_member_can_comment_and_reply(client, member_headers, db_session):
+    member = db_session.scalar(select(Member).where(Member.email == "sapan@semo.edu"))
+    suggestion = EventSuggestion(
+        title="Discussion idea",
+        description="Talk it through.",
+        suggested_by_id=member.id,
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(suggestion)
+    db_session.commit()
+    db_session.refresh(suggestion)
+
+    create_response = client.post(
+        f"/api/v1/event-suggestions/{suggestion.id}/comments",
+        headers=member_headers,
+        json={"content": "I like this timing."},
+    )
+    assert create_response.status_code == 201
+    parent = create_response.json()
+    assert parent["content"] == "I like this timing."
+    assert parent["parent_id"] is None
+    assert parent["can_delete"] is True
+
+    reply_response = client.post(
+        f"/api/v1/event-suggestions/{suggestion.id}/comments",
+        headers=member_headers,
+        json={"content": "Same here.", "parent_id": parent["id"]},
+    )
+    assert reply_response.status_code == 201
+    assert reply_response.json()["parent_id"] == parent["id"]
+
+    list_response = client.get(
+        f"/api/v1/event-suggestions/{suggestion.id}/comments",
+        headers=member_headers,
+    )
+    assert list_response.status_code == 200
+    body = list_response.json()
+    assert body["total"] == 2
+    assert len(body["comments"]) == 1
+    assert len(body["comments"][0]["replies"]) == 1
+    assert body["comments"][0]["replies"][0]["content"] == "Same here."
+
+
+def test_member_can_soft_delete_own_comment(client, member_headers, db_session):
+    member = db_session.scalar(select(Member).where(Member.email == "sapan@semo.edu"))
+    suggestion = EventSuggestion(
+        title="Delete comment idea",
+        description="Cleanup.",
+        suggested_by_id=member.id,
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(suggestion)
+    db_session.commit()
+    db_session.refresh(suggestion)
+
+    created = client.post(
+        f"/api/v1/event-suggestions/{suggestion.id}/comments",
+        headers=member_headers,
+        json={"content": "Temporary thought"},
+    ).json()
+
+    delete_response = client.delete(
+        f"/api/v1/event-suggestions/{suggestion.id}/comments/{created['id']}",
+        headers=member_headers,
+    )
+    assert delete_response.status_code == 200
+    body = delete_response.json()
+    assert body["is_deleted"] is True
+    assert body["content"] == "This comment was deleted"
+    assert body["can_delete"] is False
+
+
+def test_cannot_reply_to_a_reply(client, member_headers, db_session):
+    member = db_session.scalar(select(Member).where(Member.email == "sapan@semo.edu"))
+    suggestion = EventSuggestion(
+        title="Depth limit",
+        description="One level only.",
+        suggested_by_id=member.id,
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(suggestion)
+    db_session.commit()
+    db_session.refresh(suggestion)
+
+    parent = client.post(
+        f"/api/v1/event-suggestions/{suggestion.id}/comments",
+        headers=member_headers,
+        json={"content": "Top level"},
+    ).json()
+    reply = client.post(
+        f"/api/v1/event-suggestions/{suggestion.id}/comments",
+        headers=member_headers,
+        json={"content": "Reply", "parent_id": parent["id"]},
+    ).json()
+
+    nested = client.post(
+        f"/api/v1/event-suggestions/{suggestion.id}/comments",
+        headers=member_headers,
+        json={"content": "Too deep", "parent_id": reply["id"]},
+    )
+    assert nested.status_code == 400
+
+
+def test_discussion_closed_for_archived_idea(client, member_headers, db_session):
+    member = db_session.scalar(select(Member).where(Member.email == "sapan@semo.edu"))
+    suggestion = EventSuggestion(
+        title="Archived idea",
+        description="Closed.",
+        suggested_by_id=member.id,
+        status=EventSuggestionStatus.ARCHIVED,
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(suggestion)
+    db_session.commit()
+    db_session.refresh(suggestion)
+
+    response = client.post(
+        f"/api/v1/event-suggestions/{suggestion.id}/comments",
+        headers=member_headers,
+        json={"content": "Should not post"},
+    )
+    assert response.status_code == 400
+    assert "closed" in response.json()["detail"].lower()

@@ -83,6 +83,11 @@ export function isIdeaInterestOpen(status: EventSuggestionStatus): boolean {
   );
 }
 
+/** Discussion follows the same open window as interest voting. */
+export function isIdeaDiscussionOpen(status: EventSuggestionStatus): boolean {
+  return isIdeaInterestOpen(status);
+}
+
 export function totalIdeaInterest(counts: IdeaInterestCounts): number {
   return counts.interested + counts.maybe + counts.not_interested;
 }

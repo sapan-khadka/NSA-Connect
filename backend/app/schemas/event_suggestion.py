@@ -74,3 +74,26 @@ class EventSuggestionStatusUpdateRequest(BaseModel):
 
 class EventSuggestionInterestUpdateRequest(BaseModel):
     vote: EventSuggestionInterestVoteValue
+
+
+class EventSuggestionCommentCreateRequest(BaseModel):
+    content: str = Field(min_length=1, max_length=2000)
+    parent_id: int | None = None
+
+
+class EventSuggestionCommentResponse(BaseModel):
+    id: int
+    suggestion_id: int
+    parent_id: int | None
+    content: str
+    author: EventSuggestionMemberResponse
+    created_at: datetime
+    deleted_at: datetime | None = None
+    is_deleted: bool = False
+    can_delete: bool = False
+    replies: list["EventSuggestionCommentResponse"] = Field(default_factory=list)
+
+
+class EventSuggestionCommentListResponse(BaseModel):
+    comments: list[EventSuggestionCommentResponse]
+    total: int

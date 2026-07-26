@@ -58,3 +58,8 @@ class EventSuggestion(Base):
         back_populates="suggestion",
         cascade="all, delete-orphan",
     )
+    comments = relationship(
+        "EventSuggestionComment",
+        back_populates="suggestion",
+        cascade="all, delete-orphan",
+    )

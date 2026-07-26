@@ -15422,6 +15422,127 @@
     }
   }
 
+  .idea-comment-composer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .idea-comment-composer textarea {
+    width: 100%;
+    resize: vertical;
+    min-height: 4.5rem;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.55rem;
+    background: #fff;
+    font: inherit;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: #111827;
+  }
+
+  .idea-comment-composer textarea:focus {
+    outline: 2px solid color-mix(in srgb, var(--color-primary, #0f766e) 35%, transparent);
+    outline-offset: 1px;
+  }
+
+  .idea-comment-composer__actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .idea-comment-text-btn {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #6b7280;
+    cursor: pointer;
+  }
+
+  .idea-comment-text-btn:hover:not(:disabled) {
+    color: var(--color-primary, #0f766e);
+  }
+
+  .idea-comment-text-btn.is-danger:hover:not(:disabled) {
+    color: var(--color-overdue, #b91c1c);
+  }
+
+  .idea-comment-text-btn:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+
+  .idea-comment-list,
+  .idea-comment-replies {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .idea-comment-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    margin-top: 0.25rem;
+  }
+
+  .idea-comment {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .idea-comment.is-deleted .idea-comment__body {
+    color: #9ca3af;
+    font-style: italic;
+  }
+
+  .idea-comment__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+    color: #9ca3af;
+  }
+
+  .idea-comment__author {
+    font-weight: 600;
+    color: #4b5563;
+  }
+
+  .idea-comment__body {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: #374151;
+    white-space: pre-wrap;
+  }
+
+  .idea-comment__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .idea-comment-replies {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    margin-top: 0.55rem;
+    padding-left: 0.85rem;
+    border-left: 2px solid #eef0f3;
+  }
+
+  .idea-comment .idea-comment-composer {
+    margin-top: 0.4rem;
+  }
+
   .ideas-row__desc {
     margin: 0.12rem 0 0;
     max-width: 42rem;
