@@ -67,7 +67,7 @@ def get_notification_summary(
             db.scalar(
                 select(func.count())
                 .select_from(EventSuggestion)
-                .where(EventSuggestion.status == EventSuggestionStatus.PENDING_REVIEW),
+                .where(EventSuggestion.status == EventSuggestionStatus.SUBMITTED),
             )
             or 0
         )

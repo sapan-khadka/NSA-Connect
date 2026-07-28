@@ -124,42 +124,60 @@ export function HomeTeamPulse() {
         <p className="home-activity-empty">Loading…</p>
       ) : (
         <>
-          <div className="home-team-pulse-stats" aria-label="Team summary">
-            <div className="home-team-pulse-stat">
-              <span className="home-team-pulse-stat-value">{openTasks.length}</span>
-              <span className="home-team-pulse-stat-label">Open</span>
-            </div>
-            <div className="home-team-pulse-stat">
-              <span
-                className={[
-                  "home-team-pulse-stat-value",
-                  overdueCount > 0 ? "is-alert" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-              >
-                {overdueCount}
-              </span>
-              <span className="home-team-pulse-stat-label">Overdue</span>
-            </div>
-            <div className="home-team-pulse-stat">
-              <span className="home-team-pulse-stat-value">{dueThisWeekCount}</span>
-              <span className="home-team-pulse-stat-label">This week</span>
-            </div>
-            <div className="home-team-pulse-stat">
-              <span
-                className={[
-                  "home-team-pulse-stat-value",
-                  membersNeedingAttention > 0 ? "is-alert" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-              >
-                {membersNeedingAttention}
-              </span>
-              <span className="home-team-pulse-stat-label">Need help</span>
-            </div>
-          </div>
+          <ul className="home-team-pulse-stats" aria-label="Team summary">
+            <li>
+              <div className="home-team-pulse-row-stat">
+                <span className="home-team-pulse-row-stat__label">
+                  Open Tasks
+                </span>
+                <span className="home-team-pulse-row-stat__value">
+                  {openTasks.length}
+                </span>
+              </div>
+            </li>
+            <li>
+              <div className="home-team-pulse-row-stat">
+                <span className="home-team-pulse-row-stat__label">Overdue</span>
+                <span
+                  className={[
+                    "home-team-pulse-row-stat__value",
+                    overdueCount > 0 ? "is-alert" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  {overdueCount}
+                </span>
+              </div>
+            </li>
+            <li>
+              <div className="home-team-pulse-row-stat">
+                <span className="home-team-pulse-row-stat__label">
+                  Due This Week
+                </span>
+                <span className="home-team-pulse-row-stat__value">
+                  {dueThisWeekCount}
+                </span>
+              </div>
+            </li>
+            <li>
+              <div className="home-team-pulse-row-stat">
+                <span className="home-team-pulse-row-stat__label">
+                  Need Help
+                </span>
+                <span
+                  className={[
+                    "home-team-pulse-row-stat__value",
+                    membersNeedingAttention > 0 ? "is-alert" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  {membersNeedingAttention}
+                </span>
+              </div>
+            </li>
+          </ul>
 
           <div className="home-team-pulse-deadlines">
             <p className="home-team-pulse-deadlines-label">Upcoming deadlines</p>

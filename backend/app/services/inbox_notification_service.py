@@ -253,8 +253,8 @@ def notify_suggestion_noted(
         db,
         member_id=suggested_by_id,
         type=InboxNotificationType.SUGGESTION_NOTED,
-        title=f"Your idea is under discussion: {title}",
-        body="The board opened your event idea for discussion.",
+        title=f"Your idea is in board review: {title}",
+        body="The board started an internal review of your event idea.",
         href=f"/events/ideas/{suggestion_id}",
         dedupe_key=f"suggestion_noted:{suggestion_id}",
     )

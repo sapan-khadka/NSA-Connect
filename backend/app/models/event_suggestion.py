@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.orm import relationship
 
@@ -9,8 +9,9 @@ from app.models.base import Base
 
 
 class EventSuggestionStatus(StrEnum):
-    PENDING_REVIEW = "pending_review"
-    UNDER_DISCUSSION = "under_discussion"
+    SUBMITTED = "submitted"
+    INTERNAL_REVIEW = "internal_review"
+    PUBLISHED = "published"
     APPROVED = "approved"
     REJECTED = "rejected"
     CONVERTED = "converted"
@@ -37,8 +38,8 @@ class EventSuggestion(Base):
             values_callable=lambda types: [item.value for item in types],
         ),
         nullable=False,
-        default=EventSuggestionStatus.PENDING_REVIEW,
-        server_default=EventSuggestionStatus.PENDING_REVIEW.value,
+        default=EventSuggestionStatus.SUBMITTED,
+        server_default=EventSuggestionStatus.SUBMITTED.value,
     )
     suggested_by_id = Column(
         Integer, ForeignKey("users.id"), nullable=False, index=True
@@ -46,6 +47,21 @@ class EventSuggestion(Base):
     noted_at = Column(DateTime(timezone=True), nullable=True)
     noted_by_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     board_note = Column(Text, nullable=True)
+    board_note_updated_at = Column(DateTime(timezone=True), nullable=True)
+    board_note_updated_by_id = Column(
+        Integer, ForeignKey("users.id"), nullable=True, index=True
+    )
+    published_at = Column(DateTime(timezone=True), nullable=True)
+    community_interest_enabled = Column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
+    community_discussion_enabled = Column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
+    community_visibility = Column(
+        String(32), nullable=False, default="members", server_default="members"
+    )
+    community_feedback_closed_at = Column(DateTime(timezone=True), nullable=True)
     converted_event_id = Column(
         Integer,
         ForeignKey("events.id", ondelete="SET NULL"),
@@ -61,6 +77,9 @@ class EventSuggestion(Base):
 
     suggested_by = relationship("Member", foreign_keys=[suggested_by_id])
     noted_by = relationship("Member", foreign_keys=[noted_by_id])
+    board_note_updated_by = relationship(
+        "Member", foreign_keys=[board_note_updated_by_id]
+    )
     converted_event = relationship("Event", foreign_keys=[converted_event_id])
     interests = relationship(
         "EventSuggestionInterest",
@@ -77,9 +96,8 @@ class EventSuggestion(Base):
         back_populates="suggestion",
         cascade="all, delete-orphan",
     )
-    poll = relationship(
+    polls = relationship(
         "EventSuggestionPoll",
         back_populates="suggestion",
         cascade="all, delete-orphan",
-        uselist=False,
     )

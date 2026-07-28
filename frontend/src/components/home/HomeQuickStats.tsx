@@ -1,10 +1,3 @@
-import {
-  CalendarDays,
-  CheckCircle2,
-  CircleDollarSign,
-  Clock3,
-  Users,
-} from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -17,15 +10,12 @@ import {
   canManageTreasury,
   canViewMemberDirectory,
 } from "../../lib/roles";
-import { AppIcon } from "../ui/AppIcon";
 
 type OverviewMetric = {
   id: string;
   label: string;
   value: string;
-  hint: string;
   valueTone?: "default" | "negative" | "warning";
-  icon: typeof Users;
   to: string;
 };
 
@@ -108,35 +98,23 @@ export function HomeQuickStats({
       id: "members",
       label: "Members",
       value: memberTotal == null ? "—" : String(memberTotal),
-      hint:
-        pendingMemberApprovals > 0
-          ? `${pendingMemberApprovals} awaiting approval`
-          : "Active roster",
       valueTone: pendingMemberApprovals > 0 ? "warning" : "default",
-      icon: Users,
       to: "/members",
     });
   } else {
     metrics.push({
       id: "my-tasks",
-      label: "My tasks",
+      label: "Open Tasks",
       value: String(tasksSummary.openCount),
-      hint:
-        tasksSummary.overdueCount > 0
-          ? `${tasksSummary.overdueCount} overdue`
-          : "Open assignments",
       valueTone: tasksSummary.overdueCount > 0 ? "warning" : "default",
-      icon: CheckCircle2,
       to: "/events/tasks",
     });
   }
 
   metrics.push({
     id: "events",
-    label: "Events",
+    label: "Upcoming Events",
     value: isLoadingEvents ? "—" : String(upcomingEventCount),
-    hint: upcomingEventCount === 1 ? "Upcoming event" : "Upcoming events",
-    icon: CalendarDays,
     to: "/events/calendar",
   });
 
@@ -147,9 +125,7 @@ export function HomeQuickStats({
       id: "treasury",
       label: "Treasury",
       value: treasuryBalance == null ? "—" : formatMoney(treasuryBalance),
-      hint: isNegative ? "Balance is negative" : "Available balance",
       valueTone: isNegative ? "negative" : "default",
-      icon: CircleDollarSign,
       to: FINANCE_PATH,
     });
   } else {
@@ -157,10 +133,7 @@ export function HomeQuickStats({
       id: "overdue",
       label: "Overdue",
       value: String(tasksSummary.overdueCount),
-      hint:
-        tasksSummary.overdueCount > 0 ? "Needs attention" : "You’re caught up",
       valueTone: tasksSummary.overdueCount > 0 ? "warning" : "default",
-      icon: CheckCircle2,
       to: "/events/tasks",
     });
   }
@@ -168,11 +141,9 @@ export function HomeQuickStats({
   if (canSeeMembers || canSeeTreasury) {
     metrics.push({
       id: "pending",
-      label: "Pending",
+      label: "Pending Items",
       value: String(pendingTotal),
-      hint: pendingTotal > 0 ? "Requires action" : "No pending items",
       valueTone: pendingTotal > 0 ? "warning" : "default",
-      icon: Clock3,
       to:
         canSeeMembers && pendingMemberApprovals > 0
           ? "/members?tab=pending"
@@ -185,14 +156,9 @@ export function HomeQuickStats({
   } else {
     metrics.push({
       id: "due-today",
-      label: "Due today",
+      label: "Due Today",
       value: String(tasksSummary.dueTodayCount),
-      hint:
-        tasksSummary.dueTodayCount > 0
-          ? "Focus here first"
-          : "Nothing due today",
       valueTone: tasksSummary.dueTodayCount > 0 ? "warning" : "default",
-      icon: CalendarDays,
       to: "/events/tasks",
     });
   }
@@ -203,34 +169,31 @@ export function HomeQuickStats({
       aria-label="Organization overview"
     >
       <header className="home-org-overview-head">
-        <h2 className="home-org-overview-title">Organization overview</h2>
-        <p className="home-org-overview-sub">Live chapter pulse</p>
+        <h2 className="home-org-overview-title">Organization Overview</h2>
       </header>
-      <ul className="home-org-overview-grid">
+      <ul className="home-org-overview-list">
         {metrics.map((metric) => (
           <li key={metric.id}>
             <Link
               to={metric.to}
               className={[
-                "home-org-overview-metric",
+                "home-org-overview-row",
                 metric.valueTone === "negative"
-                  ? "home-org-overview-metric--negative"
+                  ? "home-org-overview-row--negative"
                   : "",
                 metric.valueTone === "warning"
-                  ? "home-org-overview-metric--warning"
+                  ? "home-org-overview-row--warning"
                   : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
             >
-              <span className="home-org-overview-metric-value">
-                {metric.value}
-              </span>
-              <span className="home-org-overview-metric-label">
-                <AppIcon icon={metric.icon} size="xs" className="text-current" />
+              <span className="home-org-overview-row__label">
                 {metric.label}
               </span>
-              <span className="home-org-overview-metric-hint">{metric.hint}</span>
+              <span className="home-org-overview-row__value">
+                {metric.value}
+              </span>
             </Link>
           </li>
         ))}

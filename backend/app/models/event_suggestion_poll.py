@@ -16,12 +16,6 @@ from app.models.base import Base
 
 class EventSuggestionPoll(Base):
     __tablename__ = "event_suggestion_polls"
-    __table_args__ = (
-        UniqueConstraint(
-            "suggestion_id",
-            name="uq_event_suggestion_polls_suggestion_id",
-        ),
-    )
 
     id = Column(Integer, primary_key=True, index=True)
     suggestion_id = Column(
@@ -43,7 +37,7 @@ class EventSuggestionPoll(Base):
         default=lambda: datetime.now(UTC),
     )
 
-    suggestion = relationship("EventSuggestion", back_populates="poll")
+    suggestion = relationship("EventSuggestion", back_populates="polls")
     created_by = relationship("Member", foreign_keys=[created_by_id])
     options = relationship(
         "EventSuggestionPollOption",

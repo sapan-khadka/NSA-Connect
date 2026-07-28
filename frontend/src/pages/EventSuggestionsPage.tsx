@@ -57,7 +57,7 @@ function IdeaRow({
   const navigate = useNavigate();
   const [marking, setMarking] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const isPending = suggestion.status === "pending_review";
+  const isPending = suggestion.status === "submitted";
   const timing = suggestion.preferred_timing?.trim() || "Any semester";
   const when = formatShortDate(suggestion.created_at);
   const href = `/events/ideas/${suggestion.id}`;
@@ -122,7 +122,7 @@ function IdeaRow({
                 disabled={marking}
                 onClick={(event) => void handleOpenDiscussion(event)}
               >
-                {marking ? "Saving…" : "Open discussion"}
+                {marking ? "Saving…" : "Start review"}
               </button>
             ) : null}
           </div>
@@ -152,7 +152,7 @@ function IdeaRow({
                 ·
               </span>
               <span>
-                {suggestion.interest_counts.interested} interested
+                {suggestion.interest_counts.interested} would attend
               </span>
             </>
           ) : null}
@@ -233,10 +233,10 @@ export function EventSuggestionsPage() {
   const stats = useMemo(() => {
     const total = suggestions.length;
     const inDiscussion = suggestions.filter(
-      (row) => row.status === "under_discussion",
+      (row) => row.status === "internal_review",
     ).length;
     const pending = suggestions.filter(
-      (row) => row.status === "pending_review",
+      (row) => row.status === "submitted",
     ).length;
     return { total, inDiscussion, pending };
   }, [suggestions]);
@@ -360,7 +360,7 @@ export function EventSuggestionsPage() {
           <span className="ideas-summary__dot" aria-hidden="true">
             ·
           </span>
-          <span>{stats.inDiscussion} in discussion</span>
+          <span>{stats.inDiscussion} in review</span>
         </p>
       ) : null}
 
@@ -480,10 +480,9 @@ export function EventSuggestionsPage() {
                 }
               >
                 <option value="all">Status: All</option>
-                <option value="pending_review">Status: Pending review</option>
-                <option value="under_discussion">
-                  Status: Under discussion
-                </option>
+                <option value="submitted">Status: Submitted</option>
+                <option value="internal_review">Status: Internal review</option>
+                <option value="published">Status: Published</option>
                 <option value="approved">Status: Approved</option>
                 <option value="rejected">Status: Rejected</option>
                 <option value="converted">Status: Converted</option>

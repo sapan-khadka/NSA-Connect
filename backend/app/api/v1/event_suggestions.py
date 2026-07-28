@@ -12,6 +12,7 @@ from app.schemas.event_suggestion import (
     EventSuggestionCommentCreateRequest,
     EventSuggestionCommentListResponse,
     EventSuggestionCommentResponse,
+    EventSuggestionCommunityInsightResponse,
     EventSuggestionConvertRequest,
     EventSuggestionCreateRequest,
     EventSuggestionInterestCounts,
@@ -20,11 +21,15 @@ from app.schemas.event_suggestion import (
     EventSuggestionMemberResponse,
     EventSuggestionPollCreateRequest,
     EventSuggestionPollGetResponse,
+    EventSuggestionPollListResponse,
     EventSuggestionPollResponse,
     EventSuggestionPollVoteRequest,
     EventSuggestionRelatedResponse,
     EventSuggestionResponse,
     EventSuggestionStatusUpdateRequest,
+)
+from app.services.event_suggestion_insight_service import (
+    get_event_suggestion_community_insight,
 )
 from app.services.event_suggestion_polish_service import (
     EventSuggestionPollError,
@@ -32,10 +37,13 @@ from app.services.event_suggestion_polish_service import (
     close_event_suggestion_poll,
     create_event_suggestion_poll,
     get_event_suggestion_poll,
+    get_suggestion_engagement_stats,
+    list_event_suggestion_polls,
     list_related_event_suggestions,
     record_event_suggestion_view,
     vote_event_suggestion_poll,
 )
+from app.models.event_suggestion_comment import EventSuggestionCommentChannel
 from app.services.event_suggestion_comment_service import (
     EventSuggestionCommentClosedError,
     EventSuggestionCommentEmptyError,
@@ -76,8 +84,10 @@ def _to_response(
     member: Member,
     interest_counts: EventSuggestionInterestCounts | None = None,
     my_interest: EventSuggestionInterestVote | None = None,
+    engagement: dict | None = None,
 ) -> EventSuggestionResponse:
     can_board_review = member.has_role_at_least(MemberRole.BOARD)
+    stats = engagement or {}
     return EventSuggestionResponse(
         id=suggestion.id,
         title=suggestion.title,
@@ -95,9 +105,39 @@ def _to_response(
         created_at=suggestion.created_at,
         noted_at=suggestion.noted_at,
         board_note=suggestion.board_note if can_board_review else None,
+        board_note_updated_at=(
+            suggestion.board_note_updated_at if can_board_review else None
+        ),
+        board_note_updated_by=(
+            EventSuggestionMemberResponse.model_validate(
+                suggestion.board_note_updated_by
+            )
+            if can_board_review and suggestion.board_note_updated_by is not None
+            else None
+        ),
         can_board_review=can_board_review,
         converted_event_id=suggestion.converted_event_id,
+        published_at=suggestion.published_at,
+        community_interest_enabled=bool(
+            getattr(suggestion, "community_interest_enabled", True)
+        ),
+        community_discussion_enabled=bool(
+            getattr(suggestion, "community_discussion_enabled", True)
+        ),
+        community_visibility=str(
+            getattr(suggestion, "community_visibility", "members") or "members"
+        ),
+        community_feedback_closed_at=getattr(
+            suggestion, "community_feedback_closed_at", None
+        ),
         view_count=int(suggestion.view_count or 0),
+        board_comment_count=int(stats.get("board_comment_count") or 0),
+        community_comment_count=int(stats.get("community_comment_count") or 0),
+        poll_count=int(stats.get("poll_count") or 0),
+        open_poll_count=int(stats.get("open_poll_count") or 0),
+        poll_vote_count=int(stats.get("poll_vote_count") or 0),
+        eligible_member_count=int(stats.get("eligible_member_count") or 0),
+        last_activity_at=stats.get("last_activity_at"),
         interest_counts=interest_counts or empty_interest_counts(),
         my_interest=my_interest.value if my_interest is not None else None,
     )
@@ -108,6 +148,7 @@ def _responses_for(
     rows: list,
     *,
     member: Member,
+    with_engagement: bool = False,
 ) -> list[EventSuggestionResponse]:
     ids = [row.id for row in rows]
     counts = get_interest_counts_by_suggestion(db, suggestion_ids=ids)
@@ -116,12 +157,22 @@ def _responses_for(
         suggestion_ids=ids,
         member_id=member.id,
     )
+    include_board = member.has_role_at_least(MemberRole.BOARD)
     return [
         _to_response(
             row,
             member=member,
             interest_counts=counts.get(row.id),
             my_interest=mine.get(row.id),
+            engagement=(
+                get_suggestion_engagement_stats(
+                    db,
+                    suggestion_id=row.id,
+                    include_board=include_board,
+                )
+                if with_engagement
+                else None
+            ),
         )
         for row in rows
     ]
@@ -132,7 +183,7 @@ def list_event_suggestions_endpoint(
     current_member: Member = Depends(get_current_member),
     db: Session = Depends(get_db),
 ):
-    rows = list_event_suggestions(db)
+    rows = list_event_suggestions(db, member=current_member)
     return EventSuggestionListResponse(
         suggestions=_responses_for(db, rows, member=current_member),
         total=len(rows),
@@ -157,7 +208,7 @@ def get_event_suggestion_endpoint(
             detail="Event idea not found",
         ) from None
 
-    return _responses_for(db, [suggestion], member=current_member)[0]
+    return _responses_for(db, [suggestion], member=current_member, with_engagement=True)[0]
 
 
 @router.post(
@@ -169,7 +220,7 @@ def create_event_suggestion_endpoint(
     db: Session = Depends(get_db),
 ):
     suggestion = create_event_suggestion(db, member=current_member, data=data)
-    return _responses_for(db, [suggestion], member=current_member)[0]
+    return _responses_for(db, [suggestion], member=current_member, with_engagement=True)[0]
 
 
 @router.patch("/{suggestion_id}/status", response_model=EventSuggestionResponse)
@@ -197,7 +248,7 @@ def update_event_suggestion_status_endpoint(
             detail="Invalid status update",
         ) from None
 
-    return _responses_for(db, [suggestion], member=current_member)[0]
+    return _responses_for(db, [suggestion], member=current_member, with_engagement=True)[0]
 
 
 @router.patch("/{suggestion_id}/review", response_model=EventSuggestionResponse)
@@ -218,6 +269,9 @@ def review_event_suggestion_endpoint(
             ),
             board_note=data.board_note,
             update_board_note=update_board_note,
+            feedback_package=data.feedback_package,
+            community_visibility=data.community_visibility,
+            community_feedback_closed=data.community_feedback_closed,
         )
     except EventSuggestionNotFoundError:
         raise HTTPException(
@@ -235,7 +289,7 @@ def review_event_suggestion_endpoint(
             detail="Invalid review status",
         ) from None
 
-    return _responses_for(db, [suggestion], member=current_member)[0]
+    return _responses_for(db, [suggestion], member=current_member, with_engagement=True)[0]
 
 
 @router.post(
@@ -267,7 +321,7 @@ def convert_event_suggestion_endpoint(
             detail="Only approved ideas can be converted to events",
         ) from None
 
-    return _responses_for(db, [suggestion], member=current_member)[0]
+    return _responses_for(db, [suggestion], member=current_member, with_engagement=True)[0]
 
 
 def _comment_to_response(
@@ -297,21 +351,29 @@ def _comment_to_response(
     )
 
 
-@router.get(
-    "/{suggestion_id}/comments",
-    response_model=EventSuggestionCommentListResponse,
-)
-def list_event_suggestion_comments_endpoint(
+def _list_comments_for_channel(
+    *,
+    db: Session,
     suggestion_id: int,
-    current_member: Member = Depends(get_current_member),
-    db: Session = Depends(get_db),
-):
+    member: Member,
+    channel: EventSuggestionCommentChannel,
+) -> EventSuggestionCommentListResponse:
     try:
-        rows = list_event_suggestion_comments(db, suggestion_id=suggestion_id)
+        rows = list_event_suggestion_comments(
+            db,
+            suggestion_id=suggestion_id,
+            member=member,
+            channel=channel,
+        )
     except EventSuggestionNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Event idea not found",
+        ) from None
+    except EventSuggestionCommentForbiddenError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Board discussion is only visible to officers",
         ) from None
 
     top_level, replies_by_parent, live_total = build_comment_threads(rows)
@@ -319,7 +381,7 @@ def list_event_suggestion_comments_endpoint(
         comments=[
             _comment_to_response(
                 comment,
-                member=current_member,
+                member=member,
                 replies=replies_by_parent.get(comment.id, []),
             )
             for comment in top_level
@@ -328,33 +390,40 @@ def list_event_suggestion_comments_endpoint(
     )
 
 
-@router.post(
-    "/{suggestion_id}/comments",
-    response_model=EventSuggestionCommentResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-def create_event_suggestion_comment_endpoint(
+def _create_comment_for_channel(
+    *,
+    db: Session,
     suggestion_id: int,
+    member: Member,
     data: EventSuggestionCommentCreateRequest,
-    current_member: Member = Depends(get_current_member),
-    db: Session = Depends(get_db),
-):
+    channel: EventSuggestionCommentChannel,
+) -> EventSuggestionCommentResponse:
     try:
         comment = create_event_suggestion_comment(
             db,
             suggestion_id=suggestion_id,
-            member=current_member,
+            member=member,
             data=data,
+            channel=channel,
         )
     except EventSuggestionNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Event idea not found",
         ) from None
+    except EventSuggestionCommentForbiddenError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Board discussion is only available to officers",
+        ) from None
     except EventSuggestionCommentClosedError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Discussion is closed for this idea",
+            detail=(
+                "Board discussion is closed for this idea"
+                if channel == EventSuggestionCommentChannel.BOARD
+                else "Discussion is closed for this idea"
+            ),
         ) from None
     except EventSuggestionCommentEmptyError:
         raise HTTPException(
@@ -367,25 +436,24 @@ def create_event_suggestion_comment_endpoint(
             detail="Invalid parent comment",
         ) from None
 
-    return _comment_to_response(comment, member=current_member, replies=[])
+    return _comment_to_response(comment, member=member, replies=[])
 
 
-@router.delete(
-    "/{suggestion_id}/comments/{comment_id}",
-    response_model=EventSuggestionCommentResponse,
-)
-def delete_event_suggestion_comment_endpoint(
+def _delete_comment_for_channel(
+    *,
+    db: Session,
     suggestion_id: int,
     comment_id: int,
-    current_member: Member = Depends(get_current_member),
-    db: Session = Depends(get_db),
-):
+    member: Member,
+    channel: EventSuggestionCommentChannel,
+) -> EventSuggestionCommentResponse:
     try:
         comment = soft_delete_event_suggestion_comment(
             db,
             suggestion_id=suggestion_id,
             comment_id=comment_id,
-            member=current_member,
+            member=member,
+            channel=channel,
         )
     except EventSuggestionNotFoundError:
         raise HTTPException(
@@ -403,7 +471,119 @@ def delete_event_suggestion_comment_endpoint(
             detail="You cannot delete this comment",
         ) from None
 
-    return _comment_to_response(comment, member=current_member, replies=[])
+    return _comment_to_response(comment, member=member, replies=[])
+
+
+@router.get(
+    "/{suggestion_id}/comments",
+    response_model=EventSuggestionCommentListResponse,
+)
+def list_event_suggestion_comments_endpoint(
+    suggestion_id: int,
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    return _list_comments_for_channel(
+        db=db,
+        suggestion_id=suggestion_id,
+        member=current_member,
+        channel=EventSuggestionCommentChannel.COMMUNITY,
+    )
+
+
+@router.post(
+    "/{suggestion_id}/comments",
+    response_model=EventSuggestionCommentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_event_suggestion_comment_endpoint(
+    suggestion_id: int,
+    data: EventSuggestionCommentCreateRequest,
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    return _create_comment_for_channel(
+        db=db,
+        suggestion_id=suggestion_id,
+        member=current_member,
+        data=data,
+        channel=EventSuggestionCommentChannel.COMMUNITY,
+    )
+
+
+@router.delete(
+    "/{suggestion_id}/comments/{comment_id}",
+    response_model=EventSuggestionCommentResponse,
+)
+def delete_event_suggestion_comment_endpoint(
+    suggestion_id: int,
+    comment_id: int,
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    return _delete_comment_for_channel(
+        db=db,
+        suggestion_id=suggestion_id,
+        comment_id=comment_id,
+        member=current_member,
+        channel=EventSuggestionCommentChannel.COMMUNITY,
+    )
+
+
+@router.get(
+    "/{suggestion_id}/board-comments",
+    response_model=EventSuggestionCommentListResponse,
+)
+def list_event_suggestion_board_comments_endpoint(
+    suggestion_id: int,
+    current_member: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    return _list_comments_for_channel(
+        db=db,
+        suggestion_id=suggestion_id,
+        member=current_member,
+        channel=EventSuggestionCommentChannel.BOARD,
+    )
+
+
+@router.post(
+    "/{suggestion_id}/board-comments",
+    response_model=EventSuggestionCommentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_event_suggestion_board_comment_endpoint(
+    suggestion_id: int,
+    data: EventSuggestionCommentCreateRequest,
+    current_member: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    return _create_comment_for_channel(
+        db=db,
+        suggestion_id=suggestion_id,
+        member=current_member,
+        data=data,
+        channel=EventSuggestionCommentChannel.BOARD,
+    )
+
+
+@router.delete(
+    "/{suggestion_id}/board-comments/{comment_id}",
+    response_model=EventSuggestionCommentResponse,
+)
+def delete_event_suggestion_board_comment_endpoint(
+    suggestion_id: int,
+    comment_id: int,
+    current_member: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    return _delete_comment_for_channel(
+        db=db,
+        suggestion_id=suggestion_id,
+        comment_id=comment_id,
+        member=current_member,
+        channel=EventSuggestionCommentChannel.BOARD,
+    )
 
 
 @router.put("/{suggestion_id}/interest", response_model=EventSuggestionResponse)
@@ -431,7 +611,7 @@ def set_event_suggestion_interest_endpoint(
             detail="Interest voting is closed for this idea",
         ) from None
 
-    return _responses_for(db, [suggestion], member=current_member)[0]
+    return _responses_for(db, [suggestion], member=current_member, with_engagement=True)[0]
 
 
 @router.delete("/{suggestion_id}/interest", response_model=EventSuggestionResponse)
@@ -457,7 +637,29 @@ def clear_event_suggestion_interest_endpoint(
             detail="Interest voting is closed for this idea",
         ) from None
 
-    return _responses_for(db, [suggestion], member=current_member)[0]
+    return _responses_for(db, [suggestion], member=current_member, with_engagement=True)[0]
+
+
+@router.get(
+    "/{suggestion_id}/community-insight",
+    response_model=EventSuggestionCommunityInsightResponse,
+)
+def get_event_suggestion_community_insight_endpoint(
+    suggestion_id: int,
+    current_member: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    try:
+        return get_event_suggestion_community_insight(
+            db,
+            suggestion_id=suggestion_id,
+            member=current_member,
+        )
+    except EventSuggestionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event idea not found",
+        ) from None
 
 
 @router.get(
@@ -466,11 +668,15 @@ def clear_event_suggestion_interest_endpoint(
 )
 def list_event_suggestion_activity_endpoint(
     suggestion_id: int,
-    _: Member = Depends(get_current_member),
+    current_member: Member = Depends(get_current_member),
     db: Session = Depends(get_db),
 ):
     try:
-        items = build_event_suggestion_activity(db, suggestion_id=suggestion_id)
+        items = build_event_suggestion_activity(
+            db,
+            suggestion_id=suggestion_id,
+            member=current_member,
+        )
     except EventSuggestionNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -485,17 +691,44 @@ def list_event_suggestion_activity_endpoint(
 )
 def list_related_event_suggestions_endpoint(
     suggestion_id: int,
-    _: Member = Depends(get_current_member),
+    current_member: Member = Depends(get_current_member),
     db: Session = Depends(get_db),
 ):
     try:
-        ideas = list_related_event_suggestions(db, suggestion_id=suggestion_id)
+        ideas = list_related_event_suggestions(
+            db,
+            suggestion_id=suggestion_id,
+            member=current_member,
+        )
     except EventSuggestionNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Event idea not found",
         ) from None
     return EventSuggestionRelatedResponse(ideas=ideas)
+
+
+@router.get(
+    "/{suggestion_id}/polls",
+    response_model=EventSuggestionPollListResponse,
+)
+def list_event_suggestion_polls_endpoint(
+    suggestion_id: int,
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    try:
+        polls = list_event_suggestion_polls(
+            db,
+            suggestion_id=suggestion_id,
+            member=current_member,
+        )
+    except EventSuggestionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event idea not found",
+        ) from None
+    return EventSuggestionPollListResponse(polls=polls)
 
 
 @router.get(
@@ -508,7 +741,7 @@ def get_event_suggestion_poll_endpoint(
     db: Session = Depends(get_db),
 ):
     try:
-        poll = get_event_suggestion_poll(
+        polls = list_event_suggestion_polls(
             db,
             suggestion_id=suggestion_id,
             member=current_member,
@@ -518,11 +751,19 @@ def get_event_suggestion_poll_endpoint(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Event idea not found",
         ) from None
-    return EventSuggestionPollGetResponse(poll=poll)
+    return EventSuggestionPollGetResponse(
+        poll=polls[0] if polls else None,
+        polls=polls,
+    )
 
 
 @router.post(
     "/{suggestion_id}/poll",
+    response_model=EventSuggestionPollResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+@router.post(
+    "/{suggestion_id}/polls",
     response_model=EventSuggestionPollResponse,
     status_code=status.HTTP_201_CREATED,
 )
@@ -552,6 +793,37 @@ def create_event_suggestion_poll_endpoint(
 
 
 @router.put(
+    "/{suggestion_id}/polls/{poll_id}/vote",
+    response_model=EventSuggestionPollResponse,
+)
+def vote_event_suggestion_poll_by_id_endpoint(
+    suggestion_id: int,
+    poll_id: int,
+    data: EventSuggestionPollVoteRequest,
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    try:
+        return vote_event_suggestion_poll(
+            db,
+            suggestion_id=suggestion_id,
+            member=current_member,
+            option_id=data.option_id,
+            poll_id=poll_id,
+        )
+    except EventSuggestionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event idea not found",
+        ) from None
+    except EventSuggestionPollError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unable to record poll vote",
+        ) from None
+
+
+@router.put(
     "/{suggestion_id}/poll/vote",
     response_model=EventSuggestionPollResponse,
 )
@@ -577,6 +849,35 @@ def vote_event_suggestion_poll_endpoint(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Unable to record poll vote",
+        ) from None
+
+
+@router.post(
+    "/{suggestion_id}/polls/{poll_id}/close",
+    response_model=EventSuggestionPollResponse,
+)
+def close_event_suggestion_poll_by_id_endpoint(
+    suggestion_id: int,
+    poll_id: int,
+    current_member: Member = Depends(require_board),
+    db: Session = Depends(get_db),
+):
+    try:
+        return close_event_suggestion_poll(
+            db,
+            suggestion_id=suggestion_id,
+            board_member=current_member,
+            poll_id=poll_id,
+        )
+    except EventSuggestionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event idea not found",
+        ) from None
+    except EventSuggestionPollError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unable to close poll",
         ) from None
 
 

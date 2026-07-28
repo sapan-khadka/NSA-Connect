@@ -1,12 +1,19 @@
 from datetime import UTC, datetime
+from enum import StrEnum
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, Text
+from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.orm import relationship
 
 from app.models.base import Base
 
 MAX_IDEA_COMMENT_LENGTH = 2000
 DELETED_IDEA_COMMENT_PLACEHOLDER = "This comment was deleted"
+
+
+class EventSuggestionCommentChannel(StrEnum):
+    COMMUNITY = "community"
+    BOARD = "board"
 
 
 class EventSuggestionComment(Base):
@@ -29,6 +36,16 @@ class EventSuggestionComment(Base):
         Integer,
         ForeignKey("event_suggestion_comments.id", ondelete="CASCADE"),
         nullable=True,
+        index=True,
+    )
+    channel = Column(
+        SqlEnum(
+            EventSuggestionCommentChannel,
+            values_callable=lambda types: [item.value for item in types],
+        ),
+        nullable=False,
+        default=EventSuggestionCommentChannel.COMMUNITY,
+        server_default=EventSuggestionCommentChannel.COMMUNITY.value,
         index=True,
     )
     content = Column(Text, nullable=False)

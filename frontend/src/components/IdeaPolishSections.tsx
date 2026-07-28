@@ -1,169 +1,104 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import {
+  CalendarCheck2,
+  CheckCircle2,
+  CircleDot,
+  Lightbulb,
+  BarChart3,
+  Globe2,
+  XCircle,
+  Archive,
+} from "lucide-react";
 
 import { Button } from "./ui/Button";
+import { Card } from "./ui/Card";
+import { inputFieldClassName } from "./ui/Input";
 import { getApiErrorMessage } from "../lib/api-error";
 import {
   closeIdeaPoll,
   createIdeaPoll,
   fetchIdeaActivity,
-  fetchIdeaPoll,
-  fetchRelatedIdeas,
+  fetchIdeaPolls,
   voteIdeaPoll,
   type IdeaActivityItem,
   type IdeaPoll,
-  type IdeaRelatedItem,
 } from "../lib/event-suggestion-polish-api";
-import { IDEA_STATUS_LABEL } from "../lib/event-suggestions-api";
+import type { EventSuggestion } from "../lib/event-suggestions-api";
+import {
+  feedbackEndsShortLabel,
+  ideaTimelineNowLabel,
+} from "../lib/idea-workspace-metrics";
+import { fieldLabelClassName } from "../design-system/components/fieldStyles";
 
-function formatWhen(isoDate: string): string {
+function toSentenceCase(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  const lower = trimmed.toLowerCase();
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
+}
+
+function formatTimelineDay(isoDate: string): string {
   const parsed = Date.parse(isoDate);
-  if (Number.isNaN(parsed)) {
-    return "";
-  }
+  if (Number.isNaN(parsed)) return "";
+  const date = new Date(parsed);
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startThat = new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+  );
+  const dayDiff = Math.round(
+    (startToday.getTime() - startThat.getTime()) / 86_400_000,
+  );
+  if (dayDiff === 0) return "Today";
+  if (dayDiff === 1) return "Yesterday";
   return new Intl.DateTimeFormat(undefined, {
     month: "short",
     day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(parsed));
+  }).format(date);
 }
 
-function ActivitySection({ suggestionId }: { suggestionId: number }) {
-  const [items, setItems] = useState<IdeaActivityItem[]>([]);
-  const [loading, setLoading] = useState(true);
+const ACTIVITY_PREVIEW_LIMIT = 6;
 
-  useEffect(() => {
-    let cancelled = false;
-    void fetchIdeaActivity(suggestionId)
-      .then((rows) => {
-        if (!cancelled) {
-          setItems(rows);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setItems([]);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [suggestionId]);
+type TimelineRow = IdeaActivityItem & { isNow?: boolean };
 
-  return (
-    <section className="idea-workspace-section" aria-labelledby="idea-activity">
-      <h2 id="idea-activity" className="idea-workspace-section__title">
-        Activity
-      </h2>
-      {loading ? (
-        <p className="idea-workspace-placeholder">Loading activity…</p>
-      ) : items.length === 0 ? (
-        <p className="idea-workspace-placeholder">No activity yet.</p>
-      ) : (
-        <ol className="idea-activity-list">
-          {items.map((item, index) => (
-            <li key={`${item.kind}-${item.created_at}-${index}`} className="idea-activity-item">
-              <p className="idea-activity-item__summary">{item.summary}</p>
-              <p className="idea-activity-item__when">{formatWhen(item.created_at)}</p>
-            </li>
-          ))}
-        </ol>
-      )}
-    </section>
-  );
-}
-
-function RelatedSection({ suggestionId }: { suggestionId: number }) {
-  const [ideas, setIdeas] = useState<IdeaRelatedItem[]>([]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void fetchRelatedIdeas(suggestionId)
-      .then((rows) => {
-        if (!cancelled) {
-          setIdeas(rows);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setIdeas([]);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [suggestionId]);
-
-  if (ideas.length === 0) {
-    return null;
+function timelineIcon(item: TimelineRow) {
+  if (item.isNow) return CircleDot;
+  const summary = item.summary.toLowerCase();
+  if (item.kind === "created" || summary.includes("submitted")) return Lightbulb;
+  if (item.kind === "poll" || summary.includes("poll")) return BarChart3;
+  if (summary.includes("feedback opened") || summary.includes("published")) {
+    return Globe2;
   }
-
-  return (
-    <section className="idea-workspace-section" aria-labelledby="idea-related">
-      <h2 id="idea-related" className="idea-workspace-section__title">
-        Related ideas
-      </h2>
-      <ul className="idea-related-list">
-        {ideas.map((idea) => (
-          <li key={idea.id}>
-            <Link to={`/events/ideas/${idea.id}`} className="idea-related-link">
-              <span className="idea-related-link__title">{idea.title}</span>
-              <span className="idea-related-link__meta">
-                {IDEA_STATUS_LABEL[idea.status]}
-                {idea.interested_count > 0
-                  ? ` · ${idea.interested_count} interested`
-                  : ""}
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
+  if (
+    summary.includes("approved") ||
+    summary.includes("converted") ||
+    summary.includes("scheduled")
+  ) {
+    return CalendarCheck2;
+  }
+  if (summary.includes("rejected")) return XCircle;
+  if (summary.includes("archived")) return Archive;
+  if (summary.includes("closed") || summary.includes("review")) {
+    return CheckCircle2;
+  }
+  return CheckCircle2;
 }
 
-function PollSection({
+export function IdeaCreatePollForm({
   suggestionId,
-  canManage,
+  onCreated,
+  onCancel,
 }: {
   suggestionId: number;
-  canManage: boolean;
+  onCreated: (poll: IdeaPoll) => void;
+  onCancel?: () => void;
 }) {
-  const [poll, setPoll] = useState<IdeaPoll | null>(null);
-  const [loading, setLoading] = useState(true);
   const [question, setQuestion] = useState("");
-  const [optionsText, setOptionsText] = useState("Weekend\nWeekday evening");
+  const [optionsText, setOptionsText] = useState("Spring\nFall\nSummer");
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    void fetchIdeaPoll(suggestionId)
-      .then((next) => {
-        if (!cancelled) {
-          setPoll(next);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setPoll(null);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [suggestionId]);
 
   async function handleCreate(event: FormEvent) {
     event.preventDefault();
@@ -178,43 +113,12 @@ function PollSection({
     setSaving(true);
     setErrorMessage(null);
     try {
-      const created = await createIdeaPoll(suggestionId, {
-        question: question.trim(),
-        options,
-      });
-      setPoll(created);
-    } catch (error) {
-      setErrorMessage(getApiErrorMessage(error));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleVote(optionId: number) {
-    if (!poll?.is_open || saving) {
-      return;
-    }
-    setSaving(true);
-    setErrorMessage(null);
-    try {
-      const updated = await voteIdeaPoll(suggestionId, optionId);
-      setPoll(updated);
-    } catch (error) {
-      setErrorMessage(getApiErrorMessage(error));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleClose() {
-    if (!poll || saving) {
-      return;
-    }
-    setSaving(true);
-    setErrorMessage(null);
-    try {
-      const updated = await closeIdeaPoll(suggestionId);
-      setPoll(updated);
+      onCreated(
+        await createIdeaPoll(suggestionId, {
+          question: question.trim(),
+          options,
+        }),
+      );
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error));
     } finally {
@@ -223,25 +127,250 @@ function PollSection({
   }
 
   return (
-    <section className="idea-workspace-section" aria-labelledby="idea-poll">
-      <div className="idea-interest-heading">
-        <h2 id="idea-poll" className="idea-workspace-section__title">
-          Poll
+    <form className="space-y-3" onSubmit={(e) => void handleCreate(e)}>
+      <label className="block">
+        <span className={fieldLabelClassName}>Question</span>
+        <input
+          type="text"
+          className={`${inputFieldClassName} mt-1`}
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          placeholder="Preferred semester?"
+          disabled={saving}
+        />
+      </label>
+      <label className="block">
+        <span className={fieldLabelClassName}>Options (one per line)</span>
+        <textarea
+          className={`${inputFieldClassName} mt-1`}
+          value={optionsText}
+          onChange={(e) => setOptionsText(e.target.value)}
+          rows={3}
+          disabled={saving}
+        />
+      </label>
+      {errorMessage ? (
+        <p className="ds-field-error" role="alert">
+          {errorMessage}
+        </p>
+      ) : null}
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        {onCancel ? (
+          <button
+            type="button"
+            className="text-sm font-medium text-label transition hover:text-foreground disabled:opacity-60"
+            disabled={saving}
+            onClick={onCancel}
+          >
+            Cancel
+          </button>
+        ) : null}
+        <Button type="submit" size="sm" loading={saving} disabled={saving}>
+          Create poll
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+export function IdeaActivitySection({
+  suggestionId,
+  idea,
+}: {
+  suggestionId: number;
+  idea: EventSuggestion;
+}) {
+  const [items, setItems] = useState<IdeaActivityItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchIdeaActivity(suggestionId)
+      .then((activity) => {
+        if (!cancelled) setItems(activity);
+      })
+      .catch(() => {
+        if (!cancelled) setItems([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [suggestionId]);
+
+  const chronological = [...items].sort(
+    (a, b) => Date.parse(a.created_at) - Date.parse(b.created_at),
+  );
+  const timeline: TimelineRow[] = [
+    ...chronological,
+    {
+      kind: "status",
+      summary: ideaTimelineNowLabel(idea),
+      created_at: new Date().toISOString(),
+      actor: null,
+      isNow: true,
+    },
+  ];
+  const visibleItems =
+    expanded || timeline.length <= ACTIVITY_PREVIEW_LIMIT
+      ? timeline
+      : [
+          ...timeline.slice(0, ACTIVITY_PREVIEW_LIMIT - 1),
+          timeline[timeline.length - 1],
+        ];
+  const hasMore = timeline.length > ACTIVITY_PREVIEW_LIMIT;
+
+  return (
+    <Card
+      padding="none"
+      className="idea-ws-card"
+      aria-labelledby="idea-timeline"
+    >
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2
+          id="idea-timeline"
+          className="text-sm font-semibold uppercase tracking-wide text-label"
+        >
+          Timeline
         </h2>
-        {poll ? (
-          <p className="idea-interest-summary">
-            {poll.total_votes} {poll.total_votes === 1 ? "vote" : "votes"}
-            {poll.is_open ? "" : " · closed"}
+        {!loading && chronological.length > 0 ? (
+          <p className="text-xs text-label">
+            {chronological.length}{" "}
+            {chronological.length === 1 ? "milestone" : "milestones"}
           </p>
         ) : null}
       </div>
 
-      {loading ? (
-        <p className="idea-workspace-placeholder">Loading poll…</p>
-      ) : poll ? (
-        <>
-          <p className="idea-poll-question">{poll.question}</p>
-          <div className="idea-poll-options" role="group" aria-label="Poll options">
+      <div className="mt-3">
+        {loading ? (
+          <p className="text-sm text-label">Loading…</p>
+        ) : (
+          <ol className="idea-timeline">
+            {visibleItems.map((item, index) => {
+              const isLast = index === visibleItems.length - 1;
+              const Icon = timelineIcon(item);
+              return (
+                <li
+                  key={`${item.kind}-${item.created_at}-${index}`}
+                  className={[
+                    "idea-timeline__item",
+                    item.isNow ? "is-current" : "",
+                    `is-kind-${item.kind}`,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  <div className="idea-timeline__rail" aria-hidden="true">
+                    <span className="idea-timeline__icon">
+                      <Icon className="idea-timeline__glyph" />
+                    </span>
+                    {!isLast ? <span className="idea-timeline__line" /> : null}
+                  </div>
+                  <div className="idea-timeline__body">
+                    <div className="idea-timeline__when-row">
+                      {item.isNow ? (
+                        <span className="idea-timeline__progress-pill">
+                          <span
+                            className="idea-timeline__progress-dot"
+                            aria-hidden="true"
+                          />
+                          In progress
+                        </span>
+                      ) : (
+                        <p className="idea-timeline__when">
+                          {formatTimelineDay(item.created_at)}
+                        </p>
+                      )}
+                    </div>
+                    <p className="idea-timeline__summary">{item.summary}</p>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+        {hasMore ? (
+          <button
+            type="button"
+            className="mt-3 text-sm font-medium text-accent hover:underline"
+            onClick={() => setExpanded((value) => !value)}
+          >
+            {expanded
+              ? "Show less"
+              : `View full timeline (${timeline.length}) →`}
+          </button>
+        ) : null}
+      </div>
+    </Card>
+  );
+}
+
+function PollBlock({
+  poll,
+  suggestionId,
+  canManage,
+  saving,
+  expanded,
+  endsLabel,
+  eligibleCount,
+  onToggle,
+  onSaving,
+  onVoted,
+  onClosed,
+  onError,
+}: {
+  poll: IdeaPoll;
+  suggestionId: number;
+  canManage: boolean;
+  saving: boolean;
+  expanded: boolean;
+  endsLabel: string | null;
+  eligibleCount: number | null;
+  onToggle: () => void;
+  onSaving: (value: boolean) => void;
+  onVoted: (updated: IdeaPoll) => void;
+  onClosed: (updated: IdeaPoll) => void;
+  onError: (message: string) => void;
+}) {
+  const leading = toSentenceCase(poll.question);
+
+  return (
+    <div className="rounded-lg border border-gray-100">
+      <button
+        type="button"
+        className="flex w-full items-start justify-between gap-3 px-3 py-2.5 text-left"
+        aria-expanded={expanded}
+        onClick={onToggle}
+      >
+        <span className="min-w-0">
+          <span className="block text-sm font-medium text-foreground">
+            <span className="mr-1.5 text-label" aria-hidden="true">
+              {expanded ? "▼" : "▶"}
+            </span>
+            {leading}
+          </span>
+          <span className="idea-poll-meta">
+            <span>
+              {eligibleCount != null && eligibleCount > 0
+                ? `${poll.total_votes} / ${eligibleCount} members`
+                : `${poll.total_votes} ${poll.total_votes === 1 ? "vote" : "votes"}`}
+            </span>
+            <span>{poll.is_open ? "Open" : "Closed"}</span>
+            {poll.is_open && endsLabel ? <span>{endsLabel}</span> : null}
+          </span>
+        </span>
+      </button>
+
+      {expanded ? (
+        <div className="space-y-3 border-t border-gray-100 px-3 py-3">
+          <ul
+            className="idea-result-bars"
+            role="radiogroup"
+            aria-label={poll.question}
+          >
             {poll.options.map((option) => {
               const selected = poll.my_option_id === option.id;
               const pct =
@@ -249,92 +378,238 @@ function PollSection({
                   ? Math.round((option.vote_count / poll.total_votes) * 100)
                   : 0;
               return (
-                <button
-                  key={option.id}
-                  type="button"
-                  className={[
-                    "idea-poll-option",
-                    selected ? "is-selected" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  disabled={!poll.is_open || saving}
-                  onClick={() => void handleVote(option.id)}
-                >
-                  <span className="idea-poll-option__label">{option.label}</span>
-                  <span className="idea-poll-option__count">
-                    {option.vote_count} · {pct}%
-                  </span>
-                </button>
+                <li key={option.id}>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    className={[
+                      "idea-result-bars__row",
+                      "is-clickable",
+                      selected ? "is-selected" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    disabled={!poll.is_open || saving}
+                    onClick={() => {
+                      onSaving(true);
+                      void voteIdeaPoll(suggestionId, poll.id, option.id)
+                        .then(onVoted)
+                        .catch((error) => {
+                          onSaving(false);
+                          onError(getApiErrorMessage(error));
+                        });
+                    }}
+                  >
+                    <span className="idea-result-bars__label">
+                      {option.label}
+                    </span>
+                    <span className="idea-result-bars__track" aria-hidden="true">
+                      <span
+                        className="idea-result-bars__fill is-poll"
+                        style={{
+                          width: `${Math.max(pct, option.vote_count > 0 ? 4 : 0)}%`,
+                        }}
+                      />
+                    </span>
+                    <span className="idea-result-bars__count">
+                      {option.vote_count}
+                      {poll.total_votes > 0 ? (
+                        <span className="idea-result-bars__pct"> ({pct}%)</span>
+                      ) : null}
+                    </span>
+                  </button>
+                </li>
               );
             })}
-          </div>
+          </ul>
+          <p className="text-sm text-label">
+            {poll.my_option_id != null ? "Your vote recorded" : "No vote yet"}
+            {!poll.is_open ? " · closed" : ""}
+          </p>
           {canManage && poll.is_open ? (
             <button
               type="button"
-              className="idea-comment-text-btn"
+              className="text-sm font-medium text-accent hover:underline disabled:opacity-60"
               disabled={saving}
-              onClick={() => void handleClose()}
+              onClick={() => {
+                onSaving(true);
+                void closeIdeaPoll(suggestionId, poll.id)
+                  .then(onClosed)
+                  .catch((error) => {
+                    onSaving(false);
+                    onError(getApiErrorMessage(error));
+                  });
+              }}
             >
               Close poll
             </button>
           ) : null}
-        </>
-      ) : canManage ? (
-        <form className="idea-poll-create" onSubmit={(e) => void handleCreate(e)}>
-          <p className="idea-workspace-placeholder">
-            Ask members a quick timing or format question.
-          </p>
-          <label>
-            <span>Question</span>
-            <input
-              type="text"
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              placeholder="When should we host this?"
-              disabled={saving}
-            />
-          </label>
-          <label>
-            <span>Options (one per line)</span>
-            <textarea
-              value={optionsText}
-              onChange={(e) => setOptionsText(e.target.value)}
-              rows={3}
-              disabled={saving}
-            />
-          </label>
-          <div className="idea-convert__actions">
-            <Button type="submit" size="sm" loading={saving} disabled={saving}>
-              Create poll
-            </Button>
-          </div>
-        </form>
-      ) : (
-        <p className="idea-workspace-placeholder">No poll on this idea yet.</p>
-      )}
-
-      {errorMessage ? (
-        <p className="idea-workspace-error" role="alert">
-          {errorMessage}
-        </p>
+        </div>
       ) : null}
-    </section>
+    </div>
   );
 }
 
-export function IdeaPolishSections({
+export function IdeaPollSection({
   suggestionId,
   canManage,
+  idea,
+  onPresenceChange,
+  embedded = false,
 }: {
   suggestionId: number;
   canManage: boolean;
+  idea?: EventSuggestion | null;
+  onPresenceChange?: (hasPoll: boolean) => void;
+  embedded?: boolean;
 }) {
-  return (
+  const [polls, setPolls] = useState<IdeaPoll[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [openPollId, setOpenPollId] = useState<number | null>(null);
+  const endsLabel = idea ? feedbackEndsShortLabel(idea) : null;
+  const eligibleCount = idea?.eligible_member_count ?? null;
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchIdeaPolls(suggestionId)
+      .then((next) => {
+        if (!cancelled) {
+          setPolls(next);
+          onPresenceChange?.(next.length > 0);
+          setOpenPollId((current) => {
+            if (current != null && next.some((poll) => poll.id === current)) {
+              return current;
+            }
+            return next[0]?.id ?? null;
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPolls([]);
+          onPresenceChange?.(false);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [suggestionId, onPresenceChange]);
+
+  function replacePoll(updated: IdeaPoll) {
+    setPolls((current) =>
+      current.map((poll) => (poll.id === updated.id ? updated : poll)),
+    );
+  }
+
+  if (loading) return null;
+  if (polls.length === 0 && !canManage) {
+    return embedded ? null : null;
+  }
+
+  const body = (
     <>
-      <PollSection suggestionId={suggestionId} canManage={canManage} />
-      <ActivitySection suggestionId={suggestionId} />
-      <RelatedSection suggestionId={suggestionId} />
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        {embedded ? (
+          <h3
+            id="idea-poll"
+            className="text-xs font-semibold uppercase tracking-wide text-label"
+          >
+            Polls
+          </h3>
+        ) : (
+          <h2
+            id="idea-poll"
+            className="text-sm font-semibold uppercase tracking-wide text-label"
+          >
+            Polls
+          </h2>
+        )}
+        {canManage && !creating ? (
+          <button
+            type="button"
+            className="text-sm font-medium text-accent hover:underline"
+            onClick={() => setCreating(true)}
+          >
+            + Add poll
+          </button>
+        ) : null}
+      </div>
+
+      <div className={embedded ? "mt-2 space-y-2" : "mt-3 space-y-2"}>
+        {polls.length === 0 && !creating ? (
+          <p className="text-sm text-label">No polls yet.</p>
+        ) : null}
+
+        {polls.map((poll) => (
+          <PollBlock
+            key={poll.id}
+            poll={poll}
+            suggestionId={suggestionId}
+            canManage={canManage}
+            saving={saving}
+            expanded={openPollId === poll.id}
+            endsLabel={endsLabel}
+            eligibleCount={eligibleCount}
+            onToggle={() =>
+              setOpenPollId((current) =>
+                current === poll.id ? null : poll.id,
+              )
+            }
+            onSaving={setSaving}
+            onVoted={(updated) => {
+              setSaving(false);
+              setErrorMessage(null);
+              replacePoll(updated);
+            }}
+            onClosed={(updated) => {
+              setSaving(false);
+              setErrorMessage(null);
+              replacePoll(updated);
+            }}
+            onError={(message) => {
+              setErrorMessage(message);
+            }}
+          />
+        ))}
+
+        {creating ? (
+          <div className="border-t border-gray-100 pt-3">
+            <IdeaCreatePollForm
+              suggestionId={suggestionId}
+              onCancel={() => setCreating(false)}
+              onCreated={(poll) => {
+                setPolls((current) => [...current, poll]);
+                setOpenPollId(poll.id);
+                onPresenceChange?.(true);
+                setCreating(false);
+              }}
+            />
+          </div>
+        ) : null}
+
+        {errorMessage ? (
+          <p className="ds-field-error" role="alert">
+            {errorMessage}
+          </p>
+        ) : null}
+      </div>
     </>
+  );
+
+  if (embedded) {
+    return <section aria-labelledby="idea-poll">{body}</section>;
+  }
+
+  return (
+    <Card padding="none" className="idea-ws-card" aria-labelledby="idea-poll">
+      {body}
+    </Card>
   );
 }

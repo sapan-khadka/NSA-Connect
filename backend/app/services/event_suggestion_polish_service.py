@@ -1,10 +1,14 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
+from app.models.member import Member, MemberRole, MemberStatus
 from app.models.event_suggestion import EventSuggestion, EventSuggestionStatus
-from app.models.event_suggestion_comment import EventSuggestionComment
+from app.models.event_suggestion_comment import (
+    EventSuggestionComment,
+    EventSuggestionCommentChannel,
+)
 from app.models.event_suggestion_interest import EventSuggestionInterest
 from app.models.event_suggestion_poll import (
     EventSuggestionPoll,
@@ -12,7 +16,6 @@ from app.models.event_suggestion_poll import (
     EventSuggestionPollVote,
 )
 from app.models.event_suggestion_view import EventSuggestionView
-from app.models.member import Member, MemberRole
 from app.schemas.event_suggestion import (
     EventSuggestionActivityItem,
     EventSuggestionMemberResponse,
@@ -20,11 +23,13 @@ from app.schemas.event_suggestion import (
     EventSuggestionPollOptionResponse,
     EventSuggestionPollResponse,
     EventSuggestionRelatedItem,
+    IdeaFeedbackPackageRequest,
 )
 from app.services.event_suggestion_service import (
     EventSuggestionNotFoundError,
     get_event_suggestion,
     get_interest_counts_by_suggestion,
+    member_can_view_suggestion,
 )
 
 
@@ -38,7 +43,9 @@ def record_event_suggestion_view(
     suggestion_id: int,
     member: Member,
 ) -> EventSuggestion:
-    suggestion = get_event_suggestion(db, suggestion_id=suggestion_id)
+    suggestion = get_event_suggestion(
+        db, suggestion_id=suggestion_id, member=member
+    )
     existing = db.scalar(
         select(EventSuggestionView).where(
             EventSuggestionView.suggestion_id == suggestion_id,
@@ -56,16 +63,19 @@ def record_event_suggestion_view(
         suggestion.view_count = int(suggestion.view_count or 0) + 1
         db.commit()
         db.refresh(suggestion)
-    return get_event_suggestion(db, suggestion_id=suggestion_id)
+    return get_event_suggestion(db, suggestion_id=suggestion_id, member=member)
 
 
 def list_related_event_suggestions(
     db: Session,
     *,
     suggestion_id: int,
+    member: Member,
     limit: int = 4,
 ) -> list[EventSuggestionRelatedItem]:
-    suggestion = get_event_suggestion(db, suggestion_id=suggestion_id)
+    suggestion = get_event_suggestion(
+        db, suggestion_id=suggestion_id, member=member
+    )
     timing = (suggestion.preferred_timing or "").strip()
     title_token = suggestion.title.strip().split(" ")[0] if suggestion.title else ""
 
@@ -107,7 +117,9 @@ def list_related_event_suggestions(
             -row.created_at.timestamp(),
         )
     )
-    rows = rows[:limit]
+    rows = [
+        row for row in rows if member_can_view_suggestion(member, row)
+    ][:limit]
     counts = get_interest_counts_by_suggestion(
         db,
         suggestion_ids=[row.id for row in rows],
@@ -131,13 +143,21 @@ def build_event_suggestion_activity(
     db: Session,
     *,
     suggestion_id: int,
+    member: Member,
     limit: int = 30,
 ) -> list[EventSuggestionActivityItem]:
-    suggestion = get_event_suggestion(db, suggestion_id=suggestion_id)
+    """Milestone timeline only — not a chat log.
+
+    Discussion messages, votes, and board notes stay in their own surfaces.
+    Activity answers: what happened to this idea?
+    """
+    suggestion = get_event_suggestion(
+        db, suggestion_id=suggestion_id, member=member
+    )
     items: list[EventSuggestionActivityItem] = [
         EventSuggestionActivityItem(
             kind="created",
-            summary=f"{suggestion.suggested_by.full_name} submitted this idea",
+            summary="Idea submitted",
             created_at=suggestion.created_at,
             actor=EventSuggestionMemberResponse.model_validate(
                 suggestion.suggested_by
@@ -145,56 +165,104 @@ def build_event_suggestion_activity(
         )
     ]
 
-    interests = db.scalars(
-        select(EventSuggestionInterest)
-        .where(EventSuggestionInterest.suggestion_id == suggestion_id)
-        .options(joinedload(EventSuggestionInterest.member))
-        .order_by(EventSuggestionInterest.updated_at.desc())
-        .limit(limit)
-    ).all()
-    for row in interests:
-        label = row.vote.value.replace("_", " ")
-        items.append(
-            EventSuggestionActivityItem(
-                kind="interest",
-                summary=f"{row.member.full_name} marked {label}",
-                created_at=row.updated_at or row.created_at,
-                actor=EventSuggestionMemberResponse.model_validate(row.member),
-            )
-        )
+    noted_actor = (
+        EventSuggestionMemberResponse.model_validate(suggestion.noted_by)
+        if suggestion.noted_by is not None
+        else None
+    )
 
-    comments = db.scalars(
-        select(EventSuggestionComment)
-        .where(EventSuggestionComment.suggestion_id == suggestion_id)
-        .where(EventSuggestionComment.deleted_at.is_(None))
-        .options(joinedload(EventSuggestionComment.author))
-        .order_by(EventSuggestionComment.created_at.desc())
-        .limit(limit)
-    ).all()
-    for row in comments:
-        kind = "reply" if row.parent_id is not None else "comment"
-        verb = "replied" if kind == "reply" else "commented"
-        items.append(
-            EventSuggestionActivityItem(
-                kind=kind,
-                summary=f"{row.author.full_name} {verb}",
-                created_at=row.created_at,
-                actor=EventSuggestionMemberResponse.model_validate(row.author),
-            )
-        )
-
-    if suggestion.noted_at is not None and suggestion.noted_by is not None:
+    # Internal review start (only while still in that stage — later transitions
+    # overwrite noted_at, and we do not yet store a full status history).
+    if (
+        suggestion.status == EventSuggestionStatus.INTERNAL_REVIEW
+        and suggestion.noted_at is not None
+    ):
         items.append(
             EventSuggestionActivityItem(
                 kind="status",
-                summary=(
-                    f"{suggestion.noted_by.full_name} set status to "
-                    f"{suggestion.status.value.replace('_', ' ')}"
-                ),
+                summary="Internal review started",
                 created_at=suggestion.noted_at,
-                actor=EventSuggestionMemberResponse.model_validate(
-                    suggestion.noted_by
+                actor=noted_actor,
+            )
+        )
+
+    if suggestion.published_at is not None:
+        items.append(
+            EventSuggestionActivityItem(
+                kind="status",
+                summary="Community feedback opened",
+                created_at=suggestion.published_at,
+                actor=noted_actor,
+            )
+        )
+
+    if suggestion.community_feedback_closed_at is not None:
+        items.append(
+            EventSuggestionActivityItem(
+                kind="status",
+                summary="Community feedback closed",
+                created_at=suggestion.community_feedback_closed_at,
+                actor=noted_actor,
+            )
+        )
+
+    polls = db.scalars(
+        select(EventSuggestionPoll)
+        .where(EventSuggestionPoll.suggestion_id == suggestion_id)
+        .options(joinedload(EventSuggestionPoll.created_by))
+        .order_by(EventSuggestionPoll.created_at.asc())
+    ).all()
+    if polls:
+        # One milestone for the batch — not a row per poll.
+        first = polls[0]
+        count = len(polls)
+        items.append(
+            EventSuggestionActivityItem(
+                kind="poll",
+                summary=(
+                    "1 poll created" if count == 1 else f"{count} polls created"
                 ),
+                created_at=first.created_at,
+                actor=EventSuggestionMemberResponse.model_validate(
+                    first.created_by
+                ),
+            )
+        )
+
+    if (
+        suggestion.status == EventSuggestionStatus.APPROVED
+        and suggestion.noted_at is not None
+    ):
+        items.append(
+            EventSuggestionActivityItem(
+                kind="status",
+                summary="Approved",
+                created_at=suggestion.noted_at,
+                actor=noted_actor,
+            )
+        )
+    elif (
+        suggestion.status == EventSuggestionStatus.REJECTED
+        and suggestion.noted_at is not None
+    ):
+        items.append(
+            EventSuggestionActivityItem(
+                kind="status",
+                summary="Idea rejected",
+                created_at=suggestion.noted_at,
+                actor=noted_actor,
+            )
+        )
+    elif (
+        suggestion.status == EventSuggestionStatus.ARCHIVED
+        and suggestion.noted_at is not None
+    ):
+        items.append(
+            EventSuggestionActivityItem(
+                kind="status",
+                summary="Idea archived",
+                created_at=suggestion.noted_at,
+                actor=noted_actor,
             )
         )
 
@@ -203,37 +271,156 @@ def build_event_suggestion_activity(
         and suggestion.converted_event_id is not None
         and suggestion.noted_at is not None
     ):
-        actor = (
-            EventSuggestionMemberResponse.model_validate(suggestion.noted_by)
-            if suggestion.noted_by is not None
-            else None
-        )
         items.append(
             EventSuggestionActivityItem(
                 kind="converted",
-                summary="Converted to a calendar event",
+                summary="Converted to event",
                 created_at=suggestion.noted_at,
-                actor=actor,
-            )
-        )
-
-    poll = db.scalar(
-        select(EventSuggestionPoll)
-        .where(EventSuggestionPoll.suggestion_id == suggestion_id)
-        .options(joinedload(EventSuggestionPoll.created_by))
-    )
-    if poll is not None:
-        items.append(
-            EventSuggestionActivityItem(
-                kind="poll",
-                summary=f"{poll.created_by.full_name} opened a poll",
-                created_at=poll.created_at,
-                actor=EventSuggestionMemberResponse.model_validate(poll.created_by),
+                actor=noted_actor,
             )
         )
 
     items.sort(key=lambda item: item.created_at, reverse=True)
     return items[:limit]
+
+
+def get_suggestion_engagement_stats(
+    db: Session,
+    *,
+    suggestion_id: int,
+    include_board: bool,
+) -> dict[str, int | datetime | None]:
+    """Counts for the Summary card — not Activity noise."""
+    community_count = int(
+        db.scalar(
+            select(func.count())
+            .select_from(EventSuggestionComment)
+            .where(
+                EventSuggestionComment.suggestion_id == suggestion_id,
+                EventSuggestionComment.channel
+                == EventSuggestionCommentChannel.COMMUNITY,
+                EventSuggestionComment.deleted_at.is_(None),
+            )
+        )
+        or 0
+    )
+    board_count = 0
+    if include_board:
+        board_count = int(
+            db.scalar(
+                select(func.count())
+                .select_from(EventSuggestionComment)
+                .where(
+                    EventSuggestionComment.suggestion_id == suggestion_id,
+                    EventSuggestionComment.channel
+                    == EventSuggestionCommentChannel.BOARD,
+                    EventSuggestionComment.deleted_at.is_(None),
+                )
+            )
+            or 0
+        )
+    poll_count = int(
+        db.scalar(
+            select(func.count())
+            .select_from(EventSuggestionPoll)
+            .where(EventSuggestionPoll.suggestion_id == suggestion_id)
+        )
+        or 0
+    )
+    open_poll_count = int(
+        db.scalar(
+            select(func.count())
+            .select_from(EventSuggestionPoll)
+            .where(
+                EventSuggestionPoll.suggestion_id == suggestion_id,
+                EventSuggestionPoll.is_open.is_(True),
+            )
+        )
+        or 0
+    )
+    poll_vote_count = int(
+        db.scalar(
+            select(func.count())
+            .select_from(EventSuggestionPollVote)
+            .join(
+                EventSuggestionPoll,
+                EventSuggestionPollVote.poll_id == EventSuggestionPoll.id,
+            )
+            .where(EventSuggestionPoll.suggestion_id == suggestion_id)
+        )
+        or 0
+    )
+
+    last_comment_at = db.scalar(
+        select(func.max(EventSuggestionComment.created_at)).where(
+            EventSuggestionComment.suggestion_id == suggestion_id,
+            EventSuggestionComment.deleted_at.is_(None),
+            *(
+                ()
+                if include_board
+                else (
+                    EventSuggestionComment.channel
+                    == EventSuggestionCommentChannel.COMMUNITY,
+                )
+            ),
+        )
+    )
+    last_interest_at = db.scalar(
+        select(func.max(EventSuggestionInterest.updated_at)).where(
+            EventSuggestionInterest.suggestion_id == suggestion_id
+        )
+    )
+    last_poll_at = db.scalar(
+        select(func.max(EventSuggestionPoll.created_at)).where(
+            EventSuggestionPoll.suggestion_id == suggestion_id
+        )
+    )
+
+    candidates = [
+        value
+        for value in (last_comment_at, last_interest_at, last_poll_at)
+        if value is not None
+    ]
+    last_activity_at = max(candidates) if candidates else None
+
+    eligible_member_count = int(
+        db.scalar(
+            select(func.count())
+            .select_from(Member)
+            .where(Member.status == MemberStatus.APPROVED)
+        )
+        or 0
+    )
+
+    return {
+        "board_comment_count": board_count,
+        "community_comment_count": community_count,
+        "poll_count": poll_count,
+        "open_poll_count": open_poll_count,
+        "poll_vote_count": poll_vote_count,
+        "eligible_member_count": eligible_member_count,
+        "last_activity_at": last_activity_at,
+    }
+
+
+FEEDBACK_PACKAGE_POLLS: dict[str, tuple[str, list[str]]] = {
+    "preferred_semester": (
+        "Preferred semester?",
+        ["Fall", "Spring", "Summer"],
+    ),
+    "transportation": (
+        "Transportation",
+        ["Bus", "Own car", "Other"],
+    ),
+    "budget": (
+        "Comfortable contribution?",
+        ["Free", "$10", "$15", "$20"],
+    ),
+    "volunteer_interest": (
+        "Would you volunteer to help?",
+        ["Yes", "Maybe", "No"],
+    ),
+}
 
 
 def _poll_to_response(
@@ -269,14 +456,13 @@ def _poll_to_response(
     )
 
 
-def get_event_suggestion_poll(
+def _load_poll(
     db: Session,
     *,
     suggestion_id: int,
-    member: Member,
-) -> EventSuggestionPollResponse | None:
-    get_event_suggestion(db, suggestion_id=suggestion_id)
-    poll = db.scalar(
+    poll_id: int | None = None,
+) -> EventSuggestionPoll | None:
+    query = (
         select(EventSuggestionPoll)
         .where(EventSuggestionPoll.suggestion_id == suggestion_id)
         .options(
@@ -284,45 +470,68 @@ def get_event_suggestion_poll(
             selectinload(EventSuggestionPoll.options),
             selectinload(EventSuggestionPoll.votes),
         )
+        .order_by(EventSuggestionPoll.created_at.asc())
     )
+    if poll_id is not None:
+        query = query.where(EventSuggestionPoll.id == poll_id)
+    return db.scalar(query)
+
+
+def list_event_suggestion_polls(
+    db: Session,
+    *,
+    suggestion_id: int,
+    member: Member,
+) -> list[EventSuggestionPollResponse]:
+    get_event_suggestion(db, suggestion_id=suggestion_id, member=member)
+    polls = db.scalars(
+        select(EventSuggestionPoll)
+        .where(EventSuggestionPoll.suggestion_id == suggestion_id)
+        .options(
+            joinedload(EventSuggestionPoll.created_by),
+            selectinload(EventSuggestionPoll.options),
+            selectinload(EventSuggestionPoll.votes),
+        )
+        .order_by(EventSuggestionPoll.created_at.asc())
+    ).unique().all()
+    return [_poll_to_response(poll, member=member) for poll in polls]
+
+
+def get_event_suggestion_poll(
+    db: Session,
+    *,
+    suggestion_id: int,
+    member: Member,
+    poll_id: int | None = None,
+) -> EventSuggestionPollResponse | None:
+    """Return one poll (by id) or the oldest poll for legacy callers."""
+    get_event_suggestion(db, suggestion_id=suggestion_id, member=member)
+    poll = _load_poll(db, suggestion_id=suggestion_id, poll_id=poll_id)
     if poll is None:
         return None
     return _poll_to_response(poll, member=member)
 
 
-def create_event_suggestion_poll(
+def _create_poll_row(
     db: Session,
     *,
     suggestion_id: int,
     board_member: Member,
-    data: EventSuggestionPollCreateRequest,
-) -> EventSuggestionPollResponse:
-    if not board_member.has_role_at_least(MemberRole.BOARD):
-        raise EventSuggestionPollError
-    suggestion = get_event_suggestion(db, suggestion_id=suggestion_id)
-    if suggestion.status in {
-        EventSuggestionStatus.REJECTED,
-        EventSuggestionStatus.ARCHIVED,
-        EventSuggestionStatus.CONVERTED,
-    }:
-        raise EventSuggestionPollError
-
-    existing = db.scalar(
-        select(EventSuggestionPoll).where(
-            EventSuggestionPoll.suggestion_id == suggestion_id
-        )
-    )
-    if existing is not None:
-        raise EventSuggestionPollError
-
-    cleaned_options = [option.strip() for option in data.options if option.strip()]
+    question: str,
+    options: list[str],
+    commit: bool = True,
+) -> EventSuggestionPoll:
+    cleaned_options = [option.strip() for option in options if option.strip()]
     if len(cleaned_options) < 2 or len(cleaned_options) > 6:
+        raise EventSuggestionPollError
+    question_clean = question.strip()
+    if not question_clean:
         raise EventSuggestionPollError
 
     now = datetime.now(UTC)
     poll = EventSuggestionPoll(
         suggestion_id=suggestion_id,
-        question=data.question.strip(),
+        question=question_clean[:255],
         is_open=True,
         created_by_id=board_member.id,
         created_at=now,
@@ -337,16 +546,109 @@ def create_event_suggestion_poll(
                 sort_order=index,
             )
         )
-    db.commit()
+    if commit:
+        db.commit()
+    return poll
 
+
+def create_event_suggestion_poll(
+    db: Session,
+    *,
+    suggestion_id: int,
+    board_member: Member,
+    data: EventSuggestionPollCreateRequest,
+) -> EventSuggestionPollResponse:
+    if not board_member.has_role_at_least(MemberRole.BOARD):
+        raise EventSuggestionPollError
+    suggestion = get_event_suggestion(
+        db, suggestion_id=suggestion_id, member=board_member
+    )
+    if suggestion.status != EventSuggestionStatus.PUBLISHED:
+        raise EventSuggestionPollError
+
+    poll = _create_poll_row(
+        db,
+        suggestion_id=suggestion_id,
+        board_member=board_member,
+        question=data.question,
+        options=data.options,
+    )
     loaded = get_event_suggestion_poll(
         db,
         suggestion_id=suggestion_id,
         member=board_member,
+        poll_id=poll.id,
     )
     if loaded is None:
         raise EventSuggestionPollError
     return loaded
+
+
+def apply_idea_feedback_package(
+    db: Session,
+    *,
+    suggestion_id: int,
+    board_member: Member,
+    package: IdeaFeedbackPackageRequest,
+    commit: bool = True,
+) -> list[EventSuggestionPollResponse]:
+    """Create preset polls for a published idea. Attendance is always available."""
+    if not board_member.has_role_at_least(MemberRole.BOARD):
+        raise EventSuggestionPollError
+    suggestion = get_event_suggestion(
+        db, suggestion_id=suggestion_id, member=board_member
+    )
+    if suggestion.status != EventSuggestionStatus.PUBLISHED:
+        raise EventSuggestionPollError
+
+    existing_questions = {
+        row.question.strip().lower()
+        for row in db.scalars(
+            select(EventSuggestionPoll).where(
+                EventSuggestionPoll.suggestion_id == suggestion_id
+            )
+        ).all()
+    }
+
+    created_ids: list[int] = []
+    for key, (question, options) in FEEDBACK_PACKAGE_POLLS.items():
+        if not getattr(package, key, False):
+            continue
+        if question.strip().lower() in existing_questions:
+            continue
+        poll = _create_poll_row(
+            db,
+            suggestion_id=suggestion_id,
+            board_member=board_member,
+            question=question,
+            options=options,
+            commit=False,
+        )
+        created_ids.append(poll.id)
+        existing_questions.add(question.strip().lower())
+
+    suggestion.community_interest_enabled = bool(package.attendance_interest)
+    suggestion.community_discussion_enabled = bool(package.discussion)
+    db.add(suggestion)
+
+    if commit:
+        db.commit()
+    else:
+        db.flush()
+
+    return [
+        poll
+        for poll_id in created_ids
+        if (
+            poll := get_event_suggestion_poll(
+                db,
+                suggestion_id=suggestion_id,
+                member=board_member,
+                poll_id=poll_id,
+            )
+        )
+        is not None
+    ]
 
 
 def vote_event_suggestion_poll(
@@ -355,17 +657,12 @@ def vote_event_suggestion_poll(
     suggestion_id: int,
     member: Member,
     option_id: int,
+    poll_id: int | None = None,
 ) -> EventSuggestionPollResponse:
-    get_event_suggestion(db, suggestion_id=suggestion_id)
-    poll = db.scalar(
-        select(EventSuggestionPoll)
-        .where(EventSuggestionPoll.suggestion_id == suggestion_id)
-        .options(
-            joinedload(EventSuggestionPoll.created_by),
-            selectinload(EventSuggestionPoll.options),
-            selectinload(EventSuggestionPoll.votes),
-        )
-    )
+    suggestion = get_event_suggestion(db, suggestion_id=suggestion_id, member=member)
+    if getattr(suggestion, "community_feedback_closed_at", None) is not None:
+        raise EventSuggestionPollError
+    poll = _load_poll(db, suggestion_id=suggestion_id, poll_id=poll_id)
     if poll is None or not poll.is_open:
         raise EventSuggestionPollError
 
@@ -395,6 +692,7 @@ def vote_event_suggestion_poll(
         db,
         suggestion_id=suggestion_id,
         member=member,
+        poll_id=poll.id,
     )
     if loaded is None:
         raise EventSuggestionPollError
@@ -406,15 +704,12 @@ def close_event_suggestion_poll(
     *,
     suggestion_id: int,
     board_member: Member,
+    poll_id: int | None = None,
 ) -> EventSuggestionPollResponse:
     if not board_member.has_role_at_least(MemberRole.BOARD):
         raise EventSuggestionPollError
-    get_event_suggestion(db, suggestion_id=suggestion_id)
-    poll = db.scalar(
-        select(EventSuggestionPoll).where(
-            EventSuggestionPoll.suggestion_id == suggestion_id
-        )
-    )
+    get_event_suggestion(db, suggestion_id=suggestion_id, member=board_member)
+    poll = _load_poll(db, suggestion_id=suggestion_id, poll_id=poll_id)
     if poll is None:
         raise EventSuggestionPollError
     poll.is_open = False
@@ -423,6 +718,7 @@ def close_event_suggestion_poll(
         db,
         suggestion_id=suggestion_id,
         member=board_member,
+        poll_id=poll.id,
     )
     if loaded is None:
         raise EventSuggestionPollError

@@ -104,7 +104,7 @@ def build_probe_context(
         title="Probe Suggestion",
         description="Suggestion for auth probes",
         suggested_by_id=general_member.id,
-        status=EventSuggestionStatus.PENDING_REVIEW,
+        status=EventSuggestionStatus.SUBMITTED,
         created_at=datetime.now(UTC),
     )
     db_session.add(suggestion)
@@ -308,7 +308,7 @@ def probe_request_kwargs(method: str, path_template: str) -> dict:
         path_template.endswith("/event-suggestions/{suggestion_id}/status")
         and method == "PATCH"
     ):
-        kwargs["json"] = {"status": "under_discussion"}
+        kwargs["json"] = {"status": "internal_review"}
     elif path_template.endswith("/members/{member_id}/role") and method == "PATCH":
         kwargs["json"] = {"role": "board"}
     elif path_template.endswith("/members/{member_id}/position") and method == "PATCH":

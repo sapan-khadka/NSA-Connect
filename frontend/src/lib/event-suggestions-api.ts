@@ -2,8 +2,9 @@ import api from "./api";
 import type { EventType, MeetingVisibility } from "./event-types";
 
 export type EventSuggestionStatus =
-  | "pending_review"
-  | "under_discussion"
+  | "submitted"
+  | "internal_review"
+  | "published"
   | "approved"
   | "rejected"
   | "converted"
@@ -11,7 +12,7 @@ export type EventSuggestionStatus =
 
 export type BoardUpdatableIdeaStatus = Exclude<
   EventSuggestionStatus,
-  "pending_review" | "converted"
+  "submitted" | "converted"
 >;
 
 export type IdeaInterestVote =
@@ -22,6 +23,7 @@ export type IdeaInterestVote =
 export type EventSuggestionMember = {
   id: number;
   full_name: string;
+  position?: string | null;
 };
 
 export type IdeaInterestCounts = {
@@ -41,16 +43,48 @@ export type EventSuggestion = {
   created_at: string;
   noted_at: string | null;
   board_note: string | null;
+  board_note_updated_at?: string | null;
+  board_note_updated_by?: EventSuggestionMember | null;
   can_board_review: boolean;
   converted_event_id: number | null;
+  published_at: string | null;
+  community_interest_enabled: boolean;
+  community_discussion_enabled: boolean;
+  community_visibility: IdeaCommunityVisibility;
+  community_feedback_closed_at?: string | null;
   view_count: number;
+  board_comment_count?: number;
+  community_comment_count?: number;
+  poll_count?: number;
+  open_poll_count?: number;
+  poll_vote_count?: number;
+  eligible_member_count?: number;
+  last_activity_at?: string | null;
   interest_counts: IdeaInterestCounts;
   my_interest: IdeaInterestVote | null;
+};
+
+export type IdeaCommunityVisibility =
+  | "everyone"
+  | "members"
+  | "active_members"
+  | "officers";
+
+export type IdeaFeedbackPackagePayload = {
+  attendance_interest?: boolean;
+  discussion?: boolean;
+  preferred_semester?: boolean;
+  transportation?: boolean;
+  budget?: boolean;
+  volunteer_interest?: boolean;
 };
 
 export type IdeaBoardReviewPayload = {
   status?: BoardUpdatableIdeaStatus;
   board_note?: string | null;
+  feedback_package?: IdeaFeedbackPackagePayload | null;
+  community_visibility?: IdeaCommunityVisibility | null;
+  community_feedback_closed?: boolean | null;
 };
 
 export type IdeaConvertPayload = {
@@ -76,18 +110,26 @@ export type EventSuggestionCreatePayload = {
 };
 
 export const IDEA_STATUS_LABEL: Record<EventSuggestionStatus, string> = {
-  pending_review: "Pending review",
-  under_discussion: "Under discussion",
+  submitted: "Submitted",
+  internal_review: "Internal review",
+  published: "Published",
   approved: "Approved",
   rejected: "Rejected",
   converted: "Converted",
   archived: "Archived",
 };
 
+/** Labels framed as attendance intent for the workspace. */
 export const IDEA_INTEREST_LABEL: Record<IdeaInterestVote, string> = {
-  interested: "Interested",
+  interested: "Definitely",
   maybe: "Maybe",
-  not_interested: "Not interested",
+  not_interested: "Probably not",
+};
+
+export const IDEA_INTEREST_COUNT_LABEL: Record<IdeaInterestVote, string> = {
+  interested: "would attend",
+  maybe: "maybe",
+  not_interested: "unlikely",
 };
 
 export const IDEA_INTEREST_OPTIONS: IdeaInterestVote[] = [
@@ -96,17 +138,40 @@ export const IDEA_INTEREST_OPTIONS: IdeaInterestVote[] = [
   "not_interested",
 ];
 
-export function isIdeaInterestOpen(status: EventSuggestionStatus): boolean {
+/** Community RSVP while published and feedback is still open. */
+export function isIdeaInterestOpen(
+  status: EventSuggestionStatus,
+  interestEnabled = true,
+  feedbackClosed = false,
+): boolean {
+  return status === "published" && interestEnabled && !feedbackClosed;
+}
+
+export function isIdeaCommunityFeedbackOpen(idea: EventSuggestion): boolean {
   return (
-    status === "pending_review" ||
-    status === "under_discussion" ||
-    status === "approved"
+    idea.status === "published" && idea.community_feedback_closed_at == null
   );
 }
 
-/** Discussion follows the same open window as interest voting. */
-export function isIdeaDiscussionOpen(status: EventSuggestionStatus): boolean {
-  return isIdeaInterestOpen(status);
+/** Members can post comments while community feedback is open. */
+export function isIdeaDiscussionOpen(idea: EventSuggestion): boolean {
+  return (
+    idea.status === "published" &&
+    idea.community_discussion_enabled !== false &&
+    idea.community_feedback_closed_at == null
+  );
+}
+
+/**
+ * Community workspace (interest / polls).
+ * Hidden during triage and internal review — even if previously published.
+ */
+export function isIdeaCommunityVisible(idea: EventSuggestion): boolean {
+  return (
+    idea.status === "published" ||
+    idea.status === "approved" ||
+    idea.status === "converted"
+  );
 }
 
 export function totalIdeaInterest(counts: IdeaInterestCounts): number {
@@ -150,11 +215,11 @@ export async function updateEventSuggestionStatus(
   return response.data;
 }
 
-/** Board review opens the idea for discussion. */
+/** Board starts private internal review. */
 export async function markEventSuggestionNoted(
   suggestionId: number,
 ): Promise<EventSuggestion> {
-  return updateEventSuggestionStatus(suggestionId, "under_discussion");
+  return updateEventSuggestionStatus(suggestionId, "internal_review");
 }
 
 export async function reviewEventSuggestion(
@@ -195,6 +260,23 @@ export async function clearEventSuggestionInterest(
 ): Promise<EventSuggestion> {
   const response = await api.delete<EventSuggestion>(
     `/v1/event-suggestions/${suggestionId}/interest`,
+  );
+  return response.data;
+}
+
+export type IdeaCommunityInsightResponse = {
+  response_count: number;
+  insights: string[];
+  source: "rules" | "ai";
+  comment_count: number;
+};
+
+/** Board-only narrative synthesis of community feedback. */
+export async function fetchIdeaCommunityInsight(
+  suggestionId: number,
+): Promise<IdeaCommunityInsightResponse> {
+  const response = await api.get<IdeaCommunityInsightResponse>(
+    `/v1/event-suggestions/${suggestionId}/community-insight`,
   );
   return response.data;
 }

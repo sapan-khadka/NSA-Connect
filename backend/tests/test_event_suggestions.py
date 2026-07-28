@@ -42,7 +42,7 @@ def test_any_member_can_submit_suggestion(client, member_headers):
     body = response.json()
     assert body["title"] == "Holi celebration"
     assert body["preferred_timing"] == "This semester"
-    assert body["status"] == "pending_review"
+    assert body["status"] == "submitted"
     assert body["suggested_by"]["full_name"]
 
 
@@ -105,7 +105,7 @@ def test_member_can_get_suggestion_detail(client, member_headers, db_session):
     body = response.json()
     assert body["id"] == suggestion.id
     assert body["title"] == "Cultural night"
-    assert body["status"] == "pending_review"
+    assert body["status"] == "submitted"
 
 
 def test_get_missing_suggestion_returns_404(client, member_headers):
@@ -128,12 +128,12 @@ def test_board_can_open_suggestion_for_discussion(client, board_headers, db_sess
     response = client.patch(
         f"/api/v1/event-suggestions/{suggestion.id}/status",
         headers=board_headers,
-        json={"status": "under_discussion"},
+        json={"status": "internal_review"},
     )
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "under_discussion"
+    assert body["status"] == "internal_review"
     assert body["noted_by"] is not None
     assert body["noted_at"] is not None
 
@@ -144,7 +144,8 @@ def test_board_can_approve_suggestion(client, board_headers, db_session):
         title="Approved idea",
         description="Ready for planning.",
         suggested_by_id=member.id,
-        status=EventSuggestionStatus.UNDER_DISCUSSION,
+        status=EventSuggestionStatus.PUBLISHED,
+        published_at=datetime.now(UTC),
         created_at=datetime.now(UTC),
     )
     db_session.add(suggestion)
@@ -176,13 +177,13 @@ def test_member_cannot_update_suggestion_status(client, member_headers, db_sessi
     response = client.patch(
         f"/api/v1/event-suggestions/{suggestion.id}/status",
         headers=member_headers,
-        json={"status": "under_discussion"},
+        json={"status": "internal_review"},
     )
 
     assert response.status_code == 403
 
     db_session.refresh(suggestion)
-    assert suggestion.status == EventSuggestionStatus.PENDING_REVIEW
+    assert suggestion.status == EventSuggestionStatus.SUBMITTED
 
 
 def test_member_can_set_and_change_interest(client, member_headers, db_session):
@@ -191,6 +192,8 @@ def test_member_can_set_and_change_interest(client, member_headers, db_session):
         title="Picnic",
         description="Outdoor lunch.",
         suggested_by_id=member.id,
+        status=EventSuggestionStatus.PUBLISHED,
+        published_at=datetime.now(UTC),
         created_at=datetime.now(UTC),
     )
     db_session.add(suggestion)
@@ -226,6 +229,8 @@ def test_member_can_clear_interest(client, member_headers, db_session):
         title="Movie night",
         description="Campus screening.",
         suggested_by_id=member.id,
+        status=EventSuggestionStatus.PUBLISHED,
+        published_at=datetime.now(UTC),
         created_at=datetime.now(UTC),
     )
     db_session.add(suggestion)
@@ -277,6 +282,8 @@ def test_member_can_comment_and_reply(client, member_headers, db_session):
         title="Discussion idea",
         description="Talk it through.",
         suggested_by_id=member.id,
+        status=EventSuggestionStatus.PUBLISHED,
+        published_at=datetime.now(UTC),
         created_at=datetime.now(UTC),
     )
     db_session.add(suggestion)
@@ -320,6 +327,8 @@ def test_member_can_soft_delete_own_comment(client, member_headers, db_session):
         title="Delete comment idea",
         description="Cleanup.",
         suggested_by_id=member.id,
+        status=EventSuggestionStatus.PUBLISHED,
+        published_at=datetime.now(UTC),
         created_at=datetime.now(UTC),
     )
     db_session.add(suggestion)
@@ -349,6 +358,8 @@ def test_cannot_reply_to_a_reply(client, member_headers, db_session):
         title="Depth limit",
         description="One level only.",
         suggested_by_id=member.id,
+        status=EventSuggestionStatus.PUBLISHED,
+        published_at=datetime.now(UTC),
         created_at=datetime.now(UTC),
     )
     db_session.add(suggestion)
@@ -402,6 +413,8 @@ def test_board_can_review_with_note_and_approve(client, board_headers, db_sessio
         title="Reviewable idea",
         description="Needs a decision.",
         suggested_by_id=member.id,
+        status=EventSuggestionStatus.PUBLISHED,
+        published_at=datetime.now(UTC),
         created_at=datetime.now(UTC),
     )
     db_session.add(suggestion)
@@ -523,7 +536,7 @@ def test_cannot_convert_non_approved_idea(client, board_headers, db_session):
         title="Too early",
         description="Still cooking.",
         suggested_by_id=member.id,
-        status=EventSuggestionStatus.UNDER_DISCUSSION,
+        status=EventSuggestionStatus.INTERNAL_REVIEW,
         created_at=datetime.now(UTC),
     )
     db_session.add(suggestion)
@@ -577,7 +590,8 @@ def test_board_can_create_and_member_can_vote_poll(
         title="Poll idea",
         description="When?",
         suggested_by_id=member.id,
-        status=EventSuggestionStatus.UNDER_DISCUSSION,
+        status=EventSuggestionStatus.PUBLISHED,
+        published_at=datetime.now(UTC),
         created_at=datetime.now(UTC),
     )
     db_session.add(suggestion)
@@ -612,3 +626,407 @@ def test_board_can_create_and_member_can_vote_poll(
     assert activity.status_code == 200
     assert any(item["kind"] == "poll" for item in activity.json()["items"])
     assert any(item["kind"] == "created" for item in activity.json()["items"])
+
+
+def test_member_cannot_see_others_private_idea(
+    client, member_headers, board_headers, db_session
+):
+    board = db_session.scalar(select(Member).where(Member.email == "board@semo.edu"))
+    suggestion = EventSuggestion(
+        title="Private board idea",
+        description="Not published.",
+        suggested_by_id=board.id,
+        status=EventSuggestionStatus.SUBMITTED,
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(suggestion)
+    db_session.commit()
+    db_session.refresh(suggestion)
+
+    member_list = client.get("/api/v1/event-suggestions", headers=member_headers)
+    assert member_list.status_code == 200
+    assert all(row["id"] != suggestion.id for row in member_list.json()["suggestions"])
+
+    member_detail = client.get(
+        f"/api/v1/event-suggestions/{suggestion.id}",
+        headers=member_headers,
+    )
+    assert member_detail.status_code == 404
+
+    board_detail = client.get(
+        f"/api/v1/event-suggestions/{suggestion.id}",
+        headers=board_headers,
+    )
+    assert board_detail.status_code == 200
+
+
+def test_board_publish_opens_community_feedback(client, board_headers, member_headers, db_session):
+    board = db_session.scalar(select(Member).where(Member.email == "board@semo.edu"))
+    suggestion = EventSuggestion(
+        title="Publish me",
+        description="Ask the members.",
+        suggested_by_id=board.id,
+        status=EventSuggestionStatus.INTERNAL_REVIEW,
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(suggestion)
+    db_session.commit()
+    db_session.refresh(suggestion)
+
+    response = client.patch(
+        f"/api/v1/event-suggestions/{suggestion.id}/status",
+        headers=board_headers,
+        json={"status": "published"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "published"
+    assert body["published_at"] is not None
+
+    vote = client.put(
+        f"/api/v1/event-suggestions/{suggestion.id}/interest",
+        headers=member_headers,
+        json={"vote": "interested"},
+    )
+    assert vote.status_code == 200
+
+
+def test_board_can_enable_discussion_on_published_idea(
+    client, board_headers, member_headers, db_session
+):
+    """Older published ideas may have discussion off; enable path must flip it."""
+    board = db_session.scalar(select(Member).where(Member.email == "board@semo.edu"))
+    suggestion = EventSuggestion(
+        title="Comments off",
+        description="Need enable path.",
+        suggested_by_id=board.id,
+        status=EventSuggestionStatus.PUBLISHED,
+        published_at=datetime.now(UTC),
+        community_discussion_enabled=False,
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(suggestion)
+    db_session.commit()
+    db_session.refresh(suggestion)
+
+    blocked = client.post(
+        f"/api/v1/event-suggestions/{suggestion.id}/comments",
+        headers=member_headers,
+        json={"content": "Cannot post yet"},
+    )
+    assert blocked.status_code == 400
+
+    enabled = client.patch(
+        f"/api/v1/event-suggestions/{suggestion.id}/review",
+        headers=board_headers,
+        json={
+            "feedback_package": {
+                "attendance_interest": True,
+                "discussion": True,
+                "preferred_semester": False,
+                "transportation": False,
+                "budget": False,
+                "volunteer_interest": False,
+            }
+        },
+    )
+    assert enabled.status_code == 200
+    assert enabled.json()["community_discussion_enabled"] is True
+
+    posted = client.post(
+        f"/api/v1/event-suggestions/{suggestion.id}/comments",
+        headers=member_headers,
+        json={"content": "Looks fun, but avoid finals week for transportation."},
+    )
+    assert posted.status_code == 201
+
+    insight = client.get(
+        f"/api/v1/event-suggestions/{suggestion.id}/community-insight",
+        headers=board_headers,
+    )
+    assert insight.status_code == 200
+    data = insight.json()
+    assert data["comment_count"] >= 1
+    assert isinstance(data["insights"], list)
+    assert len(data["insights"]) >= 1
+
+
+def test_board_can_close_community_feedback(client, board_headers, member_headers, db_session):
+    board = db_session.scalar(select(Member).where(Member.email == "board@semo.edu"))
+    suggestion = EventSuggestion(
+        title="Close feedback",
+        description="Lock responses before deciding.",
+        suggested_by_id=board.id,
+        status=EventSuggestionStatus.PUBLISHED,
+        published_at=datetime.now(UTC),
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(suggestion)
+    db_session.commit()
+    db_session.refresh(suggestion)
+
+    closed = client.patch(
+        f"/api/v1/event-suggestions/{suggestion.id}/review",
+        headers=board_headers,
+        json={"community_feedback_closed": True},
+    )
+    assert closed.status_code == 200
+    body = closed.json()
+    assert body["community_feedback_closed_at"] is not None
+
+    blocked = client.put(
+        f"/api/v1/event-suggestions/{suggestion.id}/interest",
+        headers=member_headers,
+        json={"vote": "maybe"},
+    )
+    assert blocked.status_code == 400
+
+    blocked_comment = client.post(
+        f"/api/v1/event-suggestions/{suggestion.id}/comments",
+        headers=member_headers,
+        json={"content": "Too late to comment"},
+    )
+    assert blocked_comment.status_code == 400
+
+    reopened = client.patch(
+        f"/api/v1/event-suggestions/{suggestion.id}/review",
+        headers=board_headers,
+        json={"community_feedback_closed": False},
+    )
+    assert reopened.status_code == 200
+    assert reopened.json()["community_feedback_closed_at"] is None
+
+    vote = client.put(
+        f"/api/v1/event-suggestions/{suggestion.id}/interest",
+        headers=member_headers,
+        json={"vote": "maybe"},
+    )
+    assert vote.status_code == 200
+
+
+def test_cannot_approve_before_publish(client, board_headers, db_session):
+    board = db_session.scalar(select(Member).where(Member.email == "board@semo.edu"))
+    suggestion = EventSuggestion(
+        title="Too soon",
+        description="Still internal.",
+        suggested_by_id=board.id,
+        status=EventSuggestionStatus.INTERNAL_REVIEW,
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(suggestion)
+    db_session.commit()
+    db_session.refresh(suggestion)
+
+    response = client.patch(
+        f"/api/v1/event-suggestions/{suggestion.id}/status",
+        headers=board_headers,
+        json={"status": "approved"},
+    )
+    assert response.status_code == 400
+
+
+def test_board_discussion_is_private(
+    client, member_headers, board_headers, db_session
+):
+    board = db_session.scalar(select(Member).where(Member.email == "board@semo.edu"))
+    suggestion = EventSuggestion(
+        title="Internal talk",
+        description="Board only thread.",
+        suggested_by_id=board.id,
+        status=EventSuggestionStatus.INTERNAL_REVIEW,
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(suggestion)
+    db_session.commit()
+    db_session.refresh(suggestion)
+
+    forbidden = client.get(
+        f"/api/v1/event-suggestions/{suggestion.id}/board-comments",
+        headers=member_headers,
+    )
+    assert forbidden.status_code == 403
+
+    created = client.post(
+        f"/api/v1/event-suggestions/{suggestion.id}/board-comments",
+        headers=board_headers,
+        json={"content": "Cost looks high for spring."},
+    )
+    assert created.status_code == 201
+    assert created.json()["content"] == "Cost looks high for spring."
+
+    listed = client.get(
+        f"/api/v1/event-suggestions/{suggestion.id}/board-comments",
+        headers=board_headers,
+    )
+    assert listed.status_code == 200
+    assert listed.json()["total"] == 1
+
+    # Private idea: members cannot access it at all.
+    hidden = client.get(
+        f"/api/v1/event-suggestions/{suggestion.id}",
+        headers=member_headers,
+    )
+    assert hidden.status_code == 404
+
+    # Community channel stays empty even for officers.
+    community = client.get(
+        f"/api/v1/event-suggestions/{suggestion.id}/comments",
+        headers=board_headers,
+    )
+    assert community.status_code == 200
+    assert community.json()["total"] == 0
+
+
+def test_board_cannot_post_internal_before_review(client, board_headers, db_session):
+    board = db_session.scalar(select(Member).where(Member.email == "board@semo.edu"))
+    suggestion = EventSuggestion(
+        title="Still submitted",
+        description="No internal thread yet.",
+        suggested_by_id=board.id,
+        status=EventSuggestionStatus.SUBMITTED,
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(suggestion)
+    db_session.commit()
+    db_session.refresh(suggestion)
+
+    response = client.post(
+        f"/api/v1/event-suggestions/{suggestion.id}/board-comments",
+        headers=board_headers,
+        json={"content": "Too early"},
+    )
+    assert response.status_code == 400
+    assert "closed" in response.json()["detail"].lower()
+
+
+def test_community_and_board_threads_stay_separate(
+    client, member_headers, board_headers, db_session
+):
+    member = db_session.scalar(select(Member).where(Member.email == "sapan@semo.edu"))
+    suggestion = EventSuggestion(
+        title="Split threads",
+        description="Two channels.",
+        suggested_by_id=member.id,
+        status=EventSuggestionStatus.PUBLISHED,
+        published_at=datetime.now(UTC),
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(suggestion)
+    db_session.commit()
+    db_session.refresh(suggestion)
+
+    community = client.post(
+        f"/api/v1/event-suggestions/{suggestion.id}/comments",
+        headers=member_headers,
+        json={"content": "Public thought"},
+    )
+    assert community.status_code == 201
+
+    board = client.post(
+        f"/api/v1/event-suggestions/{suggestion.id}/board-comments",
+        headers=board_headers,
+        json={"content": "Private concern"},
+    )
+    assert board.status_code == 201
+
+    community_list = client.get(
+        f"/api/v1/event-suggestions/{suggestion.id}/comments",
+        headers=member_headers,
+    ).json()
+    board_list = client.get(
+        f"/api/v1/event-suggestions/{suggestion.id}/board-comments",
+        headers=board_headers,
+    ).json()
+
+    assert community_list["total"] == 1
+    assert community_list["comments"][0]["content"] == "Public thought"
+    assert board_list["total"] == 1
+    assert board_list["comments"][0]["content"] == "Private concern"
+
+
+def test_publish_feedback_package_creates_polls(client, board_headers, db_session):
+    board = db_session.scalar(select(Member).where(Member.email == "board@semo.edu"))
+    suggestion = EventSuggestion(
+        title="Package publish",
+        description="Create presets.",
+        suggested_by_id=board.id,
+        status=EventSuggestionStatus.INTERNAL_REVIEW,
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(suggestion)
+    db_session.commit()
+    db_session.refresh(suggestion)
+
+    response = client.patch(
+        f"/api/v1/event-suggestions/{suggestion.id}/review",
+        headers=board_headers,
+        json={
+            "status": "published",
+            "feedback_package": {
+                "attendance_interest": True,
+                "preferred_semester": True,
+                "transportation": True,
+                "budget": False,
+                "volunteer_interest": False,
+            },
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "published"
+
+    polls = client.get(
+        f"/api/v1/event-suggestions/{suggestion.id}/polls",
+        headers=board_headers,
+    )
+    assert polls.status_code == 200
+    body = polls.json()["polls"]
+    questions = {row["question"] for row in body}
+    assert "Preferred semester?" in questions
+    assert "Transportation" in questions
+    assert len(body) == 2
+
+
+def test_can_create_multiple_polls(client, board_headers, member_headers, db_session):
+    member = db_session.scalar(select(Member).where(Member.email == "sapan@semo.edu"))
+    suggestion = EventSuggestion(
+        title="Multi poll",
+        description="Many questions.",
+        suggested_by_id=member.id,
+        status=EventSuggestionStatus.PUBLISHED,
+        published_at=datetime.now(UTC),
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(suggestion)
+    db_session.commit()
+    db_session.refresh(suggestion)
+
+    first = client.post(
+        f"/api/v1/event-suggestions/{suggestion.id}/polls",
+        headers=board_headers,
+        json={"question": "Best night?", "options": ["Friday", "Saturday"]},
+    )
+    second = client.post(
+        f"/api/v1/event-suggestions/{suggestion.id}/polls",
+        headers=board_headers,
+        json={"question": "Food?", "options": ["Dinner", "Snacks"]},
+    )
+    assert first.status_code == 201
+    assert second.status_code == 201
+
+    listed = client.get(
+        f"/api/v1/event-suggestions/{suggestion.id}/polls",
+        headers=member_headers,
+    )
+    assert listed.status_code == 200
+    assert len(listed.json()["polls"]) == 2
+
+    poll_id = second.json()["id"]
+    option_id = second.json()["options"][0]["id"]
+    vote = client.put(
+        f"/api/v1/event-suggestions/{suggestion.id}/polls/{poll_id}/vote",
+        headers=member_headers,
+        json={"option_id": option_id},
+    )
+    assert vote.status_code == 200
+    assert vote.json()["id"] == poll_id
+    assert vote.json()["my_option_id"] == option_id

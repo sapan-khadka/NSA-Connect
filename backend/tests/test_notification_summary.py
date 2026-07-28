@@ -44,7 +44,7 @@ def test_general_member_summary_zeros_board_counts(client, db_session):
         EventSuggestion(
             title="Hack night",
             description="Build something",
-            status=EventSuggestionStatus.PENDING_REVIEW,
+            status=EventSuggestionStatus.SUBMITTED,
             suggested_by_id=member.id,
         )
     )
@@ -76,7 +76,7 @@ def test_board_summary_includes_pending_members_and_suggestions(client, db_sessi
         EventSuggestion(
             title="Hack night",
             description="Build something",
-            status=EventSuggestionStatus.PENDING_REVIEW,
+            status=EventSuggestionStatus.SUBMITTED,
             suggested_by_id=board.id,
         )
     )
@@ -84,7 +84,7 @@ def test_board_summary_includes_pending_members_and_suggestions(client, db_sessi
         EventSuggestion(
             title="Already noted",
             description="Done",
-            status=EventSuggestionStatus.UNDER_DISCUSSION,
+            status=EventSuggestionStatus.INTERNAL_REVIEW,
             suggested_by_id=board.id,
         )
     )

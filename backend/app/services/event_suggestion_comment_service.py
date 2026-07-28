@@ -3,20 +3,31 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
+from app.models.event_suggestion import EventSuggestionStatus
 from app.models.event_suggestion_comment import (
     DELETED_IDEA_COMMENT_PLACEHOLDER,
     MAX_IDEA_COMMENT_LENGTH,
     EventSuggestionComment,
+    EventSuggestionCommentChannel,
 )
 from app.models.member import Member, MemberRole
 from app.schemas.event_suggestion import EventSuggestionCommentCreateRequest
 from app.services.event_suggestion_service import (
-    INTEREST_OPEN_STATUSES,
+    COMMUNITY_FEEDBACK_OPEN_STATUSES,
     EventSuggestionNotFoundError,
     get_event_suggestion,
 )
 
-DISCUSSION_OPEN_STATUSES = INTEREST_OPEN_STATUSES
+DISCUSSION_OPEN_STATUSES = COMMUNITY_FEEDBACK_OPEN_STATUSES
+
+# Officers can discuss privately from internal review through approval.
+BOARD_DISCUSSION_OPEN_STATUSES = frozenset(
+    {
+        EventSuggestionStatus.INTERNAL_REVIEW,
+        EventSuggestionStatus.PUBLISHED,
+        EventSuggestionStatus.APPROVED,
+    }
+)
 
 
 class EventSuggestionCommentNotFoundError(Exception):
@@ -47,16 +58,33 @@ def _load_comment(db: Session, comment_id: int) -> EventSuggestionComment | None
     )
 
 
+def _assert_channel_access(
+    *,
+    member: Member,
+    channel: EventSuggestionCommentChannel,
+) -> None:
+    if channel == EventSuggestionCommentChannel.BOARD and not member.has_role_at_least(
+        MemberRole.BOARD
+    ):
+        raise EventSuggestionCommentForbiddenError
+
+
 def list_event_suggestion_comments(
     db: Session,
     *,
     suggestion_id: int,
+    member: Member,
+    channel: EventSuggestionCommentChannel = EventSuggestionCommentChannel.COMMUNITY,
 ) -> list[EventSuggestionComment]:
-    get_event_suggestion(db, suggestion_id=suggestion_id)
+    _assert_channel_access(member=member, channel=channel)
+    get_event_suggestion(db, suggestion_id=suggestion_id, member=member)
     return list(
         db.scalars(
             select(EventSuggestionComment)
-            .where(EventSuggestionComment.suggestion_id == suggestion_id)
+            .where(
+                EventSuggestionComment.suggestion_id == suggestion_id,
+                EventSuggestionComment.channel == channel,
+            )
             .options(joinedload(EventSuggestionComment.author))
             .order_by(EventSuggestionComment.created_at.asc()),
         ).all()
@@ -69,9 +97,27 @@ def create_event_suggestion_comment(
     suggestion_id: int,
     member: Member,
     data: EventSuggestionCommentCreateRequest,
+    channel: EventSuggestionCommentChannel = EventSuggestionCommentChannel.COMMUNITY,
 ) -> EventSuggestionComment:
-    suggestion = get_event_suggestion(db, suggestion_id=suggestion_id)
-    if suggestion.status not in DISCUSSION_OPEN_STATUSES:
+    _assert_channel_access(member=member, channel=channel)
+    suggestion = get_event_suggestion(db, suggestion_id=suggestion_id, member=member)
+
+    open_statuses = (
+        BOARD_DISCUSSION_OPEN_STATUSES
+        if channel == EventSuggestionCommentChannel.BOARD
+        else DISCUSSION_OPEN_STATUSES
+    )
+    if suggestion.status not in open_statuses:
+        raise EventSuggestionCommentClosedError
+    if (
+        channel == EventSuggestionCommentChannel.COMMUNITY
+        and not bool(getattr(suggestion, "community_discussion_enabled", True))
+    ):
+        raise EventSuggestionCommentClosedError
+    if (
+        channel == EventSuggestionCommentChannel.COMMUNITY
+        and getattr(suggestion, "community_feedback_closed_at", None) is not None
+    ):
         raise EventSuggestionCommentClosedError
 
     content = data.content.strip()
@@ -86,6 +132,7 @@ def create_event_suggestion_comment(
         if (
             parent is None
             or parent.suggestion_id != suggestion_id
+            or parent.channel != channel
             or parent.parent_id is not None
             or parent.deleted_at is not None
         ):
@@ -96,6 +143,7 @@ def create_event_suggestion_comment(
         suggestion_id=suggestion_id,
         author_id=member.id,
         parent_id=parent_id,
+        channel=channel,
         content=content,
         created_at=now,
     )
@@ -115,11 +163,16 @@ def soft_delete_event_suggestion_comment(
     suggestion_id: int,
     comment_id: int,
     member: Member,
+    channel: EventSuggestionCommentChannel | None = None,
 ) -> EventSuggestionComment:
-    get_event_suggestion(db, suggestion_id=suggestion_id)
+    get_event_suggestion(db, suggestion_id=suggestion_id, member=member)
     comment = _load_comment(db, comment_id)
     if comment is None or comment.suggestion_id != suggestion_id:
         raise EventSuggestionCommentNotFoundError
+    if channel is not None and comment.channel != channel:
+        raise EventSuggestionCommentNotFoundError
+
+    _assert_channel_access(member=member, channel=comment.channel)
 
     can_delete = comment.author_id == member.id or member.has_role_at_least(
         MemberRole.BOARD

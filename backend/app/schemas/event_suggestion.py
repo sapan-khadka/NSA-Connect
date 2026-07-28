@@ -9,8 +9,9 @@ from app.models.event import EventType, MeetingVisibility
 from app.schemas.event import MAX_EVENT_BUDGET
 
 EventSuggestionStatusValue = Literal[
-    "pending_review",
-    "under_discussion",
+    "submitted",
+    "internal_review",
+    "published",
     "approved",
     "rejected",
     "converted",
@@ -18,7 +19,8 @@ EventSuggestionStatusValue = Literal[
 ]
 
 BoardUpdatableStatusValue = Literal[
-    "under_discussion",
+    "internal_review",
+    "published",
     "approved",
     "rejected",
     "archived",
@@ -36,6 +38,7 @@ class EventSuggestionMemberResponse(BaseModel):
 
     id: int
     full_name: str
+    position: str | None = None
 
 
 class EventSuggestionInterestCounts(BaseModel):
@@ -57,9 +60,23 @@ class EventSuggestionResponse(BaseModel):
     created_at: datetime
     noted_at: datetime | None = None
     board_note: str | None = None
+    board_note_updated_at: datetime | None = None
+    board_note_updated_by: EventSuggestionMemberResponse | None = None
     can_board_review: bool = False
     converted_event_id: int | None = None
+    published_at: datetime | None = None
+    community_interest_enabled: bool = True
+    community_discussion_enabled: bool = True
+    community_visibility: str = "members"
+    community_feedback_closed_at: datetime | None = None
     view_count: int = 0
+    board_comment_count: int = 0
+    community_comment_count: int = 0
+    poll_count: int = 0
+    open_poll_count: int = 0
+    poll_vote_count: int = 0
+    eligible_member_count: int = 0
+    last_activity_at: datetime | None = None
     interest_counts: EventSuggestionInterestCounts = Field(
         default_factory=EventSuggestionInterestCounts
     )
@@ -81,11 +98,34 @@ class EventSuggestionStatusUpdateRequest(BaseModel):
     status: BoardUpdatableStatusValue
 
 
+class IdeaFeedbackPackageRequest(BaseModel):
+    """Preset community feedback tools created when publishing an idea."""
+
+    attendance_interest: bool = True
+    discussion: bool = True
+    preferred_semester: bool = False
+    transportation: bool = False
+    budget: bool = False
+    volunteer_interest: bool = False
+
+
+IdeaCommunityVisibilityValue = Literal[
+    "everyone",
+    "members",
+    "active_members",
+    "officers",
+]
+
+
 class EventSuggestionBoardReviewRequest(BaseModel):
     """Board-only review update. Provide status and/or board_note."""
 
     status: BoardUpdatableStatusValue | None = None
     board_note: str | None = Field(default=None, max_length=2000)
+    feedback_package: IdeaFeedbackPackageRequest | None = None
+    community_visibility: IdeaCommunityVisibilityValue | None = None
+    # True closes community feedback; False reopens it (published ideas only).
+    community_feedback_closed: bool | None = None
 
 
 class EventSuggestionConvertRequest(BaseModel):
@@ -184,6 +224,15 @@ class EventSuggestionRelatedResponse(BaseModel):
     ideas: list[EventSuggestionRelatedItem]
 
 
+class EventSuggestionCommunityInsightResponse(BaseModel):
+    """Board-facing narrative synthesis of community feedback."""
+
+    response_count: int = Field(ge=0)
+    insights: list[str] = Field(default_factory=list)
+    source: Literal["rules", "ai"] = "rules"
+    comment_count: int = Field(ge=0, default=0)
+
+
 class EventSuggestionPollOptionResponse(BaseModel):
     id: int
     label: str
@@ -204,7 +253,14 @@ class EventSuggestionPollResponse(BaseModel):
 
 
 class EventSuggestionPollGetResponse(BaseModel):
+    """Legacy single-poll shape; prefer `polls` list."""
+
     poll: EventSuggestionPollResponse | None = None
+    polls: list[EventSuggestionPollResponse] = Field(default_factory=list)
+
+
+class EventSuggestionPollListResponse(BaseModel):
+    polls: list[EventSuggestionPollResponse] = Field(default_factory=list)
 
 
 class EventSuggestionPollCreateRequest(BaseModel):
