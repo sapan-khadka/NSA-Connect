@@ -12,23 +12,14 @@ type MemberWorkspaceInsightsProps = {
   isLoading?: boolean;
 };
 
-function InsightsEmpty() {
-  return (
-    <div className="member-workspace-resp-empty">
-      <p className="member-workspace-resp-empty-title">
-        No notable patterns right now.
-      </p>
-      <p className="member-workspace-insights-empty-desc">
-        Nothing matched the current insight rules for this member.
-      </p>
-    </div>
-  );
-}
-
 export function MemberWorkspaceInsights({
   insights,
   isLoading = false,
 }: MemberWorkspaceInsightsProps) {
+  if (!isLoading && insights.length === 0) {
+    return null;
+  }
+
   return (
     <section
       className="member-workspace-card member-workspace-card--default member-workspace-insights"
@@ -41,9 +32,6 @@ export function MemberWorkspaceInsights({
           </span>
           <div className="min-w-0">
             <h2 className="member-workspace-card-title">AI Insights</h2>
-            <p className="member-workspace-card-desc">
-              Patterns from attendance, dues, and tasks.
-            </p>
           </div>
         </div>
       </div>
@@ -52,8 +40,6 @@ export function MemberWorkspaceInsights({
         {isLoading ? (
           <p className="member-workspace-resp-loading">Loading insights…</p>
         ) : null}
-
-        {!isLoading && insights.length === 0 ? <InsightsEmpty /> : null}
 
         {!isLoading && insights.length > 0 ? (
           <ul className="member-workspace-insights-list">

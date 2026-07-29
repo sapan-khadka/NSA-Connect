@@ -7,6 +7,7 @@
 import {
   ArrowDown,
   ArrowUp,
+  Check,
   ChevronsUpDown,
   Eye,
   Mail,
@@ -16,7 +17,15 @@ import {
   Settings,
   Users,
 } from "lucide-react";
-import { useEffect, useId, useMemo, useState, type KeyboardEvent, type MouseEvent } from "react";
+import {
+  Fragment,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+} from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { Avatar } from "../design-system/components/Avatar";
@@ -27,22 +36,24 @@ import { useMediaQuery } from "../hooks/useMediaQuery";
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/api-error";
 import type { DuesStatus, MemberDuesRecord } from "../lib/dues-api";
-import { formatCurrency } from "../lib/format-currency";
+import { formatCurrencyCompact } from "../lib/format-currency";
 import { memberMailtoHref } from "../lib/member-mailto";
 import { openDirectMessage } from "../lib/open-direct-message";
 import {
+  compareMembersByDirectoryOrder,
   formatOutstandingDuesCell,
+  getDirectorySectionLabel,
+  getMemberDirectorySubtitle,
+  getMemberDirectorySection,
+  sortMembersByDirectoryOrder,
   type MemberDuesLookup,
   type MemberEngagementLookup,
+  type MembersDirectorySection,
 } from "../lib/members-directory";
 import { fetchMembers } from "../lib/members-api";
 import {
   buildPositionHolders,
   canViewMemberDirectory,
-  formatMemberPositionLabel,
-  getRoleBadgeClassName,
-  isMemberRole,
-  type MemberRole,
 } from "../lib/roles";
 import { EditMemberDrawer } from "./EditMemberDrawer";
 import { MembersBulkActionBar } from "./MembersBulkActionBar";
@@ -52,7 +63,7 @@ import { Button } from "./ui/Button";
 
 const MISSING = "—";
 
-type SortKey = "name" | "role" | "status" | "graduation_year";
+type SortKey = "name";
 type SortDirection = "asc" | "desc";
 
 type MembersTableProps = {
@@ -67,7 +78,7 @@ type MembersTableProps = {
   engagementByMemberId?: MemberEngagementLookup;
   /** True when filters exclude every member but the org is not empty. */
   isFilterEmpty?: boolean;
-  /** Bulk selection chrome is hidden until bulk APIs ship. */
+  /** Shows row checkboxes + floating bulk action bar when true. */
   enableBulkSelection?: boolean;
   /**
    * Keep the dense CRM table (horizontal scroll) instead of mobile cards.
@@ -103,7 +114,9 @@ function duesCellFromRecord(
 
   const outstanding = formatOutstandingDuesCell(record);
   const label =
-    outstanding !== null ? formatCurrency(outstanding) : formatCurrency(0);
+    outstanding !== null
+      ? formatCurrencyCompact(outstanding)
+      : formatCurrencyCompact(0);
 
   if (status === "partial") {
     return { label, tone: "partial" };
@@ -171,34 +184,27 @@ function MembersDirectoryStatusPill({
   );
 }
 
-function MembersRoleBadge({
-  member,
-}: {
-  member: Pick<MemberResponse, "role" | "position" | "custom_board_position">;
-}) {
-  if (!member.role) {
-    return <span className="members-table-cell-muted">{MISSING}</span>;
+function MembersDuesCell({ view }: { view: DuesCellView }) {
+  if (view.tone === "missing") {
+    return (
+      <span className="members-table-dues members-table-dues--missing">
+        {MISSING}
+      </span>
+    );
   }
 
-  const memberRole: MemberRole = isMemberRole(member.role)
-    ? member.role
-    : "general";
-  const label =
-    member.role.charAt(0).toUpperCase() + member.role.slice(1).toLowerCase();
-  const positionLabel = formatMemberPositionLabel(member);
-  const title =
-    member.custom_board_position || member.position !== "member"
-      ? `${label} · ${positionLabel}`
-      : label;
+  if (view.tone === "paid") {
+    return (
+      <span
+        className="members-table-dues members-table-dues--paid"
+        title="Paid"
+        aria-label="Paid"
+      >
+        <AppIcon icon={Check} size="xs" className="members-table-dues-check" />
+      </span>
+    );
+  }
 
-  return (
-    <span className={getRoleBadgeClassName(memberRole, "sm")} title={title}>
-      {label}
-    </span>
-  );
-}
-
-function MembersDuesCell({ view }: { view: DuesCellView }) {
   return (
     <span
       className={`members-table-dues members-table-dues--${view.tone} tabular-nums`}
@@ -223,10 +229,41 @@ function MembersRowActions({
 }) {
   const navigate = useNavigate();
   const mailtoHref = memberMailtoHref(member.email);
+  const menuId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
   const [messageLoading, setMessageLoading] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
-  async function handleMessage(event: MouseEvent<HTMLButtonElement>) {
-    event.stopPropagation();
+  useEffect(() => {
+    if (!moreOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: globalThis.MouseEvent) {
+      if (
+        rootRef.current &&
+        event.target instanceof Node &&
+        !rootRef.current.contains(event.target)
+      ) {
+        setMoreOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMoreOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [moreOpen]);
+
+  async function handleMessage() {
     if (isSelf || messageLoading) {
       return;
     }
@@ -240,8 +277,63 @@ function MembersRowActions({
     }
   }
 
+  const menu = moreOpen ? (
+    <div id={menuId} role="menu" className="members-table-more-menu">
+      <Link
+        to={`/members/${member.id}`}
+        role="menuitem"
+        className="members-table-more-item"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <AppIcon icon={Eye} size="xs" className="text-current" />
+        View
+      </Link>
+      <button
+        type="button"
+        role="menuitem"
+        className="members-table-more-item"
+        disabled={isSelf || messageLoading}
+        onClick={(event) => {
+          event.stopPropagation();
+          setMoreOpen(false);
+          void handleMessage();
+        }}
+      >
+        <AppIcon icon={MessageSquare} size="xs" className="text-current" />
+        Message
+      </button>
+      {canEdit ? (
+        <button
+          type="button"
+          role="menuitem"
+          className="members-table-more-item"
+          onClick={(event) => {
+            event.stopPropagation();
+            setMoreOpen(false);
+            onEdit(member);
+          }}
+        >
+          <AppIcon icon={Pencil} size="xs" className="text-current" />
+          Edit
+        </button>
+      ) : null}
+      {mailtoHref ? (
+        <a
+          href={mailtoHref}
+          role="menuitem"
+          className="members-table-more-item"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <AppIcon icon={Mail} size="xs" className="text-current" />
+          Email
+        </a>
+      ) : null}
+    </div>
+  ) : null;
+
   return (
     <div
+      ref={rootRef}
       className={
         alwaysVisible
           ? "members-table-row-actions is-visible"
@@ -249,61 +341,48 @@ function MembersRowActions({
       }
       onClick={(event) => event.stopPropagation()}
     >
-      <Link
-        to={`/members/${member.id}`}
-        className="members-table-icon-action"
-        aria-label={`View ${member.full_name}`}
-        title="View"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <AppIcon icon={Eye} size="sm" className="text-current" />
-      </Link>
-      {canEdit ? (
-        <button
-          type="button"
-          className="members-table-icon-action"
-          title="Edit Member"
-          aria-label={`Edit ${member.full_name}`}
-          onClick={(event) => {
-            event.stopPropagation();
-            onEdit(member);
-          }}
-        >
-          <AppIcon icon={Pencil} size="sm" className="text-current" />
-        </button>
+      {alwaysVisible ? (
+        <>
+          <Link
+            to={`/members/${member.id}`}
+            className="members-table-icon-action"
+            aria-label={`View ${member.full_name}`}
+            title="View"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <AppIcon icon={Eye} size="sm" className="text-current" />
+          </Link>
+          <button
+            type="button"
+            className="members-table-icon-action"
+            title="Message"
+            aria-label={`Message ${member.full_name}`}
+            disabled={isSelf || messageLoading}
+            onClick={(event) => {
+              event.stopPropagation();
+              void handleMessage();
+            }}
+          >
+            <AppIcon icon={MessageSquare} size="sm" className="text-current" />
+          </button>
+        </>
       ) : null}
       <button
         type="button"
         className="members-table-icon-action"
-        title="Message"
-        aria-label={`Message ${member.full_name}`}
-        disabled={isSelf || messageLoading}
+        title="More"
+        aria-label={`More actions for ${member.full_name}`}
+        aria-expanded={moreOpen}
+        aria-haspopup="menu"
+        aria-controls={menuId}
         onClick={(event) => {
-          void handleMessage(event);
+          event.stopPropagation();
+          setMoreOpen((open) => !open);
         }}
-      >
-        <AppIcon icon={MessageSquare} size="sm" className="text-current" />
-      </button>
-      {mailtoHref ? (
-        <a
-          href={mailtoHref}
-          className="members-table-icon-action"
-          title="Email"
-          aria-label={`Email ${member.full_name}`}
-          onClick={(event) => event.stopPropagation()}
-        >
-          <AppIcon icon={Mail} size="sm" className="text-current" />
-        </a>
-      ) : null}
-      <button
-        type="button"
-        className="members-table-icon-action"
-        disabled
-        title="Coming soon"
-        aria-label={`More actions for ${member.full_name} (coming soon)`}
       >
         <AppIcon icon={MoreHorizontal} size="sm" className="text-current" />
       </button>
+      {menu}
     </div>
   );
 }
@@ -356,7 +435,7 @@ function MembersTableEmptyState({
         <MembersEmptyIllustration />
         <p className="members-table-empty-title">No members yet.</p>
         <p className="members-table-empty-subtitle">
-          Invite members or import a roster to get started.
+          Add members or import a roster to get started.
         </p>
         <div className="members-table-empty-actions">
           <Button
@@ -366,7 +445,7 @@ function MembersTableEmptyState({
             onClick={onInvite}
             disabled={!onInvite}
           >
-            Invite Member
+            Add Member
           </Button>
           <Button
             type="button"
@@ -530,7 +609,7 @@ export function MembersTable({
 }: MembersTableProps) {
   const { member: currentMember } = useAuth();
   const selectAllId = useId();
-  const isNarrow = !useMediaQuery("(min-width: 768px)");
+  const isNarrow = !useMediaQuery("(min-width: 1024px)");
   const isMobile = forceTableView ? false : isNarrow;
   const [internalMembers, setInternalMembers] = useState<MemberResponse[]>([]);
   const [internalLoading, setInternalLoading] = useState(
@@ -545,7 +624,7 @@ export function MembersTable({
     null,
   );
   const [editMember, setEditMember] = useState<MemberResponse | null>(null);
-  const [sortKey, setSortKey] = useState<SortKey | null>("name");
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
   const canEditMembers = Boolean(
@@ -591,34 +670,43 @@ export function MembersTable({
   }, [isControlled]);
 
   const displayedMembers = useMemo(() => {
+    const ordered = sortMembersByDirectoryOrder(members, engagementByMemberId);
     if (!sortKey) {
-      return members;
+      return ordered;
     }
-    const sorted = [...members];
-    sorted.sort((left, right) => {
-      if (sortKey === "graduation_year") {
-        const cmp = left.graduation_year - right.graduation_year;
-        return sortDirection === "asc" ? cmp : -cmp;
+    // Leadership priority stays primary; Name / Class Year are tertiary only.
+    return [...ordered].sort((left, right) => {
+      const hierarchy = compareMembersByDirectoryOrder(
+        left,
+        right,
+        engagementByMemberId,
+      );
+      if (hierarchy !== 0) {
+        return hierarchy;
       }
-      const leftValue =
-        sortKey === "name"
-          ? left.full_name
-          : sortKey === "role"
-            ? left.role
-            : left.status;
-      const rightValue =
-        sortKey === "name"
-          ? right.full_name
-          : sortKey === "role"
-            ? right.role
-            : right.status;
-      const cmp = leftValue.localeCompare(rightValue, undefined, {
+      const cmp = left.full_name.localeCompare(right.full_name, undefined, {
         sensitivity: "base",
       });
       return sortDirection === "asc" ? cmp : -cmp;
     });
-    return sorted;
-  }, [members, sortKey, sortDirection]);
+  }, [members, engagementByMemberId, sortKey, sortDirection]);
+
+  const sectionCounts = useMemo(() => {
+    const counts: Record<MembersDirectorySection, number> = {
+      leadership: 0,
+      board: 0,
+      general: 0,
+    };
+    for (const member of displayedMembers) {
+      counts[getMemberDirectorySection(member)] += 1;
+    }
+    return counts;
+  }, [displayedMembers]);
+  const showDirectorySections =
+    [sectionCounts.leadership, sectionCounts.board, sectionCounts.general].filter(
+      (count) => count > 0,
+    ).length > 1;
+  const tableColumnCount = enableBulkSelection ? 6 : 5;
 
   const allVisibleSelected =
     displayedMembers.length > 0 &&
@@ -735,17 +823,6 @@ export function MembersTable({
     [positionSourceMembers, members],
   );
 
-  function handleRowKeyDown(
-    event: KeyboardEvent<HTMLElement>,
-    member: MemberResponse,
-  ) {
-    if (event.key !== "Enter" && event.key !== " ") {
-      return;
-    }
-    event.preventDefault();
-    openQuickView(member);
-  }
-
   if (isLoading) {
     return (
       <div aria-busy="true" aria-live="polite">
@@ -802,10 +879,6 @@ export function MembersTable({
                     data-selected={
                       enableBulkSelection && selected ? "true" : undefined
                     }
-                    tabIndex={0}
-                    aria-label={`Quick view ${member.full_name}`}
-                    onClick={() => openQuickView(member)}
-                    onKeyDown={(event) => handleRowKeyDown(event, member)}
                   >
                     <div className="members-table-card-top">
                       {enableBulkSelection ? (
@@ -820,65 +893,65 @@ export function MembersTable({
                           aria-label={`Select ${member.full_name}`}
                         />
                       ) : null}
-                      <Avatar
-                        name={member.full_name}
-                        src={member.avatar_url}
-                        size="md"
-                        className="members-table-avatar"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="members-table-card-heading">
-                          <div className="min-w-0">
-                            <p className="members-table-name">
-                              {member.full_name}
-                            </p>
-                            <p className="members-table-meta">
-                              {member.email?.trim() || member.major}
-                            </p>
-                            {member.position !== "member" ||
-                            member.custom_board_position ? (
-                              <p className="mt-0.5 truncate text-[11px] font-medium text-primary/80">
-                                {formatMemberPositionLabel(member)}
-                              </p>
-                            ) : null}
-                          </div>
-                          <MembersDirectoryStatusPill
-                            status={member.status}
-                            engagement={
-                              engagementByMemberId?.get(member.id) ?? null
-                            }
-                          />
-                        </div>
+                      <button
+                        type="button"
+                        className="members-table-avatar-btn"
+                        aria-label={`Preview ${member.full_name}`}
+                        onClick={() => openQuickView(member)}
+                      >
+                        <Avatar
+                          name={member.full_name}
+                          src={member.avatar_url}
+                          size="md"
+                          className="members-table-avatar"
+                        />
+                      </button>
+                      <div className="members-table-card-identity">
+                        <p className="members-table-name">
+                          {getMemberDirectorySection(member) ===
+                          "leadership" ? (
+                            <span
+                              className="members-table-leadership-dot"
+                              aria-hidden="true"
+                            />
+                          ) : null}
+                          <Link
+                            to={`/members/${member.id}`}
+                            className="members-table-name-link"
+                          >
+                            {member.full_name}
+                          </Link>
+                        </p>
+                        {(() => {
+                          const subtitle = getMemberDirectorySubtitle(member);
+                          return subtitle ? (
+                            <p className="members-table-role-line">{subtitle}</p>
+                          ) : null;
+                        })()}
+                        <MembersDirectoryStatusPill
+                          status={member.status}
+                          engagement={
+                            engagementByMemberId?.get(member.id) ?? null
+                          }
+                        />
                       </div>
                     </div>
 
-                    <dl className="members-table-card-meta">
-                      <div>
-                        <dt>Role</dt>
-                        <dd>
-                          <MembersRoleBadge member={member} />
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Graduation</dt>
-                        <dd>{member.graduation_year || MISSING}</dd>
-                      </div>
-                      <div>
-                        <dt>Dues</dt>
-                        <dd>
+                    <div className="members-table-card-footer">
+                      <div className="members-table-card-chips">
+                        {dues.tone !== "missing" ? (
                           <MembersDuesCell view={dues} />
-                        </dd>
+                        ) : null}
                       </div>
-                    </dl>
-
-                    <div className="members-table-card-actions">
-                      <MembersRowActions
-                        member={member}
-                        alwaysVisible
-                        canEdit={canEditMembers}
-                        onEdit={openEditMember}
-                        isSelf={currentMember?.id === member.id}
-                      />
+                      <div className="members-table-card-actions">
+                        <MembersRowActions
+                          member={member}
+                          alwaysVisible
+                          canEdit={canEditMembers}
+                          onEdit={openEditMember}
+                          isSelf={currentMember?.id === member.id}
+                        />
+                      </div>
                     </div>
                   </article>
                 </li>
@@ -919,30 +992,9 @@ export function MembersTable({
                     direction={sortDirection}
                     onSort={handleSort}
                   />
-                  <SortHeader
-                    label="Role"
-                    sortKey="role"
-                    activeKey={sortKey}
-                    direction={sortDirection}
-                    onSort={handleSort}
-                  />
-                  <SortHeader
-                    label="Status"
-                    sortKey="status"
-                    activeKey={sortKey}
-                    direction={sortDirection}
-                    onSort={handleSort}
-                  />
-                  <SortHeader
-                    label="Graduation Year"
-                    sortKey="graduation_year"
-                    activeKey={sortKey}
-                    direction={sortDirection}
-                    onSort={handleSort}
-                    className="members-table-col-grad"
-                  />
+                  <th scope="col">Status</th>
                   <th scope="col" className="members-table-col-dues">
-                    Outstanding Dues
+                    Outstanding
                   </th>
                   <th scope="col" className="members-table-actions-col">
                     <span className="sr-only">Actions</span>
@@ -968,84 +1020,122 @@ export function MembersTable({
                   const dues = duesCellFromRecord(
                     duesByMemberId?.get(member.id),
                   );
+                  const section = getMemberDirectorySection(member);
+                  const previousSection =
+                    index > 0
+                      ? getMemberDirectorySection(displayedMembers[index - 1])
+                      : null;
+                  const showSectionHeader =
+                    showDirectorySections && section !== previousSection;
+                  const isLeadership = section === "leadership";
+                  const subtitle = getMemberDirectorySubtitle(member, section);
                   return (
-                    <tr
-                      key={member.id}
-                      data-selected={
-                        enableBulkSelection && selected ? "true" : undefined
-                      }
-                      tabIndex={0}
-                      aria-label={`Quick view ${member.full_name}`}
-                      onClick={() => openQuickView(member)}
-                      onKeyDown={(event) => handleRowKeyDown(event, member)}
-                      className="members-table-row"
-                    >
-                      {enableBulkSelection ? (
-                        <td className="members-table-check-col">
-                          <input
-                            type="checkbox"
-                            className="members-table-checkbox"
-                            checked={selected}
-                            onChange={() => undefined}
-                            onClick={(event) =>
-                              handleSelectClick(event, member.id, index)
+                    <Fragment key={member.id}>
+                      {showSectionHeader ? (
+                        <tr className="members-table-section-row">
+                          <th
+                            scope="colgroup"
+                            colSpan={tableColumnCount}
+                            className="members-table-section-heading"
+                          >
+                            <span className="members-table-section-label">
+                              {getDirectorySectionLabel(section)}
+                            </span>
+                            <span className="members-table-section-count">
+                              {sectionCounts[section]}
+                            </span>
+                          </th>
+                        </tr>
+                      ) : null}
+                      <tr
+                        data-selected={
+                          enableBulkSelection && selected ? "true" : undefined
+                        }
+                        className={
+                          isLeadership
+                            ? "members-table-row members-table-row--leadership"
+                            : "members-table-row"
+                        }
+                      >
+                        {enableBulkSelection ? (
+                          <td className="members-table-check-col">
+                            <input
+                              type="checkbox"
+                              className="members-table-checkbox"
+                              checked={selected}
+                              onChange={() => undefined}
+                              onClick={(event) =>
+                                handleSelectClick(event, member.id, index)
+                              }
+                              aria-label={`Select ${member.full_name}`}
+                            />
+                          </td>
+                        ) : null}
+                        <td className="members-table-avatar-col">
+                          <button
+                            type="button"
+                            className="members-table-avatar-btn"
+                            aria-label={`Preview ${member.full_name}`}
+                            onClick={() => openQuickView(member)}
+                          >
+                            <Avatar
+                              name={member.full_name}
+                              src={member.avatar_url}
+                              size="md"
+                              className="members-table-avatar"
+                            />
+                          </button>
+                        </td>
+                        <td>
+                          <div className="min-w-0">
+                            <p
+                              className={
+                                isLeadership
+                                  ? "members-table-name members-table-name--leadership"
+                                  : "members-table-name"
+                              }
+                            >
+                              {isLeadership ? (
+                                <span
+                                  className="members-table-leadership-dot"
+                                  aria-hidden="true"
+                                />
+                              ) : null}
+                              <Link
+                                to={`/members/${member.id}`}
+                                className="members-table-name-link"
+                              >
+                                {member.full_name}
+                              </Link>
+                            </p>
+                            {subtitle ? (
+                              <p className="members-table-role-line">
+                                {subtitle}
+                              </p>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="members-table-col-status">
+                          <MembersDirectoryStatusPill
+                            status={member.status}
+                            engagement={
+                              engagementByMemberId?.get(member.id) ?? null
                             }
-                            aria-label={`Select ${member.full_name}`}
                           />
                         </td>
-                      ) : null}
-                      <td className="members-table-avatar-col">
-                        <Avatar
-                          name={member.full_name}
-                          src={member.avatar_url}
-                          size="md"
-                          className="members-table-avatar"
-                        />
-                      </td>
-                      <td>
-                        <div className="min-w-0">
-                          <p className="members-table-name">
-                            {member.full_name}
-                          </p>
-                          <p className="members-table-meta">
-                            {member.email?.trim() || member.major}
-                          </p>
-                          {member.position !== "member" ||
-                          member.custom_board_position ? (
-                            <p className="mt-0.5 truncate text-[11px] font-medium text-primary/80">
-                              {formatMemberPositionLabel(member)}
-                            </p>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td>
-                        <MembersRoleBadge member={member} />
-                      </td>
-                      <td>
-                        <MembersDirectoryStatusPill
-                          status={member.status}
-                          engagement={
-                            engagementByMemberId?.get(member.id) ?? null
-                          }
-                        />
-                      </td>
-                      <td className="members-table-col-grad">
-                        <span className="members-table-cell-text tabular-nums">
-                          {member.graduation_year || MISSING}
-                        </span>
-                      </td>
-                      <td className="members-table-col-dues">
-                        <MembersDuesCell view={dues} />
-                      </td>
-                      <td className="members-table-actions-col">
-                        <MembersRowActions
-                          member={member}
-                          canEdit={canEditMembers}
-                          onEdit={openEditMember}
-                          isSelf={currentMember?.id === member.id}
-                        />
-                      </td>
-                    </tr>
+                        <td className="members-table-col-dues">
+                          <MembersDuesCell view={dues} />
+                        </td>
+                        <td className="members-table-actions-col">
+                          <MembersRowActions
+                            member={member}
+                            canEdit={canEditMembers}
+                            onEdit={openEditMember}
+                            isSelf={currentMember?.id === member.id}
+                          />
+                        </td>
+                      </tr>
+                    </Fragment>
                   );
                 })}
               </tbody>
@@ -1061,6 +1151,11 @@ export function MembersTable({
         duesRecord={
           quickViewMember
             ? (duesByMemberId?.get(quickViewMember.id) ?? null)
+            : null
+        }
+        engagement={
+          quickViewMember
+            ? (engagementByMemberId?.get(quickViewMember.id) ?? null)
             : null
         }
         onEditMember={canEditMembers ? openEditMember : undefined}

@@ -5,12 +5,7 @@
 
 import {
   ChevronDown,
-  Clock3,
-  MoreHorizontal,
   Plus,
-  Shield,
-  UserRound,
-  Users,
 } from "lucide-react";
 import {
   useEffect,
@@ -19,13 +14,12 @@ import {
   useRef,
   useState,
   type ChangeEvent,
-  type ComponentType,
 } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { Button } from "../components/ui/Button";
 import { AppIcon } from "../components/ui/AppIcon";
-import { InviteMemberDrawer } from "../components/InviteMemberDrawer";
+import { AddMemberDrawer } from "../components/AddMemberDrawer";
 import { ManageBoardPositionsDrawer } from "../components/ManageBoardPositionsDrawer";
 import { MembersDuesFollowUps } from "../components/MembersDuesFollowUps";
 import { MembersFiltersToolbar } from "../components/MembersFiltersToolbar";
@@ -36,6 +30,7 @@ import { useAuth } from "../context/useAuth";
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/api-error";
 import { fetchDuesDashboard } from "../lib/dues-api";
+import { formatCurrencyCompact } from "../lib/format-currency";
 import {
   buildDuesLookup,
   buildEngagementLookup,
@@ -58,21 +53,21 @@ import {
 import {
   canManageTreasury,
   canViewMemberDirectory,
-  type MemberRole,
+  memberHoldsBoardSeat,
 } from "../lib/roles";
 import { getCurrentSemesterSlug } from "../lib/semester";
 
 type MembersSegment = "attention" | "people";
 type MembersFocus = "people" | "active" | "idle" | "pending" | "dues";
 
-/** Directory role chips — roster buckets only (not officer titles). */
-const DIRECTORY_ROLE_CHIPS: {
-  role: MemberRole;
+/** Directory scope segments — leadership seats vs board vs general roster. */
+const DIRECTORY_ROLE_SEGMENTS: {
+  role: "leadership" | "board" | "general";
   label: string;
-  icon: ComponentType<{ className?: string }>;
 }[] = [
-  { role: "general", label: "General", icon: UserRound },
-  { role: "board", label: "Board", icon: Users },
+  { role: "leadership", label: "Leadership" },
+  { role: "board", label: "Board" },
+  { role: "general", label: "Members" },
 ];
 
 function MembersManageMenu({
@@ -82,6 +77,7 @@ function MembersManageMenu({
   exportLoading,
   canManagePositions,
   onManagePositions,
+  className,
 }: {
   onImportClick: () => void;
   importLoading: boolean;
@@ -89,6 +85,7 @@ function MembersManageMenu({
   exportLoading: boolean;
   canManagePositions: boolean;
   onManagePositions: () => void;
+  className?: string;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
@@ -124,7 +121,10 @@ function MembersManageMenu({
   }, [open]);
 
   return (
-    <div ref={rootRef} className="relative">
+    <div
+      ref={rootRef}
+      className={["relative", className].filter(Boolean).join(" ")}
+    >
       <Button
         type="button"
         variant="outline"
@@ -187,92 +187,13 @@ function MembersManageMenu({
   );
 }
 
-function MembersMoreMenu({
-  onExport,
-  exportLoading,
-}: {
-  onExport: () => void;
-  exportLoading: boolean;
-}) {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const menuId = useId();
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    function handlePointerDown(event: MouseEvent) {
-      if (
-        rootRef.current &&
-        event.target instanceof Node &&
-        !rootRef.current.contains(event.target)
-      ) {
-        setOpen(false);
-      }
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open]);
-
-  return (
-    <div ref={rootRef} className="relative">
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="members-crm-icon-btn"
-        aria-label="More actions"
-        aria-expanded={open}
-        aria-haspopup="menu"
-        aria-controls={menuId}
-        onClick={() => setOpen((current) => !current)}
-      >
-        <AppIcon icon={MoreHorizontal} size="sm" className="text-current" />
-      </Button>
-      {open ? (
-        <div
-          id={menuId}
-          role="menu"
-          className="absolute right-0 top-full z-50 mt-2 min-w-[11rem] rounded-lg border border-gray-200 bg-surface-card py-1 shadow-sm"
-        >
-          <button
-            type="button"
-            role="menuitem"
-            className="block w-full px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-surface-muted disabled:opacity-60"
-            disabled={exportLoading}
-            onClick={() => {
-              setOpen(false);
-              onExport();
-            }}
-          >
-            {exportLoading ? "Exporting…" : "Export CSV"}
-          </button>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 export function MembersPage() {
   const { member: currentMember } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const importInputRef = useRef<HTMLInputElement>(null);
-  const [inviteOpen, setInviteOpen] = useState(false);
+  const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [managePositionsOpen, setManagePositionsOpen] = useState(false);
-  const [inviteNotice, setInviteNotice] = useState<{
+  const [addMemberNotice, setAddMemberNotice] = useState<{
     message: string;
     emailSent: boolean;
   } | null>(null);
@@ -379,14 +300,28 @@ export function MembersPage() {
         setEngagementByMemberId(
           buildEngagementLookup(engagementResult?.members ?? []),
         );
+        const boardCount = directory.members.filter(
+          (row) =>
+            row.role === "board" ||
+            row.role === "president" ||
+            row.role === "treasurer" ||
+            memberHoldsBoardSeat(row),
+        ).length;
+        const outstandingAmount = duesResult
+          ? Number.parseFloat(duesResult.summary.total_outstanding)
+          : null;
         setKpis(
           deriveMembersDirectoryKpis({
             totalMembers: directory.total,
             activeCount: engagementResult?.active_count ?? 0,
             idleCount: engagementResult?.idle_count ?? 0,
             pendingCount: pendingPage.total,
+            boardCount,
             unpaidCount: duesResult?.summary.unpaid_count,
             partialCount: duesResult?.summary.partial_count,
+            outstandingAmount: Number.isFinite(outstandingAmount)
+              ? outstandingAmount
+              : null,
             duesAvailable: duesResult !== null,
           }),
         );
@@ -462,6 +397,9 @@ export function MembersPage() {
 
   const pendingCount = kpis?.pendingCount ?? 0;
   const memberCount = kpis?.totalMembers ?? members.length;
+  const activeCount = kpis?.activeCount ?? 0;
+  const boardCount = kpis?.boardCount ?? 0;
+  const outstandingAmount = kpis?.outstandingDuesAmount ?? null;
   const activeSegment: MembersSegment =
     canReviewMembers && segment === "attention" ? "attention" : "people";
   const duesFilterActive = filters.paymentStatus === "outstanding";
@@ -476,7 +414,7 @@ export function MembersPage() {
             ? "idle"
             : "people";
 
-  function selectRole(role: MemberRole | "") {
+  function selectRole(role: "" | "leadership" | "board" | "general") {
     setFilters((prev) => ({ ...prev, role }));
   }
 
@@ -533,6 +471,31 @@ export function MembersPage() {
     userChoseSegment.current = true;
     setSegment("people");
     setEngagementFilter("");
+    setFilters((prev) => ({
+      ...prev,
+      paymentStatus: "",
+      memberStatus: "",
+    }));
+  }
+
+  function applyDirectoryFocus(next: MembersFocus) {
+    if (next === "people") {
+      clearFocusKeepRole();
+      return;
+    }
+    if (next === "active") {
+      focusActiveMembers();
+      return;
+    }
+    if (next === "idle") {
+      focusIdleMembers();
+      return;
+    }
+    if (next === "pending") {
+      focusPendingQueue();
+      return;
+    }
+    focusOutstandingDues();
   }
 
   return (
@@ -553,22 +516,65 @@ export function MembersPage() {
           aria-label="Members page header"
           className="members-page-section members-page-header"
         >
-          <h1 className="sr-only">Members</h1>
+          <div className="members-page-header-inner">
+            <div className="members-page-header-copy">
+              <h1 className="members-page-title">Members</h1>
+              <p className="members-page-subtitle">
+                Manage members, roles and dues.
+              </p>
+              {!isLoading && kpis ? (
+                <p
+                  className="members-health-strip"
+                  aria-label="Members summary"
+                >
+                  <span className="tabular-nums">{memberCount}</span>{" "}
+                  {memberCount === 1 ? "Member" : "Members"}
+                  <span className="members-health-strip__sep" aria-hidden="true">
+                    ·
+                  </span>
+                  <span className="tabular-nums">{activeCount}</span> Active
+                  <span className="members-health-strip__sep" aria-hidden="true">
+                    ·
+                  </span>
+                  <span className="tabular-nums">{boardCount}</span> Board
+                  {outstandingAmount !== null ? (
+                    <>
+                      <span
+                        className="members-health-strip__sep"
+                        aria-hidden="true"
+                      >
+                        ·
+                      </span>
+                      <span className="tabular-nums">
+                        {formatCurrencyCompact(outstandingAmount)}
+                      </span>{" "}
+                      Outstanding
+                    </>
+                  ) : null}
+                </p>
+              ) : null}
+            </div>
 
-          <div className="members-crm-toolbar">
-            <div className="members-crm-toolbar-left">
+            <div className="members-page-header-actions">
               {canManageDirectory ? (
                 <>
                   <Button
                     type="button"
                     size="sm"
                     className="members-crm-invite-btn"
-                    onClick={() => setInviteOpen(true)}
+                    aria-label="Add Member"
+                    onClick={() => setAddMemberOpen(true)}
                   >
                     <AppIcon icon={Plus} size="xs" className="text-current" />
-                    Invite member
+                    <span className="members-crm-invite-label-full" aria-hidden="true">
+                      Add Member
+                    </span>
+                    <span className="members-crm-invite-label-short" aria-hidden="true">
+                      Add
+                    </span>
                   </Button>
                   <MembersManageMenu
+                    className="hidden md:block"
                     onImportClick={() => importInputRef.current?.click()}
                     importLoading={importLoading}
                     onExport={() => {
@@ -581,161 +587,81 @@ export function MembersPage() {
                 </>
               ) : null}
             </div>
-
-            <div className="members-crm-toolbar-right">
-              <p className="members-crm-count" aria-live="polite">
-                {isLoading
-                  ? "Loading…"
-                  : `${memberCount} ${memberCount === 1 ? "member" : "members"}`}
-              </p>
-              {canReviewMembers && pendingCount > 0 ? (
-                <button
-                  type="button"
-                  className="members-crm-pending-badge"
-                  onClick={focusPendingQueue}
-                >
-                  {pendingCount} PENDING
-                </button>
-              ) : null}
-              <MembersFiltersToolbar
-                values={filters}
-                onChange={setFilters}
-                focusActiveCount={activeFocus !== "people" ? 1 : 0}
-                onResetFocus={resetFocusForFilters}
-              />
-              {canManageDirectory ? (
-                <MembersMoreMenu
-                  onExport={() => {
-                    void handleExport();
-                  }}
-                  exportLoading={exportLoading}
-                />
-              ) : null}
-            </div>
           </div>
 
-          <div className="members-crm-chip-row" aria-label="Directory filters">
-            <div
-              className="members-crm-chip-group"
-              role="group"
-              aria-label="Filter by role"
-            >
-              <button
-                type="button"
-                className={[
-                  "members-crm-chip",
-                  !filters.role ? "is-active" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                aria-pressed={!filters.role}
-                onClick={() => selectRole("")}
-              >
-                All
-              </button>
-              {DIRECTORY_ROLE_CHIPS.map(({ role, label, icon }) => {
-                const active = filters.role === role;
-                return (
-                  <button
-                    key={role}
-                    type="button"
-                    className={[
-                      "members-crm-chip",
-                      "members-crm-chip--icon",
-                      active ? "is-active" : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    aria-pressed={active}
-                    onClick={() => selectRole(role)}
-                  >
-                    <AppIcon icon={icon} size="xs" className="text-current" />
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
+          <div className="members-crm-toolbar">
+            <MembersFiltersToolbar
+              values={filters}
+              onChange={setFilters}
+              focus={activeFocus}
+              onFocusChange={applyDirectoryFocus}
+              canReviewMembers={canReviewMembers}
+              canFetchDues={canFetchDues}
+              focusActiveCount={activeFocus !== "people" ? 1 : 0}
+              onResetFocus={resetFocusForFilters}
+            />
 
-            <div
-              className="members-crm-chip-group members-crm-chip-group--focus"
-              role="group"
-              aria-label="Focus directory"
-            >
-              <button
-                type="button"
-                className={[
-                  "members-crm-focus-chip",
-                  activeFocus === "people" ? "is-active" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                aria-pressed={activeFocus === "people"}
-                onClick={clearFocusKeepRole}
+            <div className="members-crm-toolbar-segments max-md:hidden">
+                <div
+                className="members-crm-segment"
+                role="group"
+                aria-label="Filter by roster"
               >
-                All
-              </button>
-              {canReviewMembers ? (
-                <>
-                  <button
-                    type="button"
-                    className={[
-                      "members-crm-focus-chip",
-                      activeFocus === "active" ? "is-active" : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    aria-pressed={activeFocus === "active"}
-                    title="Attended events, paid dues, completed tasks, or shared suggestions recently"
-                    onClick={focusActiveMembers}
-                  >
-                    Active
-                  </button>
-                  <button
-                    type="button"
-                    className={[
-                      "members-crm-focus-chip",
-                      activeFocus === "idle" ? "is-active" : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    aria-pressed={activeFocus === "idle"}
-                    title="Approved members with no recent engagement"
-                    onClick={focusIdleMembers}
-                  >
-                    <AppIcon icon={Clock3} size="xs" className="text-current" />
-                    Idle
-                  </button>
-                  <button
-                    type="button"
-                    className={[
-                      "members-crm-focus-chip",
-                      activeFocus === "pending" ? "is-active" : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    aria-pressed={activeFocus === "pending"}
-                    onClick={focusPendingQueue}
-                  >
-                    <AppIcon icon={Shield} size="xs" className="text-current" />
-                    Pending
-                  </button>
-                </>
-              ) : null}
-              {canFetchDues ? (
                 <button
                   type="button"
-                  className={[
-                    "members-crm-focus-chip",
-                    activeFocus === "dues" ? "is-active" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  aria-pressed={activeFocus === "dues"}
-                  onClick={focusOutstandingDues}
+                  className={!filters.role ? "is-active" : undefined}
+                  aria-pressed={!filters.role}
+                  onClick={() => selectRole("")}
                 >
-                  Dues
+                  All
                 </button>
-              ) : null}
+                {DIRECTORY_ROLE_SEGMENTS.map(({ role, label }) => {
+                  const active = filters.role === role;
+                  return (
+                    <button
+                      key={role}
+                      type="button"
+                      className={active ? "is-active" : undefined}
+                      aria-pressed={active}
+                      onClick={() => selectRole(role)}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <label className="members-crm-status-select">
+                <span className="sr-only">Status</span>
+                <select
+                  value={activeFocus}
+                  aria-label="Status"
+                  onChange={(event) =>
+                    applyDirectoryFocus(
+                      event.target.value as
+                        | "people"
+                        | "active"
+                        | "idle"
+                        | "pending"
+                        | "dues",
+                    )
+                  }
+                >
+                  <option value="people">All</option>
+                  {canReviewMembers ? (
+                    <>
+                      <option value="active">Active</option>
+                      <option value="idle">Idle</option>
+                      <option value="pending">
+                        Pending{pendingCount > 0 ? ` (${pendingCount})` : ""}
+                      </option>
+                    </>
+                  ) : null}
+                  {canFetchDues ? (
+                    <option value="dues">Outstanding dues</option>
+                  ) : null}
+                </select>
+              </label>
             </div>
           </div>
         </header>
@@ -750,15 +676,15 @@ export function MembersPage() {
             {importError}
           </p>
         ) : null}
-        {inviteNotice ? (
+        {addMemberNotice ? (
           <p
             role="status"
             className={[
               "members-invite-banner members-page-section",
-              inviteNotice.emailSent ? "is-success" : "is-error",
+              addMemberNotice.emailSent ? "is-success" : "is-error",
             ].join(" ")}
           >
-            {inviteNotice.message}
+            {addMemberNotice.message}
           </p>
         ) : null}
 
@@ -811,12 +737,12 @@ export function MembersPage() {
               error={error}
               duesByMemberId={duesByMemberId}
               engagementByMemberId={engagementByMemberId}
-              forceTableView
               isFilterEmpty={
                 members.length > 0 && displayedMembers.length === 0
               }
+              enableBulkSelection={canManageDirectory}
               onInvite={
-                canManageDirectory ? () => setInviteOpen(true) : undefined
+                canManageDirectory ? () => setAddMemberOpen(true) : undefined
               }
               onMemberUpdated={(updated, previousHolder) => {
                 setMembers((prev) =>
@@ -855,16 +781,16 @@ export function MembersPage() {
         )}
       </div>
 
-      <InviteMemberDrawer
-        open={inviteOpen}
-        onClose={() => setInviteOpen(false)}
-        onInvited={(result) => {
+      <AddMemberDrawer
+        open={addMemberOpen}
+        onClose={() => setAddMemberOpen(false)}
+        onAdded={(result) => {
           refreshDirectory();
-          setInviteNotice({
+          setAddMemberNotice({
             emailSent: result.setup_email_sent,
             message: result.setup_email_sent
-              ? "Member created and setup email sent."
-              : "Member created, but we couldn't send the setup email — ask them to use Forgot Password.",
+              ? "Member added. Setup email sent."
+              : "Member added, but we couldn't send the setup email — ask them to use Forgot Password.",
           });
         }}
       />

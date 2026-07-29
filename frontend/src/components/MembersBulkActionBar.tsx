@@ -4,13 +4,11 @@
  */
 
 import {
-  Archive,
+  BadgeCheck,
   CheckSquare,
-  Download,
   Mail,
   Shield,
   Trash2,
-  UsersRound,
   X,
 } from "lucide-react";
 
@@ -26,30 +24,18 @@ type MembersBulkActionBarProps = {
 };
 
 const ACTIONS = [
-  { id: "email", label: "Email", icon: Mail, tone: "default" as const },
   {
     id: "assign-role",
     label: "Assign Role",
     icon: Shield,
     tone: "default" as const,
   },
+  { id: "email", label: "Send Email", icon: Mail, tone: "default" as const },
   {
-    id: "assign-committee",
-    label: "Assign Committee",
-    icon: UsersRound,
+    id: "mark-paid",
+    label: "Mark Paid",
+    icon: BadgeCheck,
     tone: "default" as const,
-  },
-  {
-    id: "export",
-    label: "Export",
-    icon: Download,
-    tone: "default" as const,
-  },
-  {
-    id: "archive",
-    label: "Archive",
-    icon: Archive,
-    tone: "warning" as const,
   },
   {
     id: "delete",
@@ -95,8 +81,7 @@ export function MembersBulkActionBar({
             aria-label="Actions"
           >
             {ACTIONS.map((action) => {
-              const showDivider =
-                action.id === "archive" || action.id === "delete";
+              const showDivider = action.id === "delete";
 
               return (
                 <span key={action.id} className="members-bulk-bar-action-wrap">
@@ -115,9 +100,7 @@ export function MembersBulkActionBar({
                     className={
                       action.tone === "danger"
                         ? "members-bulk-bar-action is-danger is-soon"
-                        : action.tone === "warning"
-                          ? "members-bulk-bar-action is-warning is-soon"
-                          : "members-bulk-bar-action is-soon"
+                        : "members-bulk-bar-action is-soon"
                     }
                     aria-label={`${action.label} (Coming Soon)`}
                   >

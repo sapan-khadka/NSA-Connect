@@ -35,21 +35,14 @@ describe("MembersBulkActionBar", () => {
       screen.getByRole("toolbar", { name: "Bulk member actions" }),
     ).toBeInTheDocument();
 
-    const email = screen.getByRole("button", { name: /Email \(Coming Soon\)/i });
-    expect(email).toBeDisabled();
-    expect(email).toHaveAttribute("title", "Coming Soon");
-
     expect(
       screen.getByRole("button", { name: /Assign Role \(Coming Soon\)/i }),
     ).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: /Assign Committee \(Coming Soon\)/i }),
+      screen.getByRole("button", { name: /Send Email \(Coming Soon\)/i }),
     ).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: /Export \(Coming Soon\)/i }),
-    ).toBeDisabled();
-    expect(
-      screen.getByRole("button", { name: /Archive \(Coming Soon\)/i }),
+      screen.getByRole("button", { name: /Mark Paid \(Coming Soon\)/i }),
     ).toBeDisabled();
     expect(
       screen.getByRole("button", { name: /Delete \(Coming Soon\)/i }),

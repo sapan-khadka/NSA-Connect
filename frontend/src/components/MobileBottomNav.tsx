@@ -59,9 +59,9 @@ export function MobileBottomNav() {
     <nav
       aria-label="Mobile navigation"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 backdrop-blur-sm lg:hidden"
-      style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
+      style={{ paddingBottom: "max(0.35rem, env(safe-area-inset-bottom))" }}
     >
-      <ul className="mx-auto flex max-w-lg items-stretch justify-around px-2 pt-1">
+      <ul className="mx-auto flex max-w-lg items-stretch justify-around px-2 pt-0.5">
         {tabs.map((tab) => (
           <li key={tab.to} className="flex-1">
             <NavLink

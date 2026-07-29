@@ -1,6 +1,10 @@
 /**
  * Member Workspace layout shell — Linear / GitHub / Stripe / Notion inspired.
  * Only renders real section slots; no hollow “coming soon” placeholders.
+ *
+ * Column order (profile-first):
+ *   Main: Responsibilities → Recent Activity → Schedule
+ *   Aside: Notes → Documents → Financial → Insights (when present)
  */
 
 import type { ReactNode } from "react";
@@ -9,38 +13,26 @@ type MemberWorkspaceLayoutProps = {
   /** Workspace header (identity, back nav, badges). */
   header: ReactNode;
   /**
-   * Section directly under the header (Today's Snapshot).
-   * When omitted, nothing is rendered between header and the content grid.
+   * Optional section under the header (legacy overview / snapshot).
+   * Prefer omitting — the table of content cards should lead.
    */
   overview?: ReactNode;
-  /**
-   * Primary-column responsibilities / tasks section.
-   */
+  /** Primary-column responsibilities / tasks section. */
   responsibilities?: ReactNode;
-  /**
-   * Rendered directly under Current Responsibilities / Tasks.
-   */
-  schedule?: ReactNode;
-  /**
-   * Rendered directly under Upcoming Schedule.
-   */
+  /** Primary column — recent activity (admins care most). */
   recentActivity?: ReactNode;
-  /**
-   * Rendered directly under Recent Activity.
-   */
-  financialStatus?: ReactNode;
+  /** Primary column — upcoming schedule. */
+  schedule?: ReactNode;
   /**
    * Officer-only Private Notes. When omitted (general members), nothing is
    * rendered — no placeholder, empty state, or locked card.
    */
   privateNotes?: ReactNode;
-  /**
-   * Rendered in the aside directly under Private Notes.
-   */
+  /** Aside — documents. */
   documents?: ReactNode;
-  /**
-   * Final aside section.
-   */
+  /** Aside — financial status. */
+  financialStatus?: ReactNode;
+  /** Aside — AI insights (pass only when there are insights). */
   insights?: ReactNode;
 };
 
@@ -48,20 +40,22 @@ export function MemberWorkspaceLayout({
   header,
   overview,
   responsibilities,
-  schedule,
   recentActivity,
-  financialStatus,
+  schedule,
   privateNotes,
   documents,
+  financialStatus,
   insights,
 }: MemberWorkspaceLayoutProps) {
   const hasMain =
     Boolean(responsibilities) ||
-    Boolean(schedule) ||
     Boolean(recentActivity) ||
-    Boolean(financialStatus);
+    Boolean(schedule);
   const hasAside =
-    Boolean(privateNotes) || Boolean(documents) || Boolean(insights);
+    Boolean(privateNotes) ||
+    Boolean(documents) ||
+    Boolean(financialStatus) ||
+    Boolean(insights);
 
   return (
     <div className="member-workspace">
@@ -75,9 +69,8 @@ export function MemberWorkspaceLayout({
             {hasMain ? (
               <div className="member-workspace-main">
                 {responsibilities}
-                {schedule}
                 {recentActivity}
-                {financialStatus}
+                {schedule}
               </div>
             ) : null}
 
@@ -85,6 +78,7 @@ export function MemberWorkspaceLayout({
               <aside className="member-workspace-aside" aria-label="Sidebar">
                 {privateNotes}
                 {documents}
+                {financialStatus}
                 {insights}
               </aside>
             ) : null}

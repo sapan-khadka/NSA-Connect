@@ -81,7 +81,7 @@ describe("member-workspace-schedule", () => {
     const now = new Date("2030-01-01T00:00:00.000Z");
     expect(
       commitmentFromUpcomingRsvp(makeEvent(), "going", now)?.detail,
-    ).toBe("Going");
+    ).toBe("RSVP · Going");
     expect(commitmentFromUpcomingRsvp(makeEvent(), "not_going", now)).toBeNull();
     expect(
       commitmentFromUpcomingRsvp(

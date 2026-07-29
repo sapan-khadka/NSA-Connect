@@ -60,7 +60,7 @@ export const colors = {
   },
   roleBadge: {
     president: { fg: "#9A6B2E", bg: "#FBF0E3" },
-    vicePresident: { fg: "#8B6048", bg: "#F7EDE8" },
+    vicePresident: { fg: "#0E7490", bg: "#ECFEFF" },
     secretary: { fg: "#5C6B7A", bg: "#EDF1F5" },
     treasurer: { fg: "#0F766E", bg: "#F0FDFA" },
     eventManager: { fg: "#6B5494", bg: "#F0ECF7" },

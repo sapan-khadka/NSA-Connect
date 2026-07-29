@@ -42,8 +42,8 @@ const KIND_LABELS: Record<ScheduleCommitmentKind, string> = {
 };
 
 const RSVP_DETAIL: Partial<Record<RsvpStatus, string>> = {
-  going: "Going",
-  maybe: "Maybe",
+  going: "RSVP · Going",
+  maybe: "RSVP · Maybe",
 };
 
 /** Relative-friendly when label: "Tomorrow • 6:00 PM". */

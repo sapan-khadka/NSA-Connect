@@ -1,6 +1,7 @@
 /**
  * Member Profile — Member Workspace layout shell.
- * Header, Today's Snapshot, and Current Responsibilities use real APIs where available.
+ * Identity header + primary workflows (responsibilities, activity, schedule)
+ * and supporting aside (notes, documents, financial). No snapshot dashboard.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -14,7 +15,6 @@ import { MemberWorkspaceInsights } from "../components/member-workspace/MemberWo
 import { MemberWorkspaceLayout } from "../components/member-workspace/MemberWorkspaceLayout";
 import { MemberWorkspacePrivateNotes } from "../components/member-workspace/MemberWorkspacePrivateNotes";
 import { MemberWorkspaceRecentActivity } from "../components/member-workspace/MemberWorkspaceRecentActivity";
-import { MemberWorkspaceTodaysSnapshot } from "../components/member-workspace/MemberWorkspaceTodaysSnapshot";
 import { MemberWorkspaceUpcomingSchedule } from "../components/member-workspace/MemberWorkspaceUpcomingSchedule";
 import { Skeleton } from "../design-system/components/Skeleton";
 import { useAuth } from "../context/useAuth";
@@ -42,10 +42,6 @@ import {
   fetchMemberMeetingAttendanceStreak,
 } from "../lib/members-api";
 import {
-  activeTaskCountFromMyTasks,
-  activeTaskCountFromOverviewMember,
-} from "../lib/member-workspace-metrics";
-import {
   buildResponsibilityItems,
   getAssignTaskPath,
   getResponsibilitiesViewAllPath,
@@ -56,7 +52,6 @@ import {
   type ScheduleCommitment,
 } from "../lib/member-workspace-schedule";
 import { buildMemberWorkspaceInsights } from "../lib/member-workspace-insights";
-import { buildMemberWorkspaceSnapshot } from "../lib/member-workspace-snapshot";
 import {
   canManageEventTasks,
   canAccessMemberDocuments,
@@ -66,6 +61,50 @@ import {
   isMemberRole,
 } from "../lib/roles";
 import { getCurrentSemesterSlug } from "../lib/semester";
+
+function formatMilestoneDate(iso: string | null | undefined): string | null {
+  if (!iso) {
+    return null;
+  }
+  const date = new Date(iso);
+  if (!Number.isFinite(date.getTime())) {
+    return null;
+  }
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOfDay = new Date(date);
+  startOfDay.setHours(0, 0, 0, 0);
+  const dayDiff = Math.round(
+    (startOfToday.getTime() - startOfDay.getTime()) / 86_400_000,
+  );
+  if (dayDiff === 0) {
+    return "Today";
+  }
+  if (dayDiff === 1) {
+    return "Yesterday";
+  }
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+  }).format(date);
+}
+
+function formatLastPaymentLabel(input: {
+  activityItems: MemberActivityItem[];
+  duesHistory: MemberDuesHistoryItem[];
+}): string | null {
+  const lastPaymentActivity = input.activityItems.find(
+    (row) => row.kind === "dues_paid",
+  );
+  const lastPaidAt =
+    lastPaymentActivity?.occurredAt ??
+    input.duesHistory
+      .map((row) => row.paid_at)
+      .filter((value): value is string => Boolean(value))
+      .sort((left, right) => right.localeCompare(left))[0] ??
+    null;
+  return formatMilestoneDate(lastPaidAt);
+}
 
 function MemberWorkspaceSkeleton() {
   return (
@@ -78,39 +117,26 @@ function MemberWorkspaceSkeleton() {
       <div className="member-workspace-shell">
         <header className="member-workspace-header">
           <div className="member-workspace-header-inner">
-            <Skeleton height={14} width={120} />
-            <div className="member-workspace-header-main mt-4">
-              <Skeleton height={72} width={72} variant="circular" />
-              <div className="min-w-0 flex-1 space-y-3">
-                <Skeleton height={32} width="42%" />
-                <div className="flex gap-2">
-                  <Skeleton height={22} width={64} />
-                  <Skeleton height={22} width={64} />
-                </div>
-                <Skeleton height={12} width="70%" />
+            <Skeleton height={14} width={88} />
+            <div className="member-workspace-header-main mt-3">
+              <Skeleton height={56} width={56} variant="circular" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton height={26} width="40%" />
+                <Skeleton height={14} width="28%" />
                 <Skeleton height={12} width="55%" />
               </div>
             </div>
           </div>
         </header>
 
-        <section className="member-workspace-snapshot" aria-hidden="true">
-          <Skeleton height={14} width={140} />
-          <div className="member-workspace-snapshot-chips mt-3">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <Skeleton key={index} height={44} width="100%" />
-            ))}
-          </div>
-        </section>
-
         <div className="member-workspace-grid" aria-hidden="true">
-          <div className="member-workspace-main space-y-4">
-            <Skeleton height={180} width="100%" />
+          <div className="member-workspace-main space-y-3">
             <Skeleton height={140} width="100%" />
-          </div>
-          <div className="member-workspace-aside space-y-4">
             <Skeleton height={120} width="100%" />
-            <Skeleton height={160} width="100%" />
+          </div>
+          <div className="member-workspace-aside space-y-3">
+            <Skeleton height={100} width="100%" />
+            <Skeleton height={120} width="100%" />
           </div>
         </div>
       </div>
@@ -122,7 +148,6 @@ export function MemberProfilePage() {
   const { memberId } = useParams();
   const { member: currentMember } = useAuth();
   const [profile, setProfile] = useState<MemberResponse | null>(null);
-  const [openTaskCount, setOpenTaskCount] = useState<number | null>(null);
   const [memberTasks, setMemberTasks] = useState<EventTaskResponse[]>([]);
   const [scheduleItems, setScheduleItems] = useState<ScheduleCommitment[]>([]);
   const [activityItems, setActivityItems] = useState<MemberActivityItem[]>([]);
@@ -177,19 +202,6 @@ export function MemberProfilePage() {
     [duesHistory],
   );
 
-  const chips = useMemo(() => {
-    if (!profile) {
-      return [];
-    }
-    return buildMemberWorkspaceSnapshot({
-      member: profile,
-      openTaskCount,
-      duesStatusLabel: duesHistoryUnavailable
-        ? null
-        : financialSummary.currentStatusLabel,
-    });
-  }, [profile, openTaskCount, duesHistoryUnavailable, financialSummary]);
-
   const workspaceInsights = useMemo(
     () =>
       buildMemberWorkspaceInsights({
@@ -203,6 +215,15 @@ export function MemberProfilePage() {
       financialSummary,
       memberTasks,
     ],
+  );
+
+  const lastPaymentLabel = useMemo(
+    () =>
+      formatLastPaymentLabel({
+        activityItems,
+        duesHistory,
+      }),
+    [activityItems, duesHistory],
   );
 
   const viewAllPath = getResponsibilitiesViewAllPath({
@@ -231,7 +252,6 @@ export function MemberProfilePage() {
           return;
         }
         setProfile(member);
-        setOpenTaskCount(null);
         setMemberTasks([]);
         setScheduleItems([]);
         setActivityItems([]);
@@ -283,25 +303,18 @@ export function MemberProfilePage() {
           return;
         }
 
-        let nextOpenTaskCount: number | null = null;
         let tasks: EventTaskResponse[] = [];
 
         if (overviewResult) {
           const row = overviewResult.members.find(
             (entry) => entry.member_id === member.id,
           );
-          nextOpenTaskCount = activeTaskCountFromOverviewMember(row);
-          if (nextOpenTaskCount === null && row === undefined) {
-            nextOpenTaskCount = 0;
-          }
           tasks = row?.tasks ?? [];
         } else if (myTasksResult) {
-          nextOpenTaskCount = activeTaskCountFromMyTasks(myTasksResult.tasks);
           tasks = myTasksResult.tasks;
         }
 
         setMemberTasks(tasks);
-        setOpenTaskCount(nextOpenTaskCount);
         setScheduleItems(scheduleResult);
         setActivityItems(activityResult.items.map(mapMemberActivityApiItem));
         if (duesHistoryResult) {
@@ -317,7 +330,6 @@ export function MemberProfilePage() {
       } catch (fetchError) {
         if (!cancelled) {
           setProfile(null);
-          setOpenTaskCount(null);
           setMemberTasks([]);
           setScheduleItems([]);
           setActivityItems([]);
@@ -367,18 +379,11 @@ export function MemberProfilePage() {
           onMemberUpdated={setProfile}
         />
       }
-      overview={<MemberWorkspaceTodaysSnapshot chips={chips} />}
       responsibilities={
         <MemberWorkspaceCurrentResponsibilities
           items={responsibilityItems}
           viewAllPath={viewAllPath}
           assignTaskPath={assignTaskPath}
-        />
-      }
-      schedule={
-        <MemberWorkspaceUpcomingSchedule
-          items={schedulePreview.preview}
-          hasMore={schedulePreview.hasMore}
         />
       }
       recentActivity={
@@ -387,10 +392,17 @@ export function MemberProfilePage() {
           hasMore={activityPreview.hasMore}
         />
       }
+      schedule={
+        <MemberWorkspaceUpcomingSchedule
+          items={schedulePreview.preview}
+          hasMore={schedulePreview.hasMore}
+        />
+      }
       financialStatus={
         <MemberWorkspaceFinancialStatus
           summary={financialSummary}
           unavailable={duesHistoryUnavailable}
+          lastPaymentLabel={lastPaymentLabel}
         />
       }
       privateNotes={
@@ -411,7 +423,11 @@ export function MemberProfilePage() {
           )}
         />
       }
-      insights={<MemberWorkspaceInsights insights={workspaceInsights} />}
+      insights={
+        workspaceInsights.length > 0 ? (
+          <MemberWorkspaceInsights insights={workspaceInsights} />
+        ) : undefined
+      }
     />
   );
 }

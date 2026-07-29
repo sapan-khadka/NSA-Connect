@@ -71,4 +71,21 @@ describe("MemberActivityTimeline", () => {
       screen.getByText("Completed 'Book venue' for Dashain Night"),
     ).toBeInTheDocument();
   });
+
+  it("renders a flat list without day headers", () => {
+    render(
+      <MemoryRouter>
+        <MemberActivityTimeline
+          items={sampleItems}
+          layout="flat"
+          now={new Date("2030-06-15T15:00:00")}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText("Today")).not.toBeInTheDocument();
+    expect(screen.queryByText("Yesterday")).not.toBeInTheDocument();
+    expect(screen.getByText("Attended Dashain Night")).toBeInTheDocument();
+    expect(screen.getByText("Jun 15 · 10:00 AM")).toBeInTheDocument();
+  });
 });

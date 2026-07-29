@@ -32,7 +32,7 @@ describe("MemberWorkspaceDocuments", () => {
       within(section).getByRole("heading", { name: "Documents" }),
     ).toBeInTheDocument();
     expect(
-      within(section).getByText("Documents unavailable"),
+      within(section).getByText("Documents unavailable."),
     ).toBeInTheDocument();
     expect(memberDocumentsApi.fetchMemberDocuments).not.toHaveBeenCalled();
   });
@@ -96,7 +96,7 @@ describe("MemberWorkspaceDocuments", () => {
     render(<MemberWorkspaceDocuments memberId={2} canManage />);
 
     expect(
-      await screen.findByText("No documents on file."),
+      await screen.findByText("No documents uploaded."),
     ).toBeInTheDocument();
   });
 
@@ -109,7 +109,7 @@ describe("MemberWorkspaceDocuments", () => {
     });
 
     render(<MemberWorkspaceDocuments memberId={2} canManage />);
-    await screen.findByText("No documents on file.");
+    await screen.findByText("No documents uploaded.");
 
     expect(
       screen.queryByText(/For reimbursements, use Finance/),
@@ -151,7 +151,7 @@ describe("MemberWorkspaceDocuments", () => {
     });
 
     render(<MemberWorkspaceDocuments memberId={2} canManage />);
-    await screen.findByText("No documents on file.");
+    await screen.findByText("No documents uploaded.");
 
     await user.selectOptions(screen.getByLabelText("Category"), "waiver");
     const file = new File(["%PDF-1.4"], "waiver.pdf", {

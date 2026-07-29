@@ -1,10 +1,12 @@
 /**
- * Invite Member form values and client-side validation.
+ * Add Member form values and client-side validation.
  */
 
-export const INVITE_DRAFT_STORAGE_KEY = "nsa-connect.invite-member.draft";
+export const ADD_MEMBER_DRAFT_STORAGE_KEY = "nsa-connect.add-member.draft";
+/** Legacy key from the previous Invite Member flow. */
+const LEGACY_INVITE_DRAFT_STORAGE_KEY = "nsa-connect.invite-member.draft";
 
-export type InviteFormValues = {
+export type AddMemberFormValues = {
   firstName: string;
   lastName: string;
   studentId: string;
@@ -14,9 +16,11 @@ export type InviteFormValues = {
   phone: string;
 };
 
-export type InviteFormErrors = Partial<Record<keyof InviteFormValues, string>>;
+export type AddMemberFormErrors = Partial<
+  Record<keyof AddMemberFormValues, string>
+>;
 
-export const EMPTY_INVITE_FORM: InviteFormValues = {
+export const EMPTY_ADD_MEMBER_FORM: AddMemberFormValues = {
   firstName: "",
   lastName: "",
   studentId: "",
@@ -26,7 +30,7 @@ export const EMPTY_INVITE_FORM: InviteFormValues = {
   phone: "",
 };
 
-export const INVITE_FIELD_ORDER: (keyof InviteFormValues)[] = [
+export const ADD_MEMBER_FIELD_ORDER: (keyof AddMemberFormValues)[] = [
   "firstName",
   "lastName",
   "email",
@@ -58,9 +62,9 @@ function validateName(value: string, label: string): string | undefined {
   return undefined;
 }
 
-export function validateInviteField(
-  key: keyof InviteFormValues,
-  values: InviteFormValues,
+export function validateAddMemberField(
+  key: keyof AddMemberFormValues,
+  values: AddMemberFormValues,
 ): string | undefined {
   switch (key) {
     case "firstName":
@@ -107,10 +111,12 @@ export function validateInviteField(
   }
 }
 
-export function validateInviteForm(values: InviteFormValues): InviteFormErrors {
-  const errors: InviteFormErrors = {};
-  for (const key of INVITE_FIELD_ORDER) {
-    const message = validateInviteField(key, values);
+export function validateAddMemberForm(
+  values: AddMemberFormValues,
+): AddMemberFormErrors {
+  const errors: AddMemberFormErrors = {};
+  for (const key of ADD_MEMBER_FIELD_ORDER) {
+    const message = validateAddMemberField(key, values);
     if (message) {
       errors[key] = message;
     }
@@ -118,10 +124,10 @@ export function validateInviteForm(values: InviteFormValues): InviteFormErrors {
   return errors;
 }
 
-export function firstInviteErrorField(
-  errors: InviteFormErrors,
-): keyof InviteFormValues | null {
-  for (const key of INVITE_FIELD_ORDER) {
+export function firstAddMemberErrorField(
+  errors: AddMemberFormErrors,
+): keyof AddMemberFormValues | null {
+  for (const key of ADD_MEMBER_FIELD_ORDER) {
     if (errors[key]) {
       return key;
     }
@@ -129,23 +135,30 @@ export function firstInviteErrorField(
   return null;
 }
 
-export function loadInviteDraft(): InviteFormValues | null {
+export function loadAddMemberDraft(): AddMemberFormValues | null {
   try {
-    const raw = window.localStorage.getItem(INVITE_DRAFT_STORAGE_KEY);
+    const raw =
+      window.localStorage.getItem(ADD_MEMBER_DRAFT_STORAGE_KEY) ??
+      window.localStorage.getItem(LEGACY_INVITE_DRAFT_STORAGE_KEY);
     if (!raw) {
       return null;
     }
-    const parsed = JSON.parse(raw) as Partial<InviteFormValues>;
-    return { ...EMPTY_INVITE_FORM, ...parsed };
+    const parsed = JSON.parse(raw) as Partial<AddMemberFormValues>;
+    return { ...EMPTY_ADD_MEMBER_FORM, ...parsed };
   } catch {
     return null;
   }
 }
 
-export function saveInviteDraft(values: InviteFormValues): void {
-  window.localStorage.setItem(INVITE_DRAFT_STORAGE_KEY, JSON.stringify(values));
+export function saveAddMemberDraft(values: AddMemberFormValues): void {
+  window.localStorage.setItem(
+    ADD_MEMBER_DRAFT_STORAGE_KEY,
+    JSON.stringify(values),
+  );
+  window.localStorage.removeItem(LEGACY_INVITE_DRAFT_STORAGE_KEY);
 }
 
-export function clearInviteDraft(): void {
-  window.localStorage.removeItem(INVITE_DRAFT_STORAGE_KEY);
+export function clearAddMemberDraft(): void {
+  window.localStorage.removeItem(ADD_MEMBER_DRAFT_STORAGE_KEY);
+  window.localStorage.removeItem(LEGACY_INVITE_DRAFT_STORAGE_KEY);
 }

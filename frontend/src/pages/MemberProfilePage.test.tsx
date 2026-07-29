@@ -113,13 +113,13 @@ function renderMemberProfile() {
   );
 }
 
-describe("MemberProfilePage today's snapshot", () => {
+describe("MemberProfilePage workspace", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
   });
 
-  it("renders Today's Snapshot chips from real member, tasks, and dues", async () => {
+  it("renders profile without snapshot dashboard and with primary sections", async () => {
     const { fetchMemberById } = await import("../lib/members-api");
     const { fetchMemberDuesHistory } = await import("../lib/dues-api");
     const { fetchTaskOverview } = await import("../lib/event-tasks-api");
@@ -206,21 +206,7 @@ describe("MemberProfilePage today's snapshot", () => {
     renderMemberProfile();
 
     expect(await screen.findByText("Secretary User")).toBeInTheDocument();
-    const snapshot = screen.getByLabelText("Today's Snapshot");
-    expect(snapshot).toBeInTheDocument();
-    expect(within(snapshot).getByText("Active Status")).toBeInTheDocument();
-    expect(within(snapshot).getByText("Active")).toBeInTheDocument();
-    expect(within(snapshot).getByText("Dues Status")).toBeInTheDocument();
-    expect(within(snapshot).getByText("Outstanding")).toBeInTheDocument();
-    expect(within(snapshot).getByText("Next Event RSVP")).toBeInTheDocument();
-    expect(within(snapshot).getByText("Open Tasks")).toBeInTheDocument();
-    expect(within(snapshot).getByText("3")).toBeInTheDocument();
-    expect(
-      within(snapshot).getByText("Board / Committee Role"),
-    ).toBeInTheDocument();
-    expect(within(snapshot).getByText("Board · Secretary")).toBeInTheDocument();
-    expect(within(snapshot).getByText("Graduation Year")).toBeInTheDocument();
-    expect(within(snapshot).getByText("2028")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Today's Snapshot")).not.toBeInTheDocument();
 
     const responsibilities = screen.getByLabelText("Current Responsibilities");
     expect(
@@ -232,25 +218,18 @@ describe("MemberProfilePage today's snapshot", () => {
     expect(
       within(responsibilities).queryByText("Done already"),
     ).not.toBeInTheDocument();
-    expect(
-      within(responsibilities).getByRole("link", { name: "Open Book venue" }),
-    ).toHaveAttribute("href", "/events/5/manage");
-
-    const schedule = screen.getByLabelText("Upcoming Schedule");
-    expect(
-      within(schedule).getByRole("heading", { name: "Upcoming Schedule" }),
-    ).toBeInTheDocument();
-    expect(
-      within(schedule).getByText("Nothing on the schedule yet."),
-    ).toBeInTheDocument();
 
     const activity = screen.getByLabelText("Recent Activity");
     expect(
       within(activity).getByRole("heading", { name: "Recent Activity" }),
     ).toBeInTheDocument();
+    expect(within(activity).getByText("No activity.")).toBeInTheDocument();
+
+    const schedule = screen.getByLabelText("Upcoming Schedule");
     expect(
-      within(activity).getByText("No recent activity yet."),
+      within(schedule).getByRole("heading", { name: "Upcoming Schedule" }),
     ).toBeInTheDocument();
+    expect(within(schedule).getByText("No schedule.")).toBeInTheDocument();
 
     const finance = screen.getByLabelText("Financial Status");
     expect(
@@ -263,17 +242,13 @@ describe("MemberProfilePage today's snapshot", () => {
       within(notes).getByRole("heading", { name: "Private Notes" }),
     ).toBeInTheDocument();
     expect(fetchMemberNotes).toHaveBeenCalledWith(2);
-    expect(
-      await within(notes).findByText("No private notes yet."),
-    ).toBeInTheDocument();
+    expect(await within(notes).findByText("No notes.")).toBeInTheDocument();
 
     const documents = screen.getByLabelText("Documents");
     expect(
       within(documents).getByRole("heading", { name: "Documents" }),
     ).toBeInTheDocument();
-    expect(
-      await within(documents).findByText("No documents on file."),
-    ).toBeInTheDocument();
+    expect(await within(documents).findByText("No documents uploaded.")).toBeInTheDocument();
 
     const insights = screen.getByLabelText("AI Insights");
     expect(
@@ -284,7 +259,7 @@ describe("MemberProfilePage today's snapshot", () => {
     ).toBeInTheDocument();
   });
 
-  it("hides Private Notes entirely for general members", async () => {
+  it("hides Private Notes and empty AI for general members", async () => {
     const { fetchMemberById } = await import("../lib/members-api");
     const { fetchMyDuesHistory } = await import("../lib/dues-api");
     const { fetchMyEventTasks } = await import("../lib/event-tasks-api");
@@ -344,12 +319,12 @@ describe("MemberProfilePage today's snapshot", () => {
     );
 
     expect(await screen.findByText("General Self")).toBeInTheDocument();
-    const snapshot = screen.getByLabelText("Today's Snapshot");
-    expect(within(snapshot).getByText("Paid")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Today's Snapshot")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Private Notes")).not.toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: "Private Notes" }),
     ).not.toBeInTheDocument();
     expect(fetchMemberNotes).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText("AI Insights")).not.toBeInTheDocument();
   });
 });

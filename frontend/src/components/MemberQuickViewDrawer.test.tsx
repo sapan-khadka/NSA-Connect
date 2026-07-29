@@ -2,12 +2,44 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MemberResponse } from "../lib/auth-api";
 import type { MemberDuesRecord } from "../lib/dues-api";
 import { MockAuthProvider } from "../test/test-utils";
 import { MemberQuickViewDrawer } from "./MemberQuickViewDrawer";
+
+vi.mock("../lib/members-api", async () => {
+  const actual = await vi.importActual<typeof import("../lib/members-api")>(
+    "../lib/members-api",
+  );
+  return {
+    ...actual,
+    fetchMemberActivity: vi.fn(),
+  };
+});
+
+vi.mock("../lib/event-tasks-api", async () => {
+  const actual =
+    await vi.importActual<typeof import("../lib/event-tasks-api")>(
+      "../lib/event-tasks-api",
+    );
+  return {
+    ...actual,
+    fetchTaskOverview: vi.fn(),
+    fetchMyEventTasks: vi.fn(),
+  };
+});
+
+vi.mock("../lib/member-workspace-schedule", async () => {
+  const actual = await vi.importActual<
+    typeof import("../lib/member-workspace-schedule")
+  >("../lib/member-workspace-schedule");
+  return {
+    ...actual,
+    fetchMemberWorkspaceSchedule: vi.fn(),
+  };
+});
 
 const member: MemberResponse = {
   id: 3,
@@ -57,11 +89,25 @@ function renderQuickView(ui: ReactElement) {
 }
 
 describe("MemberQuickViewDrawer", () => {
+  beforeEach(async () => {
+    const { fetchMemberActivity } = await import("../lib/members-api");
+    const { fetchTaskOverview, fetchMyEventTasks } = await import(
+      "../lib/event-tasks-api"
+    );
+    const { fetchMemberWorkspaceSchedule } = await import(
+      "../lib/member-workspace-schedule"
+    );
+    vi.mocked(fetchMemberActivity).mockResolvedValue({ items: [], total: 0 });
+    vi.mocked(fetchTaskOverview).mockResolvedValue({ members: [] } as never);
+    vi.mocked(fetchMyEventTasks).mockResolvedValue({ tasks: [] } as never);
+    vi.mocked(fetchMemberWorkspaceSchedule).mockResolvedValue([]);
+  });
+
   afterEach(() => {
     cleanup();
   });
 
-  it("renders header, honest quick stats, empty activity, and actions", () => {
+  it("renders compact header, detail rows, and text profile CTA", async () => {
     renderQuickView(
       <MemoryRouter>
         <MemberQuickViewDrawer
@@ -69,6 +115,8 @@ describe("MemberQuickViewDrawer", () => {
           open
           onClose={() => undefined}
           duesRecord={duesRecord}
+          engagement="active"
+          activityItems={[]}
         />
       </MemoryRouter>,
     );
@@ -76,45 +124,39 @@ describe("MemberQuickViewDrawer", () => {
     const dialog = screen.getByRole("dialog", { name: /Alex Member/i });
     expect(within(dialog).getByText("Alex Member")).toBeInTheDocument();
     expect(within(dialog).getByText("alex@semo.edu")).toBeInTheDocument();
-    expect(within(dialog).getByText("Board")).toBeInTheDocument();
-    expect(within(dialog).getByText("Active")).toBeInTheDocument();
+    expect(within(dialog).getByText(/Board · Active/)).toBeInTheDocument();
 
-    const overview = within(dialog).getByLabelText("Quick stats");
-    expect(within(overview).getByText("Outstanding Dues")).toBeInTheDocument();
-    expect(within(overview).getByText("$15.00")).toBeInTheDocument();
-    expect(within(overview).getByText("Graduation Year")).toBeInTheDocument();
-    expect(within(overview).getByText("2028")).toBeInTheDocument();
-    expect(within(overview).getByText("Major")).toBeInTheDocument();
-    expect(within(overview).getByText("Computer Science")).toBeInTheDocument();
-    expect(within(overview).queryByText("Attendance")).not.toBeInTheDocument();
-    expect(within(overview).queryByText("Committee")).not.toBeInTheDocument();
+    const details = within(dialog).getByLabelText("Member facts");
+    expect(within(details).getByText("Graduation")).toBeInTheDocument();
+    expect(within(details).getByText("2028")).toBeInTheDocument();
+    expect(within(details).getByText("Major")).toBeInTheDocument();
+    expect(within(details).getByText("Computer Science")).toBeInTheDocument();
+    expect(within(details).getByText("Outstanding")).toBeInTheDocument();
+    expect(within(details).getByText("$15")).toBeInTheDocument();
+    expect(within(details).queryByText("Attendance")).not.toBeInTheDocument();
 
+    expect(
+      within(dialog).getByRole("heading", { name: "Responsibilities" }),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText("Board member")).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("heading", { name: "Upcoming" }),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText("No upcoming events.")).toBeInTheDocument();
     expect(
       within(dialog).getByRole("heading", { name: "Recent Activity" }),
     ).toBeInTheDocument();
-    expect(
-      within(dialog).getByText("No recent activity yet."),
-    ).toBeInTheDocument();
+    expect(within(dialog).getByText("No activity yet.")).toBeInTheDocument();
 
     expect(
-      within(dialog).getByRole("button", { name: "View Full Profile" }),
-    ).toBeInTheDocument();
+      within(dialog).getByRole("link", { name: /View full profile/i }),
+    ).toHaveAttribute("href", "/members/3");
     expect(
-      within(dialog).queryByRole("button", { name: "Edit Member" }),
+      within(dialog).queryByRole("button", { name: "View Full Profile" }),
     ).not.toBeInTheDocument();
-    expect(
-      within(dialog).getByRole("button", {
-        name: "Message Alex Member",
-      }),
-    ).toBeEnabled();
-    expect(
-      within(dialog).getByRole("link", {
-        name: "Email Alex Member",
-      }),
-    ).toHaveAttribute("href", "mailto:alex@semo.edu");
   });
 
-  it("shows Edit Member when onEditMember is provided", async () => {
+  it("keeps Edit / Message / Email in the overflow menu", async () => {
     const user = userEvent.setup();
     const onEditMember = vi.fn();
 
@@ -125,12 +167,24 @@ describe("MemberQuickViewDrawer", () => {
           open
           onClose={() => undefined}
           onEditMember={onEditMember}
+          activityItems={[]}
         />
       </MemoryRouter>,
     );
 
-    await user.click(screen.getByRole("button", { name: "Edit Member" }));
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    const menu = screen.getByRole("menu", { name: "Member actions" });
+    await user.click(within(menu).getByRole("menuitem", { name: "Edit" }));
     expect(onEditMember).toHaveBeenCalledWith(member);
+
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    const openMenu = screen.getByRole("menu", { name: "Member actions" });
+    expect(
+      within(openMenu).getByRole("menuitem", { name: "Email" }),
+    ).toHaveAttribute("href", "mailto:alex@semo.edu");
+    expect(
+      within(openMenu).getByRole("menuitem", { name: "Message" }),
+    ).toBeEnabled();
   });
 
   it("renders provided activity items when available", () => {
@@ -153,9 +207,7 @@ describe("MemberQuickViewDrawer", () => {
 
     expect(screen.getByText("Joined organization")).toBeInTheDocument();
     expect(screen.getByText("Jan 12")).toBeInTheDocument();
-    expect(
-      screen.queryByText("No recent activity yet."),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("No activity yet.")).not.toBeInTheDocument();
   });
 
   it("hides when closed", () => {
@@ -177,7 +229,12 @@ describe("MemberQuickViewDrawer", () => {
 
     renderQuickView(
       <MemoryRouter>
-        <MemberQuickViewDrawer member={member} open onClose={onClose} />
+        <MemberQuickViewDrawer
+          member={member}
+          open
+          onClose={onClose}
+          activityItems={[]}
+        />
       </MemoryRouter>,
     );
 

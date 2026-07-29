@@ -1,6 +1,12 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { MemberResponse } from "../../lib/auth-api";
 import { MockAuthProvider } from "../../test/test-utils";
@@ -34,9 +40,10 @@ const boardViewer: MemberResponse = {
 describe("MemberWorkspaceHeader", () => {
   afterEach(() => {
     cleanup();
+    vi.restoreAllMocks();
   });
 
-  it("renders premium overview with real metadata and honest empties", () => {
+  it("renders compact overview with Edit Member and overflow only", () => {
     render(
       <MockAuthProvider value={{ member: boardViewer, isAuthenticated: true }}>
         <MemoryRouter>
@@ -46,7 +53,7 @@ describe("MemberWorkspaceHeader", () => {
     );
 
     expect(
-      screen.getByRole("link", { name: /Back to Members/i }),
+      screen.getByRole("link", { name: /^Members$/i }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { level: 1, name: "Alex Member" }),
@@ -55,29 +62,25 @@ describe("MemberWorkspaceHeader", () => {
     expect(screen.getByText("Active")).toBeInTheDocument();
 
     const details = screen.getByLabelText("Member details");
-    expect(within(details).getByText("Email")).toBeInTheDocument();
     expect(within(details).getByText("alex@semo.edu")).toBeInTheDocument();
-    expect(within(details).getByText("Phone")).toBeInTheDocument();
-    expect(within(details).getByText("Graduation Year")).toBeInTheDocument();
-    expect(within(details).getByText("2028")).toBeInTheDocument();
-    expect(within(details).getByText("Joined Organization")).toBeInTheDocument();
-    expect(within(details).getAllByText("—").length).toBeGreaterThanOrEqual(2);
+    expect(within(details).getByText("Class of 2028")).toBeInTheDocument();
+    expect(within(details).getByText(/Joined/)).toBeInTheDocument();
 
     expect(
       screen.getByRole("button", { name: "Edit Member" }),
     ).toBeEnabled();
     expect(
-      screen.getByRole("button", { name: "Message Alex Member" }),
+      screen.getByRole("button", { name: "More actions" }),
     ).toBeEnabled();
     expect(
-      screen.getByRole("link", { name: "Email Alex Member" }),
-    ).toHaveAttribute("href", "mailto:alex@semo.edu");
+      screen.queryByRole("button", { name: "Message Alex Member" }),
+    ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "More actions (Coming Soon)" }),
-    ).toBeDisabled();
+      screen.queryByRole("link", { name: "Email Alex Member" }),
+    ).not.toBeInTheDocument();
   });
 
-  it("hides Edit Member for general viewers", () => {
+  it("hides Edit Member for general viewers but keeps overflow", () => {
     render(
       <MockAuthProvider
         value={{
@@ -95,11 +98,54 @@ describe("MemberWorkspaceHeader", () => {
       screen.queryByRole("button", { name: "Edit Member" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Message Alex Member" }),
+      screen.getByRole("button", { name: "More actions" }),
     ).toBeEnabled();
+  });
+
+  it("opens a grouped overflow menu with communication and admin actions", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+
+    render(
+      <MockAuthProvider value={{ member: boardViewer, isAuthenticated: true }}>
+        <MemoryRouter>
+          <MemberWorkspaceHeader member={member} />
+        </MemoryRouter>
+      </MockAuthProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "More actions" }));
+
+    const menu = screen.getByRole("menu");
+    expect(within(menu).getByText("Communication")).toBeInTheDocument();
+    expect(within(menu).getByText("Member")).toBeInTheDocument();
+    expect(within(menu).getByText("Danger")).toBeInTheDocument();
+
+    expect(within(menu).getByRole("menuitem", { name: "Message" })).toBeEnabled();
+    expect(within(menu).getByRole("menuitem", { name: "Email" })).toHaveAttribute(
+      "href",
+      "mailto:alex@semo.edu",
+    );
+    expect(within(menu).getByRole("menuitem", { name: "Copy email" })).toBeEnabled();
     expect(
-      screen.getByRole("link", { name: "Email Alex Member" }),
-    ).toHaveAttribute("href", "mailto:alex@semo.edu");
+      within(menu).getByRole("menuitem", { name: "Change role" }),
+    ).toBeDisabled();
+    expect(
+      within(menu).getByRole("menuitem", { name: "Reset password" }),
+    ).toBeDisabled();
+    expect(
+      within(menu).getByRole("menuitem", { name: "Archive member" }),
+    ).toBeDisabled();
+    expect(
+      within(menu).getByRole("menuitem", { name: "Delete member" }),
+    ).toBeDisabled();
+
+    fireEvent.click(within(menu).getByRole("menuitem", { name: "Copy email" }));
+    expect(writeText).toHaveBeenCalledWith("alex@semo.edu");
+    expect(await screen.findByText("Copied")).toBeInTheDocument();
   });
 
   it("shows committee badge only when provided", () => {

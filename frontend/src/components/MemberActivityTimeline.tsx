@@ -8,6 +8,7 @@ import { Link } from "react-router-dom";
 
 import { AppIcon } from "./ui/AppIcon";
 import {
+  formatActivityDateTimeLabel,
   formatActivityTimeLabel,
   groupMemberActivityByDay,
   MEMBER_ACTIVITY_ICONS,
@@ -22,6 +23,11 @@ type MemberActivityTimelineProps = {
   loading?: boolean;
   /** Override "now" for stable day labels in tests. */
   now?: Date;
+  /**
+   * Flat list without day headers — title stacked over “Jul 4 · 7:17 PM”.
+   * Used by Member Workspace preview cards.
+   */
+  layout?: "grouped" | "flat";
 };
 
 function ActivitySkeleton() {
@@ -95,18 +101,29 @@ function ActivityRow({
   item,
   now,
   isLast,
+  flat,
 }: {
   item: MemberActivityItem;
   now: Date;
   isLast: boolean;
+  flat: boolean;
 }) {
   const Icon = MEMBER_ACTIVITY_ICONS[item.kind];
+  const whenLabel = flat
+    ? formatActivityDateTimeLabel(item.occurredAt)
+    : formatActivityTimeLabel(item.occurredAt, now);
   const body = (
     <>
-      <div className="member-activity-row-top">
+      <div
+        className={
+          flat
+            ? "member-activity-row-top member-activity-row-top--stacked"
+            : "member-activity-row-top"
+        }
+      >
         <h4 className="member-activity-title">{item.title}</h4>
         <time dateTime={item.occurredAt} className="member-activity-time">
-          {formatActivityTimeLabel(item.occurredAt, now)}
+          {whenLabel}
         </time>
       </div>
       {item.detail ? (
@@ -138,8 +155,10 @@ export function MemberActivityTimeline({
   items = [],
   loading = false,
   now: nowProp,
+  layout = "grouped",
 }: MemberActivityTimelineProps) {
   const now = nowProp ?? new Date();
+  const flat = layout === "flat";
 
   if (loading) {
     return <ActivitySkeleton />;
@@ -147,6 +166,27 @@ export function MemberActivityTimeline({
 
   if (items.length === 0) {
     return <ActivityEmpty />;
+  }
+
+  if (flat) {
+    return (
+      <div
+        className="member-activity member-activity--flat"
+        aria-label="Member activity timeline"
+      >
+        <ol className="member-activity-list">
+          {items.map((entry, index) => (
+            <ActivityRow
+              key={entry.id}
+              item={entry}
+              now={now}
+              isLast={index === items.length - 1}
+              flat
+            />
+          ))}
+        </ol>
+      </div>
+    );
   }
 
   const groups = groupMemberActivityByDay(items, now);
@@ -175,6 +215,7 @@ export function MemberActivityTimeline({
                 item={entry}
                 now={now}
                 isLast={index === group.items.length - 1}
+                flat={false}
               />
             ))}
           </ol>

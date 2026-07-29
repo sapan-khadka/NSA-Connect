@@ -19,6 +19,7 @@ import {
 
 import {
   formatActivityDayLabel,
+  formatActivityDateTimeLabel,
   formatActivityTimeLabel,
 } from "./event-activity-timeline";
 import { toLocalIsoDate } from "./calendar";
@@ -163,4 +164,8 @@ export function groupMemberActivityByDay(
   return [...groups.values()];
 }
 
-export { formatActivityDayLabel, formatActivityTimeLabel };
+export {
+  formatActivityDayLabel,
+  formatActivityDateTimeLabel,
+  formatActivityTimeLabel,
+};

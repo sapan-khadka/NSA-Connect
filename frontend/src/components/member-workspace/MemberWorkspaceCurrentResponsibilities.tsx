@@ -37,46 +37,12 @@ function ResponsibilitiesEmpty({
   assignTaskPath: string | null;
 }) {
   return (
-    <div className="member-workspace-resp-empty">
-      <div className="member-workspace-resp-empty-art" aria-hidden="true">
-        <svg
-          viewBox="0 0 120 80"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="member-workspace-resp-empty-svg"
-        >
-          <rect
-            x="18"
-            y="14"
-            width="84"
-            height="52"
-            rx="10"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            opacity="0.35"
-          />
-          <path
-            d="M38 34h44M38 44h28"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            opacity="0.28"
-          />
-          <circle cx="88" cy="52" r="14" fill="currentColor" opacity="0.08" />
-          <path
-            d="M82 52h12M88 46v12"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            opacity="0.4"
-          />
-        </svg>
-      </div>
-      <p className="member-workspace-resp-empty-title">
+    <div className="member-workspace-empty-block">
+      <p className="member-workspace-empty-inline">
         No current responsibilities.
       </p>
       {assignTaskPath ? (
-        <Link to={assignTaskPath} className="member-workspace-resp-assign-link">
+        <Link to={assignTaskPath} className="member-workspace-empty-link">
           Assign a task
         </Link>
       ) : null}
@@ -168,14 +134,10 @@ export function MemberWorkspaceCurrentResponsibilities({
             <h2 className="member-workspace-card-title">
               Current Responsibilities
             </h2>
-            <p className="member-workspace-card-desc">
-              What this member is responsible for right now.
-            </p>
           </div>
         </div>
         <Link to={viewAllPath} className="member-workspace-resp-view-all">
-          View All
-          <span aria-hidden="true"> →</span>
+          View all
         </Link>
       </div>
 

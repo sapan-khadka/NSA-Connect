@@ -35,7 +35,7 @@ describe("MemberWorkspaceUpcomingSchedule", () => {
       within(section).getByRole("heading", { name: "Upcoming Schedule" }),
     ).toBeInTheDocument();
     expect(within(section).getByText("Dashain Celebration")).toBeInTheDocument();
-    expect(within(section).getByText("Event")).toBeInTheDocument();
+    expect(within(section).getByText("Going")).toBeInTheDocument();
     expect(within(section).getByText("Tomorrow • 6:00 PM")).toBeInTheDocument();
     expect(
       within(section).getByRole("link", { name: "Open Dashain Celebration" }),
@@ -52,9 +52,7 @@ describe("MemberWorkspaceUpcomingSchedule", () => {
       </MemoryRouter>,
     );
 
-    expect(
-      screen.getByText("Nothing on the schedule yet."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("No schedule.")).toBeInTheDocument();
 
     rerender(
       <MemoryRouter>

@@ -45,8 +45,41 @@ describe("MemberWorkspaceFinancialStatus", () => {
     expect(
       within(section).getByRole("heading", { name: "Financial Status" }),
     ).toBeInTheDocument();
+    expect(within(section).getByText("Current dues")).toBeInTheDocument();
+    expect(within(section).getByText("Lifetime contributions")).toBeInTheDocument();
     expect(within(section).getByText(/Outstanding:/)).toBeInTheDocument();
     expect(within(section).getByText("$25.00")).toBeInTheDocument();
+  });
+
+  it("shows Paid with a check for current dues", () => {
+    const summary = buildFinancialStatusSummary({
+      currentSemester: "2026-spring",
+      records: [
+        {
+          id: 1,
+          member_id: 2,
+          semester: "2026-spring",
+          amount_owed: "20.00",
+          amount_paid: "20.00",
+          status: "paid",
+          paid_at: "2026-02-01T00:00:00Z",
+        },
+      ],
+    });
+
+    render(
+      <MemoryRouter>
+        <MemberWorkspaceFinancialStatus
+          summary={summary}
+          lastPaymentLabel="Jul 4"
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Paid")).toBeInTheDocument();
+    expect(screen.getByText("$20.00")).toBeInTheDocument();
+    expect(screen.getByText("Last payment")).toBeInTheDocument();
+    expect(screen.getByText("Jul 4")).toBeInTheDocument();
   });
 
   it("shows empty state when there is no history", () => {
@@ -61,6 +94,6 @@ describe("MemberWorkspaceFinancialStatus", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("No dues on record yet.")).toBeInTheDocument();
+    expect(screen.getByText("No dues on record.")).toBeInTheDocument();
   });
 });

@@ -4,10 +4,20 @@ import type { MemberResponse } from "./auth-api";
 import type { MemberDuesRecord } from "./dues-api";
 import {
   buildDuesLookup,
+  buildEngagementLookup,
   deriveMembersDirectoryKpis,
   EMPTY_MEMBERS_DIRECTORY_FILTERS,
   filterDirectoryMembers,
   formatOutstandingDuesCell,
+  getDirectorySectionLabel,
+  getMemberDirectoryPriority,
+  getMemberDirectoryRoleLabel,
+  getMemberDirectorySection,
+  getMemberDirectorySubtitle,
+  isBoardRosterMember,
+  isGeneralRosterMember,
+  isLeadershipMember,
+  sortMembersByDirectoryOrder,
 } from "./members-directory";
 
 const member = (overrides: Partial<MemberResponse> = {}): MemberResponse => ({
@@ -41,9 +51,110 @@ const dues = (
   ...overrides,
 });
 
+describe("directory roster classification", () => {
+  it("treats officer seats as leadership, not at-large board", () => {
+    const president = member({
+      id: 1,
+      role: "president",
+      position: "president",
+    });
+    const atLarge = member({ id: 2, role: "board", position: "member" });
+    const general = member({ id: 3, role: "general", position: "member" });
+
+    expect(isLeadershipMember(president)).toBe(true);
+    expect(isBoardRosterMember(president)).toBe(false);
+    expect(getMemberDirectorySection(president)).toBe("leadership");
+    expect(getMemberDirectoryPriority(president)).toBe(100);
+
+    expect(isLeadershipMember(atLarge)).toBe(false);
+    expect(isBoardRosterMember(atLarge)).toBe(true);
+    expect(getMemberDirectorySection(atLarge)).toBe("board");
+    expect(getMemberDirectoryPriority(atLarge)).toBe(50);
+
+    expect(isGeneralRosterMember(general)).toBe(true);
+    expect(getMemberDirectorySection(general)).toBe("general");
+    expect(getMemberDirectoryPriority(general)).toBe(10);
+  });
+});
+
+describe("getDirectorySectionLabel", () => {
+  it("uses short section titles", () => {
+    expect(getDirectorySectionLabel("leadership")).toBe("Leadership");
+    expect(getDirectorySectionLabel("board")).toBe("Board Members");
+    expect(getDirectorySectionLabel("general")).toBe("Members");
+  });
+});
+
+describe("getMemberDirectoryRoleLabel", () => {
+  it("prefers position labels over generic role", () => {
+    expect(
+      getMemberDirectoryRoleLabel(
+        member({ role: "president", position: "president" }),
+      ),
+    ).toBe("President");
+    expect(
+      getMemberDirectoryRoleLabel(
+        member({ role: "board", position: "event_manager" }),
+      ),
+    ).toBe("Event Manager");
+    expect(
+      getMemberDirectoryRoleLabel(
+        member({ role: "board", position: "member" }),
+      ),
+    ).toBe("Board");
+    expect(
+      getMemberDirectoryRoleLabel(
+        member({ role: "general", position: "member" }),
+      ),
+    ).toBe("General");
+  });
+});
+
+describe("getMemberDirectorySubtitle", () => {
+  it("shows seat for leadership and major · year for everyone else", () => {
+    expect(
+      getMemberDirectorySubtitle(
+        member({
+          role: "president",
+          position: "president",
+          major: "CS",
+          graduation_year: 2028,
+        }),
+      ),
+    ).toBe("President");
+
+    expect(
+      getMemberDirectorySubtitle(
+        member({
+          role: "board",
+          position: "member",
+          major: "Computer Science",
+          graduation_year: 2028,
+        }),
+      ),
+    ).toBe("Computer Science · 2028");
+
+    expect(
+      getMemberDirectorySubtitle(
+        member({
+          role: "general",
+          position: "member",
+          major: "",
+          graduation_year: 2027,
+        }),
+      ),
+    ).toBe("Class of 2027");
+  });
+});
+
 describe("filterDirectoryMembers", () => {
   const members = [
-    member({ id: 1, full_name: "Alex Member", role: "board" }),
+    member({
+      id: 1,
+      full_name: "Alex Board",
+      role: "board",
+      position: "member",
+    }),
     member({
       id: 2,
       full_name: "Sam General",
@@ -51,9 +162,15 @@ describe("filterDirectoryMembers", () => {
       status: "pending",
       graduation_year: 2027,
     }),
+    member({
+      id: 3,
+      full_name: "Pat President",
+      role: "president",
+      position: "president",
+    }),
   ];
 
-  it("filters by search, role, year, and status", () => {
+  it("filters by search, roster group, year, and status", () => {
     expect(
       filterDirectoryMembers(members, {
         ...EMPTY_MEMBERS_DIRECTORY_FILTERS,
@@ -66,7 +183,21 @@ describe("filterDirectoryMembers", () => {
         ...EMPTY_MEMBERS_DIRECTORY_FILTERS,
         role: "board",
       }),
-    ).toHaveLength(1);
+    ).toEqual([members[0]]);
+
+    expect(
+      filterDirectoryMembers(members, {
+        ...EMPTY_MEMBERS_DIRECTORY_FILTERS,
+        role: "leadership",
+      }),
+    ).toEqual([members[2]]);
+
+    expect(
+      filterDirectoryMembers(members, {
+        ...EMPTY_MEMBERS_DIRECTORY_FILTERS,
+        role: "general",
+      }),
+    ).toEqual([members[1]]);
 
     expect(
       filterDirectoryMembers(members, {
@@ -103,7 +234,73 @@ describe("filterDirectoryMembers", () => {
         ...EMPTY_MEMBERS_DIRECTORY_FILTERS,
         committee: "events",
       }),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
+  });
+});
+
+describe("sortMembersByDirectoryOrder", () => {
+  it("orders leadership by org hierarchy, then status, then name", () => {
+    const engagement = buildEngagementLookup([
+      { member_id: 10, status: "idle" },
+      { member_id: 11, status: "active" },
+      { member_id: 12, status: "active" },
+    ]);
+    const roster = [
+      member({
+        id: 10,
+        full_name: "Zoe Idle",
+        role: "general",
+        position: "member",
+      }),
+      member({
+        id: 11,
+        full_name: "Ann Active",
+        role: "general",
+        position: "member",
+      }),
+      member({
+        id: 12,
+        full_name: "Ben Board",
+        role: "board",
+        position: "member",
+      }),
+      member({
+        id: 13,
+        full_name: "Sam Secretary",
+        role: "board",
+        position: "secretary",
+      }),
+      member({
+        id: 16,
+        full_name: "Tina Treasurer",
+        role: "treasurer",
+        position: "treasurer",
+      }),
+      member({
+        id: 14,
+        full_name: "Pat President",
+        role: "president",
+        position: "president",
+      }),
+      member({
+        id: 15,
+        full_name: "Vic VP",
+        role: "board",
+        position: "vice_president",
+      }),
+    ];
+
+    expect(
+      sortMembersByDirectoryOrder(roster, engagement).map((m) => m.full_name),
+    ).toEqual([
+      "Pat President",
+      "Vic VP",
+      "Sam Secretary",
+      "Tina Treasurer",
+      "Ben Board",
+      "Ann Active",
+      "Zoe Idle",
+    ]);
   });
 });
 
@@ -134,7 +331,9 @@ describe("deriveMembersDirectoryKpis", () => {
       activeCount: 8,
       idleCount: 0,
       pendingCount: 2,
+      boardCount: 0,
       outstandingDuesCount: 4,
+      outstandingDuesAmount: 0,
     });
   });
 

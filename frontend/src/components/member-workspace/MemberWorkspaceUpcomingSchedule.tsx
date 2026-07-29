@@ -27,41 +27,7 @@ type MemberWorkspaceUpcomingScheduleProps = {
 };
 
 function ScheduleEmpty() {
-  return (
-    <div className="member-workspace-resp-empty">
-      <div className="member-workspace-resp-empty-art" aria-hidden="true">
-        <svg
-          viewBox="0 0 120 80"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="member-workspace-resp-empty-svg"
-        >
-          <rect
-            x="28"
-            y="18"
-            width="64"
-            height="48"
-            rx="10"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            opacity="0.35"
-          />
-          <path
-            d="M28 34h64M48 18v10M72 18v10"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            opacity="0.28"
-          />
-          <circle cx="52" cy="48" r="3" fill="currentColor" opacity="0.28" />
-          <circle cx="68" cy="48" r="3" fill="currentColor" opacity="0.18" />
-        </svg>
-      </div>
-      <p className="member-workspace-resp-empty-title">
-        Nothing on the schedule yet.
-      </p>
-    </div>
-  );
+  return <p className="member-workspace-empty-inline">No schedule.</p>;
 }
 
 function ScheduleRow({ item }: { item: ScheduleCommitment }) {
@@ -72,25 +38,20 @@ function ScheduleRow({ item }: { item: ScheduleCommitment }) {
         className="member-workspace-resp-item member-workspace-schedule-item"
         aria-label={`Open ${item.title}`}
       >
-        <div className="member-workspace-schedule-item-main">
-          <span
-            className={`member-workspace-schedule-kind member-workspace-schedule-kind--${item.kind}`}
-          >
-            <AppIcon
-              icon={KIND_ICONS[item.kind]}
-              size="xs"
-              className="text-current"
-            />
-            <span>{item.kindLabel}</span>
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="member-workspace-resp-title">{item.title}</p>
-            {item.detail ? (
-              <p className="member-workspace-resp-event">{item.detail}</p>
-            ) : null}
-          </div>
+        <span className="member-workspace-schedule-icon" aria-hidden="true">
+          <AppIcon
+            icon={KIND_ICONS[item.kind]}
+            size="xs"
+            className="text-current"
+          />
+        </span>
+        <div className="member-workspace-schedule-copy">
+          <p className="member-workspace-resp-title">{item.title}</p>
+          {item.detail ? (
+            <p className="member-workspace-resp-event">{item.detail}</p>
+          ) : null}
+          <p className="member-workspace-schedule-when">{item.whenLabel}</p>
         </div>
-        <p className="member-workspace-schedule-when">{item.whenLabel}</p>
       </Link>
     </li>
   );
@@ -114,15 +75,11 @@ export function MemberWorkspaceUpcomingSchedule({
           </span>
           <div className="min-w-0">
             <h2 className="member-workspace-card-title">Upcoming Schedule</h2>
-            <p className="member-workspace-card-desc">
-              What this member is committed to next.
-            </p>
           </div>
         </div>
         {hasMore ? (
           <Link to={viewAllPath} className="member-workspace-resp-view-all">
             View all
-            <span aria-hidden="true"> →</span>
           </Link>
         ) : null}
       </div>

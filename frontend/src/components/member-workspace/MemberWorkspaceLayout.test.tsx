@@ -49,7 +49,22 @@ describe("MemberWorkspaceLayout", () => {
     cleanup();
   });
 
-  it("renders header and snapshot without hollow placeholders", () => {
+  it("renders header without requiring a snapshot section", () => {
+    renderLayout(
+      <MemberWorkspaceLayout
+        header={<MemberWorkspaceHeader member={member} />}
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Alex Member" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Today's Snapshot")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Member workspace")).not.toBeInTheDocument();
+    expect(screen.queryByText("Coming soon")).not.toBeInTheDocument();
+  });
+
+  it("still accepts an optional overview slot when provided", () => {
     renderLayout(
       <MemberWorkspaceLayout
         header={<MemberWorkspaceHeader member={member} />}
@@ -64,12 +79,7 @@ describe("MemberWorkspaceLayout", () => {
       />,
     );
 
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Alex Member" }),
-    ).toBeInTheDocument();
     expect(screen.getByLabelText("Today's Snapshot")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Member workspace")).not.toBeInTheDocument();
-    expect(screen.queryByText("Coming soon")).not.toBeInTheDocument();
   });
 
   it("renders Private Notes only when the privateNotes slot is provided", () => {

@@ -15,21 +15,13 @@ import {
   type MemberNote,
 } from "../../lib/member-notes-api";
 import { AppIcon } from "../ui/AppIcon";
-import { Button } from "../ui/Button";
 
 type MemberWorkspacePrivateNotesProps = {
   memberId: number;
 };
 
 function NotesEmpty() {
-  return (
-    <div className="member-workspace-resp-empty">
-      <p className="member-workspace-resp-empty-title">No private notes yet.</p>
-      <p className="member-workspace-docs-empty-desc">
-        Notes are visible only to officers — never to this member.
-      </p>
-    </div>
-  );
+  return <p className="member-workspace-empty-inline">No notes.</p>;
 }
 
 export function MemberWorkspacePrivateNotes({
@@ -159,9 +151,6 @@ export function MemberWorkspacePrivateNotes({
           </span>
           <div className="min-w-0">
             <h2 className="member-workspace-card-title">Private Notes</h2>
-            <p className="member-workspace-card-desc">
-              Officer-only — never visible to this member.
-            </p>
           </div>
         </div>
       </div>
@@ -173,31 +162,47 @@ export function MemberWorkspacePrivateNotes({
           </label>
           <textarea
             id={draftId}
-            className="member-workspace-notes-input"
-            rows={3}
+            className={
+              draft.trim() || pinNew
+                ? "member-workspace-notes-input is-expanded"
+                : "member-workspace-notes-input"
+            }
+            rows={draft.trim() || pinNew ? 3 : 1}
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            placeholder="Add a private note…"
+            onFocus={(event) => {
+              if (event.currentTarget.rows < 3) {
+                event.currentTarget.rows = 3;
+              }
+            }}
+            onBlur={(event) => {
+              if (!draft.trim() && !pinNew) {
+                event.currentTarget.rows = 1;
+              }
+            }}
+            placeholder="Add note…"
             disabled={isSaving}
           />
-          <div className="member-workspace-notes-form-row">
-            <label className="member-workspace-notes-pin-label">
-              <input
-                type="checkbox"
-                checked={pinNew}
-                onChange={(event) => setPinNew(event.target.checked)}
-                disabled={isSaving}
-              />
-              Pin note
-            </label>
-            <Button
-              type="submit"
-              size="sm"
-              disabled={isSaving || !draft.trim()}
-            >
-              {isSaving ? "Saving…" : "Add note"}
-            </Button>
-          </div>
+          {draft.trim() || pinNew ? (
+            <div className="member-workspace-notes-form-row">
+              <label className="member-workspace-notes-pin-label">
+                <input
+                  type="checkbox"
+                  checked={pinNew}
+                  onChange={(event) => setPinNew(event.target.checked)}
+                  disabled={isSaving}
+                />
+                Pin note
+              </label>
+              <button
+                type="submit"
+                className="member-workspace-text-action member-workspace-text-action--quiet"
+                disabled={isSaving || !draft.trim()}
+              >
+                {isSaving ? "Saving…" : "Save"}
+              </button>
+            </div>
+          ) : null}
         </form>
 
         {error ? (

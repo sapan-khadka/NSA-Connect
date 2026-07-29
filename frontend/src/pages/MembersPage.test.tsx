@@ -7,7 +7,7 @@ import type { MemberResponse } from "../lib/auth-api";
 import {
   downloadMembersCsv,
   importMembersCsv,
-  inviteMember,
+  addMember,
 } from "../lib/members-api";
 import { MockAuthProvider } from "../test/test-utils";
 
@@ -17,9 +17,10 @@ vi.mock("../lib/members-api", () => ({
   fetchMembers: vi.fn(),
   fetchPendingMembers: vi.fn(),
   fetchMembersEngagement: vi.fn(),
+  fetchMemberActivity: vi.fn().mockResolvedValue({ items: [], total: 0 }),
   downloadMembersCsv: vi.fn(),
   importMembersCsv: vi.fn(),
-  inviteMember: vi.fn(),
+  addMember: vi.fn(),
   approveMember: vi.fn(),
   rejectMember: vi.fn(),
   fetchMemberPositionCatalog: vi.fn().mockResolvedValue({
@@ -33,6 +34,16 @@ vi.mock("../lib/members-api", () => ({
 
 vi.mock("../lib/dues-api", () => ({
   fetchDuesDashboard: vi.fn(),
+}));
+
+vi.mock("../lib/event-tasks-api", () => ({
+  fetchTaskOverview: vi.fn().mockResolvedValue({ members: [] }),
+  fetchMyEventTasks: vi.fn().mockResolvedValue({ tasks: [] }),
+}));
+
+vi.mock("../lib/member-workspace-schedule", () => ({
+  fetchMemberWorkspaceSchedule: vi.fn().mockResolvedValue([]),
+  takeSchedulePreview: () => ({ preview: [], hasMore: false, total: 0 }),
 }));
 
 const directoryMember: MemberResponse = {
@@ -181,11 +192,11 @@ async function openManageMenu(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("button", { name: /^Manage$/i }));
 }
 
-async function submitValidInvite(
+async function submitValidAddMember(
   user: ReturnType<typeof userEvent.setup>,
   setupEmailSent: boolean,
 ) {
-  vi.mocked(inviteMember).mockResolvedValue({
+  vi.mocked(addMember).mockResolvedValue({
     member: {
       ...directoryMember,
       id: 44,
@@ -199,8 +210,8 @@ async function submitValidInvite(
     setup_email_sent: setupEmailSent,
   });
 
-  await user.click(screen.getByRole("button", { name: /Invite member/i }));
-  const dialog = screen.getByRole("dialog", { name: "Invite Member" });
+  await user.click(screen.getByRole("button", { name: /Add Member/i }));
+  const dialog = screen.getByRole("dialog", { name: "Add Member" });
   await user.type(within(dialog).getByLabelText(/First name/i), "New");
   await user.type(within(dialog).getByLabelText(/Last name/i), "Member");
   await user.type(within(dialog).getByLabelText(/Student ID/i), "S12345678");
@@ -210,7 +221,7 @@ async function submitValidInvite(
     String(new Date().getFullYear()),
   );
   await user.type(within(dialog).getByLabelText(/Email address/i), "new@semo.edu");
-  await user.click(within(dialog).getByRole("button", { name: "Invite" }));
+  await user.click(within(dialog).getByRole("button", { name: "Add Member" }));
 }
 
 describe("MembersPage", () => {
@@ -219,7 +230,7 @@ describe("MembersPage", () => {
     vi.clearAllMocks();
   });
 
-  it("renders CRM toolbar with invite and manage menu", async () => {
+  it("renders CRM toolbar with add member and manage menu", async () => {
     const user = userEvent.setup();
     await mockDirectoryApis({ members: [directoryMember], total: 12 });
     renderMembersPage();
@@ -227,11 +238,16 @@ describe("MembersPage", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Members" }),
     ).toBeInTheDocument();
-    await waitFor(() => {
-      expect(screen.getByText("12 members")).toBeInTheDocument();
-    });
     expect(
-      screen.getByRole("button", { name: /Invite member/i }),
+      screen.getByText("Manage members, roles and dues."),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByLabelText("Members summary")).toBeInTheDocument();
+    });
+    const summary = screen.getByLabelText("Members summary");
+    expect(summary).toHaveTextContent("12 Members");
+    expect(
+      screen.getByRole("button", { name: /Add Member/i }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Import CSV" })).not.toBeInTheDocument();
 
@@ -321,7 +337,7 @@ describe("MembersPage", () => {
     });
   });
 
-  it("renders role and focus chips with pending badge", async () => {
+  it("renders roster and focus segments with summary strip", async () => {
     await mockDirectoryApis({
       members: [directoryMember],
       total: 12,
@@ -333,31 +349,48 @@ describe("MembersPage", () => {
     });
     renderMembersPage("president");
 
-    const roleGroup = screen.getByRole("group", { name: "Filter by role" });
-    expect(within(roleGroup).getByRole("button", { name: "All" })).toBeInTheDocument();
-    expect(within(roleGroup).getByRole("button", { name: "General" })).toBeInTheDocument();
-    expect(within(roleGroup).getByRole("button", { name: "Board" })).toBeInTheDocument();
+    const rosterGroup = screen.getByRole("group", { name: "Filter by roster" });
+    expect(within(rosterGroup).getByRole("button", { name: "All" })).toBeInTheDocument();
     expect(
-      within(roleGroup).queryByRole("button", { name: "Treasurer" }),
+      within(rosterGroup).getByRole("button", { name: "Leadership" }),
+    ).toBeInTheDocument();
+    expect(within(rosterGroup).getByRole("button", { name: "Board" })).toBeInTheDocument();
+    expect(
+      within(rosterGroup).getByRole("button", { name: "Members" }),
+    ).toBeInTheDocument();
+    expect(
+      within(rosterGroup).queryByRole("button", { name: "General" }),
     ).not.toBeInTheDocument();
     expect(
-      within(roleGroup).queryByRole("button", { name: "President" }),
+      within(rosterGroup).queryByRole("button", { name: "Treasurer" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(rosterGroup).queryByRole("button", { name: "President" }),
     ).not.toBeInTheDocument();
 
-    const focusGroup = screen.getByRole("group", { name: "Focus directory" });
-    expect(within(focusGroup).getByRole("button", { name: "Active" })).toBeInTheDocument();
-    expect(within(focusGroup).getByRole("button", { name: /Idle/i })).toBeInTheDocument();
-    expect(within(focusGroup).getByRole("button", { name: /Pending/i })).toBeInTheDocument();
-    expect(within(focusGroup).getByRole("button", { name: "Dues" })).toBeInTheDocument();
+    const statusSelect = screen.getByRole("combobox", { name: "Status" });
+    expect(statusSelect).toBeInTheDocument();
+    expect(within(statusSelect).getByRole("option", { name: "All" })).toBeInTheDocument();
+    expect(within(statusSelect).getByRole("option", { name: "Active" })).toBeInTheDocument();
+    expect(within(statusSelect).getByRole("option", { name: "Idle" })).toBeInTheDocument();
+    expect(
+      within(statusSelect).getByRole("option", { name: /Pending/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(statusSelect).getByRole("option", { name: "Outstanding dues" }),
+    ).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "2 PENDING" })).toBeInTheDocument();
+      expect(screen.getByLabelText("Members summary")).toBeInTheDocument();
     });
-    expect(screen.queryByLabelText("Members summary")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Statistics")).not.toBeInTheDocument();
+    const summary = screen.getByLabelText("Members summary");
+    expect(summary).toHaveTextContent("12 Members");
+    expect(summary).toHaveTextContent("7 Active");
+    expect(summary).toHaveTextContent("$40 Outstanding");
+    expect(summary).toHaveTextContent("Board");
   });
 
-  it("hides dues focus chip without treasury access", async () => {
+  it("hides dues status option without treasury access", async () => {
     await mockDirectoryApis({
       members: [directoryMember],
       total: 5,
@@ -366,9 +399,11 @@ describe("MembersPage", () => {
     });
     renderMembersPage("board");
 
-    const focusGroup = screen.getByRole("group", { name: "Focus directory" });
-    expect(within(focusGroup).getByRole("button", { name: "Active" })).toBeInTheDocument();
-    expect(within(focusGroup).queryByRole("button", { name: "Dues" })).not.toBeInTheDocument();
+    const statusSelect = screen.getByRole("combobox", { name: "Status" });
+    expect(within(statusSelect).getByRole("option", { name: "Active" })).toBeInTheDocument();
+    expect(
+      within(statusSelect).queryByRole("option", { name: "Outstanding dues" }),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /^\d+ PENDING$/ }),
     ).not.toBeInTheDocument();
@@ -379,13 +414,14 @@ describe("MembersPage", () => {
     await mockDirectoryApis({ members: [directoryMember], total: 1 });
     renderMembersPage();
 
-    await user.click(screen.getByRole("button", { name: /^Filter$/i }));
+    await user.click(screen.getByRole("button", { name: /^Filters$/i }));
 
-    expect(await screen.findByLabelText("Search members")).toBeInTheDocument();
-    expect(screen.getByLabelText("Member Status")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Member Status")).toBeInTheDocument();
     expect(screen.getByLabelText("Payment Status")).toBeInTheDocument();
     expect(screen.getByLabelText("Graduation Year")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Role")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Roster")).toBeInTheDocument();
+    expect(screen.getByLabelText("Focus")).toBeInTheDocument();
+    expect(screen.getByLabelText("Search members")).toBeInTheDocument();
     expect(screen.queryByLabelText("Committee")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Attendance")).not.toBeInTheDocument();
     expect(
@@ -393,7 +429,7 @@ describe("MembersPage", () => {
     ).toBeDisabled();
   });
 
-  it("filters the directory by role chip", async () => {
+  it("filters the directory by roster chip", async () => {
     const user = userEvent.setup();
     const generalMember: MemberResponse = {
       ...directoryMember,
@@ -413,9 +449,9 @@ describe("MembersPage", () => {
     expect(screen.getByText("Gina General")).toBeInTheDocument();
 
     await user.click(
-      within(screen.getByRole("group", { name: "Filter by role" })).getByRole(
+      within(screen.getByRole("group", { name: "Filter by roster" })).getByRole(
         "button",
-        { name: "General" },
+        { name: "Members" },
       ),
     );
 
@@ -479,7 +515,8 @@ describe("MembersPage", () => {
     expect(await screen.findByText("Alex Member")).toBeInTheDocument();
   });
 
-  it("renders the members table without attendance or bulk checkboxes", async () => {
+  it("renders the members table with bulk selection and without attendance", async () => {
+    const user = userEvent.setup();
     await mockDirectoryApis({
       members: [directoryMember],
       total: 1,
@@ -505,17 +542,31 @@ describe("MembersPage", () => {
     expect(
       within(table).getByRole("button", { name: /Sort by Name/i }),
     ).toBeInTheDocument();
-    expect(within(table).getByText("Outstanding Dues")).toBeInTheDocument();
+    expect(within(table).getByText("Outstanding")).toBeInTheDocument();
+    expect(within(table).queryByText("Role")).not.toBeInTheDocument();
+    expect(within(table).queryByText("Graduation Year")).not.toBeInTheDocument();
+    expect(within(tableRegion).getByText("Computer Science · 2028")).toBeInTheDocument();
     expect(
       within(table).getByRole("button", { name: "Column settings" }),
     ).toBeInTheDocument();
     expect(within(table).queryByText("Attendance")).not.toBeInTheDocument();
     expect(
-      within(table).queryByLabelText("Select all members"),
-    ).not.toBeInTheDocument();
+      within(table).getByLabelText("Select all members"),
+    ).toBeInTheDocument();
     expect(within(tableRegion).getByText("Alex Member")).toBeInTheDocument();
-    expect(within(tableRegion).getByText("$15.00")).toBeInTheDocument();
+    expect(within(tableRegion).getByText("$15")).toBeInTheDocument();
     expect(within(tableRegion).getByText("Active")).toBeInTheDocument();
+
+    await user.click(
+      within(table).getByLabelText("Select Alex Member"),
+    );
+    expect(
+      screen.getByRole("toolbar", { name: "Bulk member actions" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("1 Member")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Assign Role \(Coming Soon\)/i }),
+    ).toBeDisabled();
   });
 
   it("shows Idle status for approved members without engagement", async () => {
@@ -533,7 +584,7 @@ describe("MembersPage", () => {
     expect(within(tableRegion).getByText("Idle")).toBeInTheDocument();
   });
 
-  it("opens Member Quick View when a table row is clicked", async () => {
+  it("opens Member Quick View from the avatar and links the name to the profile", async () => {
     const user = userEvent.setup();
     await mockDirectoryApis({
       members: [directoryMember],
@@ -544,10 +595,16 @@ describe("MembersPage", () => {
 
     renderMembersPage();
 
-    const row = await screen.findByRole("row", {
-      name: /Quick view Alex Member/i,
-    });
-    await user.click(row);
+    const tableRegion = await screen.findByLabelText("Member table");
+    expect(
+      within(tableRegion).getByRole("link", { name: "Alex Member" }),
+    ).toHaveAttribute("href", "/members/3");
+
+    await user.click(
+      within(tableRegion).getByRole("button", {
+        name: "Preview Alex Member",
+      }),
+    );
 
     const dialog = await screen.findByRole("dialog", {
       name: /Alex Member/i,
@@ -556,21 +613,20 @@ describe("MembersPage", () => {
       within(dialog).getByRole("heading", { name: /Alex Member/i }),
     ).toBeInTheDocument();
     expect(
-      within(dialog).getByRole("button", { name: "View Full Profile" }),
+      within(dialog).getByRole("link", { name: /View full profile/i }),
     ).toBeInTheDocument();
-    expect(within(dialog).getByText("No recent activity yet.")).toBeInTheDocument();
   });
 
-  it("opens the Invite Member drawer from the header", async () => {
+  it("opens the Add Member drawer from the header", async () => {
     const user = userEvent.setup();
     await mockDirectoryApis();
 
     renderMembersPage();
 
-    await user.click(screen.getByRole("button", { name: /Invite member/i }));
+    await user.click(screen.getByRole("button", { name: /Add Member/i }));
 
     expect(
-      screen.getByRole("dialog", { name: "Invite Member" }),
+      screen.getByRole("dialog", { name: "Add Member" }),
     ).toBeInTheDocument();
   });
 
@@ -579,23 +635,23 @@ describe("MembersPage", () => {
     await mockDirectoryApis();
     renderMembersPage();
 
-    await submitValidInvite(user, true);
+    await submitValidAddMember(user, true);
 
     expect(
-      await screen.findByText("Member created and setup email sent."),
+      await screen.findByText("Member added. Setup email sent."),
     ).toBeInTheDocument();
   });
 
-  it("warns when the member was created but setup email failed", async () => {
+  it("warns when the member was added but setup email failed", async () => {
     const user = userEvent.setup();
     await mockDirectoryApis();
     renderMembersPage();
 
-    await submitValidInvite(user, false);
+    await submitValidAddMember(user, false);
 
     expect(
       await screen.findByText(
-        "Member created, but we couldn't send the setup email — ask them to use Forgot Password.",
+        "Member added, but we couldn't send the setup email — ask them to use Forgot Password.",
       ),
     ).toBeInTheDocument();
   });

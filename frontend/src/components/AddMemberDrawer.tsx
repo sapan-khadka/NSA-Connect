@@ -1,5 +1,5 @@
 /**
- * Invite Member — board-facing account invitation drawer.
+ * Add Member — board-facing drawer to create a member record directly.
  */
 
 import {
@@ -15,21 +15,18 @@ import { Drawer } from "../design-system/components/feedback/Drawer";
 import { Input } from "../design-system/components/Input";
 import { Select } from "../design-system/components/Select";
 import {
-  clearInviteDraft,
-  EMPTY_INVITE_FORM,
-  firstInviteErrorField,
-  loadInviteDraft,
-  saveInviteDraft,
-  validateInviteField,
-  validateInviteForm,
-  type InviteFormErrors,
-  type InviteFormValues,
-} from "../lib/invite-member-form";
+  clearAddMemberDraft,
+  EMPTY_ADD_MEMBER_FORM,
+  firstAddMemberErrorField,
+  loadAddMemberDraft,
+  saveAddMemberDraft,
+  validateAddMemberField,
+  validateAddMemberForm,
+  type AddMemberFormErrors,
+  type AddMemberFormValues,
+} from "../lib/add-member-form";
 import { getApiErrorMessage } from "../lib/api-error";
-import {
-  inviteMember,
-  type InviteMemberResponse,
-} from "../lib/members-api";
+import { addMember, type AddMemberResponse } from "../lib/members-api";
 import { Button } from "./ui/Button";
 
 const currentYear = new Date().getFullYear();
@@ -38,10 +35,10 @@ const GRADUATION_YEAR_OPTIONS = Array.from(
   (_, index) => currentYear + index,
 ).map((year) => ({ value: String(year), label: String(year) }));
 
-type InviteMemberDrawerProps = {
+type AddMemberDrawerProps = {
   open: boolean;
   onClose: () => void;
-  onInvited: (result: InviteMemberResponse) => void;
+  onAdded: (result: AddMemberResponse) => void;
 };
 
 function FormSection({
@@ -78,15 +75,15 @@ function RequiredMark() {
   );
 }
 
-export function InviteMemberDrawer({
+export function AddMemberDrawer({
   open,
   onClose,
-  onInvited,
-}: InviteMemberDrawerProps) {
-  const [values, setValues] = useState<InviteFormValues>(EMPTY_INVITE_FORM);
-  const [errors, setErrors] = useState<InviteFormErrors>({});
+  onAdded,
+}: AddMemberDrawerProps) {
+  const [values, setValues] = useState<AddMemberFormValues>(EMPTY_ADD_MEMBER_FORM);
+  const [errors, setErrors] = useState<AddMemberFormErrors>({});
   const [touched, setTouched] = useState<
-    Partial<Record<keyof InviteFormValues, boolean>>
+    Partial<Record<keyof AddMemberFormValues, boolean>>
   >({});
   const [draftSaved, setDraftSaved] = useState(false);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
@@ -98,8 +95,8 @@ export function InviteMemberDrawer({
     if (!open) {
       return;
     }
-    const draft = loadInviteDraft();
-    setValues(draft ?? EMPTY_INVITE_FORM);
+    const draft = loadAddMemberDraft();
+    setValues(draft ?? EMPTY_ADD_MEMBER_FORM);
     setErrors({});
     setTouched({});
     setDraftSaved(false);
@@ -108,16 +105,16 @@ export function InviteMemberDrawer({
     setServerError(null);
   }, [open]);
 
-  function updateField<K extends keyof InviteFormValues>(
+  function updateField<K extends keyof AddMemberFormValues>(
     key: K,
-    next: InviteFormValues[K],
+    next: AddMemberFormValues[K],
   ) {
     const nextValues = { ...values, [key]: next };
     setValues(nextValues);
     setDraftSaved(false);
 
     if (attemptedSubmit || touched[key]) {
-      const message = validateInviteField(key, nextValues);
+      const message = validateAddMemberField(key, nextValues);
       setErrors((current) => {
         const nextErrors = { ...current };
         if (message) {
@@ -130,10 +127,10 @@ export function InviteMemberDrawer({
     }
   }
 
-  function handleBlur(key: keyof InviteFormValues) {
+  function handleBlur(key: keyof AddMemberFormValues) {
     setTouched((current) => ({ ...current, [key]: true }));
     setErrors((current) => {
-      const message = validateInviteField(key, values);
+      const message = validateAddMemberField(key, values);
       const nextErrors = { ...current };
       if (message) {
         nextErrors[key] = message;
@@ -152,21 +149,21 @@ export function InviteMemberDrawer({
   }
 
   function handleSaveDraft() {
-    saveInviteDraft(values);
+    saveAddMemberDraft(values);
     setDraftSaved(true);
   }
 
-  async function handleInvite(event: FormEvent<HTMLFormElement>) {
+  async function handleAdd(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (isSubmitting) {
       return;
     }
     setAttemptedSubmit(true);
     setServerError(null);
-    const nextErrors = validateInviteForm(values);
+    const nextErrors = validateAddMemberForm(values);
     setErrors(nextErrors);
 
-    const firstError = firstInviteErrorField(nextErrors);
+    const firstError = firstAddMemberErrorField(nextErrors);
     if (firstError) {
       const field = formRef.current?.querySelector<HTMLElement>(
         `[name="${firstError}"]`,
@@ -180,7 +177,7 @@ export function InviteMemberDrawer({
 
     setIsSubmitting(true);
     try {
-      const result = await inviteMember({
+      const result = await addMember({
         full_name: `${values.firstName.trim()} ${values.lastName.trim()}`,
         email: values.email.trim().toLowerCase(),
         student_id: values.studentId.trim().toUpperCase(),
@@ -188,12 +185,12 @@ export function InviteMemberDrawer({
         graduation_year: Number(values.graduationYear),
         phone: values.phone.trim() || null,
       });
-      clearInviteDraft();
+      clearAddMemberDraft();
       setDraftSaved(false);
-      setValues(EMPTY_INVITE_FORM);
+      setValues(EMPTY_ADD_MEMBER_FORM);
       setTouched({});
       setAttemptedSubmit(false);
-      onInvited(result);
+      onAdded(result);
       onClose();
     } catch (caught) {
       setServerError(getApiErrorMessage(caught));
@@ -210,8 +207,8 @@ export function InviteMemberDrawer({
       onClose={handleCancel}
       side="right"
       size="lg"
-      title="Invite Member"
-      description="Add someone to your organization. Drafts stay on this device."
+      title="Add Member"
+      description="Create a member record for your organization. Drafts stay on this device."
       className="members-invite-drawer"
       footer={
         <div className="members-invite-footer">
@@ -242,7 +239,7 @@ export function InviteMemberDrawer({
               loading={isSubmitting}
               disabled={isSubmitting}
             >
-              Invite
+              Add Member
             </Button>
           </div>
         </div>
@@ -251,7 +248,7 @@ export function InviteMemberDrawer({
       <form
         ref={formRef}
         className="members-invite-form"
-        onSubmit={handleInvite}
+        onSubmit={handleAdd}
         noValidate
       >
         {draftSaved ? (
@@ -267,8 +264,8 @@ export function InviteMemberDrawer({
         {attemptedSubmit && errorCount > 0 ? (
           <p className="members-invite-banner is-error" role="alert">
             {errorCount === 1
-              ? "1 field needs attention before you can send the invite."
-              : `${errorCount} fields need attention before you can send the invite.`}
+              ? "1 field needs attention before you can add this member."
+              : `${errorCount} fields need attention before you can add this member.`}
           </p>
         ) : null}
 
@@ -314,7 +311,7 @@ export function InviteMemberDrawer({
 
         <FormSection
           title="Membership"
-          description="University details used to create the member account."
+          description="University details used for the member record."
         >
           <div className="members-invite-stack">
             <Input
@@ -375,7 +372,7 @@ export function InviteMemberDrawer({
 
         <FormSection
           title="Contact"
-          description="Where the invitation and follow-ups will go."
+          description="How officers can reach this member."
         >
           <div className="members-invite-stack">
             <Input

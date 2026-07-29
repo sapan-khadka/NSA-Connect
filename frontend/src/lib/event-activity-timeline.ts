@@ -106,6 +106,23 @@ export function formatActivityTimeLabel(iso: string, now = new Date()): string {
   }).format(new Date(iso));
 }
 
+/** Compact “Jul 4 · 7:17 PM” for flat activity lists (no day headers). */
+export function formatActivityDateTimeLabel(iso: string): string {
+  const date = new Date(iso);
+  if (!Number.isFinite(date.getTime())) {
+    return "—";
+  }
+  const day = new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+  }).format(date);
+  const time = new Intl.DateTimeFormat(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+  return `${day} · ${time}`;
+}
+
 /**
  * Build a readable activity timeline from known event signals + placeholders.
  * No backend activity feed exists yet.

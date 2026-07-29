@@ -9,13 +9,10 @@ describe("MemberWorkspaceInsights", () => {
     cleanup();
   });
 
-  it("shows neutral empty state when no rules fire", () => {
-    render(<MemberWorkspaceInsights insights={[]} />);
-    const section = screen.getByLabelText("AI Insights");
-    expect(
-      within(section).getByText("No notable patterns right now."),
-    ).toBeInTheDocument();
-    expect(within(section).queryByText(/all good/i)).not.toBeInTheDocument();
+  it("hides the card when no rules fire", () => {
+    const { container } = render(<MemberWorkspaceInsights insights={[]} />);
+    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByLabelText("AI Insights")).not.toBeInTheDocument();
   });
 
   it("renders insight rows with icon and message", () => {

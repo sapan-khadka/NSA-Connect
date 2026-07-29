@@ -23,7 +23,6 @@ import {
   type MemberDocumentType,
 } from "../../lib/member-documents-api";
 import { AppIcon } from "../ui/AppIcon";
-import { Button } from "../ui/Button";
 
 type MemberWorkspaceDocumentsProps = {
   memberId: number;
@@ -33,25 +32,13 @@ type MemberWorkspaceDocumentsProps = {
 
 function DocumentsUnavailable() {
   return (
-    <div className="member-workspace-resp-empty">
-      <p className="member-workspace-resp-empty-title">Documents unavailable</p>
-      <p className="member-workspace-docs-empty-desc">
-        You can manage documents on your own profile. Officers can view any
-        member’s files.
-      </p>
-    </div>
+    <p className="member-workspace-empty-inline">Documents unavailable.</p>
   );
 }
 
 function DocumentsEmpty() {
   return (
-    <div className="member-workspace-resp-empty">
-      <p className="member-workspace-resp-empty-title">No documents on file.</p>
-      <p className="member-workspace-docs-empty-desc">
-        Use Upload above to attach a resume, waiver, personal record,
-        certificate, or other file.
-      </p>
-    </div>
+    <p className="member-workspace-empty-inline">No documents uploaded.</p>
   );
 }
 
@@ -207,9 +194,6 @@ export function MemberWorkspaceDocuments({
           </span>
           <div className="min-w-0">
             <h2 className="member-workspace-card-title">Documents</h2>
-            <p className="member-workspace-card-desc">
-              Files on file for this member.
-            </p>
           </div>
         </div>
       </div>
@@ -246,41 +230,28 @@ export function MemberWorkspaceDocuments({
                     </option>
                   ))}
                 </select>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  disabled={isUploading}
-                  onClick={openFilePicker}
-                >
-                  <AppIcon icon={Upload} size="sm" className="mr-1.5" />
-                  {isUploading && replacingId === null ? "Uploading…" : "Upload"}
-                </Button>
-                <input
-                  ref={fileInputRef}
-                  id={fileInputId}
-                  type="file"
-                  className="sr-only"
-                  accept={MEMBER_DOCUMENT_ACCEPT}
-                  disabled={isUploading}
-                  onChange={(event) => {
-                    void handleFileChange(event);
-                  }}
-                />
-                <input
-                  ref={replaceInputRef}
-                  type="file"
-                  className="sr-only"
-                  accept={MEMBER_DOCUMENT_ACCEPT}
-                  disabled={isUploading}
-                  onChange={(event) => {
-                    void handleReplaceChange(event);
-                  }}
-                />
               </div>
-              <p className="member-workspace-docs-hint">
-                PDF, JPEG, PNG, or WebP up to 10 MB.
-              </p>
+              <input
+                ref={fileInputRef}
+                id={fileInputId}
+                type="file"
+                className="sr-only"
+                accept={MEMBER_DOCUMENT_ACCEPT}
+                disabled={isUploading}
+                onChange={(event) => {
+                  void handleFileChange(event);
+                }}
+              />
+              <input
+                ref={replaceInputRef}
+                type="file"
+                className="sr-only"
+                accept={MEMBER_DOCUMENT_ACCEPT}
+                disabled={isUploading}
+                onChange={(event) => {
+                  void handleReplaceChange(event);
+                }}
+              />
               {documentType === "personal_records" ? (
                 <p className="member-workspace-docs-caption">
                   {PERSONAL_RECORDS_UPLOAD_CAPTION}
@@ -325,11 +296,9 @@ export function MemberWorkspaceDocuments({
             {documents.length === 0 ? (
               <DocumentsEmpty />
             ) : visibleDocuments.length === 0 ? (
-              <div className="member-workspace-resp-empty">
-                <p className="member-workspace-resp-empty-title">
-                  No documents in this category.
-                </p>
-              </div>
+              <p className="member-workspace-empty-inline">
+                No documents in this category.
+              </p>
             ) : (
               <ul className="member-workspace-docs-list">
                 {visibleDocuments.map((document) => (
@@ -392,6 +361,21 @@ export function MemberWorkspaceDocuments({
                 ))}
               </ul>
             )}
+
+            <button
+              type="button"
+              className="member-workspace-text-action"
+              disabled={isUploading}
+              onClick={openFilePicker}
+            >
+              <AppIcon icon={Upload} size="xs" className="text-current" />
+              {isUploading && replacingId === null
+                ? "Uploading…"
+                : "Upload…"}
+            </button>
+            <p className="member-workspace-docs-hint">
+              PDF, JPEG, PNG, or WebP up to 10 MB.
+            </p>
           </>
         ) : null}
       </div>

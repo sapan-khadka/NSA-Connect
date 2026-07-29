@@ -34,21 +34,27 @@ export function MemberWorkspaceRecentActivity({
           </span>
           <div className="min-w-0">
             <h2 className="member-workspace-card-title">Recent Activity</h2>
-            <p className="member-workspace-card-desc">
-              What this member has actually done recently.
-            </p>
           </div>
         </div>
         {hasMore && viewAllPath ? (
           <Link to={viewAllPath} className="member-workspace-resp-view-all">
             View all
-            <span aria-hidden="true"> →</span>
           </Link>
         ) : null}
       </div>
 
       <div className="member-workspace-card-body member-workspace-resp-body">
-        <MemberActivityTimeline items={items} loading={isLoading} />
+        {isLoading ? (
+          <p className="member-workspace-resp-loading">Loading activity…</p>
+        ) : null}
+
+        {!isLoading && items.length === 0 ? (
+          <p className="member-workspace-empty-inline">No activity.</p>
+        ) : null}
+
+        {!isLoading && items.length > 0 ? (
+          <MemberActivityTimeline items={items} loading={false} layout="flat" />
+        ) : null}
       </div>
     </section>
   );

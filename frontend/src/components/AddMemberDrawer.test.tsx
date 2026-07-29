@@ -3,15 +3,15 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
-  EMPTY_INVITE_FORM,
-  INVITE_DRAFT_STORAGE_KEY,
-  validateInviteForm,
-} from "../lib/invite-member-form";
-import { inviteMember } from "../lib/members-api";
-import { InviteMemberDrawer } from "./InviteMemberDrawer";
+  ADD_MEMBER_DRAFT_STORAGE_KEY,
+  EMPTY_ADD_MEMBER_FORM,
+  validateAddMemberForm,
+} from "../lib/add-member-form";
+import { addMember } from "../lib/members-api";
+import { AddMemberDrawer } from "./AddMemberDrawer";
 
 vi.mock("../lib/members-api", () => ({
-  inviteMember: vi.fn(),
+  addMember: vi.fn(),
 }));
 
 const successfulResponse = {
@@ -29,19 +29,12 @@ const successfulResponse = {
   setup_email_sent: true,
 };
 
-function renderDrawer(
-  onClose = vi.fn(),
-  onInvited = vi.fn(),
-) {
+function renderDrawer(onClose = vi.fn(), onAdded = vi.fn()) {
   return {
     onClose,
-    onInvited,
+    onAdded,
     ...render(
-      <InviteMemberDrawer
-        open
-        onClose={onClose}
-        onInvited={onInvited}
-      />,
+      <AddMemberDrawer open onClose={onClose} onAdded={onAdded} />,
     ),
   };
 }
@@ -58,9 +51,9 @@ async function fillValidForm(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/Email address/i), "ALEX@SEMO.EDU");
 }
 
-describe("validateInviteForm", () => {
+describe("validateAddMemberForm", () => {
   it("requires identity, university, graduation, and email fields", () => {
-    const errors = validateInviteForm(EMPTY_INVITE_FORM);
+    const errors = validateAddMemberForm(EMPTY_ADD_MEMBER_FORM);
     expect(errors.firstName).toBeTruthy();
     expect(errors.lastName).toBeTruthy();
     expect(errors.studentId).toBeTruthy();
@@ -71,8 +64,8 @@ describe("validateInviteForm", () => {
   });
 
   it("rejects non-SEMO emails and malformed student IDs", () => {
-    const errors = validateInviteForm({
-      ...EMPTY_INVITE_FORM,
+    const errors = validateAddMemberForm({
+      ...EMPTY_ADD_MEMBER_FORM,
       firstName: "Alex",
       lastName: "Member",
       studentId: "bad!",
@@ -85,7 +78,7 @@ describe("validateInviteForm", () => {
   });
 });
 
-describe("InviteMemberDrawer", () => {
+describe("AddMemberDrawer", () => {
   beforeEach(() => {
     window.localStorage.clear();
   });
@@ -98,7 +91,7 @@ describe("InviteMemberDrawer", () => {
 
   it("renders only the reviewed member fields", () => {
     renderDrawer();
-    const dialog = screen.getByRole("dialog", { name: "Invite Member" });
+    const dialog = screen.getByRole("dialog", { name: "Add Member" });
 
     expect(within(dialog).getByLabelText(/First name/i)).toBeInTheDocument();
     expect(within(dialog).getByLabelText(/Last name/i)).toBeInTheDocument();
@@ -116,10 +109,10 @@ describe("InviteMemberDrawer", () => {
     const user = userEvent.setup();
     const { onClose } = renderDrawer();
 
-    await user.click(screen.getByRole("button", { name: "Invite" }));
+    await user.click(screen.getByRole("button", { name: "Add Member" }));
 
     expect(
-      screen.getByText(/fields need attention before you can send the invite/i),
+      screen.getByText(/fields need attention before you can add this member/i),
     ).toBeInTheDocument();
     expect(screen.getByText(/First name is required/i)).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
@@ -127,14 +120,14 @@ describe("InviteMemberDrawer", () => {
 
   it("submits normalized data and passes the full response", async () => {
     const user = userEvent.setup();
-    vi.mocked(inviteMember).mockResolvedValue(successfulResponse);
-    const { onClose, onInvited } = renderDrawer();
+    vi.mocked(addMember).mockResolvedValue(successfulResponse);
+    const { onClose, onAdded } = renderDrawer();
     await fillValidForm(user);
 
-    await user.click(screen.getByRole("button", { name: "Invite" }));
+    await user.click(screen.getByRole("button", { name: "Add Member" }));
 
-    await waitFor(() => expect(inviteMember).toHaveBeenCalledOnce());
-    expect(inviteMember).toHaveBeenCalledWith({
+    await waitFor(() => expect(addMember).toHaveBeenCalledOnce());
+    expect(addMember).toHaveBeenCalledWith({
       full_name: "Alex Member",
       email: "alex@semo.edu",
       student_id: "S12345678",
@@ -142,7 +135,7 @@ describe("InviteMemberDrawer", () => {
       graduation_year: new Date().getFullYear(),
       phone: null,
     });
-    expect(onInvited).toHaveBeenCalledWith(successfulResponse);
+    expect(onAdded).toHaveBeenCalledWith(successfulResponse);
     expect(onClose).toHaveBeenCalledOnce();
   });
 
@@ -155,49 +148,43 @@ describe("InviteMemberDrawer", () => {
         data: { detail: "Email already registered" },
       },
     };
-    vi.mocked(inviteMember).mockRejectedValue(error);
-    const { onClose, onInvited } = renderDrawer();
+    vi.mocked(addMember).mockRejectedValue(error);
+    const { onClose, onAdded } = renderDrawer();
     await fillValidForm(user);
     await user.click(screen.getByRole("button", { name: "Save Draft" }));
 
-    await user.click(screen.getByRole("button", { name: "Invite" }));
+    await user.click(screen.getByRole("button", { name: "Add Member" }));
 
-    expect(
-      await screen.findByRole("alert"),
-    ).toHaveTextContent("Email already registered");
-    expect(onInvited).not.toHaveBeenCalled();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Email already registered",
+    );
+    expect(onAdded).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
-    expect(window.localStorage.getItem(INVITE_DRAFT_STORAGE_KEY)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Invite" })).toBeEnabled();
+    expect(
+      window.localStorage.getItem(ADD_MEMBER_DRAFT_STORAGE_KEY),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Add Member" })).toBeEnabled();
   });
 
   it("saves and restores a local draft", async () => {
     const user = userEvent.setup();
-    const onInvited = vi.fn();
+    const onAdded = vi.fn();
     const { rerender } = render(
-      <InviteMemberDrawer
-        open
-        onClose={() => undefined}
-        onInvited={onInvited}
-      />,
+      <AddMemberDrawer open onClose={() => undefined} onAdded={onAdded} />,
     );
     await user.type(screen.getByLabelText(/First name/i), "Alex");
     await user.click(screen.getByRole("button", { name: "Save Draft" }));
     expect(screen.getByRole("status")).toHaveTextContent(/Draft saved/i);
 
     rerender(
-      <InviteMemberDrawer
+      <AddMemberDrawer
         open={false}
         onClose={() => undefined}
-        onInvited={onInvited}
+        onAdded={onAdded}
       />,
     );
     rerender(
-      <InviteMemberDrawer
-        open
-        onClose={() => undefined}
-        onInvited={onInvited}
-      />,
+      <AddMemberDrawer open onClose={() => undefined} onAdded={onAdded} />,
     );
     expect(screen.getByLabelText(/First name/i)).toHaveValue("Alex");
   });

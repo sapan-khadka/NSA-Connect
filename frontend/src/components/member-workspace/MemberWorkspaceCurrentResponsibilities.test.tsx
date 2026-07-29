@@ -50,11 +50,11 @@ describe("MemberWorkspaceCurrentResponsibilities", () => {
       within(section).getByRole("link", { name: "Open Book venue" }),
     ).toHaveAttribute("href", "/events/10/manage");
     expect(
-      within(section).getByRole("link", { name: /View All/i }),
+      within(section).getByRole("link", { name: /View all/i }),
     ).toHaveAttribute("href", "/events/oversight");
   });
 
-  it("shows premium empty state with assign link when allowed", () => {
+  it("shows light empty state with assign link when allowed", () => {
     render(
       <MemoryRouter>
         <MemberWorkspaceCurrentResponsibilities
@@ -65,9 +65,9 @@ describe("MemberWorkspaceCurrentResponsibilities", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("No current responsibilities.")).toBeInTheDocument();
+    expect(screen.getByText(/No current responsibilities/i)).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Assign a task" }),
+      screen.getByRole("link", { name: /Assign a task/i }),
     ).toHaveAttribute("href", "/events/calendar");
   });
 
@@ -82,9 +82,9 @@ describe("MemberWorkspaceCurrentResponsibilities", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("No current responsibilities.")).toBeInTheDocument();
+    expect(screen.getByText(/No current responsibilities/i)).toBeInTheDocument();
     expect(
-      screen.queryByRole("link", { name: "Assign a task" }),
+      screen.queryByRole("link", { name: /Assign a task/i }),
     ).not.toBeInTheDocument();
   });
 });

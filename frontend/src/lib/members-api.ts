@@ -204,7 +204,7 @@ export async function importMembersCsv(
   return response.data;
 }
 
-export type InviteMemberRequest = {
+export type AddMemberRequest = {
   full_name: string;
   email: string;
   student_id: string;
@@ -213,20 +213,26 @@ export type InviteMemberRequest = {
   phone?: string | null;
 };
 
-export type InviteMemberResponse = {
+export type AddMemberResponse = {
   member: MemberResponse;
   setup_email_sent: boolean;
 };
 
-export async function inviteMember(
-  data: InviteMemberRequest,
-): Promise<InviteMemberResponse> {
-  const response = await api.post<InviteMemberResponse>(
+/** Create an approved member record (optionally sends password-setup email). */
+export async function addMember(
+  data: AddMemberRequest,
+): Promise<AddMemberResponse> {
+  const response = await api.post<AddMemberResponse>(
     "/v1/members/invite",
     data,
   );
   return response.data;
 }
+
+/** @deprecated Prefer addMember — same endpoint, clearer product language. */
+export const inviteMember = addMember;
+export type InviteMemberRequest = AddMemberRequest;
+export type InviteMemberResponse = AddMemberResponse;
 
 export async function approveMember(memberId: number): Promise<MemberResponse> {
   const response = await api.patch<MemberResponse>(
