@@ -10,6 +10,7 @@ export type AnnouncementAudience =
 export type AnnouncementAuthor = {
   id: number;
   full_name: string;
+  avatar_url?: string | null;
 };
 
 export type Announcement = {
@@ -19,6 +20,7 @@ export type Announcement = {
   category: AnnouncementCategory;
   audience: AnnouncementAudience;
   event_id: number | null;
+  is_pinned: boolean;
   author: AnnouncementAuthor;
   created_at: string;
   updated_at: string;
@@ -35,16 +37,27 @@ export type AnnouncementCreatePayload = {
   category?: AnnouncementCategory;
   audience?: AnnouncementAudience;
   event_id?: number | null;
+  is_pinned?: boolean;
 };
 
 export type AnnouncementUpdatePayload = Partial<
-  Pick<AnnouncementCreatePayload, "title" | "body" | "category">
+  Pick<AnnouncementCreatePayload, "title" | "body" | "category" | "is_pinned">
 >;
 
 export const ANNOUNCEMENT_CATEGORY_LABELS: Record<AnnouncementCategory, string> = {
   general: "General",
   urgent: "Urgent",
   event_related: "Event-related",
+};
+
+/** Short display labels for the announcements feed. */
+export const ANNOUNCEMENT_CATEGORY_FEED_LABELS: Record<
+  AnnouncementCategory,
+  string
+> = {
+  general: "General",
+  urgent: "Urgent",
+  event_related: "Event",
 };
 
 export const ANNOUNCEMENT_AUDIENCE_LABELS: Record<AnnouncementAudience, string> = {

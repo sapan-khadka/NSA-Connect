@@ -65,7 +65,11 @@ export function CreateMenu({ onLogTransaction, className = "" }: CreateMenuProps
 
   if (isRoleAtLeast(member.role, "board")) {
     items.push({ id: "event", label: "Event", to: "/events/calendar?create=1" });
-    items.push({ id: "announcement", label: "Announcement", to: "/announcements" });
+    items.push({
+      id: "announcement",
+      label: "Announcement",
+      to: "/announcements?create=1",
+    });
   }
 
   if (canViewMemberDirectory(member.role)) {

@@ -224,3 +224,31 @@ def test_board_can_update_and_delete_announcement(client, board_headers, db_sess
 
     listing = client.get("/api/v1/announcements", headers=board_headers)
     assert listing.json()["total"] == 0
+
+
+def test_board_can_pin_announcement(client, board_headers, db_session):
+    board_member = db_session.scalar(
+        select(Member).where(Member.email == "board@semo.edu")
+    )
+    announcement = Announcement(
+        title="Kickoff",
+        body="Welcome",
+        author_id=board_member.id,
+        is_pinned=False,
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    db_session.add(announcement)
+    db_session.commit()
+
+    response = client.patch(
+        f"/api/v1/announcements/{announcement.id}",
+        headers=board_headers,
+        json={"is_pinned": True},
+    )
+    assert response.status_code == 200
+    assert response.json()["is_pinned"] is True
+
+    listing = client.get("/api/v1/announcements", headers=board_headers)
+    assert listing.json()["announcements"][0]["is_pinned"] is True
+    assert listing.json()["announcements"][0]["author"]["full_name"] == "Board Member"

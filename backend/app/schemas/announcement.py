@@ -17,6 +17,7 @@ class AnnouncementAuthorResponse(BaseModel):
 
     id: int
     full_name: str
+    avatar_url: str | None = None
 
 
 class AnnouncementResponse(BaseModel):
@@ -28,6 +29,7 @@ class AnnouncementResponse(BaseModel):
     category: AnnouncementCategoryLiteral
     audience: AnnouncementAudienceLiteral
     event_id: int | None = None
+    is_pinned: bool = False
     author: AnnouncementAuthorResponse
     created_at: datetime
     updated_at: datetime
@@ -51,6 +53,7 @@ class AnnouncementCreateRequest(BaseModel):
     category: AnnouncementCategoryLiteral = "general"
     audience: AnnouncementAudienceLiteral = "all_approved"
     event_id: int | None = None
+    is_pinned: bool = False
 
     @model_validator(mode="after")
     def audience_requires_event(self) -> "AnnouncementCreateRequest":
@@ -63,8 +66,10 @@ class AnnouncementUpdateRequest(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=255)
     body: str | None = Field(default=None, min_length=1)
     category: AnnouncementCategoryLiteral | None = None
+    is_pinned: bool | None = None
 
     def has_updates(self) -> bool:
         return any(
-            value is not None for value in (self.title, self.body, self.category)
+            value is not None
+            for value in (self.title, self.body, self.category, self.is_pinned)
         )

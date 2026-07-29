@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.orm import relationship
 
@@ -47,6 +47,12 @@ class Announcement(Base):
         ForeignKey("events.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
+    )
+    is_pinned = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
     )
     author_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     organization_id = Column(

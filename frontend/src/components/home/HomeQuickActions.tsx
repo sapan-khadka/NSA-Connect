@@ -57,7 +57,7 @@ export function HomeQuickActions({ member }: { member: MemberResponse }) {
       id: "announcement",
       label: "Announce",
       ariaLabel: "Post Announcement",
-      to: "/announcements",
+      to: "/announcements?create=1",
       icon: Megaphone,
       tone: "amber",
     });

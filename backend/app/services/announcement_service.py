@@ -44,7 +44,7 @@ def list_announcements(
         select(Announcement)
         .options(joinedload(Announcement.author))
         .where(Announcement.organization_id == get_default_organization_id(db))
-        .order_by(Announcement.created_at.desc())
+        .order_by(Announcement.is_pinned.desc(), Announcement.created_at.desc())
     )
     if event_id is not None:
         query = query.where(Announcement.event_id == event_id)
@@ -78,6 +78,7 @@ def create_announcement(
         category=AnnouncementCategory(data.category),
         audience=AnnouncementAudience(data.audience).value,
         event_id=event_id,
+        is_pinned=bool(data.is_pinned),
         author_id=author.id,
         created_at=now,
         updated_at=now,
@@ -117,6 +118,8 @@ def update_announcement(
         announcement.body = data.body.strip()
     if data.category is not None:
         announcement.category = AnnouncementCategory(data.category)
+    if data.is_pinned is not None:
+        announcement.is_pinned = data.is_pinned
 
     announcement.updated_at = datetime.now(UTC)
     db.commit()

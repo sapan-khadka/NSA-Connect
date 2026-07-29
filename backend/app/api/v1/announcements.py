@@ -35,6 +35,7 @@ def _to_response(announcement) -> AnnouncementResponse:
         category=announcement.category.value,
         audience=announcement.audience,
         event_id=announcement.event_id,
+        is_pinned=bool(announcement.is_pinned),
         author=AnnouncementAuthorResponse.model_validate(announcement.author),
         created_at=announcement.created_at,
         updated_at=announcement.updated_at,
