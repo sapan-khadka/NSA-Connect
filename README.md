@@ -12,6 +12,7 @@ Handles member registration and approvals, role-based access, events with prep t
 |-------|------------|
 | API | [FastAPI](https://fastapi.tiangolo.com/) |
 | Frontend | [React 19](https://react.dev/) + [Vite](https://vitejs.dev/) + [Tailwind CSS 4](https://tailwindcss.com/) |
+| Node | **22.22+** (CI uses 22.23.2; required by React Router 8) |
 | Database | [PostgreSQL 16](https://www.postgresql.org/) |
 | ORM | [SQLAlchemy 2](https://www.sqlalchemy.org/) |
 | Migrations | [Alembic](https://alembic.sqlalchemy.org/) |
@@ -60,6 +61,8 @@ docker compose exec backend python -m scripts.seed_demo_data
 | http://localhost:5173 | Frontend dev server (run separately) |
 
 ### Frontend dev server
+
+Requires **Node.js 22.22+** (see `.nvmrc`).
 
 ```bash
 cd frontend
