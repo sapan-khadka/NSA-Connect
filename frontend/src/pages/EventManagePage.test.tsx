@@ -310,7 +310,7 @@ describe("EventManagePage", () => {
     expect(screen.getByLabelText("About this event")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save changes" })).toBeInTheDocument();
     expect(
-      screen.getByRole("checkbox", { name: /Show in photo archive/i }),
+      screen.getByRole("checkbox", { name: /Show in Media/i }),
     ).toBeChecked();
   });
 

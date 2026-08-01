@@ -147,11 +147,16 @@ export function HomeFeaturedEvent({
   canManage = false,
   canCreateEvent = false,
   isLoading,
+  density = "lg",
+  contentScale = 1,
 }: {
   events: EventResponse[];
   canManage?: boolean;
   canCreateEvent?: boolean;
   isLoading: boolean;
+  density?: "xs" | "sm" | "md" | "lg" | "xl";
+  /** 0.68–1 continuous scale so CTAs stay visible when the card shrinks */
+  contentScale?: number;
 }) {
   const [index, setIndex] = useState(0);
   const [goingCount, setGoingCount] = useState<number | null>(null);
@@ -226,11 +231,20 @@ export function HomeFeaturedEvent({
     );
   }
 
+  const fitStyle = {
+    ["--featured-scale" as string]: String(contentScale),
+  };
+
   if (isLoading) {
     return (
       <section
         aria-label="Featured Event"
-        className="home-featured home-featured--hero home-featured--cinematic home-featured--loading"
+        className={[
+          "home-featured home-featured--hero home-featured--cinematic home-featured--loading home-featured--fit",
+          `is-density-${density}`,
+        ].join(" ")}
+        style={fitStyle}
+        data-density={density}
       >
         <div className="home-featured-hero-skeleton" />
       </section>
@@ -241,29 +255,47 @@ export function HomeFeaturedEvent({
     return (
       <section
         aria-label="Featured Event"
-        className="home-featured home-featured--hero home-featured--cinematic home-featured--empty"
+        className={[
+          "home-featured home-featured--hero home-featured--cinematic home-featured--empty home-featured--fit",
+          `is-density-${density}`,
+        ].join(" ")}
+        style={fitStyle}
+        data-density={density}
       >
         <img src={nsaCover} alt="" className="home-featured-photo" />
         <div className="home-featured-hero-scrim" aria-hidden="true" />
         <div className="home-featured-hero-content">
           <p className="home-featured-eyebrow">Upcoming event</p>
-          <h2 className="home-featured-title">Nothing upcoming</h2>
-          <p className="home-featured-meta-line">
+          <h2 className="home-featured-title">No upcoming events</h2>
+          <p className="home-featured-meta-line home-featured-optional">
             {canCreateEvent
-              ? "Create the next event when you’re ready to plan."
+              ? "Plan the next gathering so Home stays useful."
               : "Check the calendar for later dates."}
           </p>
-          <div className="home-featured-hero-footer">
-            <Link
-              to={
-                canCreateEvent
-                  ? "/events/calendar?create=1"
-                  : "/events/calendar"
-              }
-              className="home-featured-btn home-featured-btn--primary"
-            >
-              {canCreateEvent ? "Create event" : "View calendar"}
-            </Link>
+          <div className="home-featured-hero-footer home-featured-actions">
+            {canCreateEvent ? (
+              <>
+                <Link
+                  to="/events/calendar?create=1"
+                  className="home-featured-btn home-featured-btn--primary"
+                >
+                  Create Event
+                </Link>
+                <Link
+                  to="/events/calendar"
+                  className="home-featured-btn home-featured-btn--ghost"
+                >
+                  Open Calendar
+                </Link>
+              </>
+            ) : (
+              <Link
+                to="/events/calendar"
+                className="home-featured-btn home-featured-btn--primary"
+              >
+                View calendar
+              </Link>
+            )}
           </div>
         </div>
       </section>
@@ -303,7 +335,12 @@ export function HomeFeaturedEvent({
   return (
     <section
       aria-label="Featured Event"
-      className="home-featured home-featured--hero home-featured--cinematic home-featured--split"
+      className={[
+        "home-featured home-featured--hero home-featured--cinematic home-featured--split home-featured--fit",
+        `is-density-${density}`,
+      ].join(" ")}
+      style={fitStyle}
+      data-density={density}
     >
       <img src={photoUrl} alt="" className="home-featured-photo" />
       <div className="home-featured-hero-scrim" aria-hidden="true" />
@@ -313,12 +350,12 @@ export function HomeFeaturedEvent({
         total={events.length}
         onPrev={goPrev}
         onNext={goNext}
-        className="home-featured-carousel"
+        className="home-featured-carousel home-featured-optional"
       />
 
       <div className="home-featured-hero-content">
         <div className="home-featured-info">
-          <div className="home-featured-info-top">
+          <div className="home-featured-info-top home-featured-optional">
             <div className="home-featured-pills">
               <p className="home-featured-eyebrow">Upcoming event</p>
               <span className="home-featured-countdown">{countdown}</span>
@@ -326,7 +363,10 @@ export function HomeFeaturedEvent({
           </div>
 
           <div className="home-featured-info-body">
-            <div className="home-featured-date-block" aria-hidden="true">
+            <div
+              className="home-featured-date-block home-featured-optional"
+              aria-hidden="true"
+            >
               <span className="home-featured-date-month">{dateBlock.month}</span>
               <span className="home-featured-date-day">{dateBlock.day}</span>
               <span className="home-featured-date-weekday">
@@ -336,7 +376,7 @@ export function HomeFeaturedEvent({
 
             <div className="home-featured-info-copy">
               <h2 className="home-featured-title">{event.name}</h2>
-              <ul className="home-featured-meta-list">
+              <ul className="home-featured-meta-list home-featured-optional">
                 <li>
                   <AppIcon icon={Calendar} size="xs" className="text-white/75" />
                   <span>{formatFeaturedWhen(event.starts_at)}</span>
@@ -346,7 +386,10 @@ export function HomeFeaturedEvent({
                   <span>{location}</span>
                 </li>
               </ul>
-              <div className="home-featured-badges" aria-label="Event status">
+              <div
+                className="home-featured-badges home-featured-optional"
+                aria-label="Event status"
+              >
                 <span className="home-featured-badge">
                   <AppIcon icon={Users} size="xs" className="text-white/80" />
                   <span className="home-featured-badge-value">

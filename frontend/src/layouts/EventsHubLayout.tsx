@@ -63,7 +63,7 @@ function buildEventsTabs(
     });
   }
 
-  primary.push({ label: "Photos", to: "/events/photos" });
+  primary.push({ label: "Media", to: "/events/media" });
 
   // Keep Ideas last among primary tabs.
   primary.push({
@@ -318,9 +318,18 @@ export function EventsHubLayout() {
   const { summary } = useNotificationSummary();
   const isManageView = Boolean(useMatch("/events/:eventId/manage"));
   const isMeetingDetailView = Boolean(useMatch("/events/meetings/:eventId"));
-  const isPhotoAlbumView = Boolean(useMatch("/events/photos/:eventId"));
+  const isCustomAlbumView = Boolean(useMatch("/events/media/album/:albumId"));
+  // Match only event albums (`/events/media/123`), not `/events/media` or custom albums.
+  const isEventAlbumView =
+    Boolean(useMatch({ path: "/events/media/:eventId", end: true })) &&
+    !isCustomAlbumView;
 
-  if (isManageView || isMeetingDetailView || isPhotoAlbumView) {
+  if (
+    isManageView ||
+    isMeetingDetailView ||
+    isEventAlbumView ||
+    isCustomAlbumView
+  ) {
     return <Outlet />;
   }
 

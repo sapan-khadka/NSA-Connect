@@ -505,3 +505,73 @@ def test_event_ws_read_receipt_broadcast(
             assert payload_b["room_id"] == f"event:{event_id}"
             assert payload_a["last_read_message_id"] == message_id
             assert payload_b["last_read_message_id"] == message_id
+
+
+def test_ws_load_history_returns_page_to_requesting_socket_only(
+    client,
+    board_member_headers,
+    board_access_token,
+):
+    event = _create_event(client, board_member_headers)
+    event_id = event["id"]
+
+    seeded_ids = []
+    for index in range(5):
+        response = client.post(
+            f"/api/v1/events/{event_id}/discussion",
+            json={"content": f"Seed {index}"},
+            headers=board_member_headers,
+        )
+        assert response.status_code == 201
+        seeded_ids.append(response.json()["id"])
+
+    newest_id = seeded_ids[-1]
+
+    with client.websocket_connect(
+        f"/ws/events/{event_id}/discussion?token={board_access_token}"
+    ) as ws_a:
+        history = _recv_until(ws_a, "history")
+        assert len(history["messages"]) == 5
+        assert _recv_until(ws_a, "presence_snapshot")["type"] == "presence_snapshot"
+        assert _recv_until(ws_a, "read_receipts_snapshot")["type"] == "read_receipts_snapshot"
+
+        with client.websocket_connect(
+            f"/ws/events/{event_id}/discussion?token={board_access_token}"
+        ) as ws_b:
+            assert _recv_until(ws_b, "history")["type"] == "history"
+            assert _recv_until(ws_b, "presence_snapshot")["type"] == "presence_snapshot"
+            assert _recv_until(ws_b, "read_receipts_snapshot")["type"] == "read_receipts_snapshot"
+
+            ws_a.send_text(
+                json.dumps(
+                    {
+                        "type": "load_history",
+                        "before_id": newest_id,
+                        "limit": 2,
+                    }
+                )
+            )
+            page = _recv_until(ws_a, "history_page")
+            assert page["type"] == "history_page"
+            assert page["has_more"] is True
+            assert [row["id"] for row in page["messages"]] == seeded_ids[1:3]
+
+            # Peer socket still only sees broadcast traffic, not history pages.
+            ws_a.send_text(json.dumps({"content": "After page load"}))
+            live_a = _recv_until(ws_a, "message")
+            live_b = _recv_until(ws_b, "message")
+            assert live_a["message"]["content"] == "After page load"
+            assert live_b["message"]["content"] == "After page load"
+
+            ws_a.send_text(
+                json.dumps(
+                    {
+                        "type": "load_history",
+                        "before_id": seeded_ids[2],
+                        "limit": 10,
+                    }
+                )
+            )
+            older = _recv_until(ws_a, "history_page")
+            assert [row["id"] for row in older["messages"]] == seeded_ids[:2]
+            assert older["has_more"] is False

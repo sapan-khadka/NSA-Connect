@@ -2,6 +2,7 @@ import { ChevronRight, NotebookPen } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { meetingWorkspacePath } from "../../lib/meeting-workspace";
 import {
   fetchMeetings,
   type MeetingSummary,
@@ -13,11 +14,11 @@ import { HomeCard } from "../ui/HomeCard";
 const MEETINGS_PATH = "/events/meetings";
 
 function meetingPath(eventId: number): string {
-  return `${MEETINGS_PATH}/${eventId}`;
+  return meetingWorkspacePath(eventId);
 }
 
 function meetingNotesPath(eventId: number): string {
-  return `${meetingPath(eventId)}#meeting-minutes`;
+  return meetingWorkspacePath(eventId, "minutes");
 }
 
 function formatMeetingWhen(isoDate: string): string {

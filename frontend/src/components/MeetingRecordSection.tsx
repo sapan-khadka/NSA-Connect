@@ -10,13 +10,13 @@ import {
   summarizeMeetingForEvent,
   type MeetingDetailResponse,
 } from "../lib/meetings-api";
-import { Card } from "./ui/Card";
 
 type MeetingRecordSectionProps = {
   eventId: number;
   eventName: string;
 };
 
+/** Compact meeting record for Manage Event modal — full workspace is `/events/meetings/:id`. */
 export function MeetingRecordSection({
   eventId,
   eventName,
@@ -58,17 +58,6 @@ export function MeetingRecordSection({
 
   return (
     <div className="space-y-6">
-      <Card padding="sm">
-        <h2 className="text-base font-medium text-foreground">Agenda</h2>
-        {detail.agenda ? (
-          <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-            {detail.agenda}
-          </p>
-        ) : (
-          <p className="mt-2 text-sm text-label">No agenda on file.</p>
-        )}
-      </Card>
-
       <MeetingAttendancePanel
         attendance={detail.attendance}
         canManage={detail.can_manage}
@@ -92,6 +81,7 @@ export function MeetingRecordSection({
         eventName={eventName}
         minutes={detail.minutes}
         canManage={detail.can_manage}
+        mode="full"
         onSaveNotes={async (rawNotes) => {
           const updated = await saveMeetingNotes(eventId, rawNotes);
           setDetail((current) =>

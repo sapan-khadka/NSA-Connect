@@ -69,7 +69,7 @@ describe("HomeMeetingMinutesCard", () => {
     ).toHaveAttribute("href", "/events/meetings/5");
     expect(within(card).getByRole("link", { name: label })).toHaveAttribute(
       "href",
-      "/events/meetings/5#meeting-minutes",
+      "/events/meetings/5?tab=minutes",
     );
     expect(
       within(card).queryByRole("link", { name: "Summarize notes" }),

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
 
 import { PageHeader } from "../components/PageHeader";
 import { EventPhotoGrid } from "../components/photo-archive/EventPhotoGrid";
@@ -15,7 +15,10 @@ import {
   deleteEventPhoto,
   fetchEventPhotos,
   type EventPhoto,
+  type MediaKind,
 } from "../lib/photo-archive-api";
+
+type MediaFilter = "all" | MediaKind;
 
 function calendarReturnHref(
   state: CalendarReturnState | null | undefined,
@@ -33,6 +36,7 @@ function calendarReturnHref(
 export function EventPhotoAlbumPage() {
   const { eventId: eventIdParam } = useParams();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const eventId = Number(eventIdParam);
   const calendarBackHref = calendarReturnHref(
     location.state as CalendarReturnState | null,
@@ -43,6 +47,7 @@ export function EventPhotoAlbumPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [deletingPhotoId, setDeletingPhotoId] = useState<number | null>(null);
+  const [filter, setFilter] = useState<MediaFilter>("all");
 
   const loadPhotos = useCallback(async () => {
     if (!Number.isFinite(eventId)) {
@@ -68,6 +73,30 @@ export function EventPhotoAlbumPage() {
     void loadPhotos();
   }, [loadPhotos]);
 
+  useEffect(() => {
+    if (isLoading || searchParams.get("upload") !== "1") {
+      return;
+    }
+    const panel = document.getElementById("photo-upload");
+    panel?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [isLoading, searchParams]);
+
+  const photoCount = useMemo(
+    () => photos.filter((item) => item.media_kind !== "video").length,
+    [photos],
+  );
+  const videoCount = useMemo(
+    () => photos.filter((item) => item.media_kind === "video").length,
+    [photos],
+  );
+
+  const filtered = useMemo(() => {
+    if (filter === "all") {
+      return photos;
+    }
+    return photos.filter((item) => item.media_kind === filter);
+  }, [filter, photos]);
+
   function handleUploaded(photo: EventPhoto) {
     setPhotos((current) => [...current, photo]);
   }
@@ -81,7 +110,7 @@ export function EventPhotoAlbumPage() {
         if (current === null) {
           return null;
         }
-        const deletedIndex = photos.findIndex((entry) => entry.id === photo.id);
+        const deletedIndex = filtered.findIndex((entry) => entry.id === photo.id);
         if (current === deletedIndex) {
           return null;
         }
@@ -96,6 +125,17 @@ export function EventPhotoAlbumPage() {
       setDeletingPhotoId(null);
     }
   }
+
+  const countLabel = [
+    photoCount === 1 ? "1 photo" : `${photoCount} photos`,
+    videoCount > 0
+      ? videoCount === 1
+        ? "1 video"
+        : `${videoCount} videos`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <div className="space-y-6">
@@ -112,20 +152,24 @@ export function EventPhotoAlbumPage() {
             to={photoArchivePath()}
             className="text-sm text-accent hover:text-accent-hover"
           >
-            ← Photo archive
+            ← Media
           </Link>
         )}
       </div>
 
       <PageHeader
         eyebrow="Event album"
-        title={eventName || "Event photos"}
-        description="Upload and browse photos from this event."
+        title={eventName || "Event media"}
+        description="Upload and browse photos and videos from this event."
       />
 
-      <PhotoUploadPanel eventId={eventId} onUploaded={handleUploaded} />
+      <PhotoUploadPanel
+        albumId={eventId}
+        albumKind="event"
+        onUploaded={handleUploaded}
+      />
 
-      {isLoading ? <p className="text-sm text-label">Loading photos…</p> : null}
+      {isLoading ? <p className="text-sm text-label">Loading media…</p> : null}
 
       {error ? (
         <div role="alert" className="ds-alert-banner">
@@ -136,34 +180,70 @@ export function EventPhotoAlbumPage() {
       {!isLoading && !error && photos.length === 0 ? (
         <EmptyState
           icon="calendar"
-          title="No photos yet"
-          description="Be the first to add photos from this event."
+          title="No media yet"
+          description="Be the first to add photos or videos from this event."
         />
       ) : null}
 
       {!isLoading && !error && photos.length > 0 ? (
         <section className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <p className="text-sm text-label">
-              {photos.length} {photos.length === 1 ? "photo" : "photos"}
-            </p>
+            <p className="text-sm text-label">{countLabel}</p>
             <div className="flex flex-wrap items-center gap-3">
-              <DownloadAlbumButton eventId={eventId} photoCount={photos.length} />
+              <DownloadAlbumButton
+                albumId={eventId}
+                albumKind="event"
+                photoCount={photos.length}
+              />
               <ArrowLink to={photoArchivePath()}>All albums</ArrowLink>
             </div>
           </div>
-          <EventPhotoGrid
-            photos={photos}
-            onOpenPhoto={setActiveIndex}
-            onDeletePhoto={(photo) => void handleDeletePhoto(photo)}
-            deletingPhotoId={deletingPhotoId}
-          />
+
+          <div className="photo-archive-media-filters" role="tablist" aria-label="Media type">
+            {(
+              [
+                ["all", "All"],
+                ["photo", "Photos"],
+                ["video", "Videos"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                role="tab"
+                aria-selected={filter === value}
+                className={[
+                  "photo-archive-media-filters__btn",
+                  filter === value ? "is-active" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                onClick={() => {
+                  setFilter(value);
+                  setActiveIndex(null);
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {filtered.length === 0 ? (
+            <p className="text-sm text-label">No items in this filter.</p>
+          ) : (
+            <EventPhotoGrid
+              photos={filtered}
+              onOpenPhoto={setActiveIndex}
+              onDeletePhoto={(photo) => void handleDeletePhoto(photo)}
+              deletingPhotoId={deletingPhotoId}
+            />
+          )}
         </section>
       ) : null}
 
       {activeIndex !== null ? (
         <PhotoLightbox
-          photos={photos}
+          photos={filtered}
           activeIndex={activeIndex}
           onClose={() => setActiveIndex(null)}
           onChangeIndex={setActiveIndex}

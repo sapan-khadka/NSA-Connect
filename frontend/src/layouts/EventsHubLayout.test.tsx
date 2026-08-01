@@ -96,7 +96,7 @@ describe("EventsHubLayout", () => {
     cleanup();
   });
 
-  it("shows Ideas and Photos as primary tabs for general members", async () => {
+  it("shows Ideas and Media as primary tabs for general members", async () => {
     renderWithRouter(undefined, {
       initialEntries: ["/events/calendar"],
       auth: {
@@ -118,9 +118,9 @@ describe("EventsHubLayout", () => {
       "href",
       "/events/ideas",
     );
-    expect(nav.getByRole("link", { name: /Photos/ })).toHaveAttribute(
+    expect(nav.getByRole("link", { name: /Media/ })).toHaveAttribute(
       "href",
-      "/events/photos",
+      "/events/media",
     );
     expect(
       nav.queryByRole("button", { name: /More events sections/i }),
@@ -143,7 +143,7 @@ describe("EventsHubLayout", () => {
     expect(tasksTab.className).toContain("border-accent");
   });
 
-  it("keeps Meetings, Ideas, and Photos primary for board members", async () => {
+  it("keeps Meetings, Ideas, and Media primary for board members", async () => {
     renderWithRouter(undefined, {
       initialEntries: ["/events/calendar"],
       auth: {
@@ -161,9 +161,9 @@ describe("EventsHubLayout", () => {
       "href",
       "/events/ideas",
     );
-    expect(nav.getByRole("link", { name: /Photos/ })).toHaveAttribute(
+    expect(nav.getByRole("link", { name: /Media/ })).toHaveAttribute(
       "href",
-      "/events/photos",
+      "/events/media",
     );
     expect(nav.queryByRole("link", { name: /Past events/ })).not.toBeInTheDocument();
     expect(nav.queryByRole("link", { name: /Oversight/ })).not.toBeInTheDocument();

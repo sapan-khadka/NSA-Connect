@@ -116,20 +116,24 @@ export const motion = {
 } as const;
 
 /**
- * Typography scale (Inter). Sizes in px; weights match current UI hierarchy.
+ * Typography scale (Plus Jakarta Sans + Outfit display). Sizes in px.
  */
 export const typography = {
   fontFamily: {
     sans: [
-      "Inter",
+      '"Plus Jakarta Sans"',
       "ui-sans-serif",
       "system-ui",
       "-apple-system",
       "BlinkMacSystemFont",
       '"Segoe UI"',
-      "Roboto",
-      '"Helvetica Neue"',
-      "Arial",
+      "sans-serif",
+    ],
+    display: [
+      "Outfit",
+      '"Plus Jakarta Sans"',
+      "ui-sans-serif",
+      "system-ui",
       "sans-serif",
     ],
   },

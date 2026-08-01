@@ -1,75 +1,58 @@
-import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, Check, UserRound } from "lucide-react";
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 
-import {
-  fetchTaskOverview,
-  type EventTaskResponse,
-  type TaskOverviewMember,
+import type {
+  EventTaskResponse,
+  TaskOverviewMember,
 } from "../../lib/event-tasks-api";
 import { getTaskDisplayName } from "../../lib/home-tasks";
+import type { WidgetDensity } from "../../lib/home-workspace";
+import { AppIcon } from "../ui/AppIcon";
 import { ArrowLink } from "../ui/ArrowLink";
 import { HomeCard } from "../ui/HomeCard";
 
-function formatTaskDate(isoDate: string | null | undefined): string {
-  if (!isoDate) {
-    return "No date";
-  }
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-  }).format(new Date(isoDate));
-}
-
-type DeadlineRow = {
-  task: EventTaskResponse;
-  assignee: string;
+type HomeTeamPulseProps = {
+  members: TaskOverviewMember[];
+  isLoading?: boolean;
+  density?: WidgetDensity;
 };
 
-export function HomeTeamPulse() {
-  const [members, setMembers] = useState<TaskOverviewMember[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+function isCompletedToday(task: EventTaskResponse, now: Date): boolean {
+  if (!task.is_complete || !task.completed_at) {
+    return false;
+  }
+  const completed = new Date(task.completed_at);
+  return (
+    completed.getFullYear() === now.getFullYear() &&
+    completed.getMonth() === now.getMonth() &&
+    completed.getDate() === now.getDate()
+  );
+}
 
-  useEffect(() => {
-    let cancelled = false;
-    void fetchTaskOverview()
-      .then((response) => {
-        if (!cancelled) {
-          setMembers(response.members);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setMembers([]);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+export function HomeTeamPulse({
+  members,
+  isLoading = false,
+  density = "md",
+}: HomeTeamPulseProps) {
+  const now = useMemo(() => new Date(), []);
 
   const openTasks = useMemo(() => {
-    const byId = new Map<number, DeadlineRow>();
+    const byId = new Map<number, EventTaskResponse>();
     for (const member of members) {
       for (const task of member.tasks) {
         if (task.is_complete || task.status === "done") {
           continue;
         }
-        byId.set(task.id, {
-          task,
-          assignee: member.full_name,
-        });
+        byId.set(task.id, task);
       }
     }
     return [...byId.values()];
   }, [members]);
 
-  const overdueCount = openTasks.filter((row) => row.task.is_overdue).length;
-  const membersNeedingAttention = useMemo(() => {
+  const overdueCount = openTasks.filter((task) => task.is_overdue).length;
+
+  const membersNeedingHelp = useMemo(() => {
     return members.filter((member) =>
       member.tasks.some(
         (task) =>
@@ -80,34 +63,36 @@ export function HomeTeamPulse() {
     ).length;
   }, [members]);
 
-  const dueThisWeekCount = useMemo(() => {
-    const now = new Date();
-    const start = new Date(now);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(start);
-    end.setDate(end.getDate() + (7 - end.getDay()));
-    end.setHours(23, 59, 59, 999);
-    return openTasks.filter((row) => {
-      if (!row.task.due_date) {
-        return false;
+  const completedToday = useMemo(() => {
+    const byId = new Map<number, EventTaskResponse>();
+    for (const member of members) {
+      for (const task of member.tasks) {
+        if (isCompletedToday(task, now)) {
+          byId.set(task.id, task);
+        }
       }
-      const due = new Date(row.task.due_date);
-      return due >= start && due <= end;
-    }).length;
+    }
+    return byId.size;
+  }, [members, now]);
+
+  const topPriority = useMemo(() => {
+    const overdue = openTasks
+      .filter((task) => task.is_overdue)
+      .sort((a, b) =>
+        (a.due_date ?? "").localeCompare(b.due_date ?? ""),
+      );
+    const pick = overdue[0] ?? openTasks[0] ?? null;
+    if (!pick) {
+      return null;
+    }
+    return {
+      title: getTaskDisplayName(pick),
+      assignee: pick.assignee_name?.trim() || "Unassigned",
+      eventName: pick.event_name,
+    };
   }, [openTasks]);
 
-  const upcomingDeadlines = useMemo(() => {
-    return [...openTasks]
-      .sort((a, b) => {
-        if (a.task.is_overdue !== b.task.is_overdue) {
-          return a.task.is_overdue ? -1 : 1;
-        }
-        return (a.task.due_date ?? "9999").localeCompare(
-          b.task.due_date ?? "9999",
-        );
-      })
-      .slice(0, 3);
-  }, [openTasks]);
+  const compact = density === "xs" || density === "sm";
 
   return (
     <HomeCard
@@ -116,103 +101,85 @@ export function HomeTeamPulse() {
       aria-label="Team pulse"
     >
       <div className="home-task-header">
-        <h2 className="home-panel-title">Team pulse</h2>
-        <ArrowLink to="/events/oversight">Oversight</ArrowLink>
+        <h2 className="home-panel-title">Team Pulse</h2>
+        <ArrowLink to="/events/oversight" className="home-hide-xs">
+          Go to tasks
+        </ArrowLink>
       </div>
 
       {isLoading ? (
         <p className="home-activity-empty">Loading…</p>
       ) : (
         <>
-          <ul className="home-team-pulse-stats" aria-label="Team summary">
-            <li>
-              <div className="home-team-pulse-row-stat">
-                <span className="home-team-pulse-row-stat__label">
-                  Open Tasks
-                </span>
-                <span className="home-team-pulse-row-stat__value">
-                  {openTasks.length}
-                </span>
-              </div>
+          <ul className="home-team-pulse-narrative" aria-label="Team summary">
+            <li
+              className={
+                overdueCount > 0
+                  ? "home-team-pulse-narrative__item is-alert"
+                  : "home-team-pulse-narrative__item"
+              }
+            >
+              <AppIcon
+                icon={AlertTriangle}
+                size="sm"
+                className="text-current"
+              />
+              <span>
+                {overdueCount === 0
+                  ? "No overdue tasks"
+                  : `${overdueCount} overdue task${overdueCount === 1 ? "" : "s"}`}
+              </span>
             </li>
-            <li>
-              <div className="home-team-pulse-row-stat">
-                <span className="home-team-pulse-row-stat__label">Overdue</span>
-                <span
-                  className={[
-                    "home-team-pulse-row-stat__value",
-                    overdueCount > 0 ? "is-alert" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                >
-                  {overdueCount}
-                </span>
-              </div>
+            <li
+              className={
+                membersNeedingHelp > 0
+                  ? "home-team-pulse-narrative__item is-alert"
+                  : "home-team-pulse-narrative__item"
+              }
+            >
+              <AppIcon icon={UserRound} size="sm" className="text-current" />
+              <span>
+                {membersNeedingHelp === 0
+                  ? "Nobody needs help"
+                  : `${membersNeedingHelp} member${
+                      membersNeedingHelp === 1 ? "" : "s"
+                    } need${membersNeedingHelp === 1 ? "s" : ""} help`}
+              </span>
             </li>
-            <li>
-              <div className="home-team-pulse-row-stat">
-                <span className="home-team-pulse-row-stat__label">
-                  Due This Week
+            {!compact ? (
+              <li className="home-team-pulse-narrative__item is-ok">
+                <AppIcon icon={Check} size="sm" className="text-current" />
+                <span>
+                  {completedToday === 0
+                    ? "No completions today"
+                    : `${completedToday} completed today`}
                 </span>
-                <span className="home-team-pulse-row-stat__value">
-                  {dueThisWeekCount}
-                </span>
-              </div>
-            </li>
-            <li>
-              <div className="home-team-pulse-row-stat">
-                <span className="home-team-pulse-row-stat__label">
-                  Need Help
-                </span>
-                <span
-                  className={[
-                    "home-team-pulse-row-stat__value",
-                    membersNeedingAttention > 0 ? "is-alert" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                >
-                  {membersNeedingAttention}
-                </span>
-              </div>
-            </li>
+              </li>
+            ) : null}
           </ul>
 
-          <div className="home-team-pulse-deadlines">
-            <p className="home-team-pulse-deadlines-label">Upcoming deadlines</p>
-            {upcomingDeadlines.length === 0 ? (
-              <p className="home-activity-empty">No open deadlines</p>
-            ) : (
-              <ul className="home-team-pulse-list">
-                {upcomingDeadlines.map(({ task, assignee }) => (
-                  <li key={task.id}>
-                    <Link to="/events/oversight" className="home-team-pulse-row">
-                      <span className="home-team-pulse-row-main">
-                        <span className="home-team-pulse-row-title">
-                          {getTaskDisplayName(task)}
-                        </span>
-                        <span className="home-team-pulse-row-assignee">
-                          {assignee}
-                        </span>
-                      </span>
-                      <time
-                        className={[
-                          "home-team-pulse-row-due",
-                          task.is_overdue ? "is-overdue" : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
-                        dateTime={task.due_date ?? undefined}
-                      >
-                        {formatTaskDate(task.due_date)}
-                      </time>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          {!compact && topPriority ? (
+            <div className="home-team-pulse-priority">
+              <p className="home-team-pulse-deadlines-label">Top priority</p>
+              <Link to="/events/oversight" className="home-team-pulse-priority__card">
+                <span className="home-team-pulse-priority__person">
+                  {topPriority.assignee}
+                </span>
+                <span className="home-team-pulse-priority__title">
+                  {topPriority.title}
+                </span>
+                {topPriority.eventName ? (
+                  <span className="home-team-pulse-priority__meta">
+                    {topPriority.eventName}
+                  </span>
+                ) : null}
+              </Link>
+            </div>
+          ) : null}
+
+          {!compact && !topPriority ? (
+            <p className="home-team-pulse-clear">Everyone is on track</p>
+          ) : null}
         </>
       )}
     </HomeCard>

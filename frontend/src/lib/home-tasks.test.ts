@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest";
 import type { EventTaskResponse } from "./event-tasks-api";
 import {
   applyOptimisticTaskComplete,
+  buildHomeGreeting,
   buildMarkTaskCompleteRequest,
   getTaskDisplayName,
   getMyTasksPath,
+  getTaskUrgency,
   summarizeMyTasks,
 } from "./home-tasks";
 
@@ -47,6 +49,31 @@ describe("home-tasks", () => {
         }),
       ),
     ).toBe("Setup");
+  });
+
+  it("does not treat completed tasks as high urgency even when overdue", () => {
+    expect(
+      getTaskUrgency(
+        makeTask({
+          status: "done",
+          is_complete: true,
+          is_overdue: true,
+          due_date: "2026-01-01T12:00:00Z",
+        }),
+      ),
+    ).toBe("low");
+  });
+
+  it("marks open overdue tasks as high urgency", () => {
+    expect(
+      getTaskUrgency(
+        makeTask({
+          status: "todo",
+          is_overdue: true,
+          due_date: "2026-01-01T12:00:00Z",
+        }),
+      ),
+    ).toBe("high");
   });
 
   it("summarizes open, overdue, and next due tasks", () => {
@@ -138,5 +165,46 @@ describe("home-tasks", () => {
     expect(optimistic.checklist_items.every((item) => item.is_completed)).toBe(
       true,
     );
+  });
+
+  it("builds a concise Home greeting from overdue work and next event", () => {
+    const morning = new Date("2026-07-31T09:00:00");
+    expect(
+      buildHomeGreeting({
+        firstName: "Mukesh",
+        overdueCount: 3,
+        nextEventName: "WT Cultural Night",
+        nextEventStartsAt: "2026-07-31T15:00:00",
+        now: morning,
+      }),
+    ).toEqual({
+      salutation: "Good morning, Mukesh.",
+      detail:
+        "You have 3 overdue tasks and WT Cultural Night starts in 6 hours.",
+    });
+
+    expect(
+      buildHomeGreeting({
+        firstName: "Mukesh",
+        overdueCount: 0,
+        now: morning,
+      }),
+    ).toEqual({
+      salutation: "Good morning, Mukesh.",
+      detail: "You’re all caught up for now.",
+    });
+
+    expect(
+      buildHomeGreeting({
+        firstName: "Mukesh",
+        overdueCount: 1,
+        nextEventName: "Dashain",
+        nextEventStartsAt: "2026-08-11T18:00:00",
+        now: morning,
+      }),
+    ).toEqual({
+      salutation: "Good morning, Mukesh.",
+      detail: "You have 1 overdue task and Dashain starts in 11 days.",
+    });
   });
 });

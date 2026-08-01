@@ -20,6 +20,8 @@ class EventPhoto(Base):
     image_url = Column(String(2048), nullable=False)
     thumbnail_url = Column(String(2048), nullable=False)
     public_id = Column(String(512), nullable=False)
+    media_kind = Column(String(16), nullable=False, server_default="photo")
+    duration_seconds = Column(Integer, nullable=True)
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,

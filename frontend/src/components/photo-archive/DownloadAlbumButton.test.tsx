@@ -7,6 +7,7 @@ vi.mock("../../lib/photo-archive-api", () => ({
   ALBUM_DOWNLOAD_TIMEOUT_MS: 120_000,
   LARGE_ALBUM_PHOTO_THRESHOLD: 50,
   downloadEventPhotoAlbum: vi.fn(),
+  downloadCustomMediaAlbum: vi.fn(),
   triggerBrowserDownload: vi.fn(),
 }));
 
@@ -31,7 +32,7 @@ describe("DownloadAlbumButton", () => {
       filename: "dashain-2020-photos.zip",
     });
 
-    render(<DownloadAlbumButton eventId={5} photoCount={3} />);
+    render(<DownloadAlbumButton albumId={5} albumKind="event" photoCount={3} />);
 
     fireEvent.click(screen.getByRole("button", { name: /download album/i }));
 
@@ -52,7 +53,7 @@ describe("DownloadAlbumButton", () => {
       }),
     );
 
-    render(<DownloadAlbumButton eventId={5} photoCount={2} />);
+    render(<DownloadAlbumButton albumId={5} albumKind="event" photoCount={2} />);
 
     fireEvent.click(screen.getByRole("button", { name: /download album/i }));
 
@@ -75,7 +76,7 @@ describe("DownloadAlbumButton", () => {
       filename: "large-album.zip",
     });
 
-    render(<DownloadAlbumButton eventId={5} photoCount={51} />);
+    render(<DownloadAlbumButton albumId={5} albumKind="event" photoCount={51} />);
 
     fireEvent.click(screen.getByRole("button", { name: /download album/i }));
 

@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { MemberResponse } from "../../lib/auth-api";
 import * as discussionApi from "../../lib/discussion-api";
+import * as membersApi from "../../lib/members-api";
 import { MockAuthProvider } from "../../test/test-utils";
 import { DiscussionRoomMembersDrawer } from "./DiscussionRoomMembersDrawer";
 
@@ -16,8 +17,15 @@ vi.mock("../../lib/discussion-api", async () => {
     ...actual,
     fetchDiscussionRoom: vi.fn(),
     ensureDirectMessage: vi.fn(),
+    addDiscussionRoomMembers: vi.fn(),
+    removeDiscussionRoomMember: vi.fn(),
+    fetchDiscussionPresence: vi.fn().mockResolvedValue({ "3": true }),
   };
 });
+
+vi.mock("../../lib/members-api", () => ({
+  fetchAssignableMembers: vi.fn(),
+}));
 
 const viewer: MemberResponse = {
   id: 1,
@@ -31,13 +39,28 @@ const viewer: MemberResponse = {
   position: "member",
 };
 
+const directory: MemberResponse[] = [
+  viewer,
+  {
+    id: 3,
+    full_name: "Alex Member",
+    email: "alex@semo.edu",
+    student_id: "33333333",
+    major: "CS",
+    graduation_year: 2028,
+    role: "general",
+    status: "approved",
+    position: "member",
+  },
+];
+
 describe("DiscussionRoomMembersDrawer", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
   });
 
-  it("lists group members and offers Message for peers", async () => {
+  it("lists group members in sections with search", async () => {
     vi.mocked(discussionApi.fetchDiscussionRoom).mockResolvedValue({
       id: 9,
       name: "Decor Crew",
@@ -58,6 +81,10 @@ describe("DiscussionRoomMembersDrawer", () => {
         { member_id: 3, full_name: "Alex Member", role: "member" },
       ],
     });
+    vi.mocked(membersApi.fetchAssignableMembers).mockResolvedValue({
+      members: directory,
+      total: directory.length,
+    });
 
     render(
       <MockAuthProvider value={{ member: viewer, isAuthenticated: true }}>
@@ -74,17 +101,19 @@ describe("DiscussionRoomMembersDrawer", () => {
     await waitFor(() => {
       expect(screen.getByText("Alex Member")).toBeInTheDocument();
     });
-    expect(screen.getByText("2 members")).toBeInTheDocument();
-    expect(screen.getByText("You")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Members" })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Search members")).toBeInTheDocument();
+    expect(screen.getByText(/ADMIN/)).toBeInTheDocument();
+    expect(screen.getByText(/MEMBER/)).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Message Alex Member" }),
     ).toBeEnabled();
     expect(
-      screen.queryByRole("button", { name: "Message Board Viewer" }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("button", { name: /Invite members/i }),
+    ).toBeInTheDocument();
   });
 
-  it("opens a DM when Message is clicked", async () => {
+  it("opens a DM when a peer row is clicked", async () => {
     const user = userEvent.setup();
     vi.mocked(discussionApi.fetchDiscussionRoom).mockResolvedValue({
       id: 9,
@@ -105,6 +134,10 @@ describe("DiscussionRoomMembersDrawer", () => {
         { member_id: 1, full_name: "Board Viewer", role: "owner" },
         { member_id: 3, full_name: "Alex Member", role: "member" },
       ],
+    });
+    vi.mocked(membersApi.fetchAssignableMembers).mockResolvedValue({
+      members: directory,
+      total: directory.length,
     });
     vi.mocked(discussionApi.ensureDirectMessage).mockResolvedValue({
       id: 44,

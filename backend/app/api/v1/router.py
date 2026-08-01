@@ -11,6 +11,7 @@ from app.api.v1.event_tasks import router as event_tasks_router
 from app.api.v1.events import router as events_router
 from app.api.v1.finance import router as finance_router
 from app.api.v1.me import router as me_router
+from app.api.v1.media import router as media_router
 from app.api.v1.member_positions import router as member_positions_router
 from app.api.v1.members import router as members_router
 from app.api.v1.notifications import router as notifications_router
@@ -27,6 +28,7 @@ api_router.include_router(announcements_router)
 api_router.include_router(constitution_router)
 api_router.include_router(discussions_router)
 api_router.include_router(me_router)
+api_router.include_router(media_router)
 api_router.include_router(member_positions_router)
 api_router.include_router(members_router)
 api_router.include_router(public_events_router)

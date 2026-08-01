@@ -27,4 +27,8 @@ describe("getAppHeaderMeta", () => {
   it("resolves custom discussion room paths", () => {
     expect(getAppHeaderMeta("/discussions/room/4").title).toBe("Discussions");
   });
+
+  it("resolves meetings workspace title", () => {
+    expect(getAppHeaderMeta("/events/meetings").title).toBe("Meetings");
+  });
 });

@@ -46,7 +46,7 @@ export function EventManageWrapUpCard({
   const items: WrapItem[] = [
     {
       id: "photos",
-      label: "Photos in archive",
+      label: "Media album",
       done: Boolean(event.show_in_photo_archive && event.event_photo_url),
       actionLabel: "Open album",
       href: photoAlbumPath(event.id),

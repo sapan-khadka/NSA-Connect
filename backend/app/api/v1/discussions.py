@@ -29,6 +29,7 @@ from app.services.avatar_upload_service import (
 )
 from app.schemas.discussion import (
     DiscussionArchiveResponse,
+    DiscussionAttachmentUploadResponse,
     DiscussionInboxResponse,
     DiscussionMessageCreateRequest,
     DiscussionMessageListResponse,
@@ -39,10 +40,12 @@ from app.schemas.discussion import (
     DiscussionPresenceResponse,
     DiscussionRoomIdRequest,
     DiscussionRoomReadResponse,
+    DiscussionSharedFileListResponse,
     DiscussionWsTicketResponse,
 )
 from app.schemas.discussion_room import (
     DirectMessageCreateRequest,
+    DiscussionRoomAddMembersRequest,
     DiscussionRoomCreateRequest,
     DiscussionRoomListResponse,
     DiscussionRoomRejectRequest,
@@ -60,6 +63,7 @@ from app.services.discussion_realtime_sync import users_online
 from app.services.discussion_room_service import (
     DiscussionRoomInvalidStateError,
     DiscussionRoomNotFoundError,
+    add_members_to_discussion_room,
     approve_discussion_room,
     archive_discussion_room,
     assert_can_access_custom_room,
@@ -70,6 +74,7 @@ from app.services.discussion_room_service import (
     list_my_discussion_rooms,
     list_pending_discussion_rooms,
     reject_discussion_room,
+    remove_member_from_discussion_room,
     set_group_room_avatar,
 )
 from app.services.discussion_service import (
@@ -84,9 +89,15 @@ from app.services.discussion_service import (
     edit_discussion_message,
     list_board_discussion_messages,
     list_custom_room_discussion_messages,
+    list_discussion_shared_files,
     list_event_discussion_messages,
     messages_to_responses,
     soft_delete_discussion_message,
+)
+from app.services.discussion_attachment_upload_service import (
+    DiscussionAttachmentUploadUnavailableError,
+    DiscussionAttachmentValidationError,
+    upload_discussion_attachment_file,
 )
 from app.services.event_service import EventNotFoundError
 
@@ -123,6 +134,89 @@ def list_discussion_inbox_endpoint(
     current_member: Member = Depends(get_current_member),
 ):
     return list_discussion_inbox(db, member=current_member)
+
+
+@router.get(
+    "/discussions/files",
+    response_model=DiscussionSharedFileListResponse,
+)
+def list_discussion_shared_files_endpoint(
+    room_id: str = Query(..., min_length=1, max_length=64),
+    kind: str | None = Query(default=None),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+    current_member: Member = Depends(get_current_member),
+):
+    """List shared attachments for a board, event, or custom room thread."""
+    try:
+        return list_discussion_shared_files(
+            db,
+            member=current_member,
+            room_id=room_id.strip(),
+            kind=kind,
+            limit=limit,
+            offset=offset,
+        )
+    except (
+        DiscussionForbiddenError,
+        DiscussionRoomNotFoundError,
+        EventNotFoundError,
+    ) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Discussion room not found",
+        ) from exc
+    except DiscussionValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+
+
+@router.post(
+    "/discussions/attachments/upload",
+    response_model=DiscussionAttachmentUploadResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_discussion_attachment_endpoint(
+    file: UploadFile = File(...),
+    current_member: Member = Depends(get_current_member),
+):
+    del current_member  # auth gate only — any authenticated member may upload
+    file_bytes = await file.read()
+    try:
+        uploaded = upload_discussion_attachment_file(
+            file_bytes=file_bytes,
+            content_type=file.content_type,
+            file_name=file.filename,
+        )
+    except DiscussionAttachmentValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    except DiscussionAttachmentUploadUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Attachment upload is not configured",
+        ) from exc
+    except CloudinaryUploadError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to upload attachment",
+        ) from exc
+    return DiscussionAttachmentUploadResponse(
+        url=uploaded.url,
+        public_id=uploaded.public_id,
+        file_name=uploaded.file_name,
+        content_type=uploaded.content_type,
+        size_bytes=uploaded.size_bytes,
+        kind=uploaded.kind,  # type: ignore[arg-type]
+        width=uploaded.width,
+        height=uploaded.height,
+        duration_ms=uploaded.duration_ms,
+    )
 
 
 @router.post(
@@ -341,6 +435,8 @@ def create_event_discussion_endpoint(
             event_id=event_id,
             member=current_member,
             content=data.content,
+            reply_to_message_id=data.reply_to_message_id,
+            attachments=data.attachments or None,
         )
     except EventNotFoundError:
         raise HTTPException(
@@ -405,6 +501,8 @@ def create_board_discussion_endpoint(
             db,
             member=current_member,
             content=data.content,
+            reply_to_message_id=data.reply_to_message_id,
+            attachments=data.attachments or None,
         )
     except DiscussionValidationError as exc:
         raise HTTPException(
@@ -533,6 +631,62 @@ def get_discussion_room_endpoint(
             member=current_member,
         )
     except (DiscussionRoomNotFoundError, DiscussionForbiddenError) as exc:
+        _handle_room_admin_errors(exc)
+    return build_room_response(room, viewer_id=current_member.id)
+
+
+@router.post(
+    "/discussions/rooms/{room_id}/members",
+    response_model=DiscussionRoomResponse,
+)
+def add_discussion_room_members_endpoint(
+    room_id: int,
+    data: DiscussionRoomAddMembersRequest,
+    db: Session = Depends(get_db),
+    current_member: Member = Depends(get_current_member),
+):
+    """Add approved members to a group (owner or board)."""
+    try:
+        room = add_members_to_discussion_room(
+            db,
+            room_id=room_id,
+            actor=current_member,
+            member_ids=data.member_ids,
+        )
+    except (
+        DiscussionRoomNotFoundError,
+        DiscussionForbiddenError,
+        DiscussionValidationError,
+        DiscussionRoomInvalidStateError,
+    ) as exc:
+        _handle_room_admin_errors(exc)
+    return build_room_response(room, viewer_id=current_member.id)
+
+
+@router.delete(
+    "/discussions/rooms/{room_id}/members/{member_id}",
+    response_model=DiscussionRoomResponse,
+)
+def remove_discussion_room_member_endpoint(
+    room_id: int,
+    member_id: int,
+    db: Session = Depends(get_db),
+    current_member: Member = Depends(get_current_member),
+):
+    """Remove a non-owner member from a group (owner or board)."""
+    try:
+        room = remove_member_from_discussion_room(
+            db,
+            room_id=room_id,
+            actor=current_member,
+            member_id=member_id,
+        )
+    except (
+        DiscussionRoomNotFoundError,
+        DiscussionForbiddenError,
+        DiscussionValidationError,
+        DiscussionRoomInvalidStateError,
+    ) as exc:
         _handle_room_admin_errors(exc)
     return build_room_response(room, viewer_id=current_member.id)
 
@@ -722,6 +876,8 @@ def create_custom_room_message_endpoint(
             room_id=room_id,
             member=current_member,
             content=data.content,
+            reply_to_message_id=data.reply_to_message_id,
+            attachments=data.attachments or None,
         )
     except (
         DiscussionRoomNotFoundError,

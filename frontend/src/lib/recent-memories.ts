@@ -1,21 +1,29 @@
-import type { EventPhoto, PhotoAlbumSummary } from "./photo-archive-api";
-import { fetchEventPhotos, fetchPhotoAlbums } from "./photo-archive-api";
+import type { MediaItem, PhotoAlbumSummary } from "./photo-archive-api";
+import {
+  fetchCustomMediaAlbum,
+  fetchEventPhotos,
+  fetchPhotoAlbums,
+} from "./photo-archive-api";
 
 export type RecentMemoriesPreview = {
   album: PhotoAlbumSummary;
-  photos: EventPhoto[];
+  photos: MediaItem[];
   extraPhotoCount: number;
 };
 
 export function pickRecentMemoriesAlbum(
   albums: PhotoAlbumSummary[],
 ): PhotoAlbumSummary | null {
-  return albums.find((album) => album.photo_count > 0) ?? null;
+  return (
+    albums.find((album) => album.kind === "event" && album.photo_count > 0) ??
+    albums.find((album) => album.photo_count > 0) ??
+    null
+  );
 }
 
 export function buildRecentMemoriesPreview(
   album: PhotoAlbumSummary,
-  photos: EventPhoto[],
+  photos: MediaItem[],
 ): RecentMemoriesPreview {
   const previewPhotos = photos.slice(-4);
 
@@ -34,11 +42,14 @@ export async function fetchRecentMemories(): Promise<RecentMemoriesPreview | nul
     return null;
   }
 
-  const response = await fetchEventPhotos(album.event_id);
+  const photos =
+    album.kind === "custom"
+      ? (await fetchCustomMediaAlbum(album.id)).items
+      : (await fetchEventPhotos(album.id)).photos;
 
-  if (response.photos.length === 0) {
+  if (photos.length === 0) {
     return null;
   }
 
-  return buildRecentMemoriesPreview(album, response.photos);
+  return buildRecentMemoriesPreview(album, photos);
 }

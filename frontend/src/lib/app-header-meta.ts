@@ -94,21 +94,31 @@ const ROUTES: RouteMeta[] = [
     ],
   },
   {
-    pattern: /^\/events\/photos\/?$/,
-    title: "Photo archive",
+    pattern: /^\/events\/media\/?$/,
+    title: "Media",
     crumbs: () => [
       DASHBOARD,
       { id: "events", label: "Events", to: "/events/calendar" },
-      leaf("photos", "Photos"),
+      leaf("media", "Media"),
     ],
   },
   {
-    pattern: /^\/events\/photos\/([^/]+)\/?$/,
-    title: "Photo album",
+    pattern: /^\/events\/media\/album\/([^/]+)\/?$/,
+    title: "Album",
     crumbs: () => [
       DASHBOARD,
       { id: "events", label: "Events", to: "/events/calendar" },
-      { id: "photos", label: "Photos", to: "/events/photos" },
+      { id: "media", label: "Media", to: "/events/media" },
+      leaf("album", "Album"),
+    ],
+  },
+  {
+    pattern: /^\/events\/media\/([^/]+)\/?$/,
+    title: "Album",
+    crumbs: () => [
+      DASHBOARD,
+      { id: "events", label: "Events", to: "/events/calendar" },
+      { id: "media", label: "Media", to: "/events/media" },
       leaf("album", "Album"),
     ],
   },
@@ -123,7 +133,7 @@ const ROUTES: RouteMeta[] = [
   },
   {
     pattern: /^\/events\/meetings\/?$/,
-    title: "Board meetings",
+    title: "Meetings",
     crumbs: () => [
       DASHBOARD,
       { id: "events", label: "Events", to: "/events/calendar" },
@@ -132,17 +142,17 @@ const ROUTES: RouteMeta[] = [
   },
   {
     pattern: /^\/events\/meetings\/([^/]+)\/?$/,
-    title: "Meeting detail",
+    title: "Meeting",
     crumbs: () => [
       DASHBOARD,
       { id: "events", label: "Events", to: "/events/calendar" },
       { id: "meetings", label: "Meetings", to: "/events/meetings" },
-      leaf("meeting", "Detail"),
+      leaf("meeting", "Workspace"),
     ],
   },
   {
     pattern: /^\/events\/oversight\/?$/,
-    title: "Task oversight",
+    title: "Oversight",
     crumbs: () => [
       DASHBOARD,
       { id: "events", label: "Events", to: "/events/calendar" },
@@ -214,15 +224,6 @@ const ROUTES: RouteMeta[] = [
     pattern: /^\/board\/discussion\/?$/,
     title: "Discussions",
     crumbs: () => [DASHBOARD, leaf("discussions", "Discussions")],
-  },
-  {
-    pattern: /^\/board\/meeting-minutes\/?$/,
-    title: "Meeting minutes",
-    crumbs: () => [
-      DASHBOARD,
-      leaf("board", "Board tools"),
-      leaf("minutes", "Meeting minutes"),
-    ],
   },
   {
     pattern: /^\/board\/announcement-email\/?$/,

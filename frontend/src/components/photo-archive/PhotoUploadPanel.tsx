@@ -4,11 +4,13 @@ import { Upload } from "lucide-react";
 import { getApiErrorMessage } from "../../lib/api-error";
 import {
   PHOTO_UPLOAD_MAX_BATCH,
-  preparePhotosForUpload,
+  prepareMediaForUpload,
 } from "../../lib/compress-image";
 import {
   uploadEventPhoto,
-  type EventPhoto,
+  uploadMediaAlbumItem,
+  type MediaAlbumKind,
+  type MediaItem,
 } from "../../lib/photo-archive-api";
 import { AppIcon } from "../ui/AppIcon";
 import { Button } from "../ui/Button";
@@ -23,11 +25,20 @@ type UploadItem = {
 };
 
 type PhotoUploadPanelProps = {
-  eventId: number;
-  onUploaded: (photo: EventPhoto) => void;
+  albumId?: number;
+  albumKind?: MediaAlbumKind;
+  onUploaded: (item: MediaItem) => void;
+  /** @deprecated use albumId + albumKind="event" */
+  eventId?: number;
 };
 
-export function PhotoUploadPanel({ eventId, onUploaded }: PhotoUploadPanelProps) {
+export function PhotoUploadPanel({
+  albumId: albumIdProp,
+  albumKind = "event",
+  onUploaded,
+  eventId,
+}: PhotoUploadPanelProps) {
+  const albumId = albumIdProp ?? eventId ?? 0;
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [items, setItems] = useState<UploadItem[]>([]);
@@ -39,7 +50,7 @@ export function PhotoUploadPanel({ eventId, onUploaded }: PhotoUploadPanelProps)
       let prepared: File[];
 
       try {
-        prepared = await preparePhotosForUpload(files);
+        prepared = await prepareMediaForUpload(files);
       } catch (caught) {
         setItems([
           {
@@ -73,14 +84,23 @@ export function PhotoUploadPanel({ eventId, onUploaded }: PhotoUploadPanelProps)
         );
 
         try {
-          const photo = await uploadEventPhoto(eventId, file, (progress) => {
-            setItems((current) =>
-              current.map((item) =>
-                item.id === itemId ? { ...item, progress } : item,
-              ),
-            );
-          });
-          onUploaded(photo);
+          const uploaded =
+            albumKind === "custom"
+              ? await uploadMediaAlbumItem(albumId, file, (progress) => {
+                  setItems((current) =>
+                    current.map((item) =>
+                      item.id === itemId ? { ...item, progress } : item,
+                    ),
+                  );
+                })
+              : await uploadEventPhoto(albumId, file, (progress) => {
+                  setItems((current) =>
+                    current.map((item) =>
+                      item.id === itemId ? { ...item, progress } : item,
+                    ),
+                  );
+                });
+          onUploaded(uploaded);
           setItems((current) =>
             current.map((item) =>
               item.id === itemId
@@ -105,7 +125,7 @@ export function PhotoUploadPanel({ eventId, onUploaded }: PhotoUploadPanelProps)
 
       setIsUploading(false);
     },
-    [eventId, onUploaded],
+    [albumId, albumKind, onUploaded],
   );
 
   function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
@@ -124,12 +144,13 @@ export function PhotoUploadPanel({ eventId, onUploaded }: PhotoUploadPanelProps)
   }
 
   return (
-    <Card padding="sm">
+    <Card padding="sm" id="photo-upload">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm text-foreground">Add photos</h2>
+          <h2 className="text-sm text-foreground">Upload Media</h2>
           <p className="mt-1 text-xs text-label">
-            JPG, PNG, or HEIC · up to 15 MB each · max {PHOTO_UPLOAD_MAX_BATCH} at a time
+            JPG, PNG, HEIC, MP4, MOV, WebM · photos up to 15 MB · videos up to
+            100 MB · max {PHOTO_UPLOAD_MAX_BATCH} at a time
           </p>
         </div>
         <Button
@@ -141,7 +162,7 @@ export function PhotoUploadPanel({ eventId, onUploaded }: PhotoUploadPanelProps)
           onClick={() => inputRef.current?.click()}
         >
           <AppIcon icon={Upload} size="sm" className="text-current" />
-          Add photos
+          Choose files
         </Button>
       </div>
 
@@ -160,14 +181,14 @@ export function PhotoUploadPanel({ eventId, onUploaded }: PhotoUploadPanelProps)
         ].join(" ")}
       >
         <p className="text-sm text-label">
-          Drag and drop images here, or use the button above.
+          Drag and drop photos or videos here, or choose files.
         </p>
       </div>
 
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,image/heic,image/heif,.heic"
+        accept="image/jpeg,image/png,image/heic,image/heif,.heic,video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm"
         multiple
         className="hidden"
         onChange={handleInputChange}

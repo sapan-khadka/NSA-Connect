@@ -1,19 +1,100 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.models.discussion_message import MAX_DISCUSSION_CONTENT_LENGTH
+from app.services.discussion_attachment_upload_service import (
+    MAX_ATTACHMENTS_PER_MESSAGE,
+)
+
+
+class DiscussionAttachmentPayload(BaseModel):
+    """Pre-uploaded attachment metadata sent with a new chat message."""
+
+    url: str = Field(min_length=1, max_length=2048)
+    public_id: str | None = Field(default=None, max_length=512)
+    file_name: str = Field(min_length=1, max_length=512)
+    content_type: str = Field(min_length=1, max_length=128)
+    size_bytes: int = Field(ge=1)
+    kind: Literal["image", "video", "file", "audio"]
+    width: int | None = Field(default=None, ge=1)
+    height: int | None = Field(default=None, ge=1)
+    duration_ms: int | None = Field(default=None, ge=0)
+
+    @field_validator("url", "file_name", "content_type", "public_id", mode="before")
+    @classmethod
+    def strip_strings(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.strip()
+        return value
+
+
+class DiscussionAttachmentResponse(BaseModel):
+    id: int
+    kind: Literal["image", "video", "file", "audio"]
+    file_name: str
+    content_type: str
+    size_bytes: int
+    url: str
+    public_id: str | None = None
+    width: int | None = None
+    height: int | None = None
+    duration_ms: int | None = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DiscussionAttachmentUploadResponse(BaseModel):
+    url: str
+    public_id: str
+    file_name: str
+    content_type: str
+    size_bytes: int
+    kind: Literal["image", "video", "file", "audio"]
+    width: int | None = None
+    height: int | None = None
+    duration_ms: int | None = None
+
+
+class DiscussionSharedFileResponse(BaseModel):
+    """Attachment row for the room Shared Files panel."""
+
+    id: int
+    kind: Literal["image", "video", "file", "audio"]
+    file_name: str
+    content_type: str
+    size_bytes: int
+    url: str
+    width: int | None = None
+    height: int | None = None
+    duration_ms: int | None = None
+    created_at: datetime
+    message_id: int
+    author_id: int
+    author_name: str
+
+
+class DiscussionSharedFileListResponse(BaseModel):
+    files: list[DiscussionSharedFileResponse]
+    total: int
 
 
 class DiscussionMessageCreateRequest(BaseModel):
-    content: str = Field(min_length=1, max_length=MAX_DISCUSSION_CONTENT_LENGTH)
+    content: str = Field(default="", max_length=MAX_DISCUSSION_CONTENT_LENGTH)
+    reply_to_message_id: int | None = Field(default=None, ge=1)
+    attachments: list[DiscussionAttachmentPayload] = Field(
+        default_factory=list,
+        max_length=MAX_ATTACHMENTS_PER_MESSAGE,
+    )
 
     @field_validator("content", mode="before")
     @classmethod
     def normalize_content(cls, value: object) -> object:
+        if value is None:
+            return ""
         if isinstance(value, str):
-            # Strip C0 controls except tab/newline; reject NUL.
             cleaned = "".join(
                 ch
                 for ch in value
@@ -21,6 +102,12 @@ class DiscussionMessageCreateRequest(BaseModel):
             )
             return cleaned.strip()
         return value
+
+    @model_validator(mode="after")
+    def require_content_or_attachments(self) -> "DiscussionMessageCreateRequest":
+        if not self.content and not self.attachments:
+            raise ValueError("Message must include content or attachments")
+        return self
 
 
 class DiscussionMessageUpdateRequest(BaseModel):
@@ -73,6 +160,13 @@ class DiscussionMessageAuthor(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class DiscussionReplyPreview(BaseModel):
+    id: int
+    author_name: str
+    content: str
+    is_deleted: bool = False
+
+
 class DiscussionReactionSummary(BaseModel):
     count: int = Field(ge=0)
     reacted_by_me: bool = False
@@ -89,13 +183,24 @@ class DiscussionMessageResponse(BaseModel):
     is_deleted: bool = False
     author: DiscussionMessageAuthor
     reactions: dict[str, DiscussionReactionSummary] = Field(default_factory=dict)
+    reply_to_message_id: int | None = None
+    reply_to: DiscussionReplyPreview | None = None
+    attachments: list[DiscussionAttachmentResponse] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class DiscussionPinnedMessageResponse(BaseModel):
+    message: DiscussionMessageResponse
+    pinned_at: datetime
+    pinned_by_name: str
 
 
 class DiscussionMessageListResponse(BaseModel):
     messages: list[DiscussionMessageResponse]
     total: int
+    pinned: DiscussionPinnedMessageResponse | None = None
+    has_more: bool = False
 
 
 class DiscussionRoomIdRequest(BaseModel):
@@ -157,6 +262,11 @@ class DiscussionInboxRoomResponse(BaseModel):
     last_message_author: str | None = None
     unread_count: int = 0
     unread_display: str | None = None
+    # True when an unread message @mentions this member (home attention queue).
+    mentions_you: bool = False
+    # Best unread snippet for the home card (prefers mentions over "ok"/"👍").
+    attention_preview: str | None = None
+    attention_author: str | None = None
     pinned: bool = False
     pinned_at: datetime | None = None
     muted: bool = False

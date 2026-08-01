@@ -30,6 +30,11 @@ from app.services.local_avatar_storage import (
     avatar_url_prefix,
     is_local_avatar_storage_enabled,
 )
+from app.services.local_discussion_attachment_storage import (
+    DEV_DISCUSSION_ATTACHMENTS_URL_PREFIX,
+    discussion_attachments_upload_dir,
+    is_local_discussion_attachment_storage_enabled,
+)
 from app.services.local_event_photo_storage import (
     DEV_EVENT_PHOTOS_URL_PREFIX,
     event_photos_upload_dir,
@@ -63,6 +68,15 @@ if is_local_event_photo_storage_enabled():
         DEV_EVENT_PHOTOS_URL_PREFIX,
         StaticFiles(directory=Path(upload_dir)),
         name="dev-event-photos",
+    )
+
+if is_local_discussion_attachment_storage_enabled():
+    attachment_dir = discussion_attachments_upload_dir()
+    attachment_dir.mkdir(parents=True, exist_ok=True)
+    app.mount(
+        DEV_DISCUSSION_ATTACHMENTS_URL_PREFIX,
+        StaticFiles(directory=Path(attachment_dir)),
+        name="dev-discussion-attachments",
     )
 
 if is_local_avatar_storage_enabled() or is_local_event_photo_storage_enabled():

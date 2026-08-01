@@ -44,7 +44,7 @@ export function EventPhotoArchiveSetting({
         />
         <span>
           <span className="text-sm font-medium text-foreground">
-            Show in photo archive
+            Show in Media
           </span>
         </span>
       </label>

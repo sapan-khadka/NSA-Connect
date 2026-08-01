@@ -3,11 +3,11 @@ import {
   ChevronDown,
   ChevronRight,
   ClipboardList,
-  FileText,
   Home,
   LogOut,
   Megaphone,
   MessageSquare,
+  NotebookPen,
   Settings,
   Sparkles,
   Users,
@@ -346,9 +346,9 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     ...(showBoardWork
       ? [
           {
-            to: "/board/meeting-minutes",
-            label: "Documents",
-            icon: FileText,
+            to: "/events/meetings",
+            label: "Meetings",
+            icon: NotebookPen,
           } satisfies SidebarLink,
         ]
       : []),

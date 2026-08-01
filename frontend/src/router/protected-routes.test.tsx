@@ -13,6 +13,7 @@ vi.mock("../lib/members-api", () => ({
     total_pages: 0,
   }),
   fetchTalentOptions: vi.fn().mockResolvedValue({ talents: [], labels: {} }),
+  fetchMemberActivity: vi.fn().mockResolvedValue({ items: [], total: 0 }),
 }));
 
 vi.mock("../lib/notifications-api", () => ({
@@ -94,6 +95,10 @@ vi.mock("../lib/volunteer-api", () => ({
   fetchMyVolunteerSignups: vi.fn().mockResolvedValue({ signups: [], total: 0 }),
 }));
 
+vi.mock("../lib/meetings-api", () => ({
+  fetchMeetings: vi.fn().mockResolvedValue({ meetings: [], total: 0 }),
+}));
+
 describe("protected route redirects", () => {
   afterEach(() => {
     cleanup();
@@ -136,9 +141,7 @@ describe("protected route redirects", () => {
       expect(router.state.location.pathname).toBe("/");
     });
     expect(
-      await screen.findByRole("heading", {
-        name: /Good (Morning|Afternoon|Evening), Test/,
-      }),
+      await screen.findByRole("heading", { name: "Home" }),
     ).toBeInTheDocument();
   });
 
@@ -155,9 +158,7 @@ describe("protected route redirects", () => {
       expect(router.state.location.pathname).toBe("/");
     });
     expect(
-      await screen.findByRole("heading", {
-        name: /Good (Morning|Afternoon|Evening), Test/,
-      }),
+      await screen.findByRole("heading", { name: "Home" }),
     ).toBeInTheDocument();
   });
 
@@ -177,7 +178,7 @@ describe("protected route redirects", () => {
     });
     expect(
       await screen.findByRole("link", {
-        name: /3 member approvals pending/i,
+        name: /3 pending requests/i,
       }),
     ).toHaveAttribute("href", "/members?tab=pending");
   });
@@ -254,6 +255,23 @@ describe("protected route redirects", () => {
     });
     expect(
       await screen.findByText("No tasks assigned to you yet"),
+    ).toBeInTheDocument();
+  });
+
+  it("redirects /board/meeting-minutes to /events/meetings", async () => {
+    const { router } = renderWithRouter(undefined, {
+      initialEntries: ["/board/meeting-minutes"],
+      auth: {
+        member: createMockMember("board"),
+        isAuthenticated: true,
+      },
+    });
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/events/meetings");
+    });
+    expect(
+      await screen.findByRole("heading", { name: "Meetings" }),
     ).toBeInTheDocument();
   });
 

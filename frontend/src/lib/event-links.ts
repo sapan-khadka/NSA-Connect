@@ -10,11 +10,24 @@ export function publicEventPath(eventId: number): string {
 }
 
 export function photoArchivePath(): string {
-  return "/events/photos";
+  return "/events/media";
 }
 
 export function photoAlbumPath(eventId: number): string {
-  return `/events/photos/${eventId}`;
+  return `/events/media/${eventId}`;
+}
+
+export function customMediaAlbumPath(albumId: number): string {
+  return `/events/media/album/${albumId}`;
+}
+
+export function mediaAlbumHref(album: {
+  kind: "event" | "custom";
+  id: number;
+}): string {
+  return album.kind === "custom"
+    ? customMediaAlbumPath(album.id)
+    : photoAlbumPath(album.id);
 }
 
 export function calendarDeepLink(event: {

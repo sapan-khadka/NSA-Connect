@@ -81,13 +81,13 @@ describe("buildHomeUrgencyChips", () => {
         financePendingCount: 0,
         canReviewMembers: true,
         canReviewFinance: true,
-        notesNeededPath: "/events/meetings/4#meeting-minutes",
+        notesNeededPath: "/events/meetings/4?tab=minutes",
       }),
     ).toEqual([
       {
         id: "notes-needed",
         label: "Notes needed",
-        to: "/events/meetings/4#meeting-minutes",
+        to: "/events/meetings/4?tab=minutes",
         tone: "info",
       },
     ]);

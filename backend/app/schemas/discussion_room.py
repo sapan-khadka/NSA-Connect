@@ -35,6 +35,10 @@ class DiscussionRoomCreateRequest(BaseModel):
         return value
 
 
+class DiscussionRoomAddMembersRequest(BaseModel):
+    member_ids: list[int] = Field(min_length=1)
+
+
 class DiscussionRoomRejectRequest(BaseModel):
     review_note: str | None = Field(default=None, max_length=500)
 

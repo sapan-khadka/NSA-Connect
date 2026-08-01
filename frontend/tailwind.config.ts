@@ -108,6 +108,9 @@ export default {
         sans: [
           "var(--font-sans)",
         ],
+        display: [
+          "var(--font-display)",
+        ],
       },
       fontSize: {
         "ds-caption": ["var(--text-caption)", { lineHeight: "var(--leading-normal)" }],

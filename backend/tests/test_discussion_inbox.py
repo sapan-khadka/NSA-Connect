@@ -27,30 +27,33 @@ def test_discussion_inbox_lists_board_and_event_rooms_with_unread(
 ):
     register_member(client, email="other@semo.edu", student_id="22222222")
     create_board_member(db_session)
-    headers = auth_header(client, email="board@semo.edu")
+    create_president_member(db_session)
+    board_headers = auth_header(client, email="board@semo.edu")
+    president_headers = auth_header(client, email="president@semo.edu")
 
     event = client.post(
         "/api/v1/events",
         json=_event_payload(),
-        headers=headers,
+        headers=board_headers,
     ).json()
     event_id = event["id"]
 
+    # Unread excludes the viewer's own posts — peer posts create unread.
     board_msg = client.post(
         "/api/v1/board/discussion",
         json={"content": "Board hello"},
-        headers=headers,
+        headers=president_headers,
     )
     assert board_msg.status_code == 201
 
     event_msg = client.post(
         f"/api/v1/events/{event_id}/discussion",
         json={"content": "Event hello"},
-        headers=headers,
+        headers=board_headers,
     )
     assert event_msg.status_code == 201
 
-    inbox = client.get("/api/v1/discussions/inbox", headers=headers)
+    inbox = client.get("/api/v1/discussions/inbox", headers=board_headers)
     assert inbox.status_code == 200
     rooms = inbox.json()["rooms"]
     room_ids = {room["room_id"] for room in rooms}
@@ -65,12 +68,12 @@ def test_discussion_inbox_lists_board_and_event_rooms_with_unread(
     marked = client.post(
         "/api/v1/discussions/read",
         json={"room_id": "board"},
-        headers=headers,
+        headers=board_headers,
     )
     assert marked.status_code == 200
     assert marked.json()["room_id"] == "board"
 
-    inbox_after = client.get("/api/v1/discussions/inbox", headers=headers)
+    inbox_after = client.get("/api/v1/discussions/inbox", headers=board_headers)
     board_after = next(
         room for room in inbox_after.json()["rooms"] if room["room_id"] == "board"
     )
@@ -127,6 +130,54 @@ def test_discussion_pin_toggle_orders_pinned_first(client, db_session):
         headers=headers,
     )
     assert unpin.json()["pinned"] is False
+
+
+def test_discussion_inbox_marks_unread_mentions_you(client, db_session):
+    create_board_member(db_session)
+    create_president_member(db_session)
+    board_headers = auth_header(client, email="board@semo.edu")
+    president_headers = auth_header(client, email="president@semo.edu")
+
+    mentioned = client.post(
+        "/api/v1/board/discussion",
+        json={"content": "Hey @Board Member can you review the budget?"},
+        headers=president_headers,
+    )
+    assert mentioned.status_code == 201
+
+    # Low-value latest message should not replace the mention snippet.
+    ack = client.post(
+        "/api/v1/board/discussion",
+        json={"content": "ok"},
+        headers=president_headers,
+    )
+    assert ack.status_code == 201
+
+    inbox = client.get("/api/v1/discussions/inbox", headers=board_headers)
+    assert inbox.status_code == 200
+    board_room = next(
+        room for room in inbox.json()["rooms"] if room["room_id"] == "board"
+    )
+    assert board_room["unread_count"] >= 2
+    assert board_room["mentions_you"] is True
+    assert board_room["attention_author"] == "President"
+    assert "review the budget" in board_room["attention_preview"]
+    assert board_room["last_message_preview"] == "ok"
+
+    # After catch-up, mention flag clears with unread.
+    marked = client.post(
+        "/api/v1/discussions/read",
+        json={"room_id": "board"},
+        headers=board_headers,
+    )
+    assert marked.status_code == 200
+    inbox_after = client.get("/api/v1/discussions/inbox", headers=board_headers)
+    board_after = next(
+        room for room in inbox_after.json()["rooms"] if room["room_id"] == "board"
+    )
+    assert board_after["unread_count"] == 0
+    assert board_after["mentions_you"] is False
+    assert board_after["attention_preview"] is None
 
 
 def test_discussion_inbox_hides_board_from_general_member(client, db_session):

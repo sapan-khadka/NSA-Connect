@@ -5,18 +5,29 @@ import { useState } from "react";
 import { getApiErrorMessage } from "../../lib/api-error";
 import {
   ALBUM_DOWNLOAD_TIMEOUT_MS,
+  downloadCustomMediaAlbum,
   downloadEventPhotoAlbum,
   LARGE_ALBUM_PHOTO_THRESHOLD,
   triggerBrowserDownload,
+  type MediaAlbumKind,
 } from "../../lib/photo-archive-api";
 import { AppIcon } from "../ui/AppIcon";
 
 type DownloadAlbumButtonProps = {
-  eventId: number;
+  albumId?: number;
+  albumKind?: MediaAlbumKind;
   photoCount: number;
+  /** @deprecated use albumId + albumKind="event" */
+  eventId?: number;
 };
 
-export function DownloadAlbumButton({ eventId, photoCount }: DownloadAlbumButtonProps) {
+export function DownloadAlbumButton({
+  albumId: albumIdProp,
+  albumKind = "event",
+  photoCount,
+  eventId,
+}: DownloadAlbumButtonProps) {
+  const albumId = albumIdProp ?? eventId ?? 0;
   const [isDownloading, setIsDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,10 +52,16 @@ export function DownloadAlbumButton({ eventId, photoCount }: DownloadAlbumButton
     const timeoutId = window.setTimeout(() => controller.abort(), ALBUM_DOWNLOAD_TIMEOUT_MS);
 
     try {
-      const { blob, filename } = await downloadEventPhotoAlbum(eventId, {
-        signal: controller.signal,
-        timeoutMs: ALBUM_DOWNLOAD_TIMEOUT_MS,
-      });
+      const { blob, filename } =
+        albumKind === "custom"
+          ? await downloadCustomMediaAlbum(albumId, {
+              signal: controller.signal,
+              timeoutMs: ALBUM_DOWNLOAD_TIMEOUT_MS,
+            })
+          : await downloadEventPhotoAlbum(albumId, {
+              signal: controller.signal,
+              timeoutMs: ALBUM_DOWNLOAD_TIMEOUT_MS,
+            });
       triggerBrowserDownload(blob, filename);
     } catch (caught) {
       if (axios.isAxiosError(caught) && caught.code === "ECONNABORTED") {

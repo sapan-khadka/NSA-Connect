@@ -7,25 +7,28 @@ function homeStage(stage: number): CSSProperties {
 
 import { CoverBanner } from "../components/CoverBanner";
 import { HomeHeroBrand } from "../components/AppLogo";
-import { HomeFeaturedEvent } from "../components/home/HomeFeaturedEvent";
-import { HomeQuickStats } from "../components/home/HomeQuickStats";
-import { HomeRecentActivity } from "../components/home/HomeRecentActivity";
-import { HomeTeamPulse } from "../components/home/HomeTeamPulse";
-import { HomeWorkCenter } from "../components/home/HomeWorkCenter";
-import { HomeDiscussionSection } from "../components/HomeDiscussionSection";
+import { HomeAdaptiveWorkspace } from "../components/home/HomeAdaptiveWorkspace";
+import { HomeEditToolbar } from "../components/home/HomeEditToolbar";
+import { HomeWidgetDrawer } from "../components/home/HomeWidgetDrawer";
 import { useAuth } from "../context/useAuth";
 import { useNotificationSummary } from "../context/NotificationSummaryProvider";
-import { useMediaQuery } from "../hooks/useMediaQuery";
+import { useHomeWorkspace } from "../hooks/useHomeWorkspace";
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/api-error";
-import { fetchMyEventTasks, updateEventTask } from "../lib/event-tasks-api";
-import type { EventTaskResponse } from "../lib/event-tasks-api";
+import {
+  fetchMyEventTasks,
+  fetchTaskOverview,
+  updateEventTask,
+  type EventTaskResponse,
+  type TaskOverviewMember,
+} from "../lib/event-tasks-api";
 import {
   fetchUpcomingEvents,
   type EventResponse,
 } from "../lib/events-api";
 import {
   applyOptimisticTaskComplete,
+  buildHomeGreeting,
   buildMarkTaskCompleteRequest,
   getMyTasksPath,
   summarizeMyTasks,
@@ -68,6 +71,9 @@ function PublicHomeView() {
 type MemberHomeLayoutProps = {
   member: MemberResponse;
   featuredEvents: EventResponse[];
+  myTasks: EventTaskResponse[];
+  overviewMembers: TaskOverviewMember[];
+  overviewLoading: boolean;
   tasksSummary: ReturnType<typeof summarizeMyTasks>;
   isLoading: boolean;
   loadError: string | null;
@@ -79,11 +85,15 @@ type MemberHomeLayoutProps = {
   completingTaskId: number | null;
   taskCompleteError: string | null;
   onCompleteTask: (taskId: number) => void;
+  onFeaturedEventsChange: (events: EventResponse[]) => void;
 };
 
 function MemberHomeLayout({
   member,
   featuredEvents,
+  myTasks,
+  overviewMembers,
+  overviewLoading,
   tasksSummary,
   isLoading,
   loadError,
@@ -95,13 +105,33 @@ function MemberHomeLayout({
   completingTaskId,
   taskCompleteError,
   onCompleteTask,
+  onFeaturedEventsChange,
 }: MemberHomeLayoutProps) {
-  const isMobile = useMediaQuery("(max-width: 767px)");
-  const discussionLimit = isMobile ? 4 : 8;
-  const activityLimit = isMobile ? 6 : 12;
+  const workspace = useHomeWorkspace({
+    memberId: member.id,
+    showInbox: showAssistant,
+    showPulse: showTaskOversight,
+  });
+
+  const firstName =
+    member.full_name.trim().split(/\s+/).filter(Boolean)[0] ?? member.full_name;
+  const nextEvent = featuredEvents[0] ?? null;
+  const greeting = buildHomeGreeting({
+    firstName,
+    overdueCount: tasksSummary.overdueCount,
+    nextEventName: nextEvent?.name,
+    nextEventStartsAt: nextEvent?.starts_at,
+  });
 
   return (
-    <div className="home-dashboard home-dashboard--v4 home-dashboard--apple home-dashboard--nsa flex w-full min-w-0 flex-col pb-8">
+    <div
+      className={[
+        "home-dashboard home-dashboard--v4 home-dashboard--apple home-dashboard--nsa home-dashboard--adaptive flex w-full min-w-0 flex-col pb-12",
+        workspace.isCustomizing ? "home-dashboard--editing" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       {loadError ? (
         <div role="alert" className="ds-alert-banner shrink-0">
           {loadError}
@@ -110,68 +140,79 @@ function MemberHomeLayout({
 
       <div
         className={[
-          "home-enter home-top-split",
-          showAssistant ? "home-top-split--with-discussions" : "",
+          "home-enter home-workspace-toolbar",
+          workspace.isCustomizing ? "is-editing" : "",
         ]
           .filter(Boolean)
           .join(" ")}
         style={homeStage(0)}
       >
-        <div className="home-top-split__banner">
-          <HomeFeaturedEvent
-            events={featuredEvents}
-            canManage={showAssistant}
-            canCreateEvent={showAssistant}
-            isLoading={isLoading}
-          />
+        <div>
+          <h1 className="home-workspace-toolbar__title">Home</h1>
+          {workspace.isCustomizing ? (
+            <p className="home-workspace-toolbar__mode">Editing Layout</p>
+          ) : (
+            <div className="home-workspace-toolbar__briefing">
+              <p className="home-workspace-toolbar__greeting">
+                {greeting.salutation}
+              </p>
+              <p className="home-workspace-toolbar__detail">{greeting.detail}</p>
+            </div>
+          )}
         </div>
-        <aside className="home-top-split__side" aria-label="Home overview">
-          <HomeQuickStats
-            member={member}
-            upcomingEventCount={featuredEvents.length}
-            tasksSummary={tasksSummary}
-            pendingMemberApprovals={pendingMemberApprovals}
-            financePendingCount={financePendingCount}
-            isLoadingEvents={isLoading}
+        {workspace.isCustomizing ? (
+          <HomeEditToolbar
+            onAddWidget={() => workspace.setWidgetDrawerOpen(true)}
+            onReset={() => workspace.resetToDefault()}
+            onDone={() => workspace.exitCustomize()}
           />
-        </aside>
+        ) : (
+          <button
+            type="button"
+            className="home-workspace-toolbar__btn"
+            onClick={() => workspace.enterCustomize()}
+          >
+            Customize
+          </button>
+        )}
       </div>
 
-      <div
-        className={[
-          "home-enter home-main-columns",
-          showAssistant ? "home-main-columns--with-discussions" : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-        style={homeStage(1)}
-      >
-        <div className="home-col home-col--tasks min-h-0">
-          <HomeWorkCenter
-            member={member}
-            tasksSummary={tasksSummary}
-            tasksPath={tasksPath}
-            isLoading={isLoading}
-            completingTaskId={completingTaskId}
-            taskCompleteError={taskCompleteError}
-            onCompleteTask={onCompleteTask}
-          />
-        </div>
+      <HomeWidgetDrawer
+        open={workspace.widgetDrawerOpen}
+        catalog={workspace.catalog}
+        isHidden={workspace.isHidden}
+        onToggle={workspace.toggleHidden}
+        onClose={() => workspace.setWidgetDrawerOpen(false)}
+      />
 
-        {showAssistant ? (
-          <div className="home-col home-col--discussions min-h-0">
-            <HomeDiscussionSection previewLimit={discussionLimit} />
-          </div>
-        ) : null}
-
-        <div className="home-col home-col--rail min-h-0">
-          <HomeRecentActivity
-            memberId={member.id}
-            memberName={member.full_name}
-            limit={activityLimit}
-          />
-          {showTaskOversight ? <HomeTeamPulse /> : null}
-        </div>
+      <div className="home-enter" style={homeStage(1)}>
+        <HomeAdaptiveWorkspace
+          widgets={workspace.visible}
+          isCustomizing={workspace.isCustomizing}
+          selectedId={workspace.selectedId}
+          member={member}
+          featuredEvents={featuredEvents}
+          myTasks={myTasks}
+          overviewMembers={overviewMembers}
+          overviewLoading={overviewLoading}
+          tasksSummary={tasksSummary}
+          isLoading={isLoading}
+          financePendingCount={financePendingCount}
+          pendingMemberApprovals={pendingMemberApprovals}
+          showAssistant={showAssistant}
+          showTaskOversight={showTaskOversight}
+          tasksPath={tasksPath}
+          completingTaskId={completingTaskId}
+          taskCompleteError={taskCompleteError}
+          onCompleteTask={onCompleteTask}
+          onFeaturedEventsChange={onFeaturedEventsChange}
+          onSelect={workspace.setSelectedId}
+          onExitCustomize={workspace.exitCustomize}
+          onToggleCollapsed={workspace.toggleCollapsed}
+          onHide={workspace.hideWidget}
+          onPatchWidget={workspace.patchWidget}
+          onNudgeSelected={workspace.nudgeSelected}
+        />
       </div>
     </div>
   );
@@ -181,6 +222,10 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
   const { summary } = useNotificationSummary();
   const [featuredEvents, setFeaturedEvents] = useState<EventResponse[]>([]);
   const [myTasks, setMyTasks] = useState<EventTaskResponse[]>([]);
+  const [overviewMembers, setOverviewMembers] = useState<TaskOverviewMember[]>(
+    [],
+  );
+  const [overviewLoading, setOverviewLoading] = useState(false);
   const [completingTaskId, setCompletingTaskId] = useState<number | null>(null);
   const [taskCompleteError, setTaskCompleteError] = useState<string | null>(
     null,
@@ -232,14 +277,28 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
     async function load() {
       setIsLoading(true);
       setLoadError(null);
+      if (showTaskOversight) {
+        setOverviewLoading(true);
+      }
 
       try {
-        const [upcoming, tasksResult] = await Promise.all([
+        const [upcoming, tasksResult, overviewResult] = await Promise.all([
           fetchUpcomingEvents({ limit: 10 }),
           fetchMyEventTasks().catch(() => ({
             tasks: [],
             total: 0,
           })),
+          showTaskOversight
+            ? fetchTaskOverview().catch(() => ({
+                members: [] as TaskOverviewMember[],
+                total_tasks: 0,
+                completed_tasks: 0,
+              }))
+            : Promise.resolve({
+                members: [] as TaskOverviewMember[],
+                total_tasks: 0,
+                completed_tasks: 0,
+              }),
         ]);
 
         if (cancelled) {
@@ -250,6 +309,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
           upcoming.events.filter((event) => event.event_type !== "meeting"),
         );
         setMyTasks(tasksResult.tasks);
+        setOverviewMembers(overviewResult.members);
       } catch (caught) {
         if (!cancelled) {
           setLoadError(getApiErrorMessage(caught));
@@ -257,6 +317,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
       } finally {
         if (!cancelled) {
           setIsLoading(false);
+          setOverviewLoading(false);
         }
       }
     }
@@ -265,12 +326,15 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
     return () => {
       cancelled = true;
     };
-  }, [member]);
+  }, [member, showTaskOversight]);
 
   return (
     <MemberHomeLayout
       member={member}
       featuredEvents={featuredEvents}
+      myTasks={myTasks}
+      overviewMembers={overviewMembers}
+      overviewLoading={overviewLoading}
       tasksSummary={tasksSummary}
       isLoading={isLoading}
       loadError={loadError}
@@ -284,6 +348,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
       onCompleteTask={(taskId) => {
         void handleCompleteTask(taskId);
       }}
+      onFeaturedEventsChange={setFeaturedEvents}
     />
   );
 }

@@ -47,6 +47,7 @@ function taskFixture(
     is_complete: boolean;
     completion_note: string | null;
     due_date: string | null;
+    completed_at: string | null;
     assignee_name: string;
     assignee_id: number;
     event_id: number;
@@ -70,7 +71,7 @@ function taskFixture(
     checklist_items: [],
     completion_note: overrides.completion_note ?? null,
     completion_photo_url: null,
-    completed_at: "2026-03-19T12:00:00Z",
+    completed_at: overrides.completed_at ?? "2026-03-19T12:00:00Z",
     created_by_id: 1,
     created_at: "2026-03-18T12:00:00Z",
     assignee_has_volunteer_signup: false,
@@ -87,7 +88,7 @@ describe("TaskOversightPage", () => {
     expect(mockedOverview).not.toHaveBeenCalled();
   });
 
-  it("scopes operations to the selected event", async () => {
+  it("scopes the manager dashboard to the selected event", async () => {
     const user = userEvent.setup();
     mockedOverview.mockResolvedValue({
       total_tasks: 3,
@@ -154,18 +155,15 @@ describe("TaskOversightPage", () => {
     const eventSelect = await screen.findByLabelText("Event");
     expect(eventSelect).toHaveValue("10");
 
-    const ops = screen.getByLabelText("Event operations");
-    expect(
-      within(ops).getByLabelText("Upcoming"),
-    ).toHaveTextContent("Social Media Campaign");
-    expect(
-      within(ops).getByLabelText("Completed"),
-    ).toHaveTextContent("Book venue");
-    expect(within(ops).queryByText("Holidays Flyer")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Oversight summary")).toBeInTheDocument();
+    expect(screen.getByText("Open")).toBeInTheDocument();
+    expect(screen.getByText("Overdue")).toBeInTheDocument();
 
-    expect(screen.getByLabelText("Progress")).toBeInTheDocument();
-    expect(screen.getByText(/tasks completed/i)).toBeInTheDocument();
-    expect(screen.getByLabelText("Issues")).toBeInTheDocument();
+    const workspace = screen.getByLabelText("Event operations");
+    expect(
+      within(workspace).getByLabelText("Recently Completed"),
+    ).toHaveTextContent("Book venue");
+    expect(within(workspace).queryByText("Holidays Flyer")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /New Task/i })).toHaveAttribute(
       "href",
       "/events/10/manage",
@@ -174,19 +172,18 @@ describe("TaskOversightPage", () => {
     await user.selectOptions(eventSelect, "22");
 
     expect(eventSelect).toHaveValue("22");
-    const nextOps = screen.getByLabelText("Event operations");
-    expect(within(nextOps).getByText("Holidays Flyer")).toBeInTheDocument();
+    const nextWorkspace = screen.getByLabelText("Event operations");
+    expect(within(nextWorkspace).getByText("Holidays Flyer")).toBeInTheDocument();
     expect(
-      within(nextOps).queryByText("Social Media Campaign"),
+      within(nextWorkspace).queryByText("Book venue"),
     ).not.toBeInTheDocument();
-    expect(within(nextOps).queryByText("Book venue")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /New Task/i })).toHaveAttribute(
       "href",
       "/events/22/manage",
     );
   });
 
-  it("surfaces overdue work in Issues", async () => {
+  it("surfaces overdue work in Needs Attention", async () => {
     mockedOverview.mockResolvedValue({
       total_tasks: 1,
       completed_tasks: 0,
@@ -221,9 +218,10 @@ describe("TaskOversightPage", () => {
 
     renderPage("president", "member");
 
-    const issues = await screen.findByLabelText("Issues");
-    expect(within(issues).getByText("Holidays Flyer")).toBeInTheDocument();
-    expect(within(issues).getByText(/Needs Help/)).toBeInTheDocument();
-    expect(within(issues).getByText(/overdue/i)).toBeInTheDocument();
+    const attention = await screen.findByLabelText("Needs Attention");
+    expect(within(attention).getByText("Holidays Flyer")).toBeInTheDocument();
+    expect(within(attention).getByText(/Needs Help/)).toBeInTheDocument();
+    expect(within(attention).getByText(/overdue/i)).toBeInTheDocument();
+    expect(within(attention).getByText(/^High$/i)).toBeInTheDocument();
   });
 });

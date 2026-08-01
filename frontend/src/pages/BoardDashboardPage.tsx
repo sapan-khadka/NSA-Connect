@@ -77,12 +77,12 @@ export function BoardDashboardPage() {
           </li>
           <li>
             <Link
-              to="/board/meeting-minutes"
+              to="/events/meetings"
               className="block ds-card-nested ds-card-interactive px-4 py-3"
             >
-              <p className="font-medium text-foreground">Meeting minutes</p>
+              <p className="font-medium text-foreground">Meetings</p>
               <p className="mt-1 text-sm text-label">
-                Summarize raw notes into decisions and action items.
+                Open a meeting to record attendance and AI meeting minutes.
               </p>
             </Link>
           </li>

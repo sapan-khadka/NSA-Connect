@@ -27,7 +27,11 @@ export function AppLayout() {
   const { isAuthenticated } = useAuth();
   const { pathname } = useLocation();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const fluidCanvas = pathname === "/";
+  /* Events hub tabs (Tasks, Media, etc.) share Home’s full-width canvas so
+     side gutters match Calendar instead of sitting in a narrower max-width column. */
+  const isHome = pathname === "/";
+  const fluidCanvas =
+    isHome || pathname === "/events" || pathname.startsWith("/events/");
   const eventsCalendarCanvas =
     pathname === "/events" || pathname === "/events/calendar";
   const hideMobileBottomNav = isDiscussionThreadPath(pathname);
@@ -82,7 +86,14 @@ export function AppLayout() {
             </MobileSidebarDrawer>
 
             {/* Scrollable column: sticky header + main content */}
-            <div className="flex min-h-screen min-w-0 flex-col lg:pl-[var(--sidebar-width)]">
+            <div
+              className={[
+                "flex min-h-screen min-w-0 flex-col lg:pl-[var(--sidebar-width)]",
+                isHome ? "ds-home-shell" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
               <AppTopBar
                 showMenuButton
                 onOpenSidebar={() => setMobileSidebarOpen(true)}
@@ -97,6 +108,7 @@ export function AppLayout() {
                       ? "pb-0 lg:pb-8"
                       : "pb-24 lg:pb-8",
                   fluidCanvas ? "ds-main-canvas--fluid" : "",
+                  isHome ? "ds-main-canvas--home" : "",
                   eventsCalendarCanvas ? "ds-main-canvas--events-calendar" : "",
                 ]
                   .filter(Boolean)

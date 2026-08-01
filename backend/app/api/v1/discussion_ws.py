@@ -33,12 +33,17 @@ from app.services.discussion_service import (
     create_custom_room_discussion_message,
     create_event_discussion_message,
     edit_discussion_message,
+    first_unread_message_id,
+    get_thread_pin,
+    get_viewer_last_read_message_id,
     list_board_discussion_messages,
     list_custom_room_discussion_messages,
     list_discussion_read_receipts,
     list_event_discussion_messages,
     messages_to_responses,
+    pin_discussion_message,
     soft_delete_discussion_message,
+    unpin_discussion_message,
     upsert_discussion_read_state,
 )
 from app.services.discussion_ws_rate_limit import (
@@ -63,43 +68,98 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["discussions-ws"])
 
 WS_HISTORY_LIMIT = 50
+WS_HISTORY_PAGE_MAX = 100
 WS_CLOSE_UNAUTHORIZED = 4001
 WS_CLOSE_FORBIDDEN = 4003
 
 
-def _load_event_history(db: Session, *, event_id: int, member: Member):
+def _clamp_history_limit(limit: object | None) -> int:
+    if not isinstance(limit, int) or isinstance(limit, bool):
+        return WS_HISTORY_LIMIT
+    return max(1, min(limit, WS_HISTORY_PAGE_MAX))
+
+
+def _load_event_history(
+    db: Session,
+    *,
+    event_id: int,
+    member: Member,
+    before_id: int | None = None,
+    limit: int = WS_HISTORY_LIMIT,
+):
     return list_event_discussion_messages(
         db,
         event_id=event_id,
         member=member,
-        limit=WS_HISTORY_LIMIT,
+        before_id=before_id,
+        limit=limit,
     )
 
 
 def _create_event_message(
-    db: Session, *, event_id: int, member: Member, content: str
+    db: Session,
+    *,
+    event_id: int,
+    member: Member,
+    content: str,
+    reply_to_message_id: int | None = None,
+    attachments=None,
 ):
     return create_event_discussion_message(
         db,
         event_id=event_id,
         member=member,
         content=content,
+        reply_to_message_id=reply_to_message_id,
+        attachments=attachments,
     )
 
 
-def _load_board_history(db: Session, *, member: Member):
+def _load_board_history(
+    db: Session,
+    *,
+    member: Member,
+    before_id: int | None = None,
+    limit: int = WS_HISTORY_LIMIT,
+):
     return list_board_discussion_messages(
         db,
         member=member,
-        limit=WS_HISTORY_LIMIT,
+        before_id=before_id,
+        limit=limit,
     )
 
 
-def _create_board_message(db: Session, *, member: Member, content: str):
+def _serialize_history_page(
+    db: Session,
+    *,
+    messages,
+    viewer_user_id: int,
+) -> list[dict]:
+    return [
+        response.model_dump(mode="json")
+        for response in messages_to_responses(
+            db,
+            messages,
+            viewer_user_id=viewer_user_id,
+        )
+    ]
+
+
+def _create_board_message(
+    db: Session,
+    *,
+    member: Member,
+    content: str,
+    reply_to_message_id: int | None = None,
+    attachments=None,
+):
     return create_board_discussion_message(
         db,
         member=member,
         content=content,
+        reply_to_message_id=reply_to_message_id,
+        attachments=attachments,
     )
 
 
@@ -145,18 +205,30 @@ async def _discussion_websocket(
 
         try:
             history = load_history(db, member=member)
-            history_payload = [
-                response.model_dump(mode="json")
-                for response in messages_to_responses(
-                    db,
-                    history,
-                    viewer_user_id=member.id,
-                )
-            ]
+            history_payload = _serialize_history_page(
+                db,
+                messages=history,
+                viewer_user_id=member.id,
+            )
+            viewer_last_read = get_viewer_last_read_message_id(
+                db,
+                room_id=room_key,
+                user_id=member.id,
+            )
+            unread_id = first_unread_message_id(
+                history,
+                last_read_message_id=viewer_last_read,
+            )
             read_receipts_payload = [
                 receipt.model_dump(mode="json")
                 for receipt in list_discussion_read_receipts(db, room_id=room_key)
             ]
+            pinned = get_thread_pin(
+                db, room_key=room_key, viewer_user_id=member.id
+            )
+            pinned_payload = (
+                pinned.model_dump(mode="json") if pinned is not None else None
+            )
         except (
             EventNotFoundError,
             DiscussionForbiddenError,
@@ -179,12 +251,14 @@ async def _discussion_websocket(
     )
     touch_global_presence(member_id)
     try:
-        await websocket.send_json(
-            {
-                "type": "history",
-                "messages": history_payload,
-            }
-        )
+        history_event: dict = {
+            "type": "history",
+            "messages": history_payload,
+            "pinned": pinned_payload,
+        }
+        if unread_id is not None:
+            history_event["first_unread_message_id"] = unread_id
+        await websocket.send_json(history_event)
         await websocket.send_json(
             {
                 "type": "presence_snapshot",
@@ -229,6 +303,63 @@ async def _discussion_websocket(
             if event_type == "presence_heartbeat":
                 await discussion_connection_manager.refresh_presence(websocket)
                 touch_global_presence(member_id)
+                continue
+
+            if event_type == "load_history":
+                before_id = body.get("before_id")
+                if not isinstance(before_id, int) or isinstance(before_id, bool) or before_id < 1:
+                    await websocket.send_json(
+                        {"type": "error", "detail": "Invalid before_id"}
+                    )
+                    continue
+                page_limit = _clamp_history_limit(body.get("limit"))
+                db = create_db_session()
+                try:
+                    author = db.get(Member, member_id)
+                    if author is None or not author.can_authenticate():
+                        await websocket.close(code=WS_CLOSE_UNAUTHORIZED)
+                        return
+                    # Fetch one extra row to determine whether older pages remain.
+                    page = load_history(
+                        db,
+                        member=author,
+                        before_id=before_id,
+                        limit=page_limit + 1,
+                    )
+                    has_more = len(page) > page_limit
+                    if has_more:
+                        page = page[:page_limit]
+                    page_payload = _serialize_history_page(
+                        db,
+                        messages=page,
+                        viewer_user_id=member_id,
+                    )
+                except (
+                    EventNotFoundError,
+                    DiscussionForbiddenError,
+                    DiscussionRoomNotFoundError,
+                ):
+                    await websocket.close(code=WS_CLOSE_FORBIDDEN)
+                    return
+                except Exception:
+                    logger.exception("Failed to load discussion history page")
+                    await websocket.send_json(
+                        {
+                            "type": "error",
+                            "detail": "Failed to load older messages",
+                        }
+                    )
+                    continue
+                finally:
+                    db.close()
+
+                await websocket.send_json(
+                    {
+                        "type": "history_page",
+                        "messages": page_payload,
+                        "has_more": has_more,
+                    }
+                )
                 continue
 
             if event_type == "typing":
@@ -511,6 +642,75 @@ async def _discussion_websocket(
                 )
                 continue
 
+            if event_type == "pin_message":
+                message_id = body.get("message_id")
+                if not isinstance(message_id, int) or message_id < 1:
+                    await websocket.send_json(
+                        {"type": "error", "detail": "Invalid message_id"}
+                    )
+                    continue
+                db = create_db_session()
+                try:
+                    author = db.get(Member, member_id)
+                    if author is None or not author.can_authenticate():
+                        await websocket.close(code=WS_CLOSE_UNAUTHORIZED)
+                        return
+                    pinned = pin_discussion_message(
+                        db, member=author, message_id=message_id
+                    )
+                    payload = pinned.model_dump(mode="json")
+                except DiscussionMessageNotFoundError:
+                    await websocket.send_json(
+                        {"type": "error", "detail": "Message not found"}
+                    )
+                    continue
+                except DiscussionForbiddenError:
+                    await websocket.close(code=WS_CLOSE_FORBIDDEN)
+                    return
+                except DiscussionValidationError as exc:
+                    await websocket.send_json({"type": "error", "detail": str(exc)})
+                    continue
+                except Exception:
+                    logger.exception("Failed to pin discussion message")
+                    await websocket.send_json(
+                        {"type": "error", "detail": "Failed to pin message"}
+                    )
+                    continue
+                finally:
+                    db.close()
+                await discussion_connection_manager.publish(
+                    room_key,
+                    {"type": "pin_updated", "pinned": payload},
+                )
+                continue
+
+            if event_type == "unpin_message":
+                db = create_db_session()
+                try:
+                    author = db.get(Member, member_id)
+                    if author is None or not author.can_authenticate():
+                        await websocket.close(code=WS_CLOSE_UNAUTHORIZED)
+                        return
+                    unpin_discussion_message(
+                        db, member=author, room_key=room_key
+                    )
+                except DiscussionForbiddenError:
+                    await websocket.close(code=WS_CLOSE_FORBIDDEN)
+                    return
+                except Exception:
+                    logger.exception("Failed to unpin discussion message")
+                    await websocket.send_json(
+                        {"type": "error", "detail": "Failed to unpin message"}
+                    )
+                    continue
+                finally:
+                    db.close()
+                await discussion_connection_manager.publish(
+                    room_key,
+                    {"type": "pin_updated", "pinned": None},
+                )
+                continue
+
             # Chat message — either plain `{content}` or `{type:"chat", content}`.
             if not allow_ws_chat(member_id):
                 await websocket.send_json(
@@ -542,6 +742,8 @@ async def _discussion_websocket(
                     db,
                     member=author,
                     content=parsed.content,
+                    reply_to_message_id=parsed.reply_to_message_id,
+                    attachments=parsed.attachments or None,
                 )
                 message_payload = build_message_response(created).model_dump(
                     mode="json"
@@ -611,11 +813,20 @@ async def event_discussion_websocket(
         token=token,
         room_key=event_room_key(event_id),
         room_event_id=event_id,
-        load_history=lambda db, member: _load_event_history(
-            db, event_id=event_id, member=member
+        load_history=lambda db, member, before_id=None, limit=WS_HISTORY_LIMIT: _load_event_history(
+            db,
+            event_id=event_id,
+            member=member,
+            before_id=before_id,
+            limit=limit,
         ),
-        create_message=lambda db, member, content: _create_event_message(
-            db, event_id=event_id, member=member, content=content
+        create_message=lambda db, member, content, reply_to_message_id=None, attachments=None: _create_event_message(
+            db,
+            event_id=event_id,
+            member=member,
+            content=content,
+            reply_to_message_id=reply_to_message_id,
+            attachments=attachments,
         ),
     )
 
@@ -630,9 +841,18 @@ async def board_discussion_websocket(
         token=token,
         room_key=BOARD_ROOM_KEY,
         room_event_id=None,
-        load_history=lambda db, member: _load_board_history(db, member=member),
-        create_message=lambda db, member, content: _create_board_message(
-            db, member=member, content=content
+        load_history=lambda db, member, before_id=None, limit=WS_HISTORY_LIMIT: _load_board_history(
+            db,
+            member=member,
+            before_id=before_id,
+            limit=limit,
+        ),
+        create_message=lambda db, member, content, reply_to_message_id=None, attachments=None: _create_board_message(
+            db,
+            member=member,
+            content=content,
+            reply_to_message_id=reply_to_message_id,
+            attachments=attachments,
         ),
     )
 
@@ -649,17 +869,20 @@ async def custom_room_discussion_websocket(
         room_key=custom_room_key(room_id),
         room_event_id=None,
         custom_room_id=room_id,
-        load_history=lambda db, member: list_custom_room_discussion_messages(
+        load_history=lambda db, member, before_id=None, limit=WS_HISTORY_LIMIT: list_custom_room_discussion_messages(
             db,
             room_id=room_id,
             member=member,
-            limit=WS_HISTORY_LIMIT,
+            before_id=before_id,
+            limit=limit,
         ),
-        create_message=lambda db, member, content: create_custom_room_discussion_message(
+        create_message=lambda db, member, content, reply_to_message_id=None, attachments=None: create_custom_room_discussion_message(
             db,
             room_id=room_id,
             member=member,
             content=content,
+            reply_to_message_id=reply_to_message_id,
+            attachments=attachments,
         ),
     )
 

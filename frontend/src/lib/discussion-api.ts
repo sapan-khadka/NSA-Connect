@@ -1,5 +1,54 @@
 import api from "./api";
 
+export type DiscussionAttachmentKind = "image" | "video" | "file" | "audio";
+
+export type DiscussionAttachment = {
+  id: number;
+  kind: DiscussionAttachmentKind;
+  file_name: string;
+  content_type: string;
+  size_bytes: number;
+  url: string;
+  public_id?: string | null;
+  width?: number | null;
+  height?: number | null;
+  duration_ms?: number | null;
+  created_at: string;
+};
+
+export type DiscussionAttachmentUpload = {
+  url: string;
+  public_id: string;
+  file_name: string;
+  content_type: string;
+  size_bytes: number;
+  kind: DiscussionAttachmentKind;
+  width?: number | null;
+  height?: number | null;
+  duration_ms?: number | null;
+};
+
+export type DiscussionSharedFile = {
+  id: number;
+  kind: DiscussionAttachmentKind;
+  file_name: string;
+  content_type: string;
+  size_bytes: number;
+  url: string;
+  width?: number | null;
+  height?: number | null;
+  duration_ms?: number | null;
+  created_at: string;
+  message_id: number;
+  author_id: number;
+  author_name: string;
+};
+
+export type DiscussionSharedFileListResponse = {
+  files: DiscussionSharedFile[];
+  total: number;
+};
+
 export type DiscussionMessageAuthor = {
   id: number;
   full_name: string;
@@ -8,6 +57,13 @@ export type DiscussionMessageAuthor = {
 export type DiscussionReactionSummary = {
   count: number;
   reacted_by_me: boolean;
+};
+
+export type DiscussionReplyPreview = {
+  id: number;
+  author_name: string;
+  content: string;
+  is_deleted: boolean;
 };
 
 export type DiscussionMessage = {
@@ -21,6 +77,15 @@ export type DiscussionMessage = {
   is_deleted?: boolean;
   author: DiscussionMessageAuthor;
   reactions?: Record<string, DiscussionReactionSummary>;
+  reply_to_message_id?: number | null;
+  reply_to?: DiscussionReplyPreview | null;
+  attachments?: DiscussionAttachment[];
+};
+
+export type DiscussionPinnedMessage = {
+  message: DiscussionMessage;
+  pinned_at: string;
+  pinned_by_name: string;
 };
 
 export type DiscussionRoomStatus =
@@ -66,6 +131,7 @@ export type DiscussionRoomListResponse = {
 export type DiscussionMessageListResponse = {
   messages: DiscussionMessage[];
   total: number;
+  pinned?: DiscussionPinnedMessage | null;
 };
 
 export const DISCUSSION_REACTION_EMOJIS = [
@@ -90,6 +156,11 @@ export type DiscussionInboxRoom = {
   last_message_author: string | null;
   unread_count: number;
   unread_display: string | null;
+  /** Unread message @mentions the current member (home attention queue). */
+  mentions_you?: boolean;
+  /** Best unread snippet for home (prefers mentions over low-value acks). */
+  attention_preview?: string | null;
+  attention_author?: string | null;
   pinned: boolean;
   pinned_at: string | null;
   muted?: boolean;
@@ -170,6 +241,19 @@ export async function fetchDiscussionWsTicket(): Promise<{
 }> {
   const response = await api.post<{ token: string; expires_at: string }>(
     "/v1/discussions/ws-ticket",
+  );
+  return response.data;
+}
+
+export async function uploadDiscussionAttachment(
+  file: File,
+): Promise<DiscussionAttachmentUpload> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await api.post<DiscussionAttachmentUpload>(
+    "/v1/discussions/attachments/upload",
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
   );
   return response.data;
 }
@@ -288,6 +372,49 @@ export async function fetchDiscussionRoom(
 ): Promise<DiscussionRoom> {
   const response = await api.get<DiscussionRoom>(
     `/v1/discussions/rooms/${roomId}`,
+  );
+  return response.data;
+}
+
+export async function fetchDiscussionSharedFiles(
+  roomId: string,
+  options?: {
+    kind?: DiscussionAttachmentKind;
+    limit?: number;
+    offset?: number;
+  },
+): Promise<DiscussionSharedFileListResponse> {
+  const response = await api.get<DiscussionSharedFileListResponse>(
+    "/v1/discussions/files",
+    {
+      params: {
+        room_id: roomId,
+        kind: options?.kind,
+        limit: options?.limit,
+        offset: options?.offset,
+      },
+    },
+  );
+  return response.data;
+}
+
+export async function addDiscussionRoomMembers(
+  roomId: number,
+  memberIds: number[],
+): Promise<DiscussionRoom> {
+  const response = await api.post<DiscussionRoom>(
+    `/v1/discussions/rooms/${roomId}/members`,
+    { member_ids: memberIds },
+  );
+  return response.data;
+}
+
+export async function removeDiscussionRoomMember(
+  roomId: number,
+  memberId: number,
+): Promise<DiscussionRoom> {
+  const response = await api.delete<DiscussionRoom>(
+    `/v1/discussions/rooms/${roomId}/members/${memberId}`,
   );
   return response.data;
 }

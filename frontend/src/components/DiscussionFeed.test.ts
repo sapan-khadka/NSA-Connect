@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildDiscussionTimeline } from "../components/DiscussionFeed";
+import { buildDiscussionTimeline } from "../lib/discussion-timeline";
 import type { DiscussionMessage } from "../lib/discussion-api";
 import {
   discussionRoomIdFromPath,
@@ -75,21 +75,67 @@ describe("buildDiscussionTimeline", () => {
     );
 
     expect(items.filter((item) => item.kind === "day")).toHaveLength(2);
-    const messages = items.filter((item) => item.kind === "message");
-    expect(messages[0]).toMatchObject({
-      kind: "message",
-      showMeta: true,
+    const groups = items.filter((item) => item.kind === "group");
+    expect(groups).toHaveLength(2);
+    expect(groups[0]).toMatchObject({
+      kind: "group",
       isOwn: true,
     });
-    expect(messages[1]).toMatchObject({
-      kind: "message",
-      showMeta: false,
-      isOwn: true,
-    });
-    expect(messages[2]).toMatchObject({
-      kind: "message",
-      showMeta: true,
+    expect(groups[0]?.messages).toHaveLength(2);
+    expect(groups[1]).toMatchObject({
+      kind: "group",
       isOwn: false,
+    });
+    expect(groups[1]?.messages).toHaveLength(1);
+  });
+
+  it("splits same-author groups after a long pause", () => {
+    const items = buildDiscussionTimeline(
+      [
+        msg({
+          id: 1,
+          content: "earlier",
+          created_at: "2030-01-01T10:00:00Z",
+          authorId: 1,
+        }),
+        msg({
+          id: 2,
+          content: "much later",
+          created_at: "2030-01-01T11:00:00Z",
+          authorId: 1,
+        }),
+      ],
+      1,
+    );
+    const groups = items.filter((item) => item.kind === "group");
+    expect(groups).toHaveLength(2);
+  });
+
+  it("inserts an unread separator before the first unread message", () => {
+    const items = buildDiscussionTimeline(
+      [
+        msg({
+          id: 1,
+          content: "read",
+          created_at: "2030-01-01T10:00:00Z",
+          authorId: 1,
+        }),
+        msg({
+          id: 2,
+          content: "unread",
+          created_at: "2030-01-01T10:01:00Z",
+          authorId: 2,
+          authorName: "Bob",
+        }),
+      ],
+      1,
+      { firstUnreadMessageId: 2 },
+    );
+    const unreadIndex = items.findIndex((item) => item.kind === "unread");
+    expect(unreadIndex).toBeGreaterThan(-1);
+    expect(items[unreadIndex + 1]).toMatchObject({
+      kind: "group",
+      messages: [{ id: 2 }],
     });
   });
 });

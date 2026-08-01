@@ -4,39 +4,60 @@ import {
   buildRecentMemoriesPreview,
   pickRecentMemoriesAlbum,
 } from "./recent-memories";
-import type { EventPhoto, PhotoAlbumSummary } from "./photo-archive-api";
+import type { MediaItem, PhotoAlbumSummary } from "./photo-archive-api";
 
 const album: PhotoAlbumSummary = {
-  event_id: 7,
-  event_name: "Dashain",
+  kind: "event",
+  id: 7,
+  title: "Dashain",
   starts_at: "2026-10-01T18:00:00Z",
   event_type: "cultural",
   photo_count: 16,
+  video_count: 0,
   cover_thumbnail_url: "https://example.com/cover.jpg",
 };
 
-function makePhoto(id: number): EventPhoto {
+function makePhoto(id: number): MediaItem {
   return {
     id,
-    event_id: 7,
     uploaded_by_id: 1,
     uploaded_by_name: "Member",
     image_url: `https://example.com/${id}.jpg`,
     thumbnail_url: `https://example.com/${id}-thumb.jpg`,
     created_at: "2026-10-02T12:00:00Z",
     can_delete: false,
+    media_kind: "photo",
+    duration_seconds: null,
   };
 }
 
 describe("recent-memories", () => {
-  it("picks the first album that already has photos", () => {
+  it("picks the first event album that already has photos", () => {
     const albums: PhotoAlbumSummary[] = [
-      { ...album, event_id: 1, photo_count: 0 },
-      { ...album, event_id: 2, photo_count: 3 },
-      { ...album, event_id: 3, photo_count: 8 },
+      { ...album, id: 1, photo_count: 0 },
+      { ...album, id: 2, photo_count: 3 },
+      { ...album, id: 3, photo_count: 8 },
     ];
 
-    expect(pickRecentMemoriesAlbum(albums)?.event_id).toBe(2);
+    expect(pickRecentMemoriesAlbum(albums)?.id).toBe(2);
+  });
+
+  it("prefers event albums over custom albums", () => {
+    const albums: PhotoAlbumSummary[] = [
+      {
+        kind: "custom",
+        id: 99,
+        title: "Custom",
+        starts_at: null,
+        event_type: null,
+        photo_count: 5,
+        video_count: 0,
+        cover_thumbnail_url: null,
+      },
+      { ...album, id: 2, photo_count: 3 },
+    ];
+
+    expect(pickRecentMemoriesAlbum(albums)?.id).toBe(2);
   });
 
   it("builds a four-photo preview with an overflow count", () => {

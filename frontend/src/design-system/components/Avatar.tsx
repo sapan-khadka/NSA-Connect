@@ -5,6 +5,8 @@ import { cx } from "../cx";
 
 export type AvatarSize = "sm" | "md" | "lg" | "xl";
 
+export type AvatarTone = "colorful" | "neutral";
+
 export type AvatarProps = HTMLAttributes<HTMLSpanElement> & {
   /** Image URL. Falls back to initials when missing or failed. */
   src?: string | null;
@@ -13,6 +15,10 @@ export type AvatarProps = HTMLAttributes<HTMLSpanElement> & {
   /** Display name used to derive initials when no image. */
   name?: string;
   size?: AvatarSize;
+  /** Colorful = seeded palette; neutral = gray initials. */
+  tone?: AvatarTone;
+  /** Optional seed for colorful palette (e.g. `user:12`) so colors match across surfaces. */
+  colorSeed?: string;
 };
 
 const SIZE_CLASS: Record<AvatarSize, string> = {
@@ -39,6 +45,8 @@ export function Avatar({
   alt = "",
   name = "",
   size = "md",
+  tone = "colorful",
+  colorSeed,
   className = "",
   ...rest
 }: AvatarProps) {
@@ -46,7 +54,10 @@ export function Avatar({
   const showImage = Boolean(src) && !failed;
   const initials = name ? initialsFromName(name) : "?";
   const label = alt || name || "Avatar";
-  const palette = avatarColorFromSeed(name || alt || "member");
+  const palette =
+    tone === "neutral"
+      ? { background: "#F0F0EE", color: "#52525B" }
+      : avatarColorFromSeed(colorSeed || name || alt || "member");
 
   return (
     <span

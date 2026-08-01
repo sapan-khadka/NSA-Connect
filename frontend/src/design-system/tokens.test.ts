@@ -31,8 +31,9 @@ describe("CampusOS design tokens", () => {
     expect(shadows.card).toContain("rgba(15, 23, 42");
   });
 
-  it("defines the Inter typography scale", () => {
-    expect(typography.fontFamily.sans[0]).toBe("Inter");
+  it("defines the Plus Jakarta Sans typography scale", () => {
+    expect(typography.fontFamily.sans[0]).toBe('"Plus Jakarta Sans"');
+    expect(typography.fontFamily.display[0]).toBe("Outfit");
     expect(typography.size.display).toBe("32px");
     expect(typography.size.title).toBe("18px");
     expect(typography.size.body).toBe("14px");

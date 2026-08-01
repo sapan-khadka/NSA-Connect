@@ -218,6 +218,7 @@ export function HomeYourWorkSection({
   taskCompleteError = null,
   onCompleteTask,
   embedded = false,
+  taskLimit = 6,
 }: {
   member?: MemberResponse;
   tasksSummary: MyTasksSummary;
@@ -227,6 +228,7 @@ export function HomeYourWorkSection({
   taskCompleteError?: string | null;
   onCompleteTask?: (taskId: number) => void;
   embedded?: boolean;
+  taskLimit?: number;
 }) {
   const [tab, setTab] = useState<MyTasksTab>("upcoming");
   const [userPickedTab, setUserPickedTab] = useState(false);
@@ -237,8 +239,14 @@ export function HomeYourWorkSection({
     }
   }, [isLoading, tasksSummary, userPickedTab]);
 
-  const tabTasks = filterTasksForTab(tasksSummary, tab).slice(0, 6);
-  const completedToday = tasksSummary.completedTodayTasks.slice(0, 3);
+  const tabTasks = filterTasksForTab(tasksSummary, tab).slice(
+    0,
+    Math.max(1, taskLimit),
+  );
+  const completedToday = tasksSummary.completedTodayTasks.slice(
+    0,
+    Math.min(3, Math.max(1, taskLimit)),
+  );
   const showCompletedToday = !isLoading && completedToday.length > 0;
   const emptyCopy =
     tab === "overdue"

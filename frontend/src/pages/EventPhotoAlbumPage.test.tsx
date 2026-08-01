@@ -11,6 +11,8 @@ vi.mock("../lib/photo-archive-api", () => ({
     event_name: "WT Cultural Night",
     photos: [],
     total: 0,
+    photo_count: 0,
+    video_count: 0,
   }),
   deleteEventPhoto: vi.fn(),
   uploadEventPhoto: vi.fn(),
@@ -36,13 +38,13 @@ describe("EventPhotoAlbumPage calendar return", () => {
       <MemoryRouter
         initialEntries={[
           {
-            pathname: "/events/photos/33",
+            pathname: "/events/media/33",
             state: returnState,
           },
         ]}
       >
         <Routes>
-          <Route path="/events/photos/:eventId" element={<EventPhotoAlbumPage />} />
+          <Route path="/events/media/:eventId" element={<EventPhotoAlbumPage />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -56,17 +58,17 @@ describe("EventPhotoAlbumPage calendar return", () => {
     );
   });
 
-  it("falls back to photo archive when not opened from calendar", async () => {
+  it("falls back to Media when not opened from calendar", async () => {
     render(
-      <MemoryRouter initialEntries={["/events/photos/33"]}>
+      <MemoryRouter initialEntries={["/events/media/33"]}>
         <Routes>
-          <Route path="/events/photos/:eventId" element={<EventPhotoAlbumPage />} />
+          <Route path="/events/media/:eventId" element={<EventPhotoAlbumPage />} />
         </Routes>
       </MemoryRouter>,
     );
 
     expect(
-      await screen.findByRole("link", { name: /Photo archive/i }),
-    ).toHaveAttribute("href", "/events/photos");
+      await screen.findByRole("link", { name: /^← Media$/i }),
+    ).toHaveAttribute("href", "/events/media");
   });
 });

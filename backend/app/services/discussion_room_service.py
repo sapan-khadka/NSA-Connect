@@ -590,6 +590,99 @@ def unarchive_discussion_room(
     return _load_room(db, room_id)
 
 
+def _actor_can_manage_room_members(
+    db: Session,
+    *,
+    room: DiscussionRoom,
+    actor: Member,
+) -> bool:
+    if room.kind != DiscussionRoomKind.GROUP:
+        return False
+    if actor.has_role_at_least(MemberRole.BOARD):
+        return True
+    membership = next(
+        (row for row in room.members if row.member_id == actor.id),
+        None,
+    )
+    return membership is not None and membership.role == DiscussionRoomMemberRole.OWNER
+
+
+def add_members_to_discussion_room(
+    db: Session,
+    *,
+    room_id: int,
+    actor: Member,
+    member_ids: list[int],
+) -> DiscussionRoom:
+    room = assert_can_access_custom_room(db, room_id=room_id, member=actor)
+    if room.kind == DiscussionRoomKind.DM:
+        raise DiscussionRoomInvalidStateError("Cannot add members to a direct message")
+    if room.status == DiscussionRoomStatus.ARCHIVED:
+        raise DiscussionRoomInvalidStateError("Cannot add members to an archived room")
+    if not _actor_can_manage_room_members(db, room=room, actor=actor):
+        raise DiscussionForbiddenError
+
+    existing = {row.member_id for row in room.members}
+    unique_ids = {
+        member_id
+        for member_id in member_ids
+        if isinstance(member_id, int) and member_id > 0 and member_id not in existing
+    }
+    if not unique_ids:
+        return room
+
+    invited = list(
+        db.scalars(
+            select(Member).where(
+                Member.id.in_(unique_ids),
+                Member.status == MemberStatus.APPROVED,
+            )
+        ).all()
+    )
+    if not invited:
+        raise DiscussionValidationError("No approved members found to add")
+
+    for invitee in invited:
+        db.add(
+            DiscussionRoomMember(
+                room_id=room.id,
+                member_id=invitee.id,
+                role=DiscussionRoomMemberRole.MEMBER,
+                added_by_id=actor.id,
+            )
+        )
+    db.commit()
+    return _load_room(db, room.id)
+
+
+def remove_member_from_discussion_room(
+    db: Session,
+    *,
+    room_id: int,
+    actor: Member,
+    member_id: int,
+) -> DiscussionRoom:
+    room = assert_can_access_custom_room(db, room_id=room_id, member=actor)
+    if room.kind == DiscussionRoomKind.DM:
+        raise DiscussionRoomInvalidStateError(
+            "Cannot remove members from a direct message"
+        )
+    if not _actor_can_manage_room_members(db, room=room, actor=actor):
+        raise DiscussionForbiddenError
+
+    target = next((row for row in room.members if row.member_id == member_id), None)
+    if target is None:
+        raise DiscussionValidationError("Member is not in this room")
+    if target.role == DiscussionRoomMemberRole.OWNER:
+        raise DiscussionValidationError("Cannot remove the room owner")
+    if member_id == actor.id:
+        raise DiscussionValidationError("Use leave instead of removing yourself")
+
+    db.delete(target)
+    db.commit()
+    return _load_room(db, room.id)
+
+
 def list_archived_custom_rooms(db: Session) -> list[DiscussionRoom]:
     return list(
         db.scalars(

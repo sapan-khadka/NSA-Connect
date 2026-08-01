@@ -1,7 +1,13 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useDiscussion, useEventDiscussion } from "./useEventDiscussion";
+import {
+  prependOlderMessages,
+  resolveFirstUnreadMessageId,
+  useDiscussion,
+  useEventDiscussion,
+} from "./useEventDiscussion";
+import type { DiscussionMessage } from "./discussion-api";
 
 const sockets: MockWebSocket[] = [];
 
@@ -385,5 +391,202 @@ describe("useDiscussion", () => {
     });
 
     vi.useRealTimers();
+  });
+
+  it("parses pinned history and handles pin/edit/reply sends", async () => {
+    const { result } = renderHook(() => useDiscussion({ type: "board" }));
+
+    await waitFor(() => expect(sockets).toHaveLength(1));
+
+    act(() => {
+      sockets[0].onmessage?.(
+        new MessageEvent("message", {
+          data: JSON.stringify({
+            type: "history",
+            messages: [
+              {
+                id: 3,
+                content: "Pinned note",
+                event_id: null,
+                created_at: "2030-01-01T00:00:00Z",
+                author: { id: 2, full_name: "Board User" },
+              },
+            ],
+            pinned: {
+              message: {
+                id: 3,
+                content: "Pinned note",
+                event_id: null,
+                created_at: "2030-01-01T00:00:00Z",
+                author: { id: 2, full_name: "Board User" },
+              },
+              pinned_at: "2030-01-01T00:05:00Z",
+              pinned_by_name: "Ada",
+            },
+          }),
+        }),
+      );
+    });
+
+    await waitFor(() => expect(result.current.pinnedMessage?.message.id).toBe(3));
+
+    act(() => {
+      result.current.sendMessage("With reply", { replyToMessageId: 3 });
+      result.current.editMessage(3, "Updated note");
+      result.current.pinMessage(3);
+    });
+
+    expect(sockets[0].sent).toEqual(
+      expect.arrayContaining([
+        JSON.stringify({ content: "With reply", reply_to_message_id: 3 }),
+        JSON.stringify({
+          type: "edit_message",
+          message_id: 3,
+          content: "Updated note",
+        }),
+        JSON.stringify({ type: "pin_message", message_id: 3 }),
+      ]),
+    );
+
+    act(() => {
+      sockets[0].onmessage?.(
+        new MessageEvent("message", {
+          data: JSON.stringify({ type: "pin_updated", pinned: null }),
+        }),
+      );
+    });
+
+    await waitFor(() => expect(result.current.pinnedMessage).toBeNull());
+
+    act(() => {
+      result.current.unpinMessage();
+    });
+    expect(sockets[0].sent.at(-1)).toBe(
+      JSON.stringify({ type: "unpin_message" }),
+    );
+  });
+
+  it("requests older history and prepends history_page messages", async () => {
+    const { result } = renderHook(() => useDiscussion({ type: "board" }));
+
+    await waitFor(() => expect(sockets).toHaveLength(1));
+
+    act(() => {
+      sockets[0].onmessage?.(
+        new MessageEvent("message", {
+          data: JSON.stringify({
+            type: "history",
+            messages: Array.from({ length: 50 }, (_, index) => ({
+              id: index + 51,
+              content: `m${index + 51}`,
+              event_id: null,
+              created_at: "2030-01-01T00:00:00Z",
+              author: { id: 2, full_name: "Board User" },
+              reactions: {},
+            })),
+            first_unread_message_id: 60,
+          }),
+        }),
+      );
+    });
+
+    await waitFor(() => expect(result.current.messages).toHaveLength(50));
+    expect(result.current.hasMoreOlder).toBe(true);
+    expect(result.current.firstUnreadMessageId).toBe(60);
+
+    act(() => {
+      expect(result.current.loadOlderMessages()).toBe(true);
+    });
+    expect(result.current.loadingOlder).toBe(true);
+    expect(sockets[0].sent.at(-1)).toBe(
+      JSON.stringify({
+        type: "load_history",
+        before_id: 51,
+        limit: 50,
+      }),
+    );
+
+    act(() => {
+      sockets[0].onmessage?.(
+        new MessageEvent("message", {
+          data: JSON.stringify({
+            type: "history_page",
+            messages: [
+              {
+                id: 40,
+                content: "older",
+                event_id: null,
+                created_at: "2030-01-01T00:00:00Z",
+                author: { id: 2, full_name: "Board User" },
+                reactions: {},
+              },
+              {
+                id: 50,
+                content: "mid",
+                event_id: null,
+                created_at: "2030-01-01T00:00:00Z",
+                author: { id: 2, full_name: "Board User" },
+                reactions: {},
+              },
+            ],
+            has_more: false,
+          }),
+        }),
+      );
+    });
+
+    await waitFor(() => expect(result.current.messages).toHaveLength(52));
+    expect(result.current.messages[0]?.id).toBe(40);
+    expect(result.current.messages[1]?.id).toBe(50);
+    expect(result.current.messages[2]?.id).toBe(51);
+    expect(result.current.hasMoreOlder).toBe(false);
+    expect(result.current.loadingOlder).toBe(false);
+  });
+});
+
+describe("prependOlderMessages", () => {
+  const base = (id: number): DiscussionMessage => ({
+    id,
+    content: `m${id}`,
+    event_id: null,
+    created_at: "2030-01-01T00:00:00Z",
+    author: { id: 1, full_name: "Ada" },
+    reactions: {},
+  });
+
+  it("prepends only unknown older messages", () => {
+    const current = [base(3), base(4)];
+    const merged = prependOlderMessages(current, [base(1), base(2), base(3)]);
+    expect(merged.map((row) => row.id)).toEqual([1, 2, 3, 4]);
+  });
+
+  it("returns current when older page is empty or fully known", () => {
+    const current = [base(3)];
+    expect(prependOlderMessages(current, [])).toBe(current);
+    expect(prependOlderMessages(current, [base(3)])).toBe(current);
+  });
+});
+
+describe("resolveFirstUnreadMessageId", () => {
+  it("returns the first message after the read watermark", () => {
+    const messages = [
+      {
+        id: 1,
+        content: "a",
+        event_id: null,
+        created_at: "2030-01-01T00:00:00Z",
+        author: { id: 1, full_name: "Ada" },
+      },
+      {
+        id: 3,
+        content: "b",
+        event_id: null,
+        created_at: "2030-01-01T00:00:00Z",
+        author: { id: 1, full_name: "Ada" },
+      },
+    ] as DiscussionMessage[];
+    expect(resolveFirstUnreadMessageId(messages, 1)).toBe(3);
+    expect(resolveFirstUnreadMessageId(messages, 3)).toBeNull();
+    expect(resolveFirstUnreadMessageId(messages, null)).toBeNull();
   });
 });

@@ -168,7 +168,7 @@ migrations — run `alembic upgrade head` after enabling AI.
 |---------|-------|--------|
 | **Event prep checklist** | "Generate Checklist" button in the create-event form (`/events`) | Board+ |
 | **Announcement email draft** | `/board/announcement-email` | Board+ |
-| **Meeting minutes summary** | `/board/meeting-minutes` | Board+ |
+| **Meeting minutes (AI)** | Open a meeting at `/events/meetings/:id` | Board+ |
 | **AI assistant chat** | `/assistant` (streaming, with constitution RAG + live data tools) | Authenticated |
 | **Constitution knowledge base** | PDF upload + semantic search feeding chat | Upload: Board+, Search: Authenticated |
 

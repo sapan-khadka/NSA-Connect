@@ -1,4 +1,4 @@
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import settings
@@ -61,14 +61,23 @@ def list_photo_albums(
     photo_rows = db.execute(
         select(
             EventPhoto.event_id,
-            func.count(EventPhoto.id).label("photo_count"),
+            func.count(EventPhoto.id).label("media_count"),
+            func.sum(
+                case((EventPhoto.media_kind == "video", 1), else_=0)
+            ).label("video_count"),
             func.min(EventPhoto.id).label("cover_photo_id"),
         )
         .where(EventPhoto.event_id.in_(event_ids))
         .group_by(EventPhoto.event_id)
     ).all()
 
-    counts_by_event = {row.event_id: row.photo_count for row in photo_rows}
+    counts_by_event = {
+        row.event_id: {
+            "photo_count": int(row.media_count or 0) - int(row.video_count or 0),
+            "video_count": int(row.video_count or 0),
+        }
+        for row in photo_rows
+    }
     cover_ids = [row.cover_photo_id for row in photo_rows if row.cover_photo_id]
     cover_photos = {}
     if cover_ids:
@@ -90,7 +99,8 @@ def list_photo_albums(
             "event_name": event.title,
             "starts_at": event.starts_at,
             "event_type": event.event_type,
-            "photo_count": counts_by_event.get(event.id, 0),
+            "photo_count": counts_by_event.get(event.id, {}).get("photo_count", 0),
+            "video_count": counts_by_event.get(event.id, {}).get("video_count", 0),
             "cover_thumbnail_url": cover_by_event.get(event.id),
         }
         for event in events
@@ -136,6 +146,8 @@ def create_event_photo(
         image_url=upload_result.image_url,
         thumbnail_url=upload_result.thumbnail_url,
         public_id=upload_result.public_id,
+        media_kind=upload_result.media_kind or "photo",
+        duration_seconds=upload_result.duration_seconds,
     )
     db.add(photo)
     db.commit()
@@ -200,6 +212,9 @@ def delete_event_photo(
                 api_key=settings.CLOUDINARY_API_KEY,
                 api_secret=settings.CLOUDINARY_API_SECRET,
                 public_id=photo.public_id,
+                resource_type=(
+                    "video" if (photo.media_kind or "photo") == "video" else "image"
+                ),
             )
         except CloudinaryUploadError:
             pass

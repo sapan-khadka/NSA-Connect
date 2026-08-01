@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import re
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.discussion_message import DiscussionMessage
@@ -283,6 +286,165 @@ def _unread_display(count: int) -> str | None:
     return str(count)
 
 
+def _mention_needles(member: Member) -> list[str]:
+    full = (member.full_name or "").strip()
+    if not full:
+        return []
+    needles = [f"@{full}"]
+    first = full.split()[0]
+    if first and first.casefold() != full.casefold():
+        needles.append(f"@{first}")
+    return needles
+
+
+def _content_mentions_member(content: str, needles: list[str]) -> bool:
+    """Best-effort match for `@Full Name` / `@First` tokens in message text."""
+    if not content or not needles:
+        return False
+    text = content.casefold()
+    for needle in needles:
+        target = needle.casefold()
+        start = 0
+        while True:
+            idx = text.find(target, start)
+            if idx < 0:
+                break
+            end = idx + len(target)
+            # Require a token boundary so `@Muk` does not match `@Mukesh`.
+            if end >= len(text) or not (text[end].isalnum() or text[end] in "._"):
+                return True
+            start = idx + 1
+    return False
+
+
+def _message_scope(
+    *,
+    event_id: int | None,
+    custom_room_id: int | None = None,
+):
+    if custom_room_id is not None:
+        return and_(
+            DiscussionMessage.custom_room_id == custom_room_id,
+            DiscussionMessage.event_id.is_(None),
+        )
+    if event_id is None:
+        return and_(
+            DiscussionMessage.event_id.is_(None),
+            DiscussionMessage.custom_room_id.is_(None),
+        )
+    return and_(
+        DiscussionMessage.event_id == event_id,
+        DiscussionMessage.custom_room_id.is_(None),
+    )
+
+
+_LOW_VALUE_ACK = re.compile(
+    r"^(ok|okay|k|kk|yes|yep|yeah|y|no|nah|n|thanks|thank you|ty|thx|np|"
+    r"sure|cool|nice|lol|lmao|haha|hehe|same|true|false|done|noted|"
+    r"👍|🙏|❤️|❤|🔥|😂|😊|👌|💯|✅|👏|🙌|✨)[.!]*$",
+    re.IGNORECASE,
+)
+
+
+def _is_low_value_content(content: str) -> bool:
+    """True for empty/ack/emoji-only chatter that shouldn't lead a dashboard card."""
+    text = (content or "").strip()
+    if not text:
+        return True
+    if len(text) <= 2:
+        return True
+    if _LOW_VALUE_ACK.match(text):
+        return True
+    # No letters/digits → sticker / emoji-only.
+    if re.search(r"[^\W_]", text, flags=re.UNICODE) is None:
+        return True
+    return False
+
+
+@dataclass(frozen=True)
+class _UnreadAttention:
+    mentions_you: bool
+    preview: str | None
+    author: str | None
+
+
+def _unread_attention(
+    db: Session,
+    *,
+    member: Member,
+    event_id: int | None,
+    custom_room_id: int | None = None,
+    last_read_at: datetime | None,
+) -> _UnreadAttention:
+    """Find mention + useful snippet without scanning large unread histories."""
+    scope = _message_scope(event_id=event_id, custom_room_id=custom_room_id)
+    base = [
+        scope,
+        DiscussionMessage.author_id != member.id,
+        DiscussionMessage.deleted_at.is_(None),
+    ]
+    if last_read_at is not None:
+        base.append(DiscussionMessage.created_at > last_read_at)
+
+    needles = _mention_needles(member)
+    mention_msg: DiscussionMessage | None = None
+    if needles:
+        mention_filters = [
+            DiscussionMessage.content.ilike(f"%{needle}%") for needle in needles
+        ]
+        mention_msg = db.scalars(
+            select(DiscussionMessage)
+            .options(joinedload(DiscussionMessage.author))
+            .where(*base, or_(*mention_filters))
+            .order_by(DiscussionMessage.id.desc())
+            .limit(1)
+        ).first()
+        # Guard against partial false positives from ILIKE (e.g. @Muk vs @Mukesh).
+        if mention_msg is not None and not _content_mentions_member(
+            str(mention_msg.content or ""), needles
+        ):
+            mention_msg = None
+
+    if mention_msg is not None:
+        return _UnreadAttention(
+            mentions_you=True,
+            preview=_preview_for_message(mention_msg),
+            author=(
+                mention_msg.author.full_name if mention_msg.author is not None else None
+            ),
+        )
+
+    recent = db.scalars(
+        select(DiscussionMessage)
+        .options(joinedload(DiscussionMessage.author))
+        .where(*base)
+        .order_by(DiscussionMessage.id.desc())
+        .limit(8)
+    ).unique().all()
+
+    substantive_msg: DiscussionMessage | None = None
+    latest_msg: DiscussionMessage | None = None
+    for message in recent:
+        if latest_msg is None:
+            latest_msg = message
+        if substantive_msg is None and not _is_low_value_content(
+            str(message.content or "")
+        ):
+            substantive_msg = message
+            break
+
+    chosen = substantive_msg or latest_msg
+    return _UnreadAttention(
+        mentions_you=False,
+        preview=_preview_for_message(chosen) if chosen is not None else None,
+        author=(
+            chosen.author.full_name
+            if chosen is not None and chosen.author is not None
+            else None
+        ),
+    )
+
+
 def mark_discussion_room_read(
     db: Session,
     *,
@@ -306,10 +468,25 @@ def mark_discussion_room_read(
             last_read_at=now,
         )
         db.add(existing)
+        try:
+            db.commit()
+        except IntegrityError:
+            # Concurrent first-read inserts for the same (user, room) are fine.
+            db.rollback()
+            existing = db.scalars(
+                select(DiscussionRoomRead).where(
+                    DiscussionRoomRead.user_id == member.id,
+                    DiscussionRoomRead.room_id == cleaned,
+                )
+            ).first()
+            if existing is None:
+                raise
+            existing.last_read_at = now
+            db.commit()
     else:
         existing.last_read_at = now
+        db.commit()
 
-    db.commit()
     db.refresh(existing)
     return DiscussionRoomReadResponse(
         room_id=existing.room_id,
@@ -443,26 +620,11 @@ def _count_unread(
     custom_room_id: int | None = None,
     last_read_at: datetime | None,
 ) -> int:
-    if custom_room_id is not None:
-        scope = and_(
-            DiscussionMessage.custom_room_id == custom_room_id,
-            DiscussionMessage.event_id.is_(None),
-        )
-    elif event_id is None:
-        scope = and_(
-            DiscussionMessage.event_id.is_(None),
-            DiscussionMessage.custom_room_id.is_(None),
-        )
-    else:
-        scope = and_(
-            DiscussionMessage.event_id == event_id,
-            DiscussionMessage.custom_room_id.is_(None),
-        )
     statement = (
         select(func.count())
         .select_from(DiscussionMessage)
         .where(
-            scope,
+            _message_scope(event_id=event_id, custom_room_id=custom_room_id),
             DiscussionMessage.author_id != member_id,
             DiscussionMessage.deleted_at.is_(None),
         )
@@ -478,25 +640,10 @@ def _latest_message(
     event_id: int | None,
     custom_room_id: int | None = None,
 ) -> DiscussionMessage | None:
-    if custom_room_id is not None:
-        scope = and_(
-            DiscussionMessage.custom_room_id == custom_room_id,
-            DiscussionMessage.event_id.is_(None),
-        )
-    elif event_id is None:
-        scope = and_(
-            DiscussionMessage.event_id.is_(None),
-            DiscussionMessage.custom_room_id.is_(None),
-        )
-    else:
-        scope = and_(
-            DiscussionMessage.event_id == event_id,
-            DiscussionMessage.custom_room_id.is_(None),
-        )
     return db.scalars(
         select(DiscussionMessage)
         .options(joinedload(DiscussionMessage.author))
-        .where(scope)
+        .where(_message_scope(event_id=event_id, custom_room_id=custom_room_id))
         .order_by(DiscussionMessage.id.desc())
         .limit(1)
     ).first()
@@ -537,11 +684,22 @@ def list_discussion_inbox(
         latest = _latest_message(db, event_id=None)
         if latest is not None and BOARD_ROOM_KEY not in archived_ids:
             room_id = BOARD_ROOM_KEY
+            last_read_at = reads.get(room_id)
             unread = _count_unread(
                 db,
                 member_id=member.id,
                 event_id=None,
-                last_read_at=reads.get(room_id),
+                last_read_at=last_read_at,
+            )
+            attention = (
+                _unread_attention(
+                    db,
+                    member=member,
+                    event_id=None,
+                    last_read_at=last_read_at,
+                )
+                if unread > 0
+                else _UnreadAttention(False, None, None)
             )
             rooms.append(
                 DiscussionInboxRoomResponse(
@@ -557,6 +715,9 @@ def list_discussion_inbox(
                     else None,
                     unread_count=unread,
                     unread_display=_unread_display(unread),
+                    mentions_you=attention.mentions_you,
+                    attention_preview=attention.preview,
+                    attention_author=attention.author,
                     # Board Discussion is always in the pinned section.
                     pinned=True,
                     pinned_at=pins.get(room_id) or latest.created_at,
@@ -608,11 +769,22 @@ def list_discussion_inbox(
             latest = _latest_message(db, event_id=event_id)
             if latest is None:
                 continue
+            last_read_at = reads.get(room_id)
             unread = _count_unread(
                 db,
                 member_id=member.id,
                 event_id=event_id,
-                last_read_at=reads.get(room_id),
+                last_read_at=last_read_at,
+            )
+            attention = (
+                _unread_attention(
+                    db,
+                    member=member,
+                    event_id=event_id,
+                    last_read_at=last_read_at,
+                )
+                if unread > 0
+                else _UnreadAttention(False, None, None)
             )
             rooms.append(
                 DiscussionInboxRoomResponse(
@@ -630,6 +802,9 @@ def list_discussion_inbox(
                     else None,
                     unread_count=unread,
                     unread_display=_unread_display(unread),
+                    mentions_you=attention.mentions_you,
+                    attention_preview=attention.preview,
+                    attention_author=attention.author,
                     pinned=room_id in pins,
                     pinned_at=pins.get(room_id),
                     muted=room_id in muted_ids,
@@ -648,12 +823,24 @@ def list_discussion_inbox(
 
         room_id = custom_room_key(custom.id)
         latest = _latest_message(db, event_id=None, custom_room_id=custom.id)
+        last_read_at = reads.get(room_id)
         unread = _count_unread(
             db,
             member_id=member.id,
             event_id=None,
             custom_room_id=custom.id,
-            last_read_at=reads.get(room_id),
+            last_read_at=last_read_at,
+        )
+        attention = (
+            _unread_attention(
+                db,
+                member=member,
+                event_id=None,
+                custom_room_id=custom.id,
+                last_read_at=last_read_at,
+            )
+            if unread > 0
+            else _UnreadAttention(False, None, None)
         )
 
         label = custom.name
@@ -691,6 +878,9 @@ def list_discussion_inbox(
                 else None,
                 unread_count=unread,
                 unread_display=_unread_display(unread),
+                mentions_you=attention.mentions_you,
+                attention_preview=attention.preview,
+                attention_author=attention.author,
                 pinned=room_id in pins,
                 pinned_at=pins.get(room_id),
                 muted=room_id in muted_ids,

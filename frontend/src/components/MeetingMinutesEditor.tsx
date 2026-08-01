@@ -9,12 +9,16 @@ import { getApiErrorMessage } from "../lib/api-error";
 import type { MeetingMinutes } from "../lib/meetings-api";
 import type { SummarizeMinutesResponse } from "../lib/ai-api";
 
+export type MeetingMinutesEditorMode = "full" | "notes" | "summary";
+
 type MeetingMinutesEditorProps = {
   eventName: string;
   minutes: MeetingMinutes;
   canManage: boolean;
+  mode?: MeetingMinutesEditorMode;
   onSaveNotes: (rawNotes: string) => Promise<MeetingMinutes>;
   onSummarize: (rawNotes: string) => Promise<MeetingMinutes & SummarizeMinutesResponse>;
+  onGoToNotes?: () => void;
 };
 
 function MinutesStatusChip({
@@ -38,8 +42,10 @@ function MinutesStatusChip({
 export function MeetingMinutesEditor({
   minutes,
   canManage,
+  mode = "full",
   onSaveNotes,
   onSummarize,
+  onGoToNotes,
 }: MeetingMinutesEditorProps) {
   const [notes, setNotes] = useState(minutes.raw_notes);
   const [savedMinutes, setSavedMinutes] = useState(minutes);
@@ -51,6 +57,8 @@ export function MeetingMinutesEditor({
 
   const hasPublishedMinutes = Boolean(savedMinutes.summary?.trim());
   const hasDraft = savedMinutes.raw_notes.trim().length > 0;
+  const showNotes = mode === "full" || mode === "notes";
+  const showSummary = mode === "full" || mode === "summary";
 
   const summaryResult = hasPublishedMinutes
     ? {
@@ -79,7 +87,7 @@ export function MeetingMinutesEditor({
   }
 
   async function handleSummarize() {
-    const trimmedNotes = notes.trim();
+    const trimmedNotes = notes.trim() || savedMinutes.raw_notes.trim();
     if (!trimmedNotes) {
       setNotesError("Add draft notes before publishing official minutes.");
       return;
@@ -102,24 +110,36 @@ export function MeetingMinutesEditor({
     }
   }
 
+  const title =
+    mode === "summary"
+      ? "AI Summary"
+      : mode === "notes"
+        ? "Minutes"
+        : "Minutes";
+
   return (
     <Card
       id="meeting-minutes"
-      aria-label="Minutes"
+      aria-label={title}
       padding="md"
       className="scroll-mt-24"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-light tracking-subhead text-foreground">Minutes</h2>
+        <h2 className="text-lg font-light tracking-subhead text-foreground">
+          {title}
+        </h2>
         <MinutesStatusChip
           published={hasPublishedMinutes}
           draftSaved={hasDraft && !hasPublishedMinutes}
         />
       </div>
 
-      {summaryResult ? (
-        <div className="mt-4 border-b border-gray-100 pb-4">
-          <MeetingMinutesSummary result={summaryResult} />
+      {showSummary && summaryResult ? (
+        <div className={showNotes ? "mt-4 border-b border-gray-100 pb-4" : "mt-4"}>
+          <MeetingMinutesSummary
+            result={summaryResult}
+            title={mode === "summary" ? "Official AI minutes" : "Official minutes"}
+          />
           {savedMinutes.updated_by_name && savedMinutes.updated_at ? (
             <p className="mt-3 text-xs text-label">
               Published by {savedMinutes.updated_by_name} on{" "}
@@ -129,7 +149,50 @@ export function MeetingMinutesEditor({
         </div>
       ) : null}
 
-      {canManage ? (
+      {showSummary && !summaryResult && mode === "summary" ? (
+        <div className="mt-4 space-y-3">
+          <p className="text-sm text-label">
+            {hasDraft
+              ? "Draft notes are ready. Generate an AI summary to publish official minutes."
+              : "No AI summary yet. Capture draft notes first, then generate one here."}
+          </p>
+          {serverError ? (
+            <p role="alert" className="ds-alert-banner">
+              {serverError}
+            </p>
+          ) : null}
+          {saveSuccess ? (
+            <p role="status" className="ds-alert-banner">
+              {saveSuccess}
+            </p>
+          ) : null}
+          {notesError ? <p className="ds-field-error">{notesError}</p> : null}
+          {canManage ? (
+            <div className="flex flex-wrap gap-3">
+              {hasDraft ? (
+                <Button
+                  type="button"
+                  disabled={isSummarizing}
+                  onClick={() => void handleSummarize()}
+                >
+                  {isSummarizing ? "Generating…" : "Generate AI Minutes"}
+                </Button>
+              ) : null}
+              {onGoToNotes ? (
+                <button
+                  type="button"
+                  className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-foreground transition hover:bg-gray-50"
+                  onClick={onGoToNotes}
+                >
+                  {hasDraft ? "Edit draft notes" : "Add draft notes"}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {showNotes && canManage ? (
         <form onSubmit={handleSaveNotes} noValidate className="mt-4 space-y-4">
           {serverError ? (
             <p role="alert" className="ds-alert-banner">
@@ -173,17 +236,27 @@ export function MeetingMinutesEditor({
             >
               {isSaving ? "Saving…" : "Save draft"}
             </button>
-            <Button
-              type="button"
-              disabled={isSaving || isSummarizing}
-              onClick={() => void handleSummarize()}
-            >
-              {isSummarizing
-                ? "Publishing…"
-                : hasPublishedMinutes
-                  ? "Re-publish"
-                  : "Publish"}
-            </Button>
+            {mode === "full" ? (
+              <Button
+                type="button"
+                disabled={isSaving || isSummarizing}
+                onClick={() => void handleSummarize()}
+              >
+                {isSummarizing
+                  ? "Publishing…"
+                  : hasPublishedMinutes
+                    ? "Re-publish"
+                    : "Publish"}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                disabled={isSaving || isSummarizing}
+                onClick={() => void handleSummarize()}
+              >
+                {isSummarizing ? "Generating…" : "Generate AI Minutes"}
+              </Button>
+            )}
           </div>
 
           {hasDraft &&
@@ -196,7 +269,9 @@ export function MeetingMinutesEditor({
             </p>
           ) : null}
         </form>
-      ) : (
+      ) : null}
+
+      {showNotes && !canManage ? (
         <>
           {!summaryResult && !hasDraft ? (
             <p className="mt-4 text-sm text-label">No minutes published yet.</p>
@@ -212,7 +287,7 @@ export function MeetingMinutesEditor({
             </details>
           ) : null}
         </>
-      )}
+      ) : null}
     </Card>
   );
 }

@@ -68,14 +68,18 @@ def list_event_photos_endpoint(
             detail="Event not found",
         ) from None
 
+    responses = [
+        EventPhotoResponse.from_photo(photo, viewer=current_member)
+        for photo in photos
+    ]
+    video_count = sum(1 for item in responses if item.media_kind == "video")
     return EventPhotoListResponse(
         event_id=event_id,
         event_name=event.title,
-        photos=[
-            EventPhotoResponse.from_photo(photo, viewer=current_member)
-            for photo in photos
-        ],
-        total=len(photos),
+        photos=responses,
+        total=len(responses),
+        photo_count=len(responses) - video_count,
+        video_count=video_count,
     )
 
 
@@ -113,7 +117,7 @@ async def upload_event_photo_endpoint(
     except EventPhotoUploadUnavailableError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Photo upload is not configured",
+            detail="Media upload is not configured",
         ) from exc
 
     return EventPhotoResponse.from_photo(photo, viewer=current_member)
@@ -200,6 +204,7 @@ async def upload_event_cover_photo_endpoint(
         upload_result = upload_event_photo_file(
             file_bytes=file_bytes,
             content_type=file.content_type,
+            cover_only=True,
         )
         event = set_event_photo_url(
             db,

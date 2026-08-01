@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 import { ArrowLink } from "./ui/ArrowLink";
 import { HomeCard } from "./ui/HomeCard";
-import { photoAlbumPath, photoArchivePath } from "../lib/event-links";
+import { mediaAlbumHref, photoArchivePath } from "../lib/event-links";
 import type { RecentMemoriesPreview } from "../lib/recent-memories";
 
 type RecentMemoriesStripProps = {
@@ -15,6 +15,8 @@ function formatPhotoCount(count: number): string {
 
 export function RecentMemoriesStrip({ memories }: RecentMemoriesStripProps) {
   const { album, photos, extraPhotoCount } = memories;
+  const albumHref = mediaAlbumHref(album);
+  const albumTitle = album.title;
 
   return (
     <HomeCard padding="sm">
@@ -22,10 +24,10 @@ export function RecentMemoriesStrip({ memories }: RecentMemoriesStripProps) {
         <div>
           <h2 className="text-base font-medium text-foreground">Recent memories</h2>
           <p className="mt-1 text-sm text-label">
-            From {album.event_name} · {formatPhotoCount(album.photo_count)}
+            From {albumTitle} · {formatPhotoCount(album.photo_count)}
           </p>
         </div>
-        <ArrowLink to={photoArchivePath()}>View all photos</ArrowLink>
+        <ArrowLink to={photoArchivePath()}>View all media</ArrowLink>
       </div>
 
       <ul className="mt-4 grid grid-cols-4 gap-2">
@@ -36,12 +38,12 @@ export function RecentMemoriesStrip({ memories }: RecentMemoriesStripProps) {
           return (
             <li key={photo.id}>
               <Link
-                to={photoAlbumPath(album.event_id)}
+                to={albumHref}
                 className="group relative block aspect-square overflow-hidden rounded-[10px] bg-surface-muted"
                 aria-label={
                   isLastWithMore
-                    ? `View ${album.event_name} album, ${extraPhotoCount} more photos`
-                    : `View photo from ${album.event_name}`
+                    ? `View ${albumTitle} album, ${extraPhotoCount} more photos`
+                    : `View photo from ${albumTitle}`
                 }
               >
                 <img

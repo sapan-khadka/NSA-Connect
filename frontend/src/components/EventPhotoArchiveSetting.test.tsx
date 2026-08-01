@@ -25,7 +25,7 @@ describe("EventPhotoArchiveSetting", () => {
     );
 
     expect(
-      screen.getByRole("checkbox", { name: /Show in photo archive/i }),
+      screen.getByRole("checkbox", { name: /Show in Media/i }),
     ).toBeChecked();
   });
 
@@ -42,7 +42,7 @@ describe("EventPhotoArchiveSetting", () => {
     );
 
     await user.click(
-      screen.getByRole("checkbox", { name: /Show in photo archive/i }),
+      screen.getByRole("checkbox", { name: /Show in Media/i }),
     );
 
     await waitFor(() => {

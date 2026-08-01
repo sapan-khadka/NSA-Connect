@@ -10,6 +10,7 @@ export function HomeWorkCenter({
   completingTaskId,
   taskCompleteError,
   onCompleteTask,
+  taskLimit = 6,
 }: {
   member: MemberResponse;
   tasksSummary: MyTasksSummary;
@@ -18,6 +19,7 @@ export function HomeWorkCenter({
   completingTaskId: number | null;
   taskCompleteError: string | null;
   onCompleteTask: (taskId: number) => void;
+  taskLimit?: number;
 }) {
   return (
     <div className="home-tasks-stack" aria-label="Work Center">
@@ -29,6 +31,7 @@ export function HomeWorkCenter({
         completingTaskId={completingTaskId}
         taskCompleteError={taskCompleteError}
         onCompleteTask={onCompleteTask}
+        taskLimit={taskLimit}
       />
     </div>
   );

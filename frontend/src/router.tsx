@@ -1,4 +1,14 @@
-import { createBrowserRouter, Navigate, type RouteObject } from "react-router-dom";
+import {
+  createBrowserRouter,
+  Navigate,
+  useParams,
+  type RouteObject,
+} from "react-router-dom";
+
+function LegacyPhotoAlbumRedirect() {
+  const { eventId } = useParams();
+  return <Navigate to={`/events/media/${eventId ?? ""}`} replace />;
+}
 
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppLayout } from "./layouts/AppLayout";
@@ -20,7 +30,6 @@ import { FinancePage } from "./pages/FinancePage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
-import { MeetingMinutesPage } from "./pages/MeetingMinutesPage";
 import { MemberProfilePage } from "./pages/MemberProfilePage";
 import { MembersPage } from "./pages/MembersPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
@@ -28,6 +37,7 @@ import { NotFoundPage } from "./pages/NotFoundPage";
 import { PastEventsPage } from "./pages/PastEventsPage";
 import { BoardMeetingsPage } from "./pages/BoardMeetingsPage";
 import { MeetingDetailPage } from "./pages/MeetingDetailPage";
+import { CustomMediaAlbumPage } from "./pages/CustomMediaAlbumPage";
 import { PhotoArchivePage } from "./pages/PhotoArchivePage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { PublicEventPage } from "./pages/PublicEventPage";
@@ -105,11 +115,7 @@ export const appRoutes: RouteObject[] = [
       },
       {
         path: "board/meeting-minutes",
-        element: (
-          <ProtectedRoute minRole="board">
-            <MeetingMinutesPage />
-          </ProtectedRoute>
-        ),
+        element: <Navigate to="/events/meetings" replace />,
       },
       {
         path: "discussions",
@@ -225,8 +231,17 @@ export const appRoutes: RouteObject[] = [
           },
           { path: "upcoming", element: <Navigate to="/events/calendar" replace /> },
           { path: "tasks", element: <BoardTasksPage /> },
-          { path: "photos", element: <PhotoArchivePage /> },
-          { path: "photos/:eventId", element: <EventPhotoAlbumPage /> },
+          { path: "media", element: <PhotoArchivePage /> },
+          {
+            path: "media/album/:albumId",
+            element: <CustomMediaAlbumPage />,
+          },
+          { path: "media/:eventId", element: <EventPhotoAlbumPage /> },
+          { path: "photos", element: <Navigate to="/events/media" replace /> },
+          {
+            path: "photos/:eventId",
+            element: <LegacyPhotoAlbumRedirect />,
+          },
           {
             path: "past",
             element: (

@@ -15,7 +15,7 @@ export type {
   TypographySize,
 } from "./tokens";
 
-export { typeClass, fontFamilySans } from "./typography";
+export { typeClass, fontFamilySans, fontFamilyDisplay } from "./typography";
 export type { TypeClassKey } from "./typography";
 
 export { spaceClass, spacePx } from "./spacing";

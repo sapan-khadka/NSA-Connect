@@ -70,6 +70,7 @@ export function CreateMenu({ onLogTransaction, className = "" }: CreateMenuProps
       label: "Announcement",
       to: "/announcements?create=1",
     });
+    items.push({ id: "task", label: "Task", to: "/events/tasks?create=1" });
   }
 
   if (canViewMemberDirectory(member.role)) {

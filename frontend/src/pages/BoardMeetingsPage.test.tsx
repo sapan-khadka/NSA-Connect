@@ -67,7 +67,7 @@ describe("BoardMeetingsPage", () => {
     });
 
     expect(
-      await screen.findByRole("heading", { name: "Board meetings" }),
+      await screen.findByRole("heading", { name: "Meetings" }),
     ).toBeInTheDocument();
     expect(screen.getByText("April Board Meeting")).toBeInTheDocument();
     expect(screen.getByText("March Board Meeting")).toBeInTheDocument();

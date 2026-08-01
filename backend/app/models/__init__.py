@@ -2,8 +2,10 @@ from app.models.announcement import Announcement, AnnouncementCategory
 from app.models.base import Base
 from app.models.constitutional_chunk import ConstitutionalChunk
 from app.models.discussion_message import DiscussionMessage
+from app.models.discussion_message_attachment import DiscussionMessageAttachment
 from app.models.discussion_message_reaction import DiscussionMessageReaction
 from app.models.discussion_read_state import DiscussionReadState
+from app.models.discussion_thread_pin import DiscussionThreadPin
 from app.models.discussion_room import (
     DiscussionRoom,
     DiscussionRoomMember,
@@ -20,6 +22,7 @@ from app.models.event_feedback import EventFeedback
 from app.models.event_guest_checkin import EventGuestCheckIn, GuestAffiliationType
 from app.models.event_participant_invitation import EventParticipantInvitation
 from app.models.event_photo import EventPhoto
+from app.models.media_album import MediaAlbum, MediaAlbumItem
 from app.models.event_rsvp import EventRsvp, RsvpStatus
 from app.models.event_suggestion import EventSuggestion, EventSuggestionStatus
 from app.models.event_suggestion_comment import (
@@ -85,7 +88,9 @@ __all__ = [
     "ConstitutionalChunk",
     "CustomBoardPosition",
     "DiscussionMessage",
+    "DiscussionMessageAttachment",
     "DiscussionMessageReaction",
+    "DiscussionThreadPin",
     "DiscussionReadState",
     "DiscussionRoom",
     "DiscussionRoomMember",
@@ -113,6 +118,8 @@ __all__ = [
     "GuestAffiliationType",
     "EventParticipantInvitation",
     "EventPhoto",
+    "MediaAlbum",
+    "MediaAlbumItem",
     "EventRsvp",
     "RsvpStatus",
     "EventTask",

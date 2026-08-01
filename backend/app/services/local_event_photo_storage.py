@@ -12,6 +12,9 @@ _CONTENT_TYPE_EXTENSIONS = {
     "image/png": "png",
     "image/heic": "heic",
     "image/heif": "heif",
+    "video/mp4": "mp4",
+    "video/quicktime": "mov",
+    "video/webm": "webm",
 }
 
 
@@ -43,6 +46,7 @@ def upload_local_event_photo(
     *,
     file_bytes: bytes,
     content_type: str | None,
+    media_kind: str = "photo",
 ) -> CloudinaryEventPhotoResult:
     extension = _extension_for_content_type(content_type)
     filename = f"{uuid.uuid4().hex}.{extension}"
@@ -58,6 +62,8 @@ def upload_local_event_photo(
         public_id=f"{LOCAL_EVENT_PHOTO_PUBLIC_ID_PREFIX}/{filename}",
         bytes=len(file_bytes),
         format=extension,
+        media_kind=media_kind,
+        duration_seconds=None,
     )
 
 

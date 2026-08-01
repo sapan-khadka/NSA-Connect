@@ -7,11 +7,15 @@ import type { MemberRole } from "./roles";
 
 export type TaskUrgency = "high" | "medium" | "low";
 
-/** Visual urgency for home task rows — derived from due state (no stored priority). */
+/** Visual urgency for open tasks — derived from due state (no stored priority). */
 export function getTaskUrgency(
   task: EventTaskResponse,
   now = new Date(),
 ): TaskUrgency {
+  // Completed work isn't urgent anymore, even if the due date was missed.
+  if (task.is_complete || task.status === "done") {
+    return "low";
+  }
   if (task.is_overdue) {
     return "high";
   }
@@ -193,3 +197,82 @@ export function summarizeMyTasks(
 export function getMyTasksPath(_role: MemberRole): string {
   return "/events/tasks";
 }
+
+function greetingPartOfDay(now: Date): "morning" | "afternoon" | "evening" {
+  const hour = now.getHours();
+  if (hour < 12) {
+    return "morning";
+  }
+  if (hour < 17) {
+    return "afternoon";
+  }
+  return "evening";
+}
+
+function hoursUntil(iso: string, now: Date): number | null {
+  const starts = new Date(iso).getTime();
+  if (!Number.isFinite(starts)) {
+    return null;
+  }
+  const hours = Math.round((starts - now.getTime()) / 3_600_000);
+  return hours;
+}
+
+/** One-line Home briefing under the page title. */
+export type HomeGreeting = {
+  /** e.g. "Good morning, Mukesh." */
+  salutation: string;
+  /** e.g. "You have 1 overdue task and Dashain starts in 11 days." */
+  detail: string;
+};
+
+export function buildHomeGreeting(opts: {
+  firstName: string;
+  overdueCount: number;
+  nextEventName?: string | null;
+  nextEventStartsAt?: string | null;
+  now?: Date;
+}): HomeGreeting {
+  const now = opts.now ?? new Date();
+  const name = opts.firstName.trim() || "there";
+  const salutation = `Good ${greetingPartOfDay(now)}, ${name}.`;
+
+  const parts: string[] = [];
+  if (opts.overdueCount > 0) {
+    parts.push(
+      `${opts.overdueCount} overdue task${opts.overdueCount === 1 ? "" : "s"}`,
+    );
+  }
+
+  if (opts.nextEventName && opts.nextEventStartsAt) {
+    const hours = hoursUntil(opts.nextEventStartsAt, now);
+    if (hours != null && hours >= 0 && hours <= 48) {
+      if (hours <= 1) {
+        parts.push(`${opts.nextEventName} starts within the hour`);
+      } else {
+        parts.push(`${opts.nextEventName} starts in ${hours} hours`);
+      }
+    } else if (hours != null && hours > 48) {
+      const days = Math.max(2, Math.round(hours / 24));
+      parts.push(`${opts.nextEventName} starts in ${days} days`);
+    }
+  }
+
+  if (parts.length === 0) {
+    return {
+      salutation,
+      detail: "You’re all caught up for now.",
+    };
+  }
+  if (parts.length === 1) {
+    return {
+      salutation,
+      detail: `You have ${parts[0]}.`,
+    };
+  }
+  return {
+    salutation,
+    detail: `You have ${parts[0]} and ${parts[1]}.`,
+  };
+}
+

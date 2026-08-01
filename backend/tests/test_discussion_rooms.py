@@ -154,3 +154,100 @@ def test_archive_live_room(client, db_session):
     )
     assert archived.status_code == 200
     assert archived.json()["status"] == "archived"
+
+
+def test_board_can_add_and_remove_general_member(client, db_session):
+    from sqlalchemy import select
+
+    from app.models.member import Member
+
+    create_president_member(db_session)
+    register_member(client, email="general@semo.edu", student_id="44444444")
+    set_member_approved(db_session, email="general@semo.edu")
+    general = db_session.scalar(
+        select(Member).where(Member.email == "general@semo.edu")
+    )
+    assert general is not None
+
+    headers = auth_header(client, email="president@semo.edu")
+    created = client.post(
+        "/api/v1/discussions/rooms",
+        headers=headers,
+        json={"name": "Outreach"},
+    ).json()
+    room_id = created["id"]
+    assert created["status"] == "live"
+    assert len(created["members"]) == 1
+
+    added = client.post(
+        f"/api/v1/discussions/rooms/{room_id}/members",
+        headers=headers,
+        json={"member_ids": [general.id]},
+    )
+    assert added.status_code == 200
+    body = added.json()
+    assert any(member["member_id"] == general.id for member in body["members"])
+
+    general_headers = auth_header(client, email="general@semo.edu")
+    posted = client.post(
+        f"/api/v1/discussions/rooms/{room_id}/messages",
+        headers=general_headers,
+        json={"content": "Happy to help"},
+    )
+    assert posted.status_code == 201
+
+    removed = client.delete(
+        f"/api/v1/discussions/rooms/{room_id}/members/{general.id}",
+        headers=headers,
+    )
+    assert removed.status_code == 200
+    assert all(
+        member["member_id"] != general.id
+        for member in removed.json()["members"]
+    )
+
+    denied = client.post(
+        f"/api/v1/discussions/rooms/{room_id}/messages",
+        headers=general_headers,
+        json={"content": "Should fail"},
+    )
+    assert denied.status_code == 404
+
+
+def test_general_member_cannot_add_members(client, db_session):
+    from sqlalchemy import select
+
+    from app.models.member import Member
+
+    create_president_member(db_session)
+    register_member(client, email="general@semo.edu", student_id="44444444")
+    set_member_approved(db_session, email="general@semo.edu")
+    register_member(client, email="other@semo.edu", student_id="55555555")
+    set_member_approved(db_session, email="other@semo.edu")
+    other = db_session.scalar(
+        select(Member).where(Member.email == "other@semo.edu")
+    )
+    assert other is not None
+
+    president_headers = auth_header(client, email="president@semo.edu")
+    created = client.post(
+        "/api/v1/discussions/rooms",
+        headers=president_headers,
+        json={
+            "name": "Crew",
+            "member_ids": [
+                db_session.scalar(
+                    select(Member).where(Member.email == "general@semo.edu")
+                ).id
+            ],
+        },
+    ).json()
+    room_id = created["id"]
+
+    general_headers = auth_header(client, email="general@semo.edu")
+    response = client.post(
+        f"/api/v1/discussions/rooms/{room_id}/members",
+        headers=general_headers,
+        json={"member_ids": [other.id]},
+    )
+    assert response.status_code == 404

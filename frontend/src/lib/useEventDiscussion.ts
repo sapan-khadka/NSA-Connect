@@ -3,7 +3,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getAccessToken } from "./auth-token";
 import { fetchDiscussionWsTicket } from "./discussion-api";
 import type {
+  DiscussionAttachmentUpload,
   DiscussionMessage,
+  DiscussionPinnedMessage,
   DiscussionReactionSummary,
 } from "./discussion-api";
 
@@ -26,6 +28,14 @@ export type DiscussionPresenceUser = {
 type HistoryPayload = {
   type: "history";
   messages: DiscussionMessage[];
+  pinned?: DiscussionPinnedMessage | null;
+  first_unread_message_id?: number | null;
+};
+
+type HistoryPagePayload = {
+  type: "history_page";
+  messages: DiscussionMessage[];
+  has_more: boolean;
 };
 
 type MessagePayload = {
@@ -36,6 +46,11 @@ type MessagePayload = {
 type MessageUpdatedPayload = {
   type: "message_updated";
   message: DiscussionMessage;
+};
+
+type PinUpdatedPayload = {
+  type: "pin_updated";
+  pinned: DiscussionPinnedMessage | null;
 };
 
 type ReactionPayload = {
@@ -92,7 +107,10 @@ type ErrorPayload = {
 
 type ServerPayload =
   | HistoryPayload
+  | HistoryPagePayload
   | MessagePayload
+  | MessageUpdatedPayload
+  | PinUpdatedPayload
   | ReactionPayload
   | ReadReceiptsSnapshotPayload
   | ReadReceiptPayload
@@ -109,6 +127,9 @@ const TYPING_IDLE_MS = 3_000;
 const TYPING_EXPIRE_MS = 5_000;
 const PRESENCE_HEARTBEAT_MS = 15_000;
 const READ_RECEIPT_DEBOUNCE_MS = 2_500;
+/** Matches backend WS_HISTORY_LIMIT for initial hasMoreOlder heuristic. */
+const INITIAL_HISTORY_PAGE_SIZE = 50;
+const OLDER_HISTORY_PAGE_SIZE = 50;
 
 function scopeKey(scope: DiscussionScope | null): string | null {
   if (scope == null) {
@@ -161,6 +182,43 @@ function mergeMessages(
       reactions: normalizeReactions(message.reactions),
     })),
   ];
+}
+
+/** Prepend older history pages; exported for unit tests. */
+export function prependOlderMessages(
+  current: DiscussionMessage[],
+  older: DiscussionMessage[],
+): DiscussionMessage[] {
+  if (older.length === 0) {
+    return current;
+  }
+  const knownIds = new Set(current.map((message) => message.id));
+  const fresh = older
+    .filter((message) => !knownIds.has(message.id))
+    .map((message) => ({
+      ...message,
+      reactions: normalizeReactions(message.reactions),
+    }));
+  if (fresh.length === 0) {
+    return current;
+  }
+  return [...fresh, ...current];
+}
+
+/** Resolve first unread from a watermark; exported for unit tests. */
+export function resolveFirstUnreadMessageId(
+  messages: DiscussionMessage[],
+  lastReadMessageId: number | null | undefined,
+): number | null {
+  if (lastReadMessageId == null || messages.length === 0) {
+    return null;
+  }
+  for (const message of messages) {
+    if (message.id > lastReadMessageId) {
+      return message.id;
+    }
+  }
+  return null;
 }
 
 /** Exported for unit tests. */
@@ -291,6 +349,8 @@ export function useDiscussion(
   viewerUserIdRef.current = viewerUserId;
 
   const [messages, setMessages] = useState<DiscussionMessage[]>([]);
+  const [pinnedMessage, setPinnedMessage] =
+    useState<DiscussionPinnedMessage | null>(null);
   const [presentUsers, setPresentUsers] = useState<DiscussionPresenceUser[]>(
     [],
   );
@@ -301,6 +361,11 @@ export function useDiscussion(
   const [status, setStatus] = useState<DiscussionStatus>("closed");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(Boolean(scope));
+  const [hasMoreOlder, setHasMoreOlder] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [firstUnreadMessageId, setFirstUnreadMessageId] = useState<
+    number | null
+  >(null);
 
   const socketRef = useRef<WebSocket | null>(null);
   const backoffRef = useRef(INITIAL_BACKOFF_MS);
@@ -314,6 +379,8 @@ export function useDiscussion(
   const isTypingRef = useRef(false);
   const heartbeatTimerRef = useRef<number | null>(null);
   const messagesRef = useRef(messages);
+  const hasMoreOlderRef = useRef(false);
+  const loadingOlderRef = useRef(false);
   const tabFocusedRef = useRef(
     typeof document === "undefined" ? true : document.visibilityState === "visible",
   );
@@ -330,6 +397,8 @@ export function useDiscussion(
 
   scopeRef.current = scope;
   messagesRef.current = messages;
+  hasMoreOlderRef.current = hasMoreOlder;
+  loadingOlderRef.current = loadingOlder;
 
   const rollbackPendingReactions = useCallback(() => {
     const viewerId = viewerUserIdRef.current;
@@ -453,6 +522,26 @@ export function useDiscussion(
     }
   }, [scheduleReadReceipt]);
 
+  const loadOlderMessages = useCallback(() => {
+    if (loadingOlderRef.current || !hasMoreOlderRef.current) {
+      return false;
+    }
+    const oldest = messagesRef.current[0];
+    if (oldest == null) {
+      return false;
+    }
+    const sent = sendRaw({
+      type: "load_history",
+      before_id: oldest.id,
+      limit: OLDER_HISTORY_PAGE_SIZE,
+    });
+    if (sent) {
+      loadingOlderRef.current = true;
+      setLoadingOlder(true);
+    }
+    return sent;
+  }, [sendRaw]);
+
   const sendStoppedTyping = useCallback(() => {
     if (!isTypingRef.current) {
       return;
@@ -481,17 +570,63 @@ export function useDiscussion(
   }, [sendRaw, sendStoppedTyping]);
 
   const sendMessage = useCallback(
-    (content: string) => {
+    (
+      content: string,
+      options?: {
+        replyToMessageId?: number | null;
+        attachments?: DiscussionAttachmentUpload[];
+      },
+    ) => {
       const socket = socketRef.current;
       const trimmed = content.trim();
-      if (!socket || socket.readyState !== WebSocket.OPEN || !trimmed) {
+      const attachments = options?.attachments ?? [];
+      if (
+        !socket ||
+        socket.readyState !== WebSocket.OPEN ||
+        (!trimmed && attachments.length === 0)
+      ) {
         throw new Error("Discussion is not connected");
       }
       sendStoppedTyping();
-      socket.send(JSON.stringify({ content: trimmed }));
+      const payload: Record<string, unknown> = { content: trimmed };
+      if (
+        options?.replyToMessageId != null &&
+        options.replyToMessageId >= 1
+      ) {
+        payload.reply_to_message_id = options.replyToMessageId;
+      }
+      if (attachments.length > 0) {
+        payload.attachments = attachments.map((item) => ({
+          url: item.url,
+          public_id: item.public_id,
+          file_name: item.file_name,
+          content_type: item.content_type,
+          size_bytes: item.size_bytes,
+          kind: item.kind,
+          width: item.width ?? null,
+          height: item.height ?? null,
+          duration_ms: item.duration_ms ?? null,
+        }));
+      }
+      socket.send(JSON.stringify(payload));
     },
     [sendStoppedTyping],
   );
+
+  const editMessage = useCallback((messageId: number, content: string) => {
+    const socket = socketRef.current;
+    const trimmed = content.trim();
+    if (!socket || socket.readyState !== WebSocket.OPEN || !trimmed) {
+      throw new Error("Discussion is not connected");
+    }
+    socket.send(
+      JSON.stringify({
+        type: "edit_message",
+        message_id: messageId,
+        content: trimmed,
+      }),
+    );
+  }, []);
 
   const deleteMessage = useCallback((messageId: number) => {
     const socket = socketRef.current;
@@ -503,14 +638,34 @@ export function useDiscussion(
     );
   }, []);
 
+  const pinMessage = useCallback((messageId: number) => {
+    const socket = socketRef.current;
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      throw new Error("Discussion is not connected");
+    }
+    socket.send(
+      JSON.stringify({ type: "pin_message", message_id: messageId }),
+    );
+  }, []);
+
+  const unpinMessage = useCallback(() => {
+    const socket = socketRef.current;
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      throw new Error("Discussion is not connected");
+    }
+    socket.send(JSON.stringify({ type: "unpin_message" }));
+  }, []);
+
   const toggleReaction = useCallback(
     (messageId: number, emoji: string) => {
       const socket = socketRef.current;
       if (!socket || socket.readyState !== WebSocket.OPEN) {
+        setError("Reconnect to react — chat is not live yet.");
         return;
       }
       const viewerId = viewerUserIdRef.current;
       if (viewerId == null) {
+        setError("Could not send reaction.");
         return;
       }
 
@@ -621,6 +776,7 @@ export function useDiscussion(
       closeSocket(socketRef.current);
       socketRef.current = null;
       setMessages([]);
+      setPinnedMessage(null);
       setPresentUsers([]);
       setTypingUsers([]);
       setReadReceipts([]);
@@ -753,8 +909,43 @@ export function useDiscussion(
                   ),
                 ),
           );
+          setPinnedMessage(
+            payload.pinned
+              ? {
+                  ...payload.pinned,
+                  message: {
+                    ...payload.pinned.message,
+                    reactions: normalizeReactions(
+                      payload.pinned.message.reactions,
+                    ),
+                  },
+                }
+              : null,
+          );
+          const unreadFromServer =
+            typeof payload.first_unread_message_id === "number"
+              ? payload.first_unread_message_id
+              : null;
+          setFirstUnreadMessageId((current) =>
+            current ?? unreadFromServer,
+          );
+          setHasMoreOlder(incoming.length >= INITIAL_HISTORY_PAGE_SIZE);
+          setLoadingOlder(false);
+          loadingOlderRef.current = false;
           setLoading(false);
           setError(null);
+          return;
+        }
+
+        if (payload.type === "history_page") {
+          const older = (payload.messages ?? []).map((message) => ({
+            ...message,
+            reactions: normalizeReactions(message.reactions),
+          }));
+          setMessages((current) => prependOlderMessages(current, older));
+          setHasMoreOlder(Boolean(payload.has_more));
+          setLoadingOlder(false);
+          loadingOlderRef.current = false;
           return;
         }
 
@@ -774,6 +965,15 @@ export function useDiscussion(
               lastSentReadIdRef.current ?? 0,
               mine.last_read_message_id,
             );
+            setFirstUnreadMessageId((current) => {
+              if (current != null) {
+                return current;
+              }
+              return resolveFirstUnreadMessageId(
+                messagesRef.current,
+                mine.last_read_message_id,
+              );
+            });
           }
           return;
         }
@@ -822,6 +1022,28 @@ export function useDiscussion(
               row.id === updated.id ? updated : row,
             );
           });
+          setPinnedMessage((current) => {
+            if (current == null || current.message.id !== updated.id) {
+              return current;
+            }
+            return { ...current, message: updated };
+          });
+          return;
+        }
+
+        if (payload.type === "pin_updated") {
+          const pinned = payload.pinned;
+          setPinnedMessage(
+            pinned
+              ? {
+                  ...pinned,
+                  message: {
+                    ...pinned.message,
+                    reactions: normalizeReactions(pinned.message.reactions),
+                  },
+                }
+              : null,
+          );
           return;
         }
 
@@ -875,6 +1097,10 @@ export function useDiscussion(
           if (/reaction/i.test(detail)) {
             rollbackPendingReactions();
           }
+          if (/older messages|load history|before_id/i.test(detail)) {
+            setLoadingOlder(false);
+            loadingOlderRef.current = false;
+          }
         }
       };
 
@@ -908,9 +1134,14 @@ export function useDiscussion(
 
     setLoading(true);
     setMessages([]);
+    setPinnedMessage(null);
     setPresentUsers([]);
     setTypingUsers([]);
     setReadReceipts([]);
+    setHasMoreOlder(false);
+    setLoadingOlder(false);
+    loadingOlderRef.current = false;
+    setFirstUnreadMessageId(null);
     pendingReactionsRef.current.clear();
     connect();
 
@@ -947,6 +1178,7 @@ export function useDiscussion(
 
   return {
     messages,
+    pinnedMessage,
     presentUsers,
     typingUsers,
     readReceipts,
@@ -954,8 +1186,15 @@ export function useDiscussion(
     status,
     error,
     loading,
+    hasMoreOlder,
+    loadingOlder,
+    firstUnreadMessageId,
+    loadOlderMessages,
     sendMessage,
+    editMessage,
     deleteMessage,
+    pinMessage,
+    unpinMessage,
     toggleReaction,
     markLatestAsRead,
     notifyTypingActivity,

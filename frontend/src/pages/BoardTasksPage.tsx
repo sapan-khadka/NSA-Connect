@@ -1,21 +1,37 @@
-import { Check, ChevronDown, Search, SlidersHorizontal } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  Circle,
+  CircleDot,
+  Plus,
+  Search,
+  SlidersHorizontal,
+} from "lucide-react";
 import {
   useCallback,
   useEffect,
+  useId,
   useMemo,
+  useRef,
   useState,
+  type FormEvent,
   type ReactNode,
 } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { KanbanTaskDetailPanel } from "../components/kanban/KanbanTaskDetailPanel";
 import { AppIcon } from "../components/ui/AppIcon";
 import { useAuth } from "../context/useAuth";
+import { Avatar } from "../design-system/components/Avatar";
+import { getApiErrorMessage } from "../lib/api-error";
 import { isToday } from "../lib/calendar";
 import {
+  createEventTask,
   fetchMyEventTasks,
   updateEventTask,
   updateEventTaskChecklistItem,
 } from "../lib/event-tasks-api";
+import { fetchUpcomingEvents } from "../lib/events-api";
 import {
   buildMarkTaskCompleteRequest,
   getTaskDisplayName,
@@ -246,7 +262,15 @@ function TaskCheck({
   );
 }
 
-/** Quiet status control — plain text in the metadata line. */
+const STATUS_ICON = {
+  todo: Circle,
+  in_progress: CircleDot,
+  done: Check,
+} as const;
+
+const STATUS_OPTIONS: KanbanColumnId[] = ["todo", "in_progress", "done"];
+
+/** Quiet status control — icon menu in the metadata line. */
 function StatusMenu({
   task,
   busy,
@@ -257,26 +281,127 @@ function StatusMenu({
   onSetColumn: (column: KanbanColumnId) => void;
 }) {
   const column = getKanbanColumn(task);
+  const StatusIcon = STATUS_ICON[column];
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const menuId = useId();
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handlePointerDown(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [open]);
 
   return (
-    <label
+    <div
+      ref={rootRef}
       className={["my-tasks-status-menu", `is-${column}`].join(" ")}
       onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => event.stopPropagation()}
     >
-      <select
+      <button
+        type="button"
+        className="my-tasks-status-menu__trigger"
         aria-label="Set task status"
-        value={column}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={menuId}
         disabled={busy}
-        onChange={(event) =>
-          onSetColumn(event.target.value as KanbanColumnId)
-        }
+        onClick={() => setOpen((current) => !current)}
       >
-        <option value="todo">{STATUS_LABEL.todo}</option>
-        <option value="in_progress">{STATUS_LABEL.in_progress}</option>
-        <option value="done">{STATUS_LABEL.done}</option>
-      </select>
-    </label>
+        <AppIcon
+          icon={StatusIcon}
+          size="xs"
+          className="my-tasks-status-menu__icon"
+        />
+        <span>{STATUS_LABEL[column]}</span>
+      </button>
+      {open ? (
+        <div id={menuId} role="menu" className="my-tasks-status-menu__list">
+          {STATUS_OPTIONS.map((option) => {
+            const OptionIcon = STATUS_ICON[option];
+            return (
+              <button
+                key={option}
+                type="button"
+                role="menuitemradio"
+                aria-checked={option === column}
+                className={[
+                  "my-tasks-status-menu__item",
+                  `is-${option}`,
+                  option === column ? "is-active" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                onClick={() => {
+                  setOpen(false);
+                  if (option !== column) {
+                    onSetColumn(option);
+                  }
+                }}
+              >
+                <AppIcon
+                  icon={OptionIcon}
+                  size="xs"
+                  className="my-tasks-status-menu__icon"
+                />
+                {STATUS_LABEL[option]}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function PriorityMark({ urgency }: { urgency: TaskUrgency }) {
+  return (
+    <span className={["my-tasks-priority", `is-${urgency}`].join(" ")}>
+      <span className="my-tasks-priority__dot" aria-hidden="true" />
+      {URGENCY_LABEL[urgency]}
+    </span>
+  );
+}
+
+function TaskAssignee({
+  name,
+  avatarUrl,
+}: {
+  name: string | null;
+  avatarUrl?: string | null;
+}) {
+  const label = name?.trim() || "Unassigned";
+
+  return (
+    <span className="my-tasks-assignee">
+      <Avatar
+        name={label}
+        src={avatarUrl}
+        size="sm"
+        className="my-tasks-assignee__avatar"
+      />
+      <span className="my-tasks-assignee__name">{label}</span>
+    </span>
   );
 }
 
@@ -284,6 +409,7 @@ type TaskRowProps = {
   task: KanbanTask;
   completedView?: boolean;
   busy: boolean;
+  assigneeAvatarUrl?: string | null;
   onOpen: () => void;
   onComplete: () => void;
   onMove: (column: KanbanColumnId) => void;
@@ -293,6 +419,7 @@ function TaskRow({
   task,
   completedView = false,
   busy,
+  assigneeAvatarUrl,
   onOpen,
   onComplete,
   onMove,
@@ -301,12 +428,6 @@ function TaskRow({
   const urgency = getTaskUrgency(task);
   const column = getKanbanColumn(task);
   const dueLabel = formatShortDue(task.due_date);
-  const metaParts = [
-    task.eventName,
-    dueLabel,
-    URGENCY_LABEL[urgency],
-    !isSimpleKanbanTask(task) ? "Checklist" : null,
-  ].filter(Boolean);
 
   return (
     <li>
@@ -326,44 +447,36 @@ function TaskRow({
             <button
               type="button"
               className="my-tasks-row__title"
+              title={task.eventName}
               onClick={onOpen}
             >
               {title}
             </button>
           </div>
-          <button
-            type="button"
-            className="my-tasks-row__open"
-            onClick={onOpen}
+          <time
+            className={[
+              "my-tasks-row__due",
+              task.is_overdue && column !== "done" ? "is-overdue" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            dateTime={task.due_date ?? undefined}
           >
-            Open →
-          </button>
+            {dueLabel}
+          </time>
         </div>
 
-        <p className="my-tasks-row__meta">
-          {metaParts.map((part, index) => (
-            <span key={`${part}-${index}`}>
-              {index > 0 ? (
-                <span className="my-tasks-row__sep" aria-hidden="true">
-                  ·
-                </span>
-              ) : null}
-              <span
-                className={
-                  part === dueLabel && task.is_overdue
-                    ? "my-tasks-due is-overdue"
-                    : undefined
-                }
-              >
-                {part}
-              </span>
-            </span>
-          ))}
-          <span className="my-tasks-row__sep" aria-hidden="true">
-            ·
-          </span>
+        <div className="my-tasks-row__meta">
+          <TaskAssignee
+            name={task.assignee_name}
+            avatarUrl={assigneeAvatarUrl}
+          />
+          {column !== "done" ? <PriorityMark urgency={urgency} /> : null}
           <StatusMenu task={task} busy={busy} onSetColumn={onMove} />
-        </p>
+          {!isSimpleKanbanTask(task) ? (
+            <span className="my-tasks-row__chip">Checklist</span>
+          ) : null}
+        </div>
       </article>
     </li>
   );
@@ -397,7 +510,10 @@ function TaskSection({
   const head = (
     <h2 id={id} className="my-tasks-section__title">
       {title}
-      <span className="my-tasks-section__count"> ({count})</span>
+      <span className="my-tasks-section__count" aria-label={`${count} tasks`}>
+        {" "}
+        · {count}
+      </span>
     </h2>
   );
 
@@ -444,6 +560,7 @@ function TaskSection({
 
 export function BoardTasksPage() {
   const { member } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
   const [movingTaskId, setMovingTaskId] = useState<number | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
@@ -453,6 +570,18 @@ export function BoardTasksPage() {
   const [eventFilter, setEventFilter] = useState<number | "all">("all");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<TaskSort>("due");
+  const [composing, setComposing] = useState(false);
+  const [composeEvents, setComposeEvents] = useState<
+    { id: number; name: string }[]
+  >([]);
+  const [composeEventId, setComposeEventId] = useState<number | "">("");
+  const [composeTitle, setComposeTitle] = useState("");
+  const [composeDue, setComposeDue] = useState("");
+  const [composeBusy, setComposeBusy] = useState(false);
+  const [composeError, setComposeError] = useState<string | null>(null);
+  const [composeEventsLoading, setComposeEventsLoading] = useState(false);
+
+  const canCreateTask = Boolean(member && isRoleAtLeast(member.role, "board"));
 
   const loadTasks = useCallback(async () => {
     setLoadState({ status: "loading" });
@@ -474,6 +603,58 @@ export function BoardTasksPage() {
   useEffect(() => {
     void loadTasks();
   }, [loadTasks]);
+
+  const openComposer = useCallback(() => {
+    setComposing(true);
+    setComposeError(null);
+  }, []);
+
+  useEffect(() => {
+    if (searchParams.get("create") !== "1" || !canCreateTask) {
+      return;
+    }
+    openComposer();
+    const next = new URLSearchParams(searchParams);
+    next.delete("create");
+    setSearchParams(next, { replace: true });
+  }, [canCreateTask, openComposer, searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (!composing || !canCreateTask) {
+      return;
+    }
+
+    let cancelled = false;
+    setComposeEventsLoading(true);
+    void fetchUpcomingEvents({ limit: 40 })
+      .then((response) => {
+        if (cancelled) {
+          return;
+        }
+        const events = response.events.map((event) => ({
+          id: event.id,
+          name: event.name,
+        }));
+        setComposeEvents(events);
+        setComposeEventId((current) =>
+          current === "" && events[0] ? events[0].id : current,
+        );
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setComposeError("Unable to load events for new tasks.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setComposeEventsLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [composing, canCreateTask]);
 
   function replaceTask(updated: KanbanTask) {
     setLoadState((current) => {
@@ -586,6 +767,55 @@ export function BoardTasksPage() {
     }
   }
 
+  function resetComposer() {
+    setComposing(false);
+    setComposeTitle("");
+    setComposeDue("");
+    setComposeError(null);
+    setComposeBusy(false);
+  }
+
+  async function handleCreateTask(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!member || !canCreateTask || composeEventId === "") {
+      return;
+    }
+
+    const title = composeTitle.trim();
+    if (!title) {
+      setComposeError("Add a task title.");
+      return;
+    }
+
+    setComposeBusy(true);
+    setComposeError(null);
+
+    try {
+      const created = await createEventTask(composeEventId, {
+        title,
+        assignee_id: member.id,
+        due_date: composeDue ? new Date(composeDue).toISOString() : null,
+      });
+      const kanbanTask = toKanbanTask(created);
+      setLoadState((current) => {
+        if (current.status !== "ready") {
+          return {
+            status: "ready",
+            tasks: [kanbanTask],
+          };
+        }
+        return {
+          status: "ready",
+          tasks: [kanbanTask, ...current.tasks],
+        };
+      });
+      resetComposer();
+    } catch (error) {
+      setComposeError(getApiErrorMessage(error));
+      setComposeBusy(false);
+    }
+  }
+
   const tasks = loadState.status === "ready" ? loadState.tasks : [];
   const stats = useMemo(() => calcBoardTasksStats(tasks), [tasks]);
   const selectedTask =
@@ -662,6 +892,11 @@ export function BoardTasksPage() {
         task={task}
         completedView={completedView}
         busy={movingTaskId === task.id}
+        assigneeAvatarUrl={
+          task.assignee_id != null && task.assignee_id === member.id
+            ? member.avatar_url
+            : null
+        }
         onOpen={() => setSelectedTaskId(task.id)}
         onComplete={() => {
           void handleCompleteTask(task);
@@ -678,72 +913,167 @@ export function BoardTasksPage() {
       <h1 className="sr-only">My Tasks</h1>
 
       {loadState.status === "ready" && tasks.length > 0 ? (
-        <p className="my-tasks-summary" aria-label="My tasks summary">
-          <span>Mine</span>
-          <span className="my-tasks-summary__dot" aria-hidden="true">
-            ·
-          </span>
-          <span>
-            {stats.assigned} {stats.assigned === 1 ? "task" : "tasks"}
-          </span>
-          <span className="my-tasks-summary__dot" aria-hidden="true">
-            ·
-          </span>
-          <span className={stats.overdue > 0 ? "is-overdue" : undefined}>
-            {stats.overdue} overdue
-          </span>
-          <span className="my-tasks-summary__dot" aria-hidden="true">
-            ·
-          </span>
-          <span>{stats.completedPercent}% complete</span>
-        </p>
+        <div className="my-tasks-summary" aria-label="My tasks summary">
+          <span className="my-tasks-summary__label">Mine</span>
+          <p className="my-tasks-summary__metrics">
+            <span>
+              {stats.assigned} {stats.assigned === 1 ? "task" : "tasks"}
+            </span>
+            <span className="my-tasks-summary__dot" aria-hidden="true">
+              ·
+            </span>
+            <span className={stats.overdue > 0 ? "is-overdue" : undefined}>
+              {stats.overdue} overdue
+            </span>
+            <span className="my-tasks-summary__dot" aria-hidden="true">
+              ·
+            </span>
+            <span>{stats.completedPercent}% complete</span>
+          </p>
+        </div>
       ) : null}
 
-      {loadState.status === "ready" && tasks.length > 0 ? (
+      {loadState.status === "ready" ? (
         <>
           <div className="board-meetings-toolbar">
-            <label className="board-meetings-search">
-              <AppIcon icon={Search} size="sm" className="text-label" />
-              <span className="sr-only">Search tasks</span>
-              <input
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search tasks…"
-              />
-            </label>
-            <div className="board-meetings-toolbar__actions">
-              <button
-                type="button"
-                className="board-meetings-filter-btn"
-                aria-expanded={filtersOpen}
-                onClick={() => setFiltersOpen((open) => !open)}
-              >
-                <AppIcon
-                  icon={SlidersHorizontal}
-                  size="sm"
-                  className="text-current"
+            {tasks.length > 0 ? (
+              <label className="board-meetings-search">
+                <AppIcon icon={Search} size="sm" className="text-label" />
+                <span className="sr-only">Search tasks</span>
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search tasks…"
                 />
-                Filter
-                {filtersActive ? (
-                  <span className="board-meetings-filter-btn__on">On</span>
-                ) : null}
-              </button>
-              <label className="my-tasks-sort">
-                <span className="sr-only">Sort</span>
-                <select
-                  value={sort}
-                  onChange={(event) => setSort(event.target.value as TaskSort)}
-                >
-                  <option value="due">Sort: Due date</option>
-                  <option value="priority">Sort: Priority</option>
-                  <option value="event">Sort: Event</option>
-                </select>
               </label>
+            ) : (
+              <div className="my-tasks-toolbar-spacer" />
+            )}
+            <div className="board-meetings-toolbar__actions">
+              {tasks.length > 0 ? (
+                <>
+                  <button
+                    type="button"
+                    className="board-meetings-filter-btn"
+                    aria-expanded={filtersOpen}
+                    onClick={() => setFiltersOpen((open) => !open)}
+                  >
+                    <AppIcon
+                      icon={SlidersHorizontal}
+                      size="sm"
+                      className="text-current"
+                    />
+                    Filter
+                    {filtersActive ? (
+                      <span className="board-meetings-filter-btn__on">On</span>
+                    ) : null}
+                  </button>
+                  <label className="my-tasks-sort">
+                    <span className="sr-only">Sort</span>
+                    <select
+                      value={sort}
+                      onChange={(event) =>
+                        setSort(event.target.value as TaskSort)
+                      }
+                    >
+                      <option value="due">Sort: Due date</option>
+                      <option value="priority">Sort: Priority</option>
+                      <option value="event">Sort: Event</option>
+                    </select>
+                  </label>
+                </>
+              ) : null}
+              {canCreateTask && !composing ? (
+                <button
+                  type="button"
+                  className="my-tasks-new"
+                  onClick={openComposer}
+                >
+                  <AppIcon icon={Plus} size="xs" className="text-current" />
+                  New Task
+                </button>
+              ) : null}
             </div>
           </div>
 
-          {filtersOpen ? (
+          {composing ? (
+            <form
+              className="my-tasks-compose"
+              onSubmit={(event) => {
+                void handleCreateTask(event);
+              }}
+            >
+              <div className="my-tasks-compose__fields">
+                <label className="my-tasks-compose__field">
+                  <span>Event</span>
+                  <select
+                    value={composeEventId === "" ? "" : String(composeEventId)}
+                    disabled={composeBusy || composeEventsLoading}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setComposeEventId(value === "" ? "" : Number(value));
+                    }}
+                    required
+                  >
+                    <option value="" disabled>
+                      {composeEventsLoading ? "Loading events…" : "Select event"}
+                    </option>
+                    {composeEvents.map((eventOption) => (
+                      <option key={eventOption.id} value={eventOption.id}>
+                        {eventOption.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="my-tasks-compose__field my-tasks-compose__title">
+                  <span>Task</span>
+                  <input
+                    type="text"
+                    value={composeTitle}
+                    onChange={(event) => setComposeTitle(event.target.value)}
+                    placeholder="What needs to get done?"
+                    disabled={composeBusy}
+                    autoFocus
+                    required
+                  />
+                </label>
+                <label className="my-tasks-compose__field">
+                  <span>Due</span>
+                  <input
+                    type="date"
+                    value={composeDue}
+                    onChange={(event) => setComposeDue(event.target.value)}
+                    disabled={composeBusy}
+                  />
+                </label>
+              </div>
+              {composeError ? (
+                <p className="my-tasks-compose__error" role="alert">
+                  {composeError}
+                </p>
+              ) : null}
+              <div className="my-tasks-compose__actions">
+                <button
+                  type="submit"
+                  className="my-tasks-compose__submit"
+                  disabled={composeBusy || composeEventsLoading}
+                >
+                  {composeBusy ? "Creating…" : "Create task"}
+                </button>
+                <button
+                  type="button"
+                  className="my-tasks-compose__cancel"
+                  disabled={composeBusy}
+                  onClick={resetComposer}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          ) : null}
+
+          {filtersOpen && tasks.length > 0 ? (
             <div
               className="board-meetings-filter-panel"
               aria-label="Task filters"
@@ -774,9 +1104,9 @@ export function BoardTasksPage() {
                   }}
                 >
                   <option value="all">All events</option>
-                  {eventOptions.map((event) => (
-                    <option key={event.id} value={event.id}>
-                      {event.name}
+                  {eventOptions.map((eventOption) => (
+                    <option key={eventOption.id} value={eventOption.id}>
+                      {eventOption.name}
                     </option>
                   ))}
                 </select>
@@ -817,8 +1147,8 @@ export function BoardTasksPage() {
         <div className="my-tasks-empty">
           <h3>No tasks assigned to you yet</h3>
           <p>
-            {isRoleAtLeast(member.role, "board")
-              ? "Create work from an event workspace — assigned tasks will show up here."
+            {canCreateTask
+              ? "Use + New Task to assign yourself work, or create tasks from an event workspace."
               : "When someone assigns you event work, it will show up here automatically."}
           </p>
         </div>

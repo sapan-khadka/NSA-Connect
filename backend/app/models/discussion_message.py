@@ -41,12 +41,29 @@ class DiscussionMessage(Base):
     )
     edited_at = Column(DateTime(timezone=True), nullable=True)
     deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    reply_to_message_id = Column(
+        Integer,
+        ForeignKey("discussion_messages.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
 
     author = relationship("Member")
     event = relationship("Event")
     custom_room = relationship("DiscussionRoom")
+    reply_to = relationship(
+        "DiscussionMessage",
+        remote_side="DiscussionMessage.id",
+        foreign_keys=[reply_to_message_id],
+    )
     reactions = relationship(
         "DiscussionMessageReaction",
         back_populates="message",
         cascade="all, delete-orphan",
+    )
+    attachments = relationship(
+        "DiscussionMessageAttachment",
+        back_populates="message",
+        cascade="all, delete-orphan",
+        order_by="DiscussionMessageAttachment.id",
     )

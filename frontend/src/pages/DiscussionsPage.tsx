@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 
-import { Bell, BellOff, Users } from "lucide-react";
+import { Bell, BellOff, FileText, MoreHorizontal, Users } from "lucide-react";
 
 import { DiscussionFeed } from "../components/DiscussionFeed";
 import { CreateDiscussionRoomModal } from "../components/discussions/CreateDiscussionRoomModal";
 import { DiscussionRoomMembersDrawer } from "../components/discussions/DiscussionRoomMembersDrawer";
 import { DiscussionRoomSidebar } from "../components/discussions/DiscussionRoomSidebar";
+import { DiscussionSharedFilesDrawer } from "../components/discussions/DiscussionSharedFilesDrawer";
 import { NewDirectMessageModal } from "../components/discussions/NewDirectMessageModal";
 import { AppIcon } from "../components/ui/AppIcon";
 import { Button } from "../components/ui/Button";
@@ -33,6 +34,7 @@ import {
   discussionScopeFromPath,
 } from "../lib/discussion-paths";
 import { openDirectMessage } from "../lib/open-direct-message";
+import { fetchAssignableMembers } from "../lib/members-api";
 import { canViewTaskOversight, isRoleAtLeast } from "../lib/roles";
 
 const INBOX_POLL_MS = 12_000;
@@ -83,7 +85,7 @@ export function DiscussionsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pinningId, setPinningId] = useState<string | null>(null);
-  const [mutingId, setMutingId] = useState<string | null>(null);
+  const [, setMutingId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [newMessageOpen, setNewMessageOpen] = useState(false);
   const [pendingRooms, setPendingRooms] = useState<DiscussionRoom[]>([]);
@@ -91,6 +93,8 @@ export function DiscussionsPage() {
   const [pendingBusyId, setPendingBusyId] = useState<number | null>(null);
   const [archiving, setArchiving] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
+  const [filesOpen, setFilesOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [activeRoomDetail, setActiveRoomDetail] =
     useState<DiscussionRoom | null>(null);
   const [unarchivingId, setUnarchivingId] = useState<string | null>(null);
@@ -99,6 +103,23 @@ export function DiscussionsPage() {
   );
   const [showArchived, setShowArchived] = useState(false);
   const [queuesVersion, setQueuesVersion] = useState(0);
+  const [boardMemberCount, setBoardMemberCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchAssignableMembers("board")
+      .then((response) => {
+        if (!cancelled) {
+          setBoardMemberCount(response.total);
+        }
+      })
+      .catch(() => {
+        // Header member count is optional.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -431,20 +452,40 @@ export function DiscussionsPage() {
           ? (activeRoomDetail?.peer_full_name ?? "Direct message")
           : "Group"
         : "Discussion");
-  const feedDescription = selectedArchived
-    ? "Archived — messaging is closed until restored"
-    : scope?.type === "board"
-      ? "Visible to board members and above"
+  const feedDescriptionLines = selectedArchived
+    ? ["Archived — messaging is closed until restored"]
+    : [
+        scope?.type === "board"
+          ? boardMemberCount != null && boardMemberCount > 0
+            ? `Board only · ${boardMemberCount} members`
+            : "Board only"
+          : isDmThread
+            ? "Direct message"
+            : isGroupThread
+              ? memberCount > 0
+                ? `${memberCount} member${memberCount === 1 ? "" : "s"}`
+                : "Private group"
+              : scope?.type === "event"
+                ? "Event"
+                : null,
+      ].filter((line): line is string => Boolean(line));
+
+  const introCreatedLabel = activeRoomDetail?.created_at
+    ? `Created ${new Intl.DateTimeFormat(undefined, {
+        month: "short",
+        day: "numeric",
+      }).format(new Date(activeRoomDetail.created_at))}`
+    : undefined;
+
+  const introVisibilityLabel =
+    scope?.type === "board"
+      ? "Visible to Board Members"
       : isDmThread
-        ? selectedRoom?.peer_online
-          ? "Online"
-          : "Direct message"
+        ? "Private conversation"
         : isGroupThread
-          ? memberCount > 0
-            ? `${memberCount} member${memberCount === 1 ? "" : "s"}`
-            : "Private group"
-          : scope?.type === "room"
-            ? "Private group"
+          ? "Visible to group members"
+          : scope?.type === "event"
+            ? "Visible to event members"
             : undefined;
 
   const canArchiveSelected = canManageArchive && Boolean(selectedRoomId);
@@ -454,7 +495,7 @@ export function DiscussionsPage() {
   }
 
   return (
-    <div className="discussions-shell -mx-4 -my-5 flex min-h-[28rem] overflow-hidden border-y border-gray-200 bg-white sm:-mx-6 sm:-my-6 lg:-mx-8 xl:-mx-10">
+    <div className="discussions-shell -mx-4 -my-5 flex min-h-[28rem] overflow-hidden border-y border-[#F0F0EE] bg-white sm:-mx-6 sm:-my-6 lg:-mx-8 xl:-mx-10">
       {showList ? (
         <DiscussionRoomSidebar
           rooms={rooms}
@@ -486,71 +527,133 @@ export function DiscussionsPage() {
             <DiscussionFeed
               key={selectedRoomId ?? "none"}
               title={feedTitle}
-              description={feedDescription}
+              descriptionLines={feedDescriptionLines}
+              introCreatedLabel={introCreatedLabel}
+              introVisibilityLabel={introVisibilityLabel}
               scope={scope}
               variant="pane"
               onBack={() => navigate("/discussions")}
               className="h-full"
               headerAction={
-                <div className="flex items-center gap-1.5">
-                  {selectedRoomId && !selectedArchived ? (
-                    <Button
+                <div className="relative flex items-center gap-0.5">
+                  {isGroupThread || scope?.type === "board" ? (
+                    <button
                       type="button"
-                      variant="ghost"
-                      size="sm"
                       aria-label={
-                        selectedRoom?.muted
-                          ? "Unmute notifications"
-                          : "Mute notifications"
+                        scope?.type === "board"
+                          ? boardMemberCount != null && boardMemberCount > 0
+                            ? `View ${boardMemberCount} board members`
+                            : "View board members"
+                          : memberCount > 0
+                            ? `View ${memberCount} members`
+                            : "View members"
                       }
-                      aria-pressed={Boolean(selectedRoom?.muted)}
-                      loading={mutingId === selectedRoomId}
-                      onClick={() => void handleToggleMute(selectedRoomId)}
+                      aria-pressed={membersOpen}
+                      onClick={() => {
+                        setFilesOpen(false);
+                        setMembersOpen((open) => !open);
+                      }}
+                      title="Members"
+                      className={[
+                        "relative inline-flex h-9 items-center gap-1.5 rounded-full px-2.5 transition",
+                        membersOpen
+                          ? "text-primary after:absolute after:inset-x-2 after:bottom-0.5 after:h-0.5 after:rounded-full after:bg-primary"
+                          : "text-gray-500 hover:bg-[#F5F5F4] hover:text-foreground",
+                      ].join(" ")}
+                    >
+                      <AppIcon icon={Users} size="sm" className="text-current" />
+                      <span className="hidden text-[13px] font-medium sm:inline">
+                        Members
+                      </span>
+                    </button>
+                  ) : null}
+                  {selectedRoomId && !selectedArchived ? (
+                    <button
+                      type="button"
+                      aria-label="Shared files"
+                      title="Shared files"
+                      onClick={() => setFilesOpen(true)}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-full px-2.5 text-gray-500 transition hover:bg-[#F5F5F4] hover:text-foreground"
                     >
                       <AppIcon
-                        icon={selectedRoom?.muted ? BellOff : Bell}
-                        size="xs"
+                        icon={FileText}
+                        size="sm"
                         className="text-current"
                       />
-                      {selectedRoom?.muted ? "Unmute" : "Mute"}
-                    </Button>
+                      <span className="hidden text-[13px] font-medium sm:inline">
+                        Files
+                      </span>
+                    </button>
                   ) : null}
-                  {isGroupThread ? (
-                    <Button
+                  <div className="relative">
+                    <button
                       type="button"
-                      variant="ghost"
-                      size="sm"
-                      aria-label="View group members"
-                      onClick={() => setMembersOpen(true)}
+                      aria-label="More actions"
+                      aria-expanded={moreOpen}
+                      onClick={() => setMoreOpen((open) => !open)}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full text-gray-500 transition hover:bg-[#F5F5F4] hover:text-foreground"
                     >
-                      <AppIcon icon={Users} size="xs" className="text-current" />
-                      Members
-                    </Button>
-                  ) : null}
-                  {canManageArchive && selectedRoomId && selectedArchived ? (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      loading={unarchivingId === selectedRoomId}
-                      onClick={() => void handleUnarchiveRoom(selectedRoomId)}
-                    >
-                      Unarchive
-                    </Button>
-                  ) : canArchiveSelected &&
-                    selectedRoomId &&
-                    !selectedArchived &&
-                    !isDmThread ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      loading={archiving}
-                      onClick={() => void handleArchiveRoom(selectedRoomId)}
-                    >
-                      Archive
-                    </Button>
-                  ) : null}
+                      <AppIcon
+                        icon={MoreHorizontal}
+                        size="sm"
+                        className="text-current"
+                      />
+                    </button>
+                    {moreOpen ? (
+                      <div
+                        role="menu"
+                        className="absolute right-0 top-full z-20 mt-1 min-w-[10rem] rounded-md border border-[#EBEBEA] bg-white py-1 shadow-sm"
+                      >
+                        {selectedRoomId && !selectedArchived ? (
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-foreground hover:bg-[#F5F5F4]"
+                            onClick={() => {
+                              setMoreOpen(false);
+                              void handleToggleMute(selectedRoomId);
+                            }}
+                          >
+                            <AppIcon
+                              icon={selectedRoom?.muted ? Bell : BellOff}
+                              size="xs"
+                            />
+                            {selectedRoom?.muted ? "Unmute" : "Mute"}
+                          </button>
+                        ) : null}
+                        {canManageArchive &&
+                        selectedRoomId &&
+                        selectedArchived ? (
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-foreground hover:bg-[#F5F5F4]"
+                            onClick={() => {
+                              setMoreOpen(false);
+                              void handleUnarchiveRoom(selectedRoomId);
+                            }}
+                          >
+                            Unarchive
+                          </button>
+                        ) : canArchiveSelected &&
+                          selectedRoomId &&
+                          !selectedArchived &&
+                          !isDmThread ? (
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-foreground hover:bg-[#F5F5F4]"
+                            onClick={() => {
+                              setMoreOpen(false);
+                              void handleArchiveRoom(selectedRoomId);
+                            }}
+                          >
+                            Archive
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               }
             />
@@ -576,13 +679,34 @@ export function DiscussionsPage() {
       ) : null}
 
       <DiscussionRoomMembersDrawer
-        open={membersOpen && isGroupThread}
+        open={
+          membersOpen &&
+          (isGroupThread || scope?.type === "board")
+        }
         roomId={activeCustomRoomId}
+        mode={scope?.type === "board" ? "board" : "group"}
         onClose={() => setMembersOpen(false)}
         onLoaded={setActiveRoomDetail}
         onRoomUpdated={(room) => {
           setActiveRoomDetail(room);
           void reloadInboxSilent();
+        }}
+      />
+
+      <DiscussionSharedFilesDrawer
+        open={filesOpen && Boolean(selectedRoomId) && !selectedArchived}
+        roomId={selectedRoomId}
+        onClose={() => setFilesOpen(false)}
+        onJumpToMessage={(messageId) => {
+          const params = new URLSearchParams(location.search);
+          params.set("msg", String(messageId));
+          navigate(
+            {
+              pathname: location.pathname,
+              search: params.toString(),
+            },
+            { replace: false },
+          );
         }}
       />
 

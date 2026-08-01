@@ -173,10 +173,11 @@ export function Drawer({
               <button
                 type="button"
                 data-drawer-initial-focus
+                aria-label="Close"
                 onClick={onClose}
-                className="shrink-0 rounded-lg px-2 py-1 text-sm text-label transition hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg leading-none text-label transition hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2"
               >
-                Close
+                ×
               </button>
             ) : null}
           </div>

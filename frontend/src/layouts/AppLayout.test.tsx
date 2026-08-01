@@ -91,7 +91,7 @@ describe("AppLayout navigation", () => {
       within(sidebar).getByRole("link", { name: "Discussions" }),
     ).toHaveAttribute("href", "/discussions");
     expect(
-      within(sidebar).queryByRole("link", { name: "Documents" }),
+      within(sidebar).queryByRole("link", { name: "Meetings" }),
     ).not.toBeInTheDocument();
   });
 
@@ -138,16 +138,16 @@ describe("AppLayout navigation", () => {
     expect(
       within(sidebar).queryByRole("link", { name: "Roles & Permissions" }),
     ).not.toBeInTheDocument();
-    expect(within(sidebar).getByRole("link", { name: "Documents" })).toHaveAttribute(
+    expect(within(sidebar).getByRole("link", { name: "Meetings" })).toHaveAttribute(
       "href",
-      "/board/meeting-minutes",
+      "/events/meetings",
     );
     expect(
       within(sidebar).queryByRole("button", { name: /Admin/i }),
     ).not.toBeInTheDocument();
   });
 
-  it("shows Treasury for treasurer members and work discussion/documents links", () => {
+  it("shows Treasury for treasurer members and work discussion/meetings links", () => {
     renderWithRouter(undefined, {
       initialEntries: ["/finance"],
       auth: {
@@ -164,9 +164,9 @@ describe("AppLayout navigation", () => {
     expect(
       within(sidebar).getByRole("link", { name: "Discussions" }),
     ).toHaveAttribute("href", "/discussions");
-    expect(within(sidebar).getByRole("link", { name: "Documents" })).toHaveAttribute(
+    expect(within(sidebar).getByRole("link", { name: "Meetings" })).toHaveAttribute(
       "href",
-      "/board/meeting-minutes",
+      "/events/meetings",
     );
     expect(within(sidebar).getByRole("link", { name: "Reports" })).toHaveAttribute(
       "href",

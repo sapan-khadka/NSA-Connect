@@ -603,10 +603,10 @@ export function EventManageDetailsCard({
             />
             <span>
               <span className="block text-sm font-medium text-foreground">
-                Show in photo archive
+                Show in Media
               </span>
               <span className="mt-0.5 block text-xs text-gray-500">
-                Include this event in the shared album.
+                Include this event in Media.
               </span>
             </span>
           </label>

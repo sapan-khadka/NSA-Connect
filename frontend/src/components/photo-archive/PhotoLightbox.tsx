@@ -1,11 +1,11 @@
 import { useEffect } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 
-import type { EventPhoto } from "../../lib/photo-archive-api";
+import type { MediaItem } from "../../lib/photo-archive-api";
 import { AppIcon } from "../ui/AppIcon";
 
 type PhotoLightboxProps = {
-  photos: EventPhoto[];
+  photos: MediaItem[];
   activeIndex: number;
   onClose: () => void;
   onChangeIndex: (index: number) => void;
@@ -45,7 +45,7 @@ export function PhotoLightbox({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
       role="dialog"
       aria-modal="true"
-      aria-label={`Photo ${activeIndex + 1} of ${photos.length}`}
+      aria-label={`Media ${activeIndex + 1} of ${photos.length}`}
       onClick={onClose}
     >
       <button
@@ -61,7 +61,7 @@ export function PhotoLightbox({
         <button
           type="button"
           className="absolute left-4 ds-icon-btn rounded-full bg-white/10 p-2 text-white transition hover:bg-white/20"
-          aria-label="Previous photo"
+          aria-label="Previous item"
           onClick={(event) => {
             event.stopPropagation();
             onChangeIndex(activeIndex - 1);
@@ -75,7 +75,7 @@ export function PhotoLightbox({
         <button
           type="button"
           className="absolute right-4 top-16 ds-icon-btn rounded-full bg-white/10 p-2 text-white transition hover:bg-white/20"
-          aria-label="Next photo"
+          aria-label="Next item"
           onClick={(event) => {
             event.stopPropagation();
             onChangeIndex(activeIndex + 1);
@@ -89,11 +89,21 @@ export function PhotoLightbox({
         className="max-h-[90vh] max-w-[90vw]"
         onClick={(event) => event.stopPropagation()}
       >
-        <img
-          src={photo.image_url}
-          alt={`Photo by ${photo.uploaded_by_name}`}
-          className="max-h-[82vh] max-w-full rounded-card object-contain"
-        />
+        {photo.media_kind === "video" ? (
+          <video
+            src={photo.image_url}
+            poster={photo.thumbnail_url}
+            controls
+            playsInline
+            className="max-h-[82vh] max-w-full rounded-card bg-black"
+          />
+        ) : (
+          <img
+            src={photo.image_url}
+            alt={`Media by ${photo.uploaded_by_name}`}
+            className="max-h-[82vh] max-w-full rounded-card object-contain"
+          />
+        )}
         <figcaption className="mt-3 text-center text-sm text-white/90">
           {photo.uploaded_by_name} · {activeIndex + 1} of {photos.length}
         </figcaption>
