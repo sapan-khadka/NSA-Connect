@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router";
 
 import { EventManageDashboard } from "../components/EventManageDashboard";
 import { EventManageHero } from "../components/EventManageHero";

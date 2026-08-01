@@ -1,6 +1,6 @@
 import { CalendarDays, Home, Megaphone, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink } from "react-router";
 
 import {
   NavCountBadge,

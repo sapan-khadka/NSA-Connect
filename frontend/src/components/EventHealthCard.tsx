@@ -3,7 +3,7 @@
  * overall status badge, thin progress metrics, and a next action.
  */
 
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import {
   computeEventHealth,

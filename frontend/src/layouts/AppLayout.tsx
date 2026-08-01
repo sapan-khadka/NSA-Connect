@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { NavLink, Outlet, useLocation } from "react-router";
 
 import { AppSidebar } from "../components/AppSidebar";
 import { AppTopBar, MobileSidebarDrawer } from "../components/AppTopBar";

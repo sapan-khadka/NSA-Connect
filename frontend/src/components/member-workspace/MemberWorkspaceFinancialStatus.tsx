@@ -4,7 +4,7 @@
  */
 
 import { Check, Wallet } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import type { FinancialStatusSummary } from "../../lib/member-workspace-financial";
 import { AppIcon } from "../ui/AppIcon";

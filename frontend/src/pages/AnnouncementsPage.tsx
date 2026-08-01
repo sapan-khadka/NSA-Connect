@@ -22,7 +22,7 @@ import {
   type FormEvent,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router";
 
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage } from "../lib/api-error";

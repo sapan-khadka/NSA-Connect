@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 
 import { getApiErrorMessage } from "../lib/api-error";
 import { deleteEvent } from "../lib/events-api";

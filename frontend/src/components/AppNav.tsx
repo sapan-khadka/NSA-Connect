@@ -1,6 +1,6 @@
 import { ChevronDown } from "lucide-react";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink } from "react-router";
 
 import { avatarColorFromSeed } from "../lib/avatar-color";
 import { AppIcon } from "./ui/AppIcon";

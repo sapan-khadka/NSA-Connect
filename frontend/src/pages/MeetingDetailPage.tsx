@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router";
 
 import { MeetingWorkspace } from "../components/MeetingWorkspace";
 import { getApiErrorMessage } from "../lib/api-error";

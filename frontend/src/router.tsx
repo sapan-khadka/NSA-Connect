@@ -3,7 +3,7 @@ import {
   Navigate,
   useParams,
   type RouteObject,
-} from "react-router-dom";
+} from "react-router";
 
 function LegacyPhotoAlbumRedirect() {
   const { eventId } = useParams();

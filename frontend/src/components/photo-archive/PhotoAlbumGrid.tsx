@@ -7,7 +7,7 @@ import {
   useState,
   type MouseEvent as ReactMouseEvent,
 } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router";
 
 import { getApiErrorMessage } from "../../lib/api-error";
 import { mediaAlbumHref } from "../../lib/event-links";

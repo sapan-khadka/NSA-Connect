@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { NavLink, Outlet, useLocation, useMatch, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useMatch, useNavigate } from "react-router";
 
 import { AppIcon } from "../components/ui/AppIcon";
 import {

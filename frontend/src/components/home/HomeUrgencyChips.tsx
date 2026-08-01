@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import type { MyTasksSummary } from "../../lib/home-tasks";
 import { FINANCE_APPROVALS_PATH } from "../../lib/finance-routes";

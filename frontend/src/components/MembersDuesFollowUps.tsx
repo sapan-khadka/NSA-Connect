@@ -3,7 +3,7 @@
  */
 
 import { BadgeDollarSign } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { Avatar } from "../design-system/components/Avatar";
 import type { MemberResponse } from "../lib/auth-api";

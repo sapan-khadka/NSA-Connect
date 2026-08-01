@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage } from "../lib/api-error";

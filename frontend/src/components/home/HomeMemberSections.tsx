@@ -1,6 +1,6 @@
 import { Check } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import type { MemberResponse } from "../../lib/auth-api";
 import { avatarColorFromSeed } from "../../lib/avatar-color";

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router";
 
 import { IdeaBoardReviewSection } from "../components/IdeaBoardReviewSection";
 import { IdeaCommunityCommentsSection } from "../components/IdeaCommunityCommentsSection";

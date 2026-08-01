@@ -16,7 +16,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 
 import { Search } from "../design-system/components/Search";
 import { EmptyState } from "../design-system/components/data-display/EmptyState";

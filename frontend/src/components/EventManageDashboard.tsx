@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router";
 
 import { EventAttendanceSummaryPanel } from "./EventAttendanceSummaryPanel";
 import { EventCheckInPanel } from "./EventCheckInPanel";

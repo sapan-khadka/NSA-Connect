@@ -1,6 +1,6 @@
 import { AlertTriangle, Check, Circle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import type { MemberResponse } from "../../lib/auth-api";
 import type { EventResponse } from "../../lib/events-api";

@@ -1,6 +1,6 @@
 import { Hash, Megaphone, User } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { useAuth } from "../context/useAuth";
 import {

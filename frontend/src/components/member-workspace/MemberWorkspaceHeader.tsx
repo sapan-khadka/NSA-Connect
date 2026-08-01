@@ -15,7 +15,7 @@ import {
   UserX,
 } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router";
 
 import { Avatar } from "../../design-system/components/Avatar";
 import { useAuth } from "../../context/useAuth";

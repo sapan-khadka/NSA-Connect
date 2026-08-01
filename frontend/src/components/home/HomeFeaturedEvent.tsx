@@ -9,7 +9,7 @@ import {
   Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import nsaCover from "../../assets/nsa-cover.PNG";
 import { eventDetailPath } from "../../lib/event-links";

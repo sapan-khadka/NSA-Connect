@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import type { EventAttendanceSummary } from "../lib/event-checkin-api";
 import {

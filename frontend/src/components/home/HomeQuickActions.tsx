@@ -4,7 +4,7 @@ import {
   UserPlus,
   Wallet,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import type { MemberResponse } from "../../lib/auth-api";
 import { FINANCE_BOOKS_PATH } from "../../lib/finance-routes";

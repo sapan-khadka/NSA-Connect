@@ -3,7 +3,7 @@
  */
 
 import { Activity } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import type { MemberActivityItem } from "../../lib/member-activity-timeline";
 import { MemberActivityTimeline } from "../MemberActivityTimeline";

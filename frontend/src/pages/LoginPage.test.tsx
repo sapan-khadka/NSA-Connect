@@ -1,7 +1,7 @@
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AxiosError, type InternalAxiosRequestConfig } from "axios";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -138,9 +138,7 @@ describe("LoginPage", () => {
       expect(router.state.location.pathname).toBe("/");
     });
     expect(
-      await screen.findByRole("heading", {
-        name: /Good (Morning|Afternoon|Evening), Test/,
-      }),
+      await screen.findByText(/Good (morning|afternoon|evening), Test\./i),
     ).toBeInTheDocument();
   });
 });

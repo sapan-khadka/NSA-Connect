@@ -17,7 +17,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 
 import { KanbanTaskDetailPanel } from "../components/kanban/KanbanTaskDetailPanel";
 import { AppIcon } from "../components/ui/AppIcon";

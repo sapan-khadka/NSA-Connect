@@ -1,6 +1,6 @@
 import { AlertTriangle, Check, UserRound } from "lucide-react";
 import { useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import type {
   EventTaskResponse,

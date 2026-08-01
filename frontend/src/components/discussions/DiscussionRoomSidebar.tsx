@@ -8,7 +8,7 @@ import {
   X,
 } from "lucide-react";
 import { useMemo, useState, type MouseEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 
 import type {
   DiscussionArchivedRoom,

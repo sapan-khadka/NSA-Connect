@@ -1,6 +1,6 @@
 import { Calendar, MapPin, Users } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router";
 
 import { AppIcon } from "../components/ui/AppIcon";
 import { Card } from "../components/ui/Card";

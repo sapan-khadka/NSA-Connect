@@ -1,5 +1,5 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { MemberResponse } from "../lib/auth-api";
@@ -193,7 +193,7 @@ describe("MemberProfilePage workspace", () => {
         {
           id: 1,
           member_id: 2,
-          semester: "2026-summer",
+          semester: "2026-fall",
           amount_owed: "20.00",
           amount_paid: "0.00",
           status: "unpaid",

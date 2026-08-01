@@ -1,5 +1,5 @@
 import { Bell } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { useNotificationSummary } from "../context/NotificationSummaryProvider";
 import { getNotificationVisual } from "../design-system/components/navigation/notificationVisuals";

@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { startOfLocalDay } from "../../lib/calendar";
 import { eventDetailPath } from "../../lib/event-links";

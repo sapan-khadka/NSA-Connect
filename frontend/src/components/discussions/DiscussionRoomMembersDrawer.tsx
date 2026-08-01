@@ -5,7 +5,7 @@
 
 import { Search, UserPlus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 
 import { Avatar } from "../../design-system/components/Avatar";
 import { Drawer } from "../../design-system/components/feedback/Drawer";

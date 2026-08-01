@@ -15,7 +15,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router";
 
 import { Drawer } from "../design-system/components/feedback/Drawer";
 import { useMediaQuery } from "../hooks/useMediaQuery";

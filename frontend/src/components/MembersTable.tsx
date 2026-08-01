@@ -26,7 +26,7 @@ import {
   useState,
   type MouseEvent,
 } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router";
 
 import { Avatar } from "../design-system/components/Avatar";
 import { EmptyState } from "../design-system/components/data-display/EmptyState";

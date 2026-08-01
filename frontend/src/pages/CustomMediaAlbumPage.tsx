@@ -5,7 +5,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 
 import { PageHeader } from "../components/PageHeader";
 import { DownloadAlbumButton } from "../components/photo-archive/DownloadAlbumButton";

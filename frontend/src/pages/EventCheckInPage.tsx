@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { CheckCircle2, ChevronRight, Circle } from "lucide-react";
-import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useParams, useSearchParams } from "react-router";
 
 import { AppIcon } from "../components/ui/AppIcon";
 import { Button } from "../components/ui/Button";

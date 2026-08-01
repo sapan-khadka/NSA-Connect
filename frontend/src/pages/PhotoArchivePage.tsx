@@ -7,7 +7,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router";
 
 import { PhotoAlbumGrid } from "../components/photo-archive/PhotoAlbumGrid";
 import { AppIcon } from "../components/ui/AppIcon";

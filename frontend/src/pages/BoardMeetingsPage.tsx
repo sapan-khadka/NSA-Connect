@@ -1,6 +1,6 @@
 import { Search, SlidersHorizontal } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { AppIcon } from "../components/ui/AppIcon";
 import { getApiErrorMessage } from "../lib/api-error";

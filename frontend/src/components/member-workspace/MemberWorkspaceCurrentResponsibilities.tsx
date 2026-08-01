@@ -3,7 +3,7 @@
  */
 
 import { ClipboardList } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import type { MemberResponsibilityItem } from "../../lib/member-workspace-responsibilities";
 import { AppIcon } from "../ui/AppIcon";

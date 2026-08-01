@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useParams, useSearchParams } from "react-router";
 
 import { PageHeader } from "../components/PageHeader";
 import { EventPhotoGrid } from "../components/photo-archive/EventPhotoGrid";

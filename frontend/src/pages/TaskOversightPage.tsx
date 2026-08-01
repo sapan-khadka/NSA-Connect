@@ -5,7 +5,7 @@
 
 import { Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router";
 
 import { AppIcon } from "../components/ui/AppIcon";
 import { Card } from "../components/ui/Card";

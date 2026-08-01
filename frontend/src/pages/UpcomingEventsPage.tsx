@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ChevronRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { AppIcon } from "../components/ui/AppIcon";
 import { getApiErrorMessage } from "../lib/api-error";

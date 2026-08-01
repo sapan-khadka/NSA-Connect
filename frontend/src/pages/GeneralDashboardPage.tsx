@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { RoleBadge } from "../components/RoleBadge";
 import { useAuth } from "../context/useAuth";

@@ -2,7 +2,7 @@
  * Open (or create) an in-app DM and navigate to the discussion thread.
  */
 
-import type { NavigateFunction } from "react-router-dom";
+import type { NavigateFunction } from "react-router";
 
 import { ensureDirectMessage } from "./discussion-api";
 import { discussionRoomPath } from "./discussion-paths";

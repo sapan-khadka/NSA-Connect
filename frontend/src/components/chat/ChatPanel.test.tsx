@@ -1,5 +1,6 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ChatStreamHandlers } from "../../lib/chat-stream";
@@ -18,6 +19,14 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+function renderChatPanel() {
+  return render(
+    <MemoryRouter>
+      <ChatPanel />
+    </MemoryRouter>,
+  );
+}
+
 describe("ChatPanel streaming UX", () => {
   it("shows a streaming cursor and a Stop button while tokens arrive", async () => {
     const user = userEvent.setup();
@@ -34,7 +43,7 @@ describe("ChatPanel streaming UX", () => {
       await streamGate;
     });
 
-    render(<ChatPanel />);
+    renderChatPanel();
 
     await user.type(
       screen.getByLabelText("Message the AI assistant"),
@@ -70,7 +79,7 @@ describe("ChatPanel streaming UX", () => {
       });
     });
 
-    render(<ChatPanel />);
+    renderChatPanel();
 
     await user.type(
       screen.getByLabelText("Message the AI assistant"),

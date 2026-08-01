@@ -4,7 +4,7 @@
  */
 
 import { Activity } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { AppIcon } from "./ui/AppIcon";
 import {

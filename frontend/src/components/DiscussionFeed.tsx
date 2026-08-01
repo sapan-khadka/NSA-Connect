@@ -41,7 +41,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router";
 
 import { Avatar } from "../design-system/components/Avatar";
 import { useAuth } from "../context/useAuth";
@@ -2688,9 +2688,10 @@ function DiscussionShell({
     }
     deepLinkHandledRef.current = handleKey;
     window.setTimeout(() => {
-      document
-        .getElementById(`discussion-msg-${messageId}`)
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const el = document.getElementById(`discussion-msg-${messageId}`);
+      if (typeof el?.scrollIntoView === "function") {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
     }, 80);
   }, [loading, messages, searchParams, scopeKey]);
 
@@ -3008,10 +3009,12 @@ function DiscussionShell({
             aria-label="Jump to latest messages"
             className="absolute bottom-3 right-3 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#EBEBEA] bg-white text-gray-600 shadow-sm transition hover:bg-[#F5F5F4] hover:text-foreground"
             onClick={() => {
-              bottomRef.current?.scrollIntoView({
-                behavior: "smooth",
-                block: "nearest",
-              });
+              if (typeof bottomRef.current?.scrollIntoView === "function") {
+                bottomRef.current.scrollIntoView({
+                  behavior: "smooth",
+                  block: "nearest",
+                });
+              }
               setShowJumpLatest(false);
             }}
           >
@@ -3159,7 +3162,9 @@ function LiveDiscussionFeed({
     if (pendingScrollRestoreRef.current != null) {
       return;
     }
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    if (typeof bottomRef.current?.scrollIntoView === "function") {
+      bottomRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
     markLatestAsRead();
   }, [messages.length, othersTyping.length, markLatestAsRead]);
 
@@ -3263,7 +3268,9 @@ function LiveDiscussionFeed({
       return;
     }
     const el = document.getElementById(`discussion-msg-${messageId}`);
-    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (typeof el?.scrollIntoView === "function") {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
   }
 
   async function handleSend(payload: {
