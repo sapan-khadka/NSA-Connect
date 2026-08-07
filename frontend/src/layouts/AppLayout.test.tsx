@@ -126,7 +126,9 @@ describe("AppLayout navigation", () => {
       "href",
       "/finance",
     );
-    expect(within(sidebar).queryByRole("link", { name: "Assistant" })).toBeNull();
+    expect(
+      within(sidebar).getByRole("link", { name: "AI & Documents" }),
+    ).toHaveAttribute("href", "/assistant");
     expect(screen.getByRole("link", { name: /Need help/i })).toHaveAttribute(
       "href",
       "/assistant",

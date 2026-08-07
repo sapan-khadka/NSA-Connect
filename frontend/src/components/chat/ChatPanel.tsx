@@ -27,7 +27,7 @@ function toHistory(messages: ChatMessage[]): ChatHistoryMessage[] {
 function statusLabelForPhase(phase: string): string {
   switch (phase) {
     case "retrieving":
-      return "Searching the constitution…";
+      return "Searching constitution and documents…";
     case "tools":
       return "Checking live NSA Connect data…";
     case "thinking":
@@ -37,7 +37,11 @@ function statusLabelForPhase(phase: string): string {
   }
 }
 
-export function ChatPanel() {
+export function ChatPanel({
+  starterQuery = null,
+}: {
+  starterQuery?: string | null;
+}) {
   const [searchParams] = useSearchParams();
   const initialQuery = searchParams.get("q")?.trim() ?? "";
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -45,7 +49,7 @@ export function ChatPanel() {
       id: createMessageId(),
       role: "assistant",
       content:
-        "Hi! I can answer constitution questions and look up live NSA Connect data about events, members, and finances.",
+        "Hi! I can look up live NSA Connect data — members, dues, events, tasks, finance — and search the constitution plus chapter documents the board uploads.",
     },
   ]);
   const [draft, setDraft] = useState(initialQuery);
@@ -54,7 +58,12 @@ export function ChatPanel() {
   const [statusLabel, setStatusLabel] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const autoSentRef = useRef(false);
+
+  useEffect(() => {
+    if (starterQuery?.trim()) {
+      setDraft(starterQuery.trim());
+    }
+  }, [starterQuery]);
 
   useEffect(() => {
     const container = scrollRef.current;
@@ -235,7 +244,7 @@ export function ChatPanel() {
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             rows={2}
-            placeholder="Ask about the constitution, upcoming events, or prep tasks…"
+            placeholder="Ask about members, dues, events, constitution, or chapter docs…"
             disabled={isStreaming}
             className="min-h-[3rem] flex-1 resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:bg-gray-100"
           />

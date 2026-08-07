@@ -23,6 +23,7 @@ from app.services.ai_chat_tools import CHAT_TOOL_DEFINITIONS, execute_chat_tool
 from app.services.ai_checklist_service import AIDisabledError
 from app.services.constitution_search_service import search_constitution_chunks
 from app.services.embedding_service import EmbeddingsNotConfiguredError
+from app.services.org_document_service import search_org_document_chunks
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,42 @@ def _format_rag_context(hits) -> tuple[str, list[ChatConstitutionSource]]:
             ),
         )
     return "\n\n".join(sections), sources
+
+
+def _format_document_context(hits) -> str:
+    if not hits:
+        return ""
+    sections: list[str] = []
+    for hit in hits:
+        label = hit.section or f"Chunk {hit.chunk_index + 1}"
+        sections.append(
+            f"[{hit.document_title} · {label} | score={hit.similarity_score:.3f}]\n"
+            f"{hit.content.strip()}",
+        )
+    return "\n\n".join(sections)
+
+
+def _retrieve_document_context(
+    db: Session,
+    *,
+    member: Member,
+    query: str,
+    limit: int,
+) -> str:
+    try:
+        hits = search_org_document_chunks(
+            db,
+            member=member,
+            query=query,
+            limit=limit,
+        )
+    except EmbeddingsNotConfiguredError:
+        logger.warning("Document RAG skipped: embeddings not configured")
+        return ""
+    except Exception:
+        logger.exception("Document RAG retrieval failed")
+        return ""
+    return _format_document_context(hits)
 
 
 def _retrieve_constitution_context(
@@ -150,6 +187,7 @@ def _process_tool_use_blocks(
 def _prepare_chat_context(
     db: Session,
     *,
+    member: Member,
     data: ChatRequest,
 ) -> tuple[str, list[ChatConstitutionSource], list[dict[str, Any]]]:
     settings = get_settings()
@@ -158,7 +196,16 @@ def _prepare_chat_context(
         query=data.message,
         limit=settings.AI_CHAT_RAG_CHUNK_LIMIT,
     )
-    system_prompt = build_chat_system_prompt(rag_context=rag_context)
+    document_context = _retrieve_document_context(
+        db,
+        member=member,
+        query=data.message,
+        limit=settings.AI_CHAT_RAG_CHUNK_LIMIT,
+    )
+    system_prompt = build_chat_system_prompt(
+        rag_context=rag_context,
+        document_context=document_context,
+    )
     messages = _history_messages(data.history)
     messages.append({"role": "user", "content": data.message.strip()})
     return system_prompt, sources, messages
@@ -179,7 +226,9 @@ def chat_with_nsa_assistant(
     except AnthropicNotConfiguredError as exc:
         raise AIChatError("Anthropic is not configured") from exc
 
-    system_prompt, sources, messages = _prepare_chat_context(db, data=data)
+    system_prompt, sources, messages = _prepare_chat_context(
+        db, member=member, data=data
+    )
     tool_records: list[ChatToolCallRecord] = []
     final_text = ""
 
@@ -264,7 +313,9 @@ def _stream_chat_impl(
 
     yield _format_sse("status", {"phase": "retrieving"})
 
-    system_prompt, sources, messages = _prepare_chat_context(db, data=data)
+    system_prompt, sources, messages = _prepare_chat_context(
+        db, member=member, data=data
+    )
     tool_records: list[ChatToolCallRecord] = []
     final_text = ""
 

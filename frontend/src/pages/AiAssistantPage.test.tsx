@@ -52,7 +52,10 @@ describe("AiAssistantPage", () => {
     });
 
     expect(
-      screen.getByText(/answer constitution questions/i),
+      screen.getByRole("heading", { name: "AI Assistant" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Ask about membership, dues, events/i),
     ).toBeInTheDocument();
 
     await user.type(

@@ -23,7 +23,7 @@ import {
 } from "../context/NotificationSummaryProvider";
 import { useAuth } from "../context/useAuth";
 import { useLogout } from "../context/useLogout";
-import { avatarColorFromSeed } from "../lib/avatar-color";
+import { avatarColorForPerson } from "../lib/avatar-color";
 import {
   canAccessFinance,
   canBrowseMemberDirectory,
@@ -81,12 +81,14 @@ function SidebarSectionLabel({ children }: { children: string }) {
 }
 
 function SidebarAccountMenu({
+  memberId,
   fullName,
   avatarUrl = null,
   roleLabel,
   onLogout,
   onNavigate,
 }: {
+  memberId?: number | null;
   fullName: string;
   avatarUrl?: string | null;
   roleLabel: string;
@@ -96,7 +98,7 @@ function SidebarAccountMenu({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
-  const palette = avatarColorFromSeed(fullName);
+  const palette = avatarColorForPerson(memberId, fullName);
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = Boolean(avatarUrl) && !imageFailed;
 
@@ -328,6 +330,11 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       label: "Announcements",
       icon: Megaphone,
     },
+    {
+      to: "/assistant",
+      label: "AI & Documents",
+      icon: Sparkles,
+    },
   ];
 
   const workItems: SidebarLink[] = [
@@ -436,6 +443,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
         {member ? (
           <SidebarAccountMenu
+            memberId={member.id}
             fullName={member.full_name}
             avatarUrl={member.avatar_url}
             roleLabel={roleLabel}

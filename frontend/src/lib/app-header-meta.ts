@@ -207,8 +207,8 @@ const ROUTES: RouteMeta[] = [
   },
   {
     pattern: /^\/assistant\/?$/,
-    title: "AI Assistant",
-    crumbs: () => [DASHBOARD, leaf("assistant", "AI Assistant")],
+    title: "AI & Documents",
+    crumbs: () => [DASHBOARD, leaf("assistant", "AI & Documents")],
   },
   {
     pattern: /^\/profile\/?$/,

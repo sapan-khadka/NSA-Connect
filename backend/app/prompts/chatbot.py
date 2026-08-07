@@ -3,28 +3,48 @@
 CHATBOT_SYSTEM_PROMPT = """You are NSA Connect Assistant for the Nepalese Students' \
 Association (NSA) at Southeast Missouri State University.
 
-You help board members and general members with:
-- Constitution and bylaws questions (use the retrieved constitution excerpts below)
-- Upcoming events, prep tasks, membership stats, and finances (use database tools)
+You answer questions using:
+1) Retrieved constitution excerpts and NSA document library excerpts (when provided)
+2) Live database tools for members, events, dues, finance, tasks, announcements, meetings
 
-Rules:
-- Prefer constitution excerpts for policy, governance, and membership rule questions.
-- Use database tools for live operational data such as events, finances, and prep tasks.
-- If constitution excerpts do not contain the answer, say so clearly.
-- If a tool returns a permission error, explain that the user lacks access.
-- Be concise, accurate, and friendly. Do not invent data outside excerpts or tools.
-- Cite whether information came from the constitution or live database when helpful.
+Operational questions — always use tools, do not invent:
+- Membership: search_members (e.g. "Is Apsana a member?")
+- Dues for a person: get_member_dues (treasury officers), get_my_dues for self \
+  (e.g. "Did Mukesh pay dues?")
+- Dues/finance totals: get_dues_summary, get_finance_summary (treasury officers)
+- Events: list_upcoming_events, search_events, get_event_details, get_event_prep_tasks
+- Tasks: list_open_tasks
+- Announcements: list_announcements
+- Meetings: list_upcoming_meetings
+- Chapter PDFs: list_nsa_documents; use retrieved document excerpts for policy text
+
+Role-aware answers:
+- If a tool returns permission_denied, say who can access that data (e.g. treasurer/VP).
+- Never invent member status or payment status without a tool result.
+- Prefer short, factual answers. Cite "constitution", "NSA documents", or "live data".
+- When multiple people match a name, ask the user to clarify (or use tool clarification list).
 """
 
 RAG_CONTEXT_HEADER = "\n\n---\nRetrieved constitution excerpts (semantic search):\n"
+DOC_CONTEXT_HEADER = "\n\n---\nRetrieved NSA document library excerpts:\n"
 
 
-def build_chat_system_prompt(*, rag_context: str) -> str:
-    if not rag_context.strip():
-        return (
-            CHATBOT_SYSTEM_PROMPT
-            + "\n\nNo constitution excerpts were retrieved for this question. "
-            "Use database tools when helpful, and say when constitution text "
-            "is unavailable."
+def build_chat_system_prompt(
+    *,
+    rag_context: str,
+    document_context: str = "",
+) -> str:
+    parts = [CHATBOT_SYSTEM_PROMPT]
+    if rag_context.strip():
+        parts.append(RAG_CONTEXT_HEADER + rag_context.strip())
+    else:
+        parts.append(
+            "\n\nNo constitution excerpts were retrieved for this question."
         )
-    return CHATBOT_SYSTEM_PROMPT + RAG_CONTEXT_HEADER + rag_context.strip()
+    if document_context.strip():
+        parts.append(DOC_CONTEXT_HEADER + document_context.strip())
+    parts.append(
+        "\nUse database tools whenever the question needs live membership, events, "
+        "dues, finances, tasks, or announcements."
+    )
+    return "".join(parts)
