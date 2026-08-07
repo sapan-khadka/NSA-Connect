@@ -66,11 +66,12 @@ describe("FinanceSummaryCard", () => {
       />,
     );
 
-    const incomeCard = screen.getByTestId("finance-total-income").closest("section");
-    const netBalanceCard = screen.getByTestId("finance-net-balance").closest("section");
+    const incomeCard = screen.getByTestId("finance-total-income");
+    const netBalanceCard = screen.getByTestId("finance-net-balance");
 
-    expect(incomeCard).toHaveClass("border-gray-200");
-    expect(netBalanceCard).toHaveClass("bg-mint/25");
+    expect(incomeCard).toHaveClass("finance-metric");
+    expect(incomeCard).not.toHaveClass("is-positive");
+    expect(netBalanceCard).toHaveClass("is-positive");
   });
 
   it("uses warning styling for negative net balance", () => {
@@ -87,8 +88,8 @@ describe("FinanceSummaryCard", () => {
       />,
     );
 
-    const netBalanceCard = screen.getByTestId("finance-net-balance").closest("section");
-    expect(netBalanceCard).toHaveClass("bg-overdue-surface");
+    const netBalanceCard = screen.getByTestId("finance-net-balance");
+    expect(netBalanceCard).toHaveClass("is-negative");
     expect(screen.getByTestId("finance-net-balance-amount")).toHaveClass("text-overdue");
     expect(screen.getByText("Spending with no income yet")).toBeInTheDocument();
   });

@@ -17,12 +17,14 @@ type ExpenseCategoryChartProps = {
   errorMessage: string | null;
 };
 
+/** Distinct hues so bars stay legible with monochrome brand chrome. */
 const BAR_COLORS = [
-  "bg-primary",
-  "bg-accent",
-  "bg-olive",
-  "bg-gray-300",
-  "bg-mint",
+  "bg-[#0F766E]",
+  "bg-[#378ADD]",
+  "bg-[#D85A30]",
+  "bg-[#639922]",
+  "bg-[#7F77DD]",
+  "bg-[#EF9F27]",
 ] as const;
 
 function barWidth(totalExpense: string, categoryExpense: string): number {
@@ -63,8 +65,8 @@ export function ExpenseCategoryChart({
   }
 
   return (
-    <section className="rounded-card border border-gray-200 bg-surface-card p-6 shadow-card">
-      <h2 className="text-base font-medium text-foreground">
+    <section className="finance-chart-card">
+      <h2 className="finance-chart-card-title">
         Spend by category
       </h2>
 

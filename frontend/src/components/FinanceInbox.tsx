@@ -228,7 +228,7 @@ export function FinanceInbox({
   onOpenBooksForEvent,
 }: FinanceInboxProps) {
   return (
-    <div className="space-y-6" data-testid="finance-inbox">
+    <div className="finance-tab-stack" data-testid="finance-inbox">
       <FinancePendingApprovals refreshKey={refreshKey} onChanged={onChanged} />
       <FinanceInboxDuesShortlist
         semester={duesSemester}

@@ -20,8 +20,8 @@ describe("formatCurrency", () => {
 
 describe("currencyBalanceToneClass", () => {
   it("maps positive, negative, and zero balances to tone classes", () => {
-    expect(currencyBalanceToneClass("10.00")).toBe("text-accent");
-    expect(currencyBalanceToneClass("-5.00")).toBe("text-foreground");
+    expect(currencyBalanceToneClass("10.00")).toBe("text-emerald-700");
+    expect(currencyBalanceToneClass("-5.00")).toBe("text-overdue");
     expect(currencyBalanceToneClass("0.00")).toBe("text-label");
   });
 });

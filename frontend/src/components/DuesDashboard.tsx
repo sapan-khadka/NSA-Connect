@@ -109,16 +109,16 @@ function SummaryMetric({
 }) {
   const variantClass =
     variant === "negative"
-      ? "border-overdue/20 bg-overdue-surface"
+      ? "finance-metric is-negative"
       : variant === "positive"
-        ? "border-accent/20 bg-mint/25"
-        : "border-gray-200 bg-surface-card";
+        ? "finance-metric is-positive"
+        : "finance-metric";
 
   return (
-    <div className={`rounded-card border p-4 shadow-card ${variantClass}`}>
-      <p className="text-xs uppercase tracking-wide text-label">{title}</p>
-      <p className="mt-2 text-2xl font-light tracking-headline text-foreground">{value}</p>
-      {caption ? <p className="mt-1 text-xs text-label">{caption}</p> : null}
+    <div className={variantClass}>
+      <p className="finance-metric-label">{title}</p>
+      <p className="finance-metric-value-text">{value}</p>
+      {caption ? <p className="finance-metric-sub">{caption}</p> : null}
     </div>
   );
 }
@@ -500,24 +500,24 @@ export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboard
   );
 
   return (
-    <div className="space-y-6">
+    <div className="finance-tab-stack">
       <details
-        className="rounded-card border border-gray-200 bg-surface-card shadow-card"
+        className="finance-setup-panel"
         open={setupOpen}
         onToggle={(event) =>
           setSetupOpen((event.currentTarget as HTMLDetailsElement).open)
         }
       >
-        <summary className="cursor-pointer list-none px-5 py-4 marker:content-none [&::-webkit-details-marker]:hidden">
-          <span className="text-sm font-medium text-foreground">
+        <summary className="finance-setup-summary">
+          <span className="finance-panel-title">
             Semester setup
           </span>
-          <span className="mt-0.5 block text-xs text-label">
+          <span className="finance-panel-copy">
             Default amount · generate records for {semesterLabel}
           </span>
         </summary>
 
-        <div className="space-y-4 border-t border-gray-100 px-5 pb-5 pt-4">
+        <div className="finance-setup-body space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <p className="text-sm text-label">
               Set the default amount, then generate unpaid records for all approved members.
@@ -584,7 +584,7 @@ export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboard
 
       {summary ? (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="finance-metrics-strip finance-metrics-strip--4">
             <SummaryMetric
               title="Expected"
               value={formatCurrency(summary.total_expected)}
@@ -607,7 +607,7 @@ export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboard
             />
           </div>
 
-          <section className="rounded-card border border-gray-200 bg-surface-card shadow-card">
+          <section className="finance-dues-table-card">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-3">
               <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
                 <input

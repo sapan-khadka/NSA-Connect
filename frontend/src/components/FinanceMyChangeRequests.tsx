@@ -5,6 +5,7 @@ import {
   fetchMyFinanceChangeRequests,
   type FinanceChangeRequestResponse,
 } from "../lib/finance-api";
+import { financeReviewStatusToneClass } from "../lib/finance-status";
 import { formatCurrency } from "../lib/format-currency";
 import { formatEventDateTime } from "../lib/format-datetime";
 import { Card } from "./ui/Card";
@@ -21,16 +22,6 @@ function statusLabel(status: FinanceChangeRequestResponse["status"]): string {
     return "Approved";
   }
   return "Rejected";
-}
-
-function statusClass(status: FinanceChangeRequestResponse["status"]): string {
-  if (status === "pending") {
-    return "bg-surface-muted text-label";
-  }
-  if (status === "approved") {
-    return "bg-accent/10 text-foreground";
-  }
-  return "border border-urgent/30 bg-urgent/5 text-foreground";
 }
 
 export function FinanceMyChangeRequests({
@@ -118,7 +109,7 @@ export function FinanceMyChangeRequests({
                     ) : null}
                   </div>
                   <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusClass(request.status)}`}
+                    className={financeReviewStatusToneClass(request.status)}
                   >
                     {statusLabel(request.status)}
                   </span>

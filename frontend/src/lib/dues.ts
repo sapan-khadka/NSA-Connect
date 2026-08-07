@@ -38,13 +38,13 @@ export function duesStatusLabel(status: DuesStatus): string {
 export function duesStatusToneClass(status: DuesStatus): string {
   switch (status) {
     case "paid":
-      return "border-accent/30 bg-mint/20 text-accent";
+      return "border-emerald-200 bg-emerald-50 text-emerald-800";
     case "unpaid":
       return "border-overdue/30 bg-overdue-surface text-overdue";
     case "partial":
-      return "border-amber-200 bg-amber-50 text-amber-800";
+      return "border-amber-200 bg-amber-50 text-amber-900";
     case "exempt":
-      return "border-gray-200 bg-gray-50 text-label";
+      return "border-slate-200 bg-slate-50 text-slate-600";
   }
 }
 

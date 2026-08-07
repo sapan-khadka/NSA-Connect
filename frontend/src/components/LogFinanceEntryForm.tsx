@@ -487,30 +487,24 @@ function CollapsibleLogFinanceEntryForm({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-card border border-gray-200 bg-surface-card p-6 shadow-card">
+    <section className="finance-log-form">
       {!isExpanded ? (
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onExpand}
-        >
+        <Button type="button" variant="outline" onClick={onExpand}>
           + Log transaction
         </Button>
       ) : (
         <>
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="text-base font-medium text-foreground">
-              Log transaction
-            </h2>
+          <div className="finance-log-form-head">
+            <h2 className="finance-panel-title">Log transaction</h2>
             <button
               type="button"
               onClick={onCollapse}
-              className="min-h-11 text-sm font-light text-label transition hover:text-foreground"
+              className="finance-log-form-close"
             >
               Close
             </button>
           </div>
-          <div className="mt-6">{children}</div>
+          <div className="finance-log-form-body">{children}</div>
         </>
       )}
     </section>

@@ -29,11 +29,11 @@ export function currencyBalanceToneClass(amount: string): string {
   const value = parseCurrencyAmount(amount);
 
   if (value > 0) {
-    return "text-accent";
+    return "text-emerald-700";
   }
 
   if (value < 0) {
-    return "text-foreground";
+    return "text-overdue";
   }
 
   return "text-label";

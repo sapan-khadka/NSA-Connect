@@ -22,6 +22,7 @@ import {
 import { FINANCE_CATEGORIES } from "../lib/finance-form";
 import { formatCurrency } from "../lib/format-currency";
 import { formatEventDateTime } from "../lib/format-datetime";
+import { financeEntryTypeToneClass } from "../lib/finance-status";
 
 type FinanceEntryListProps = {
   semester: string;
@@ -412,7 +413,7 @@ export function FinanceEntryList({
                         "finance-entry-card-amount",
                         entry.entry_type === "income"
                           ? "finance-entry-card-amount--income"
-                          : "",
+                          : "finance-entry-card-amount--expense",
                       ]
                         .filter(Boolean)
                         .join(" ")}
@@ -424,7 +425,13 @@ export function FinanceEntryList({
                   <dl className="finance-entry-card-meta">
                     <div>
                       <dt>Type</dt>
-                      <dd className="capitalize">{entry.entry_type}</dd>
+                      <dd>
+                        <span
+                          className={financeEntryTypeToneClass(entry.entry_type)}
+                        >
+                          {entry.entry_type}
+                        </span>
+                      </dd>
                     </div>
                     <div>
                       <dt>Category</dt>
@@ -621,16 +628,20 @@ export function FinanceEntryList({
                     <td className="px-4 py-3 text-label">
                       {formatEventDateTime(entry.created_at)}
                     </td>
-                    <td className="px-4 py-3 capitalize text-foreground">
-                      {entry.entry_type}
+                    <td className="px-4 py-3">
+                      <span
+                        className={financeEntryTypeToneClass(entry.entry_type)}
+                      >
+                        {entry.entry_type}
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-foreground">
                       {formatFinanceCategory(entry.category)}
                     </td>
                     <td
-                      className={`px-4 py-3 font-medium ${
+                      className={`px-4 py-3 font-medium tabular-nums ${
                         entry.entry_type === "income"
-                          ? "text-accent"
+                          ? "text-emerald-700"
                           : "text-foreground"
                       }`}
                     >

@@ -83,7 +83,7 @@ function buildBreakdownColumns(
       id: "income",
       header: "Income",
       cell: (row) => (
-        <span className="text-accent">{formatCurrency(row.income)}</span>
+        <span className="text-emerald-700">{formatCurrency(row.income)}</span>
       ),
     },
     {
@@ -152,14 +152,14 @@ function netBalanceVariant(amount: string): "neutral" | "positive" | "negative" 
 
 function metricCardClasses(variant: "neutral" | "positive" | "negative"): string {
   if (variant === "negative") {
-    return "border border-overdue/20 bg-overdue-surface";
+    return "finance-metric is-negative";
   }
 
   if (variant === "positive") {
-    return "border border-accent/20 bg-mint/25";
+    return "finance-metric is-positive";
   }
 
-  return "border border-gray-200 bg-surface-card";
+  return "finance-metric";
 }
 
 function MetricCard({
@@ -172,19 +172,17 @@ function MetricCard({
   return (
     <section
       data-testid={testId}
-      className={`rounded-card p-5 shadow-card ${metricCardClasses(variant)}`}
+      className={metricCardClasses(variant)}
     >
-      <div className="ds-icon-label">
+      <div className="finance-metric-label-row">
         {variant === "negative" ? (
           <AppIcon icon={TrendingDown} size="sm" className="text-overdue" />
         ) : null}
-        <h2 className="text-xs font-medium uppercase tracking-label text-label">
-          {title}
-        </h2>
+        <h2 className="finance-metric-label">{title}</h2>
       </div>
-      <div className="mt-3">{children}</div>
+      <div className="finance-metric-value">{children}</div>
       {caption ? (
-        <p className="mt-2 text-xs font-light text-overdue">{caption}</p>
+        <p className="finance-metric-caption">{caption}</p>
       ) : null}
     </section>
   );
@@ -220,12 +218,12 @@ export function FinanceSummaryMetrics({
     balanceVariant === "negative"
       ? "text-overdue"
       : balanceVariant === "positive"
-        ? "text-accent"
+        ? "text-emerald-700"
         : "text-foreground";
 
   return (
     <div
-      className="grid gap-4 sm:grid-cols-3"
+      className="finance-metrics-strip"
       data-testid="finance-pulse-strip"
     >
       <MetricCard
@@ -236,7 +234,7 @@ export function FinanceSummaryMetrics({
       >
         <p
           data-testid="finance-net-balance-amount"
-          className={`text-3xl font-light tracking-headline ${balanceAmountClass}`}
+          className={`finance-metric-amount ${balanceAmountClass}`}
         >
           {formatCurrency(summary.balance)}
         </p>
@@ -245,7 +243,7 @@ export function FinanceSummaryMetrics({
       <MetricCard title="Income" testId="finance-total-income">
         <p
           data-testid="finance-total-income-amount"
-          className="text-3xl font-light tracking-headline text-foreground"
+          className="finance-metric-amount text-foreground"
         >
           {formatCurrency(summary.total_income)}
         </p>
@@ -254,7 +252,7 @@ export function FinanceSummaryMetrics({
       <MetricCard title="Expenses" testId="finance-total-expense">
         <p
           data-testid="finance-total-expense-amount"
-          className="text-3xl font-light tracking-headline text-foreground"
+          className="finance-metric-amount text-foreground"
         >
           {formatCurrency(summary.total_expense)}
         </p>

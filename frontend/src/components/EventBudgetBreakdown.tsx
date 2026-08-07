@@ -62,12 +62,12 @@ export function EventBudgetBreakdown({
   }
 
   return (
-    <section className="rounded-card border border-gray-200 bg-surface-card p-6 shadow-card">
-      <h2 className="text-base font-medium text-foreground">
+    <section className="finance-chart-card">
+      <h2 className="finance-chart-card-title">
         Event budgets
       </h2>
       {onEventClick ? (
-        <p className="mt-1 text-xs text-label">Open an event to view its Books.</p>
+        <p className="finance-chart-card-hint">Open an event to view its Books.</p>
       ) : null}
 
       <div

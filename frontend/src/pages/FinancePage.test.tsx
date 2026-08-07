@@ -198,11 +198,11 @@ describe("FinancePage", () => {
       "$260.00",
     );
     expect(screen.queryByTestId("finance-pending-count")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Pulse" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Pulse" })).toBeInTheDocument();
     expect(screen.getByText("Insights")).toBeInTheDocument();
     expect(screen.queryByTestId("finance-entry-list")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Books" }));
+    await user.click(screen.getByRole("tab", { name: "Books" }));
 
     expect(
       screen.getByRole("button", { name: "+ Log transaction" }),
