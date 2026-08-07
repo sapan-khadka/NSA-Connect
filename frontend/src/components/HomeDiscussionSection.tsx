@@ -1,49 +1,60 @@
-import { Hash, Megaphone, User } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 
-import { useAuth } from "../context/useAuth";
 import {
   fetchDiscussionInbox,
   type DiscussionInboxRoom,
 } from "../lib/discussion-api";
-import { discussionRoomPath } from "../lib/discussion-paths";
-import { formatCompactRelativeTimestamp } from "../lib/format-datetime";
 import {
-  buildDiscussionAttentionItems,
-  type DiscussionAttentionItem,
-  type DiscussionRoomVisualKind,
-} from "../lib/home-discussion-attention";
-import { AppIcon } from "./ui/AppIcon";
+  DiscussionInboxRow,
+  DiscussionInboxSectionLabel,
+  groupDiscussionInboxRooms,
+} from "./discussions/DiscussionInboxRow";
 import { ArrowLink } from "./ui/ArrowLink";
 import { HomeCard } from "./ui/HomeCard";
 
 const INBOX_PATH = "/discussions";
 const INBOX_POLL_MS = 45_000;
 
-function roomTypeIcon(kind: DiscussionRoomVisualKind) {
-  if (kind === "board") {
-    return Megaphone;
-  }
-  if (kind === "dm") {
-    return User;
-  }
-  return Hash;
-}
-
 function totalUnread(rooms: DiscussionInboxRoom[]): number {
   return rooms.reduce((sum, room) => sum + Math.max(0, room.unread_count), 0);
+}
+
+/** Match Discussions page pin + recency order. */
+function sortRooms(rooms: DiscussionInboxRoom[]): DiscussionInboxRoom[] {
+  const pinned = rooms.filter((room) => room.pinned);
+  const unpinned = rooms.filter((room) => !room.pinned);
+  return [
+    ...pinned.sort((a, b) => {
+      if (a.room_id === "board") return -1;
+      if (b.room_id === "board") return 1;
+      return (b.pinned_at ?? "").localeCompare(a.pinned_at ?? "");
+    }),
+    ...unpinned.sort((a, b) =>
+      (b.last_message_at ?? "").localeCompare(a.last_message_at ?? ""),
+    ),
+  ];
 }
 
 function DiscussionCardShell({
   children,
   headerAction,
   unreadTotal = 0,
+  variant = "card",
 }: {
   children: ReactNode;
   headerAction?: ReactNode;
   unreadTotal?: number;
+  variant?: "card" | "rail";
 }) {
+  if (variant === "rail") {
+    return (
+      <div className="home-discussion-rail" aria-label="Inbox threads">
+        <div className="home-discussion-rail__list">{children}</div>
+      </div>
+    );
+  }
+
   return (
     <HomeCard
       padding="sm"
@@ -69,62 +80,93 @@ function DiscussionCardShell({
   );
 }
 
-function AttentionRow({ item }: { item: DiscussionAttentionItem }) {
-  const { room, kind, roomKind, detail, badge } = item;
-  const time = room.last_message_at
-    ? formatCompactRelativeTimestamp(room.last_message_at)
-    : null;
-  const TypeIcon = roomTypeIcon(roomKind);
-  const hasAttention = kind === "mentioned" || kind === "unread";
+function InboxRoomSections({
+  rooms,
+  previewLimit,
+}: {
+  rooms: DiscussionInboxRoom[];
+  previewLimit: number;
+}) {
+  const ordered = useMemo(() => sortRooms(rooms), [rooms]);
+  const groups = useMemo(
+    () => groupDiscussionInboxRooms(ordered),
+    [ordered],
+  );
+
+  const capped = useMemo(() => {
+    const pick: DiscussionInboxRoom[] = [];
+    for (const room of [
+      ...groups.pinned,
+      ...groups.channels,
+      ...groups.directMessages,
+    ]) {
+      if (pick.length >= previewLimit) break;
+      pick.push(room);
+    }
+    const ids = new Set(pick.map((r) => r.room_id));
+    return {
+      pinned: groups.pinned.filter((r) => ids.has(r.room_id)),
+      channels: groups.channels.filter((r) => ids.has(r.room_id)),
+      directMessages: groups.directMessages.filter((r) => ids.has(r.room_id)),
+    };
+  }, [groups, previewLimit]);
 
   return (
-    <Link
-      to={discussionRoomPath(room.room_id)}
-      className={[
-        "home-discussion-row home-discussion-row--feed",
-        `is-${kind}`,
-        hasAttention ? "has-attention" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-    >
-      <span className="home-discussion-type" aria-hidden="true">
-        <AppIcon icon={TypeIcon} size="xs" className="text-current" />
-      </span>
-      <div className="home-discussion-copy">
-        <div className="home-discussion-title-row">
-          <p className="home-discussion-title">{room.label}</p>
-          <div className="home-discussion-title-meta">
-            {badge ? (
-              <span
-                className="home-discussion-badge"
-                aria-label={`${badge} unread`}
-              >
-                {badge}
-              </span>
-            ) : null}
-            {time ? (
-              <time
-                dateTime={room.last_message_at ?? undefined}
-                className="home-discussion-time"
-              >
-                {time}
-              </time>
-            ) : null}
-          </div>
-        </div>
-        <p className="home-discussion-detail">{detail}</p>
-      </div>
-    </Link>
+    <div className="home-discussion-sections">
+      {capped.pinned.length > 0 ? (
+        <section className="home-discussion-section">
+          <DiscussionInboxSectionLabel>Pinned</DiscussionInboxSectionLabel>
+          {capped.pinned.map((room) => (
+            <DiscussionInboxRow
+              key={room.room_id}
+              room={room}
+              asLink
+              pinInteractive={false}
+            />
+          ))}
+        </section>
+      ) : null}
+
+      {capped.channels.length > 0 ? (
+        <section className="home-discussion-section">
+          <DiscussionInboxSectionLabel>Channels</DiscussionInboxSectionLabel>
+          {capped.channels.map((room) => (
+            <DiscussionInboxRow
+              key={room.room_id}
+              room={room}
+              asLink
+              pinInteractive={false}
+            />
+          ))}
+        </section>
+      ) : null}
+
+      {capped.directMessages.length > 0 ? (
+        <section className="home-discussion-section">
+          <DiscussionInboxSectionLabel>
+            Direct Messages
+          </DiscussionInboxSectionLabel>
+          {capped.directMessages.map((room) => (
+            <DiscussionInboxRow
+              key={room.room_id}
+              room={room}
+              asLink
+              pinInteractive={false}
+            />
+          ))}
+        </section>
+      ) : null}
+    </div>
   );
 }
 
 export function HomeDiscussionSection({
   previewLimit = 5,
+  variant = "card",
 }: {
   previewLimit?: number;
+  variant?: "card" | "rail";
 }) {
-  const { member } = useAuth();
   const [rooms, setRooms] = useState<DiscussionInboxRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -183,24 +225,23 @@ export function HomeDiscussionSection({
     };
   }, []);
 
-  const attention = buildDiscussionAttentionItems(rooms, {
-    cap: previewLimit,
-    viewerName: member?.full_name,
-  });
   const unreadTotal = totalUnread(rooms);
-  const openLink = <ArrowLink to={INBOX_PATH}>Open inbox →</ArrowLink>;
+  const openLink =
+    variant === "rail" ? undefined : (
+      <ArrowLink to={INBOX_PATH}>Open</ArrowLink>
+    );
 
   if (loading) {
     return (
-      <DiscussionCardShell headerAction={openLink}>
-        <p className="home-discussion-empty">Loading inbox…</p>
+      <DiscussionCardShell headerAction={openLink} variant={variant}>
+        <p className="home-discussion-empty">Loading…</p>
       </DiscussionCardShell>
     );
   }
 
   if (error) {
     return (
-      <DiscussionCardShell headerAction={openLink}>
+      <DiscussionCardShell headerAction={openLink} variant={variant}>
         <p className="home-discussion-empty" role="alert">
           {error}
         </p>
@@ -210,29 +251,26 @@ export function HomeDiscussionSection({
 
   if (rooms.length === 0) {
     return (
-      <DiscussionCardShell headerAction={openLink}>
-        <p className="home-discussion-empty">No messages yet</p>
-      </DiscussionCardShell>
-    );
-  }
-
-  if (attention.length === 0) {
-    return (
-      <DiscussionCardShell headerAction={openLink} unreadTotal={unreadTotal}>
-        <p className="home-discussion-empty">You’re caught up</p>
+      <DiscussionCardShell headerAction={openLink} variant={variant}>
+        <p className="home-discussion-empty">No conversations yet</p>
       </DiscussionCardShell>
     );
   }
 
   return (
-    <DiscussionCardShell headerAction={openLink} unreadTotal={unreadTotal}>
-      <ul className="home-discussion-list home-discussion-list--feed">
-        {attention.map((item) => (
-          <li key={item.room.room_id}>
-            <AttentionRow item={item} />
-          </li>
-        ))}
-      </ul>
+    <DiscussionCardShell
+      headerAction={openLink}
+      unreadTotal={unreadTotal}
+      variant={variant}
+    >
+      <InboxRoomSections rooms={rooms} previewLimit={previewLimit} />
+      {variant === "card" ? (
+        <div className="home-discussion-card-footer">
+          <Link to={INBOX_PATH} className="ds-link text-sm">
+            Open all discussions
+          </Link>
+        </div>
+      ) : null}
     </DiscussionCardShell>
   );
 }

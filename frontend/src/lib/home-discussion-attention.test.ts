@@ -87,6 +87,42 @@ describe("buildDiscussionAttentionItems", () => {
     expect(items[2]?.badge).toBeNull();
   });
 
+  it("keeps pinned rooms above unpinned, Board first among pins", () => {
+    const items = buildDiscussionAttentionItems(
+      [
+        room({
+          room_id: "hot-unread",
+          unread_count: 9,
+          unread_display: "9",
+          last_message_at: "2030-01-01T17:30:00Z",
+        }),
+        room({
+          room_id: "event:2",
+          label: "Other pin",
+          pinned: true,
+          pinned_at: "2030-01-01T12:00:00Z",
+          last_message_at: "2029-06-01T00:00:00Z",
+        }),
+        room({
+          room_id: "board",
+          label: "Board Discussion",
+          pinned: true,
+          pinned_at: "2029-01-01T00:00:00Z",
+          last_message_at: "2029-01-02T00:00:00Z",
+        }),
+      ],
+      { now: NOW, cap: 5 },
+    );
+
+    expect(items.map((item) => item.room.room_id)).toEqual([
+      "board",
+      "event:2",
+      "hot-unread",
+    ]);
+    expect(items[0]?.kind).toBe("recent");
+    expect(items[0]?.room.pinned).toBe(true);
+  });
+
   it("fills remaining slots with recent rooms", () => {
     const items = buildDiscussionAttentionItems(
       [

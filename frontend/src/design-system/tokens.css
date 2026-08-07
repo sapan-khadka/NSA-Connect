@@ -1,16 +1,19 @@
 /**
- * CampusOS CSS custom properties.
+ * NSA Connect CSS custom properties.
  * Keep values in sync with `tokens.ts` — that file is the TypeScript source of truth.
+ *
+ * Brand chrome: monochrome primary / surfaces.
+ * Semantic hue: badges, roles, success / warning (and data encoding outside tokens).
  */
 
 :root {
   /* ——— Color: semantic ——— */
-  --color-foreground: #18181b;
-  --color-label: #6b7280;
-  --color-primary: #0f766e;
-  --color-primary-hover: #0d5f5a;
-  --color-accent: #0f766e;
-  --color-accent-hover: #0d5f5a;
+  --color-foreground: #111111;
+  --color-label: #6b6b6b;
+  --color-primary: #111111;
+  --color-primary-hover: #000000;
+  --color-accent: #111111;
+  --color-accent-hover: #000000;
   --color-mint: #99f6e4;
   --color-urgent: #ffff66;
 
@@ -21,16 +24,16 @@
   --color-success: #16a34a;
   --color-success-surface: #f0fdf4;
 
-  --color-border: #e5e7eb;
-  --color-border-muted: #f1f5f9;
+  --color-border: #e5e5e5;
+  --color-border-muted: #f0f0f0;
 
-  --color-surface: #f8fafc;
+  --color-surface: #fafafa;
   --color-surface-card: #ffffff;
-  --color-surface-muted: #f1f5f9;
+  --color-surface-muted: #f4f4f4;
 
   --color-kanban-header: #fafafa;
-  --color-kanban-border: #e5e7eb;
-  --color-kanban-badge: #e5e7eb;
+  --color-kanban-border: #e5e5e5;
+  --color-kanban-badge: #e8e8e8;
 
   --color-marigold: #ea580c;
   --color-marigold-hover: #c2410c;
@@ -70,7 +73,7 @@
   --role-pro-bg: #eef0f8;
   --role-board-fg: #4a6274;
   --role-board-bg: #edf1f5;
-  --role-general-fg: #64748b;
+  --role-general-fg: #6b7280;
   --role-general-bg: #f8fafc;
 
   /* ——— Typography ——— */
@@ -93,10 +96,10 @@
   --leading-tight: 1.25;
   --leading-snug: 1.375;
   --leading-normal: 1.5;
-  --tracking-headline: -0.025em;
-  --tracking-subhead: -0.012em;
-  --tracking-body: -0.006em;
-  --tracking-label: 0.02em;
+  --tracking-headline: -0.03em;
+  --tracking-subhead: -0.015em;
+  --tracking-body: -0.01em;
+  --tracking-label: 0.04em;
 
   /* ——— Spacing (8-point grid) ——— */
   --space-0: 0px;
@@ -108,28 +111,30 @@
   --space-6: 48px;
   --space-8: 64px;
 
-  /* ——— Radius ——— */
-  --radius-sm: 8px;
-  --radius-md: 10px;
-  --radius-lg: 12px;
-  --radius-card: 16px;
+  /* ——— Radius (slightly tighter — ops UI) ——— */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-card: 12px;
   --radius-pill: 980px;
-  --radius-kanban: 10px;
+  --radius-kanban: 8px;
 
   /* ——— Elevation ——— */
-  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.04);
   --shadow-card-hover:
-    0 4px 8px rgba(15, 23, 42, 0.04), 0 12px 24px rgba(15, 23, 42, 0.06);
+    0 4px 8px rgba(0, 0, 0, 0.04), 0 10px 20px rgba(0, 0, 0, 0.05);
   --ds-card-shadow: var(--shadow-card);
   --ds-card-shadow-hover: var(--shadow-card-hover);
   --ds-border: var(--color-border);
 
   /* ——— Motion ——— */
-  --motion-duration: 200ms;
-  --motion-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-duration: 180ms;
+  --motion-easing: cubic-bezier(0.2, 0.8, 0.2, 1);
 
   /* ——— Layout ——— */
   --sidebar-width: 240px;
+  --inbox-rail-width: 0px;
+  --inbox-rail-collapsed-width: 64px;
   --main-max-width: 1500px;
 }
 

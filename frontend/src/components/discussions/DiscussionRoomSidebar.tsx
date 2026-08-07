@@ -1,13 +1,11 @@
 import {
   Archive,
-  BellOff,
   MessageSquare,
-  Pin,
   Plus,
   Search,
   X,
 } from "lucide-react";
-import { useMemo, useState, type MouseEvent } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 
 import type {
@@ -19,151 +17,13 @@ import { discussionRoomPath } from "../../lib/discussion-paths";
 import { formatCompactRelativeTimestamp } from "../../lib/format-datetime";
 import { AppIcon } from "../ui/AppIcon";
 import { Button } from "../ui/Button";
-import { DiscussionRoomAvatar } from "./DiscussionRoomAvatar";
+import {
+  DiscussionInboxRow,
+  DiscussionInboxSectionLabel,
+} from "./DiscussionInboxRow";
 
 function SectionLabel({ children }: { children: string }) {
-  return (
-    <p className="px-3 pb-0.5 pt-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-gray-400">
-      {children}
-    </p>
-  );
-}
-
-function DiscussionSidebarRow({
-  room,
-  selected,
-  onSelect,
-  onTogglePin,
-  pinDisabled,
-}: {
-  room: DiscussionInboxRoom;
-  selected: boolean;
-  onSelect: (roomId: string) => void;
-  onTogglePin: (roomId: string) => void;
-  pinDisabled?: boolean;
-}) {
-  const unread = room.unread_count > 0;
-  const isBoard = room.room_id === "board";
-  const muted = Boolean(room.muted);
-
-  function handlePinClick(event: MouseEvent<HTMLButtonElement>) {
-    event.preventDefault();
-    event.stopPropagation();
-    if (!isBoard) {
-      onTogglePin(room.room_id);
-    }
-  }
-
-  const previewAuthor = room.last_message_author;
-  const previewText = room.last_message_preview;
-
-  return (
-    <div
-      role="option"
-      aria-selected={selected}
-      tabIndex={0}
-      onClick={() => onSelect(room.room_id)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onSelect(room.room_id);
-        }
-      }}
-      className={[
-        "group relative flex min-h-[42px] w-full cursor-pointer items-center gap-2 px-2.5 py-1 transition-colors",
-        selected
-          ? "bg-[#EFEFEF] before:absolute before:inset-y-1 before:left-0 before:w-[3px] before:rounded-full before:bg-primary"
-          : "hover:bg-[#F5F5F4]",
-      ].join(" ")}
-    >
-      {unread && !selected ? (
-        <span
-          className="absolute left-1 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-primary"
-          aria-hidden="true"
-        />
-      ) : null}
-      <DiscussionRoomAvatar room={room} size="xs" />
-
-      <div className="min-w-0 flex-1">
-        <div className="flex items-baseline justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-1">
-            <p className="truncate text-[13px] font-semibold leading-[1.2] text-foreground">
-              {room.label}
-            </p>
-            {muted ? (
-              <span className="shrink-0 text-gray-400" title="Muted">
-                <AppIcon icon={BellOff} size="xs" />
-              </span>
-            ) : null}
-          </div>
-          {room.last_message_at ? (
-            <time
-              dateTime={room.last_message_at}
-              className={[
-                "shrink-0 text-[10px] tabular-nums leading-4",
-                unread ? "font-medium text-gray-500" : "text-gray-400",
-              ].join(" ")}
-            >
-              {formatCompactRelativeTimestamp(room.last_message_at)}
-            </time>
-          ) : null}
-        </div>
-
-        <div className="mt-px flex items-center gap-1.5">
-          <p className="min-w-0 flex-1 truncate text-[11px] leading-[1.2] text-gray-400">
-            {previewText ? (
-              <>
-                {previewAuthor ? (
-                  <span className="font-medium text-gray-500">
-                    {previewAuthor}:{" "}
-                  </span>
-                ) : null}
-                <span className={unread ? "text-gray-600" : "text-gray-400"}>
-                  {previewText}
-                </span>
-              </>
-            ) : (
-              "No messages yet"
-            )}
-          </p>
-
-          <div className="flex shrink-0 items-center gap-0.5">
-            {room.unread_display ? (
-              <span className="inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-foreground px-1 text-[8px] font-semibold tabular-nums leading-none text-white">
-                {room.unread_display}
-              </span>
-            ) : null}
-            <button
-              type="button"
-              aria-label={
-                isBoard
-                  ? "Board Discussion is always pinned"
-                  : room.pinned
-                    ? `Unpin ${room.label}`
-                    : `Pin ${room.label}`
-              }
-              aria-pressed={room.pinned}
-              disabled={pinDisabled || isBoard}
-              onClick={handlePinClick}
-              className={[
-                "inline-flex h-6 w-6 items-center justify-center rounded-full transition",
-                room.pinned
-                  ? "text-foreground"
-                  : "text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-gray-100 hover:text-foreground max-sm:opacity-100",
-                isBoard ? "cursor-default" : "",
-              ].join(" ")}
-            >
-              <AppIcon
-                icon={Pin}
-                size="xs"
-                className={room.pinned ? "fill-current" : ""}
-              />
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  return <DiscussionInboxSectionLabel>{children}</DiscussionInboxSectionLabel>;
 }
 
 function PendingReviewRow({
@@ -379,13 +239,14 @@ export function DiscussionRoomSidebar({
 
   function renderRoomList(list: DiscussionInboxRoom[]) {
     return list.map((room) => (
-      <DiscussionSidebarRow
+      <DiscussionInboxRow
         key={room.room_id}
         room={room}
         selected={selectedRoomId === room.room_id}
         onSelect={handleSelect}
         onTogglePin={onTogglePin}
         pinDisabled={pinDisabled}
+        pinInteractive
       />
     ));
   }

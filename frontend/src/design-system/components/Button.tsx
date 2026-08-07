@@ -24,9 +24,9 @@ const VARIANT_CLASS: Record<ButtonVariant, string> = {
   primary:
     "bg-primary text-white hover:bg-primary-hover focus-visible:ring-primary/30",
   secondary:
-    "bg-badge-teal-bg text-primary hover:bg-badge-teal-bg/80 focus-visible:ring-primary/20",
+    "bg-surface-muted text-foreground hover:bg-border focus-visible:ring-primary/20",
   outline:
-    "border border-gray-200 bg-surface-card text-foreground hover:border-primary/40 hover:bg-badge-teal-bg focus-visible:ring-primary/20",
+    "border border-gray-200 bg-surface-card text-foreground hover:border-foreground/25 hover:bg-surface-muted focus-visible:ring-primary/20",
   ghost:
     "bg-transparent text-foreground hover:bg-surface-muted focus-visible:ring-primary/20",
   danger:

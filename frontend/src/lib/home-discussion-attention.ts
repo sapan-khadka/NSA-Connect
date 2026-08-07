@@ -157,6 +157,23 @@ function unreadBadge(room: DiscussionInboxRoom): string | null {
   return room.unread_display ?? String(room.unread_count);
 }
 
+function classifyKind(
+  room: DiscussionInboxRoom,
+  nowMs: number,
+  viewerName: string | null,
+): DiscussionAttentionKind {
+  if (roomMentionsYou(room, viewerName) && room.unread_count > 0) {
+    return "mentioned";
+  }
+  if (room.unread_count > 0) {
+    return "unread";
+  }
+  if (isActiveNow(room, nowMs)) {
+    return "active";
+  }
+  return "recent";
+}
+
 function buildItem(
   room: DiscussionInboxRoom,
   kind: DiscussionAttentionKind,
@@ -213,15 +230,68 @@ function buildItem(
   };
 }
 
-function sortByRecency(a: DiscussionInboxRoom, b: DiscussionInboxRoom): number {
-  const aTime = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
-  const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
-  return bTime - aTime;
+function messageTimeMs(room: DiscussionInboxRoom): number {
+  if (!room.last_message_at) {
+    return 0;
+  }
+  const at = new Date(room.last_message_at).getTime();
+  return Number.isFinite(at) ? at : 0;
+}
+
+function pinnedTimeMs(room: DiscussionInboxRoom): number {
+  if (!room.pinned_at) {
+    return 0;
+  }
+  const at = new Date(room.pinned_at).getTime();
+  return Number.isFinite(at) ? at : 0;
 }
 
 /**
- * Compact Linear-style attention feed for the home Discussions card.
- * Mentions → unread → active → recent filler so the card stays dense.
+ * Match Discussions inbox ordering: pinned block first (Board always first),
+ * then attention rank among peers, then recency.
+ */
+export function compareAttentionItems(
+  a: DiscussionAttentionItem,
+  b: DiscussionAttentionItem,
+): number {
+  const pinA = a.room.pinned ? 0 : 1;
+  const pinB = b.room.pinned ? 0 : 1;
+  if (pinA !== pinB) {
+    return pinA - pinB;
+  }
+
+  if (a.room.pinned && b.room.pinned) {
+    if (a.room.room_id === "board" && b.room.room_id !== "board") {
+      return -1;
+    }
+    if (b.room.room_id === "board" && a.room.room_id !== "board") {
+      return 1;
+    }
+    const byPinnedAt = pinnedTimeMs(b.room) - pinnedTimeMs(a.room);
+    if (byPinnedAt !== 0) {
+      return byPinnedAt;
+    }
+  }
+
+  const byKind = KIND_RANK[a.kind] - KIND_RANK[b.kind];
+  if (byKind !== 0) {
+    return byKind;
+  }
+
+  if (a.kind === "mentioned" || a.kind === "unread") {
+    const byUnread = b.room.unread_count - a.room.unread_count;
+    if (byUnread !== 0) {
+      return byUnread;
+    }
+  }
+
+  return messageTimeMs(b.room) - messageTimeMs(a.room);
+}
+
+/**
+ * Compact attention feed for Home Inbox + App Inbox rail.
+ * Pins (incl. always-pinned Board Discussion) stay above unpinned rooms,
+ * same as /discussions. Within each block: mentions → unread → active → recent.
  */
 export function buildDiscussionAttentionItems(
   rooms: DiscussionInboxRoom[],
@@ -238,55 +308,53 @@ export function buildDiscussionAttentionItems(
       : (options?.now ?? Date.now());
   const viewerName = options?.viewerName ?? null;
 
-  const priority: DiscussionAttentionItem[] = [];
+  const items: DiscussionAttentionItem[] = [];
 
   for (const room of rooms) {
     const mentioned = roomMentionsYou(room, viewerName);
-    if (mentioned && room.unread_count > 0) {
-      priority.push(buildItem(room, "mentioned"));
+    // Muted rooms stay out of the feed unless they have an unread mention.
+    if (room.muted && !(mentioned && room.unread_count > 0)) {
       continue;
     }
-    if (room.muted) {
+
+    const kind = classifyKind(room, nowMs, viewerName);
+    // Keep pinned rooms in the feed even when quiet so Board Discussion
+    // (always pinned) and user pins stay visible and ordered at the top.
+    if (
+      kind === "recent" &&
+      !room.pinned &&
+      room.unread_count <= 0 &&
+      !isActiveNow(room, nowMs)
+    ) {
+      // Defer quiet unpinned rooms to the recency fill pass below.
       continue;
     }
-    if (room.unread_count > 0) {
-      priority.push(buildItem(room, "unread"));
-      continue;
-    }
-    if (isActiveNow(room, nowMs)) {
-      priority.push(buildItem(room, "active"));
-    }
+
+    items.push(buildItem(room, kind));
   }
 
-  priority.sort((a, b) => {
-    const byKind = KIND_RANK[a.kind] - KIND_RANK[b.kind];
-    if (byKind !== 0) {
-      return byKind;
-    }
-    if (a.kind === "mentioned" || a.kind === "unread") {
-      const byUnread = b.room.unread_count - a.room.unread_count;
-      if (byUnread !== 0) {
-        return byUnread;
-      }
-    }
-    return sortByRecency(a.room, b.room);
-  });
+  items.sort(compareAttentionItems);
 
-  const items = priority.slice(0, Math.max(0, cap));
   if (items.length >= cap) {
-    return items;
+    return items.slice(0, Math.max(0, cap));
   }
 
   const used = new Set(items.map((item) => item.room.room_id));
-  const recent = [...rooms]
-    .filter((room) => !used.has(room.room_id) && !room.muted)
-    .sort(sortByRecency);
+  const recent = rooms
+    .filter((room) => {
+      if (used.has(room.room_id) || room.muted) {
+        return false;
+      }
+      return true;
+    })
+    .map((room) => buildItem(room, "recent"))
+    .sort(compareAttentionItems);
 
-  for (const room of recent) {
+  for (const item of recent) {
     if (items.length >= cap) {
       break;
     }
-    items.push(buildItem(room, "recent"));
+    items.push(item);
   }
 
   return items;

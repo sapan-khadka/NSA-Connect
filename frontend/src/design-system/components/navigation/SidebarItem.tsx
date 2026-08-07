@@ -27,7 +27,7 @@ const itemBaseClass =
   "group relative ds-icon-label w-full gap-2.5 rounded-card px-2.5 py-2 text-sm font-medium text-foreground transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20";
 
 const itemActiveClass =
-  "bg-badge-teal-bg font-semibold text-primary shadow-none before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:rounded-full before:bg-primary";
+  "bg-surface-muted font-semibold text-foreground shadow-none before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:rounded-full before:bg-foreground";
 
 const itemIdleClass =
   "hover:translate-x-0.5 hover:bg-surface-muted hover:text-foreground";

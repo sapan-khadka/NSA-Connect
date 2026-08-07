@@ -1,19 +1,20 @@
 /**
- * CampusOS design tokens — single source of truth for color, type, space,
- * radius, and elevation. Values match the current production UI so adopting
- * these tokens does not change appearance.
+ * NSA Connect design tokens.
+ * App chrome stays monochrome (primary / surfaces). Semantic badges, roles,
+ * success/warning, and other data-encoding colors keep distinct hues.
+ * Keep values in sync with tokens.css.
  */
 
 export const colors = {
-  foreground: "#18181B",
-  label: "#6B7280",
+  foreground: "#111111",
+  label: "#6B6B6B",
   primary: {
-    DEFAULT: "#0F766E",
-    hover: "#0D5F5A",
+    DEFAULT: "#111111",
+    hover: "#000000",
   },
   accent: {
-    DEFAULT: "#0F766E",
-    hover: "#0D5F5A",
+    DEFAULT: "#111111",
+    hover: "#000000",
   },
   mint: "#99F6E4",
   urgent: "#FFFF66",
@@ -29,17 +30,17 @@ export const colors = {
     DEFAULT: "#16A34A",
     surface: "#F0FDF4",
   },
-  border: "#E5E7EB",
-  borderMuted: "#F1F5F9",
+  border: "#E5E5E5",
+  borderMuted: "#F0F0F0",
   surface: {
-    DEFAULT: "#F8FAFC",
+    DEFAULT: "#FAFAFA",
     card: "#FFFFFF",
-    muted: "#F1F5F9",
+    muted: "#F4F4F4",
   },
   kanban: {
     header: "#FAFAFA",
-    border: "#E5E7EB",
-    badge: "#E5E7EB",
+    border: "#E5E5E5",
+    badge: "#E8E8E8",
   },
   badge: {
     green: { fg: "#15803D", bg: "#F0FDF4" },
@@ -60,14 +61,14 @@ export const colors = {
   },
   roleBadge: {
     president: { fg: "#9A6B2E", bg: "#FBF0E3" },
-    vicePresident: { fg: "#0E7490", bg: "#ECFEFF" },
+    vicePresident: { fg: "#8B6048", bg: "#F7EDE8" },
     secretary: { fg: "#5C6B7A", bg: "#EDF1F5" },
     treasurer: { fg: "#0F766E", bg: "#F0FDFA" },
     eventManager: { fg: "#6B5494", bg: "#F0ECF7" },
     nsr: { fg: "#15803D", bg: "#F0FDF4" },
     pro: { fg: "#5A6490", bg: "#EEF0F8" },
     board: { fg: "#4A6274", bg: "#EDF1F5" },
-    general: { fg: "#64748B", bg: "#F8FAFC" },
+    general: { fg: "#6B7280", bg: "#F8FAFC" },
   },
 } as const;
 
@@ -96,23 +97,23 @@ export const spacingScale = {
 } as const;
 
 export const radii = {
-  sm: "8px",
-  md: "10px",
-  lg: "12px",
-  card: "16px",
+  sm: "6px",
+  md: "8px",
+  lg: "10px",
+  card: "12px",
   pill: "980px",
-  kanban: "10px",
+  kanban: "8px",
 } as const;
 
 export const shadows = {
-  card: "0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06)",
+  card: "0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.04)",
   cardHover:
-    "0 4px 8px rgba(15, 23, 42, 0.04), 0 12px 24px rgba(15, 23, 42, 0.06)",
+    "0 4px 8px rgba(0, 0, 0, 0.04), 0 10px 20px rgba(0, 0, 0, 0.05)",
 } as const;
 
 export const motion = {
-  duration: "200ms",
-  easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+  duration: "180ms",
+  easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
 } as const;
 
 /**
@@ -158,10 +159,10 @@ export const typography = {
     normal: "1.5",
   },
   letterSpacing: {
-    headline: "-0.02em",
-    subhead: "-0.01em",
-    body: "-0.005em",
-    label: "0.03em",
+    headline: "-0.03em",
+    subhead: "-0.015em",
+    body: "-0.01em",
+    label: "0.04em",
   },
 } as const;
 

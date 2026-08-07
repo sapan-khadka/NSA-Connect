@@ -15,7 +15,7 @@ export const sidebarItemBaseClass = [
 ].join(" ");
 
 export const sidebarItemActiveClass =
-  "bg-badge-teal-bg font-semibold text-primary shadow-none before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:rounded-full before:bg-primary before:transition-transform before:duration-200";
+  "bg-surface-muted font-semibold text-foreground shadow-none before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:rounded-full before:bg-foreground before:transition-transform before:duration-200";
 
 export const sidebarItemIdleClass =
   "hover:translate-x-0.5 hover:bg-surface-muted hover:text-foreground active:scale-[0.99] motion-reduce:active:scale-100";

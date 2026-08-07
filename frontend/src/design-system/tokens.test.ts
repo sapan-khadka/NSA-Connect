@@ -8,15 +8,19 @@ import {
   typography,
 } from "./tokens";
 
-describe("CampusOS design tokens", () => {
-  it("exposes the CampusOS semantic color foundation", () => {
-    expect(colors.surface.DEFAULT).toBe("#F8FAFC");
+describe("NSA Connect design tokens", () => {
+  it("uses monochrome brand chrome with colorful semantic tones", () => {
+    expect(colors.surface.DEFAULT).toBe("#FAFAFA");
     expect(colors.surface.card).toBe("#FFFFFF");
-    expect(colors.border).toBe("#E5E7EB");
-    expect(colors.primary.DEFAULT).toBe("#0F766E");
-    expect(colors.warning.DEFAULT).toBe("#EA580C");
+    expect(colors.border).toBe("#E5E5E5");
+    expect(colors.primary.DEFAULT).toBe("#111111");
+    expect(colors.primary.hover).toBe("#000000");
+    expect(colors.accent.DEFAULT).toBe("#111111");
+    expect(colors.badge.teal.fg).toBe("#0F766E");
     expect(colors.success.DEFAULT).toBe("#16A34A");
+    expect(colors.warning.DEFAULT).toBe("#EA580C");
     expect(colors.overdue.DEFAULT).toBe("#DC2626");
+    expect(colors.roleBadge.president.fg).toBe("#9A6B2E");
   });
 
   it("uses an 8-point spacing grid", () => {
@@ -26,9 +30,9 @@ describe("CampusOS design tokens", () => {
     expect(spacing[4]).toBe("32px");
   });
 
-  it("standardizes card radius and soft shadows", () => {
-    expect(radii.card).toBe("16px");
-    expect(shadows.card).toContain("rgba(15, 23, 42");
+  it("standardizes tighter card radius and soft neutral shadows", () => {
+    expect(radii.card).toBe("12px");
+    expect(shadows.card).toContain("rgba(0, 0, 0");
   });
 
   it("defines the Plus Jakarta Sans typography scale", () => {

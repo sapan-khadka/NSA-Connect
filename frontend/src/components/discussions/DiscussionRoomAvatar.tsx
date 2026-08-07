@@ -49,7 +49,7 @@ export function DiscussionRoomAvatar({
   if (room.room_id === "board") {
     return (
       <span
-        className={`${baseClass} bg-[var(--color-badge-teal-bg,#ecfdf5)] text-primary`}
+        className={`${baseClass} bg-surface-muted text-foreground`}
         aria-hidden="true"
       >
         <AppIcon
@@ -96,7 +96,7 @@ export function DiscussionRoomAvatar({
         <span
           className={[
             "absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white",
-            online ? "bg-success" : "bg-gray-300",
+            online ? "bg-foreground" : "bg-gray-300",
           ].join(" ")}
           aria-label={online ? "Online" : "Offline"}
         />
@@ -117,7 +117,7 @@ export function DiscussionRoomAvatar({
     }
     return (
       <span
-        className={`${baseClass} bg-primary text-white`}
+        className={`${baseClass} bg-foreground text-white`}
         aria-hidden="true"
       >
         <AppIcon icon={Users} size={size === "md" ? "sm" : "xs"} />
