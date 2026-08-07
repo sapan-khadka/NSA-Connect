@@ -63,7 +63,8 @@ def test_discussion_inbox_lists_board_and_event_rooms_with_unread(
     board_room = next(room for room in rooms if room["room_id"] == "board")
     assert board_room["unread_count"] >= 1
     assert board_room["unread_display"] is not None
-    assert board_room["pinned"] is True
+    assert board_room["pinned"] is False
+    assert board_room["pinned_at"] is None
 
     marked = client.post(
         "/api/v1/discussions/read",
@@ -119,10 +120,26 @@ def test_discussion_pin_toggle_orders_pinned_first(client, db_session):
     assert pin.json() == {"room_id": f"event:{event_id}", "pinned": True}
 
     rooms = client.get("/api/v1/discussions/inbox", headers=headers).json()["rooms"]
-    assert rooms[0]["room_id"] == "board"
+    assert rooms[0]["room_id"] == f"event:{event_id}"
     assert rooms[0]["pinned"] is True
-    assert rooms[1]["room_id"] == f"event:{event_id}"
-    assert rooms[1]["pinned"] is True
+    board_room = next(room for room in rooms if room["room_id"] == "board")
+    assert board_room["pinned"] is False
+
+    pin_board = client.post(
+        "/api/v1/discussions/pins/toggle",
+        json={"room_id": "board"},
+        headers=headers,
+    )
+    assert pin_board.status_code == 200
+    assert pin_board.json() == {"room_id": "board", "pinned": True}
+
+    rooms_after = client.get("/api/v1/discussions/inbox", headers=headers).json()[
+        "rooms"
+    ]
+    assert rooms_after[0]["room_id"] == "board"
+    assert rooms_after[0]["pinned"] is True
+    assert rooms_after[1]["room_id"] == f"event:{event_id}"
+    assert rooms_after[1]["pinned"] is True
 
     unpin = client.post(
         "/api/v1/discussions/pins/toggle",
@@ -130,6 +147,13 @@ def test_discussion_pin_toggle_orders_pinned_first(client, db_session):
         headers=headers,
     )
     assert unpin.json()["pinned"] is False
+
+    unpin_board = client.post(
+        "/api/v1/discussions/pins/toggle",
+        json={"room_id": "board"},
+        headers=headers,
+    )
+    assert unpin_board.json()["pinned"] is False
 
 
 def test_discussion_inbox_marks_unread_mentions_you(client, db_session):

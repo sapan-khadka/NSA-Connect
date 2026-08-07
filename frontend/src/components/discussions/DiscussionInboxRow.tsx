@@ -5,6 +5,7 @@ import { Link } from "react-router";
 import type { DiscussionInboxRoom } from "../../lib/discussion-api";
 import { discussionRoomPath } from "../../lib/discussion-paths";
 import { formatCompactRelativeTimestamp } from "../../lib/format-datetime";
+import { useLongPress } from "../../hooks/useLongPress";
 import { AppIcon } from "../ui/AppIcon";
 import { DiscussionRoomAvatar } from "./DiscussionRoomAvatar";
 
@@ -17,6 +18,7 @@ export function DiscussionInboxRow({
   selected = false,
   onSelect,
   onTogglePin,
+  onRequestActions,
   pinDisabled = false,
   pinInteractive = true,
   asLink = false,
@@ -25,6 +27,8 @@ export function DiscussionInboxRow({
   selected?: boolean;
   onSelect?: (roomId: string) => void;
   onTogglePin?: (roomId: string) => void;
+  /** Long-press / right-click opens chat actions (mobile sheet). */
+  onRequestActions?: (room: DiscussionInboxRoom) => void;
   pinDisabled?: boolean;
   /** When false, pin is display-only (Home rail). */
   pinInteractive?: boolean;
@@ -32,21 +36,26 @@ export function DiscussionInboxRow({
   asLink?: boolean;
 }) {
   const unread = room.unread_count > 0;
-  const isBoard = room.room_id === "board";
   const muted = Boolean(room.muted);
   const previewAuthor = room.last_message_author;
   const previewText = room.last_message_preview;
+  const longPressActions = Boolean(onRequestActions);
+  const longPress = useLongPress(
+    onRequestActions ? () => onRequestActions(room) : undefined,
+    { enabled: longPressActions },
+  );
 
   function handlePinClick(event: MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
     event.stopPropagation();
-    if (!isBoard && pinInteractive && onTogglePin) {
+    if (pinInteractive && onTogglePin) {
       onTogglePin(room.room_id);
     }
   }
 
   const className = [
     "discussion-inbox-row group relative flex min-h-[42px] w-full cursor-pointer items-center gap-2 px-2.5 py-1.5 transition-colors",
+    longPressActions ? "select-none touch-manipulation [-webkit-touch-callout:none]" : "",
     selected
       ? "bg-[#EFEFEF] before:absolute before:inset-y-1 before:left-0 before:w-[3px] before:rounded-full before:bg-primary"
       : room.pinned
@@ -116,8 +125,18 @@ export function DiscussionInboxRow({
                 {room.unread_display}
               </span>
             ) : null}
+            {/* Mobile long-press owns controls; keep a static pin cue + desktop toggle. */}
+            {room.pinned && longPressActions ? (
+              <span
+                className="inline-flex h-6 w-6 items-center justify-center text-foreground md:hidden"
+                title="Pinned"
+                aria-hidden
+              >
+                <AppIcon icon={Pin} size="xs" className="fill-current" />
+              </span>
+            ) : null}
             {room.pinned || pinInteractive ? (
-              pinInteractive && !isBoard ? (
+              pinInteractive ? (
                 <button
                   type="button"
                   aria-label={
@@ -130,10 +149,13 @@ export function DiscussionInboxRow({
                   onClick={handlePinClick}
                   className={[
                     "inline-flex h-6 w-6 items-center justify-center rounded-full transition",
+                    longPressActions ? "max-md:hidden" : "",
                     room.pinned
                       ? "text-foreground"
-                      : "text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-gray-100 hover:text-foreground max-sm:opacity-100",
-                  ].join(" ")}
+                      : "text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-gray-100 hover:text-foreground",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
                 >
                   <AppIcon
                     icon={Pin}
@@ -144,11 +166,7 @@ export function DiscussionInboxRow({
               ) : room.pinned ? (
                 <span
                   className="inline-flex h-6 w-6 items-center justify-center text-foreground"
-                  title={
-                    isBoard
-                      ? "Board Discussion is always pinned"
-                      : "Pinned"
-                  }
+                  title="Pinned"
                   aria-hidden
                 >
                   <AppIcon icon={Pin} size="xs" className="fill-current" />
@@ -166,6 +184,7 @@ export function DiscussionInboxRow({
       <Link
         to={discussionRoomPath(room.room_id)}
         className={[className, "no-underline text-inherit"].join(" ")}
+        {...longPress}
       >
         {body}
       </Link>
@@ -185,6 +204,7 @@ export function DiscussionInboxRow({
         }
       }}
       className={className}
+      {...longPress}
     >
       {body}
     </div>
@@ -207,10 +227,7 @@ export function DiscussionInboxSectionLabel({
 export function groupDiscussionInboxRooms(rooms: DiscussionInboxRoom[]) {
   const pinned = rooms.filter((room) => room.pinned);
   const channels = rooms.filter(
-    (room) =>
-      !room.pinned &&
-      room.event_type !== "dm" &&
-      room.room_id !== "board",
+    (room) => !room.pinned && room.event_type !== "dm",
   );
   const directMessages = rooms.filter(
     (room) => !room.pinned && room.event_type === "dm",

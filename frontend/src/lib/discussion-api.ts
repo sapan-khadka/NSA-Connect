@@ -164,6 +164,7 @@ export type DiscussionInboxRoom = {
   pinned: boolean;
   pinned_at: string | null;
   muted?: boolean;
+  archived_for_me?: boolean;
   peer_user_id?: number | null;
   peer_avatar_url?: string | null;
   peer_online?: boolean | null;
@@ -181,6 +182,7 @@ export type DiscussionArchivedRoom = {
 export type DiscussionInboxResponse = {
   rooms: DiscussionInboxRoom[];
   archived_rooms?: DiscussionArchivedRoom[];
+  personal_archived_rooms?: DiscussionInboxRoom[];
 };
 
 export function discussionRoomIdFromScope(
@@ -232,6 +234,16 @@ export async function toggleDiscussionRoomMute(
     "/v1/discussions/mutes/toggle",
     { room_id: roomId },
   );
+  return response.data;
+}
+
+export async function toggleDiscussionRoomUserArchive(
+  roomId: string,
+): Promise<{ room_id: string; archived_for_me: boolean }> {
+  const response = await api.post<{
+    room_id: string;
+    archived_for_me: boolean;
+  }>("/v1/discussions/user-archives/toggle", { room_id: roomId });
   return response.data;
 }
 

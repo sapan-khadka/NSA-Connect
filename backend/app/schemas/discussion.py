@@ -229,6 +229,11 @@ class DiscussionMuteToggleResponse(BaseModel):
     muted: bool
 
 
+class DiscussionUserArchiveToggleResponse(BaseModel):
+    room_id: str
+    archived_for_me: bool
+
+
 class DiscussionWsTicketResponse(BaseModel):
     token: str
     expires_at: datetime
@@ -270,6 +275,8 @@ class DiscussionInboxRoomResponse(BaseModel):
     pinned: bool = False
     pinned_at: datetime | None = None
     muted: bool = False
+    # True on personal-archive inbox rows (archived_for_me list only).
+    archived_for_me: bool = False
     peer_user_id: int | None = None
     peer_avatar_url: str | None = None
     peer_online: bool | None = None
@@ -278,5 +285,9 @@ class DiscussionInboxRoomResponse(BaseModel):
 
 class DiscussionInboxResponse(BaseModel):
     rooms: list[DiscussionInboxRoomResponse]
-    # Pres/VP only — archived rooms available for restore.
+    # Pres/VP only — chapter-wide archived rooms available for restore.
     archived_rooms: list[DiscussionArchivedRoomResponse] = Field(default_factory=list)
+    # Per-user hidden chats (“archive for me”).
+    personal_archived_rooms: list[DiscussionInboxRoomResponse] = Field(
+        default_factory=list
+    )

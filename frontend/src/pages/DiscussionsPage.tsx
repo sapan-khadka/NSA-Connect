@@ -20,9 +20,11 @@ import {
   fetchDiscussionRoom,
   fetchMyDiscussionRooms,
   fetchPendingDiscussionRooms,
+  markDiscussionRoomRead,
   rejectDiscussionRoom,
   toggleDiscussionRoomMute,
   toggleDiscussionRoomPin,
+  toggleDiscussionRoomUserArchive,
   unarchiveDiscussionInboxRoom,
   type DiscussionArchivedRoom,
   type DiscussionInboxRoom,
@@ -101,6 +103,9 @@ export function DiscussionsPage() {
   const [archivedRooms, setArchivedRooms] = useState<DiscussionArchivedRoom[]>(
     [],
   );
+  const [personalArchivedRooms, setPersonalArchivedRooms] = useState<
+    DiscussionInboxRoom[]
+  >([]);
   const [showArchived, setShowArchived] = useState(false);
   const [queuesVersion, setQueuesVersion] = useState(0);
   const [boardMemberCount, setBoardMemberCount] = useState<number | null>(null);
@@ -145,11 +150,15 @@ export function DiscussionsPage() {
             ),
           );
           setArchivedRooms(response.archived_rooms ?? []);
+          setPersonalArchivedRooms(
+            sortRooms(response.personal_archived_rooms ?? []),
+          );
         }
       } catch {
         if (!cancelled && !opts?.silent) {
           setRooms([]);
           setArchivedRooms([]);
+          setPersonalArchivedRooms([]);
           setError("Could not load discussions.");
         }
       } finally {
@@ -279,6 +288,9 @@ export function DiscussionsPage() {
       const response = await fetchDiscussionInbox();
       setRooms(sortRooms(response.rooms));
       setArchivedRooms(response.archived_rooms ?? []);
+      setPersonalArchivedRooms(
+        sortRooms(response.personal_archived_rooms ?? []),
+      );
     } catch {
       // Keep existing list on silent refresh failure.
     }
@@ -301,10 +313,62 @@ export function DiscussionsPage() {
     }
   }
 
-  async function handleTogglePin(roomId: string) {
-    if (roomId === "board") {
+  async function handleToggleArchiveForMe(roomId: string) {
+    const fromActive = rooms.find((room) => room.room_id === roomId) ?? null;
+    const fromPersonal =
+      personalArchivedRooms.find((room) => room.room_id === roomId) ?? null;
+    const source = fromActive ?? fromPersonal;
+    if (!source) {
       return;
     }
+
+    const previousRooms = rooms;
+    const previousPersonal = personalArchivedRooms;
+    const willArchive = !source.archived_for_me;
+
+    if (willArchive) {
+      setRooms((current) =>
+        current.filter((room) => room.room_id !== roomId),
+      );
+      setPersonalArchivedRooms((current) =>
+        sortRooms([
+          ...current.filter((room) => room.room_id !== roomId),
+          {
+            ...source,
+            pinned: false,
+            pinned_at: null,
+            archived_for_me: true,
+          },
+        ]),
+      );
+    } else {
+      setPersonalArchivedRooms((current) =>
+        current.filter((room) => room.room_id !== roomId),
+      );
+      setRooms((current) =>
+        sortRooms([
+          ...current.filter((room) => room.room_id !== roomId),
+          {
+            ...source,
+            archived_for_me: false,
+          },
+        ]),
+      );
+    }
+
+    try {
+      const result = await toggleDiscussionRoomUserArchive(roomId);
+      if (result.archived_for_me) {
+        await reloadInboxSilent();
+      } else {
+        await reloadInboxSilent();
+      }
+    } catch {
+      setRooms(previousRooms);
+      setPersonalArchivedRooms(previousPersonal);
+    }
+  }
+  async function handleTogglePin(roomId: string) {
     const previous = rooms;
     setRooms((current) =>
       sortRooms(
@@ -365,6 +429,29 @@ export function DiscussionsPage() {
       setRooms(previous);
     } finally {
       setMutingId(null);
+    }
+  }
+
+  async function handleMarkRoomRead(roomId: string) {
+    const previous = rooms;
+    setRooms((current) =>
+      current.map((room) =>
+        room.room_id === roomId
+          ? {
+              ...room,
+              unread_count: 0,
+              unread_display: null,
+              mentions_you: false,
+              attention_preview: null,
+              attention_author: null,
+            }
+          : room,
+      ),
+    );
+    try {
+      await markDiscussionRoomRead(roomId);
+    } catch {
+      setRooms(previous);
     }
   }
 
@@ -429,10 +516,13 @@ export function DiscussionsPage() {
     setQueuesVersion((value) => value + 1);
   }
 
-  const selectedRoom = rooms.find((room) => room.room_id === selectedRoomId);
+  const selectedRoom =
+    rooms.find((room) => room.room_id === selectedRoomId) ??
+    personalArchivedRooms.find((room) => room.room_id === selectedRoomId);
   const selectedArchived = archivedRooms.find(
     (room) => room.room_id === selectedRoomId,
   );
+  const selectedPersonalArchived = Boolean(selectedRoom?.archived_for_me);
   const showList = isMdUp || !selectedRoomId;
   const showThread = isMdUp || Boolean(selectedRoomId);
 
@@ -501,6 +591,10 @@ export function DiscussionsPage() {
           rooms={rooms}
           selectedRoomId={selectedRoomId}
           onTogglePin={handleTogglePin}
+          onToggleMute={(roomId) => void handleToggleMute(roomId)}
+          onMarkRead={(roomId) => void handleMarkRoomRead(roomId)}
+          onArchiveForMe={(roomId) => void handleToggleArchiveForMe(roomId)}
+          onArchiveChapter={(roomId) => void handleArchiveRoom(roomId)}
           pinDisabled={pinningId != null}
           loading={loading}
           error={error}
@@ -516,8 +610,9 @@ export function DiscussionsPage() {
           showArchived={showArchived}
           onToggleArchived={() => setShowArchived((value) => !value)}
           archivedRooms={archivedRooms}
+          personalArchivedRooms={personalArchivedRooms}
           unarchivingId={unarchivingId}
-          onUnarchive={(roomId) => void handleUnarchiveRoom(roomId)}
+          onUnarchiveChapter={(roomId) => void handleUnarchiveRoom(roomId)}
         />
       ) : null}
 
@@ -621,6 +716,26 @@ export function DiscussionsPage() {
                             {selectedRoom?.muted ? "Unmute" : "Mute"}
                           </button>
                         ) : null}
+                        {selectedRoomId && !selectedArchived ? (
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-foreground hover:bg-[#F5F5F4]"
+                            onClick={() => {
+                              setMoreOpen(false);
+                              void handleToggleArchiveForMe(selectedRoomId);
+                              if (!selectedPersonalArchived) {
+                                navigate("/discussions");
+                              } else {
+                                setShowArchived(false);
+                              }
+                            }}
+                          >
+                            {selectedPersonalArchived
+                              ? "Unarchive for me"
+                              : "Archive for me"}
+                          </button>
+                        ) : null}
                         {canManageArchive &&
                         selectedRoomId &&
                         selectedArchived ? (
@@ -633,7 +748,7 @@ export function DiscussionsPage() {
                               void handleUnarchiveRoom(selectedRoomId);
                             }}
                           >
-                            Unarchive
+                            Unarchive for chapter
                           </button>
                         ) : canArchiveSelected &&
                           selectedRoomId &&
@@ -648,7 +763,7 @@ export function DiscussionsPage() {
                               void handleArchiveRoom(selectedRoomId);
                             }}
                           >
-                            Archive
+                            Archive for chapter
                           </button>
                         ) : null}
                       </div>

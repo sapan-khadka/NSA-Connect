@@ -18,6 +18,10 @@ import { formatCompactRelativeTimestamp } from "../../lib/format-datetime";
 import { AppIcon } from "../ui/AppIcon";
 import { Button } from "../ui/Button";
 import {
+  DiscussionInboxActionSheet,
+  type DiscussionInboxActionId,
+} from "./DiscussionInboxActionSheet";
+import {
   DiscussionInboxRow,
   DiscussionInboxSectionLabel,
 } from "./DiscussionInboxRow";
@@ -157,6 +161,10 @@ export function DiscussionRoomSidebar({
   rooms,
   selectedRoomId,
   onTogglePin,
+  onToggleMute,
+  onMarkRead,
+  onArchiveForMe,
+  onArchiveChapter,
   pinDisabled,
   loading,
   error,
@@ -172,12 +180,17 @@ export function DiscussionRoomSidebar({
   showArchived,
   onToggleArchived,
   archivedRooms,
+  personalArchivedRooms,
   unarchivingId,
-  onUnarchive,
+  onUnarchiveChapter,
 }: {
   rooms: DiscussionInboxRoom[];
   selectedRoomId: string | null;
   onTogglePin: (roomId: string) => void;
+  onToggleMute?: (roomId: string) => void;
+  onMarkRead?: (roomId: string) => void;
+  onArchiveForMe?: (roomId: string) => void;
+  onArchiveChapter?: (roomId: string) => void;
   pinDisabled?: boolean;
   loading?: boolean;
   error?: string | null;
@@ -193,14 +206,20 @@ export function DiscussionRoomSidebar({
   showArchived?: boolean;
   onToggleArchived?: () => void;
   archivedRooms?: DiscussionArchivedRoom[];
+  personalArchivedRooms?: DiscussionInboxRoom[];
   unarchivingId?: string | null;
-  onUnarchive?: (roomId: string) => void;
+  onUnarchiveChapter?: (roomId: string) => void;
 }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
+  const [actionsRoom, setActionsRoom] = useState<DiscussionInboxRoom | null>(
+    null,
+  );
   const reviewQueue = pendingRooms ?? [];
   const awaiting = awaitingRooms ?? [];
   const archived = archivedRooms ?? [];
+  const personalArchived = personalArchivedRooms ?? [];
+  const archivedBadge = personalArchived.length + (canManageArchive ? archived.length : 0);
 
   const filteredRooms = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -222,10 +241,7 @@ export function DiscussionRoomSidebar({
 
   const pinned = filteredRooms.filter((room) => room.pinned);
   const channels = filteredRooms.filter(
-    (room) =>
-      !room.pinned &&
-      room.event_type !== "dm" &&
-      room.room_id !== "board",
+    (room) => !room.pinned && room.event_type !== "dm",
   );
   const directMessages = filteredRooms.filter(
     (room) => !room.pinned && room.event_type === "dm",
@@ -237,6 +253,31 @@ export function DiscussionRoomSidebar({
     navigate(discussionRoomPath(roomId));
   }
 
+  function handleSheetAction(
+    action: DiscussionInboxActionId,
+    room: DiscussionInboxRoom,
+  ) {
+    switch (action) {
+      case "pin":
+        onTogglePin(room.room_id);
+        break;
+      case "mute":
+        onToggleMute?.(room.room_id);
+        break;
+      case "markRead":
+        onMarkRead?.(room.room_id);
+        break;
+      case "archiveForMe":
+        onArchiveForMe?.(room.room_id);
+        break;
+      case "archiveChapter":
+        onArchiveChapter?.(room.room_id);
+        break;
+      default:
+        break;
+    }
+  }
+
   function renderRoomList(list: DiscussionInboxRoom[]) {
     return list.map((room) => (
       <DiscussionInboxRow
@@ -245,8 +286,9 @@ export function DiscussionRoomSidebar({
         selected={selectedRoomId === room.room_id}
         onSelect={handleSelect}
         onTogglePin={onTogglePin}
+        onRequestActions={setActionsRoom}
         pinDisabled={pinDisabled}
-        pinInteractive
+        pinInteractive={!room.archived_for_me}
       />
     ));
   }
@@ -268,7 +310,7 @@ export function DiscussionRoomSidebar({
           ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-0.5">
-          {canManageArchive && onToggleArchived ? (
+          {onToggleArchived ? (
             <HeaderIconButton
               label={
                 showArchived ? "Back to active discussions" : "View archived"
@@ -276,7 +318,7 @@ export function DiscussionRoomSidebar({
               pressed={showArchived}
               onClick={onToggleArchived}
               icon={Archive}
-              badge={!showArchived ? archived.length : undefined}
+              badge={!showArchived ? archivedBadge : undefined}
             />
           ) : null}
           {!showArchived && canCreateGroup && onCreateGroup ? (
@@ -345,20 +387,36 @@ export function DiscussionRoomSidebar({
 
         {showArchived ? (
           <>
-            {!loading && archived.length === 0 ? (
-              <p className="px-4 py-4 text-sm text-gray-500">
-                No archived discussions
-              </p>
+            <div>
+              <SectionLabel>Archived for me</SectionLabel>
+              {!loading && personalArchived.length === 0 ? (
+                <p className="px-4 py-3 text-sm text-gray-500">
+                  No personal archives yet. Long-press a chat and choose Archive
+                  for me.
+                </p>
+              ) : null}
+              {renderRoomList(personalArchived)}
+            </div>
+
+            {canManageArchive ? (
+              <div className="mt-2 border-t border-gray-100 pt-1">
+                <SectionLabel>Chapter archives</SectionLabel>
+                {!loading && archived.length === 0 ? (
+                  <p className="px-4 py-3 text-sm text-gray-500">
+                    No chapter-wide archives
+                  </p>
+                ) : null}
+                {archived.map((room) => (
+                  <ArchivedRoomRow
+                    key={room.room_id}
+                    room={room}
+                    busy={unarchivingId === room.room_id}
+                    onRestore={(roomId) => onUnarchiveChapter?.(roomId)}
+                    onOpen={handleSelect}
+                  />
+                ))}
+              </div>
             ) : null}
-            {archived.map((room) => (
-              <ArchivedRoomRow
-                key={room.room_id}
-                room={room}
-                busy={unarchivingId === room.room_id}
-                onRestore={(roomId) => onUnarchive?.(roomId)}
-                onOpen={handleSelect}
-              />
-            ))}
           </>
         ) : (
           <>
@@ -469,6 +527,15 @@ export function DiscussionRoomSidebar({
           </>
         )}
       </div>
+
+      <DiscussionInboxActionSheet
+        room={actionsRoom}
+        open={actionsRoom != null}
+        onClose={() => setActionsRoom(null)}
+        canOrgArchive={Boolean(canManageArchive && onArchiveChapter)}
+        pinDisabled={pinDisabled}
+        onAction={handleSheetAction}
+      />
     </aside>
   );
 }

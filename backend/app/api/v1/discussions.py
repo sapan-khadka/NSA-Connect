@@ -41,6 +41,7 @@ from app.schemas.discussion import (
     DiscussionRoomIdRequest,
     DiscussionRoomReadResponse,
     DiscussionSharedFileListResponse,
+    DiscussionUserArchiveToggleResponse,
     DiscussionWsTicketResponse,
 )
 from app.schemas.discussion_room import (
@@ -57,6 +58,7 @@ from app.services.discussion_inbox_service import (
     mark_discussion_room_read,
     toggle_discussion_room_mute,
     toggle_discussion_room_pin,
+    toggle_discussion_room_user_archive,
     unarchive_inbox_room,
 )
 from app.services.discussion_realtime_sync import users_online
@@ -268,6 +270,26 @@ def toggle_discussion_room_mute_endpoint(
 ):
     try:
         return toggle_discussion_room_mute(
+            db,
+            member=current_member,
+            room_id=data.room_id,
+        )
+    except (EventNotFoundError, DiscussionForbiddenError, DiscussionValidationError) as exc:
+        _handle_room_access_errors(exc)
+
+
+@router.post(
+    "/discussions/user-archives/toggle",
+    response_model=DiscussionUserArchiveToggleResponse,
+)
+def toggle_discussion_room_user_archive_endpoint(
+    data: DiscussionRoomIdRequest,
+    db: Session = Depends(get_db),
+    current_member: Member = Depends(get_current_member),
+):
+    """Archive / unarchive a chat for the current member only."""
+    try:
+        return toggle_discussion_room_user_archive(
             db,
             member=current_member,
             room_id=data.room_id,

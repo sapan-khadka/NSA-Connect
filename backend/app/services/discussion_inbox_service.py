@@ -15,6 +15,7 @@ from app.models.discussion_room_archive import DiscussionRoomArchive
 from app.models.discussion_room_mute import DiscussionRoomMute
 from app.models.discussion_room_pin import DiscussionRoomPin
 from app.models.discussion_room_read import DiscussionRoomRead
+from app.models.discussion_room_user_archive import DiscussionRoomUserArchive
 from app.models.event import Event
 from app.models.event_volunteer_signup import EventVolunteerSignup
 from app.models.member import Member, MemberRole
@@ -26,6 +27,7 @@ from app.schemas.discussion import (
     DiscussionMuteToggleResponse,
     DiscussionPinToggleResponse,
     DiscussionRoomReadResponse,
+    DiscussionUserArchiveToggleResponse,
 )
 from app.services.discussion_service import (
     DiscussionForbiddenError,
@@ -540,25 +542,6 @@ def toggle_discussion_room_pin(
     cleaned = room_id.strip()
     assert_can_access_room(db, member=member, room_id=cleaned)
 
-    # Board Discussion stays pinned in the inbox.
-    if cleaned == BOARD_ROOM_KEY:
-        existing = db.scalars(
-            select(DiscussionRoomPin).where(
-                DiscussionRoomPin.user_id == member.id,
-                DiscussionRoomPin.room_id == cleaned,
-            )
-        ).first()
-        if existing is None:
-            db.add(
-                DiscussionRoomPin(
-                    user_id=member.id,
-                    room_id=cleaned,
-                    pinned_at=datetime.now(UTC),
-                )
-            )
-            db.commit()
-        return DiscussionPinToggleResponse(room_id=cleaned, pinned=True)
-
     existing = db.scalars(
         select(DiscussionRoomPin).where(
             DiscussionRoomPin.user_id == member.id,
@@ -610,6 +593,55 @@ def toggle_discussion_room_mute(
     db.add(mute)
     db.commit()
     return DiscussionMuteToggleResponse(room_id=cleaned, muted=True)
+
+
+def toggle_discussion_room_user_archive(
+    db: Session,
+    *,
+    member: Member,
+    room_id: str,
+) -> DiscussionUserArchiveToggleResponse:
+    """Hide/show a room on this member's inbox only (not chapter-wide)."""
+    cleaned = room_id.strip()
+    assert_can_access_room(db, member=member, room_id=cleaned)
+
+    existing = db.scalars(
+        select(DiscussionRoomUserArchive).where(
+            DiscussionRoomUserArchive.user_id == member.id,
+            DiscussionRoomUserArchive.room_id == cleaned,
+        )
+    ).first()
+
+    if existing is not None:
+        db.delete(existing)
+        db.commit()
+        return DiscussionUserArchiveToggleResponse(
+            room_id=cleaned,
+            archived_for_me=False,
+        )
+
+    # Pinning and personal-archive conflict: prefer archive-for-me.
+    pin = db.scalars(
+        select(DiscussionRoomPin).where(
+            DiscussionRoomPin.user_id == member.id,
+            DiscussionRoomPin.room_id == cleaned,
+        )
+    ).first()
+    if pin is not None:
+        db.delete(pin)
+
+    db.add(
+        DiscussionRoomUserArchive(
+            user_id=member.id,
+            room_id=cleaned,
+            archived_at=datetime.now(UTC),
+        )
+    )
+    db.commit()
+    return DiscussionUserArchiveToggleResponse(
+        room_id=cleaned,
+        archived_for_me=True,
+    )
 
 
 def _count_unread(
@@ -673,6 +705,13 @@ def list_discussion_inbox(
             )
         ).all()
     )
+    personal_archived_ids = set(
+        db.scalars(
+            select(DiscussionRoomUserArchive.room_id).where(
+                DiscussionRoomUserArchive.user_id == member.id
+            )
+        ).all()
+    )
 
     from app.services.discussion_realtime_sync import users_online
 
@@ -718,9 +757,8 @@ def list_discussion_inbox(
                     mentions_you=attention.mentions_you,
                     attention_preview=attention.preview,
                     attention_author=attention.author,
-                    # Board Discussion is always in the pinned section.
-                    pinned=True,
-                    pinned_at=pins.get(room_id) or latest.created_at,
+                    pinned=room_id in pins,
+                    pinned_at=pins.get(room_id),
                     muted=room_id in muted_ids,
                 )
             )
@@ -911,8 +949,20 @@ def list_discussion_inbox(
         last_ts = room.last_message_at.timestamp() if room.last_message_at else 0.0
         return (1, 0, -last_ts, room.label.lower())
 
-    rooms.sort(key=sort_key)
+    active_rooms: list[DiscussionInboxRoomResponse] = []
+    personal_archived_rooms: list[DiscussionInboxRoomResponse] = []
+    for room in rooms:
+        if room.room_id in personal_archived_ids:
+            personal_archived_rooms.append(
+                room.model_copy(update={"archived_for_me": True, "pinned": False})
+            )
+        else:
+            active_rooms.append(room)
+
+    active_rooms.sort(key=sort_key)
+    personal_archived_rooms.sort(key=sort_key)
     return DiscussionInboxResponse(
-        rooms=rooms,
+        rooms=active_rooms,
         archived_rooms=list_archived_rooms_for_oversight(db, member=member),
+        personal_archived_rooms=personal_archived_rooms,
     )

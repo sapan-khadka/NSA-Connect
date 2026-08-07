@@ -104,6 +104,65 @@ def test_dm_messaging_and_inbox_for_general_members(client, db_session):
     assert alice_match["event_type"] == "dm"
 
 
+def test_personal_archive_hides_dm_for_one_user_only(client, db_session):
+    bob_id = _approve_named(
+        client, db_session, email="bob@semo.edu", student_id="11110042"
+    )
+    _approve_named(
+        client, db_session, email="alice@semo.edu", student_id="11110041"
+    )
+    alice = auth_header(client, email="alice@semo.edu")
+    bob = auth_header(client, email="bob@semo.edu")
+
+    room = client.post(
+        "/api/v1/discussions/dms",
+        headers=alice,
+        json={"member_id": bob_id},
+    ).json()
+    room_key = f"room:{room['id']}"
+
+    assert (
+        client.post(
+            f"/api/v1/discussions/rooms/{room['id']}/messages",
+            headers=alice,
+            json={"content": "Hide me maybe"},
+        ).status_code
+        == 201
+    )
+
+    archived = client.post(
+        "/api/v1/discussions/user-archives/toggle",
+        json={"room_id": room_key},
+        headers=bob,
+    )
+    assert archived.status_code == 200
+    assert archived.json() == {
+        "room_id": room_key,
+        "archived_for_me": True,
+    }
+
+    bob_inbox = client.get("/api/v1/discussions/inbox", headers=bob).json()
+    bob_active = {item["room_id"] for item in bob_inbox["rooms"]}
+    bob_personal = {
+        item["room_id"] for item in bob_inbox["personal_archived_rooms"]
+    }
+    assert room_key not in bob_active
+    assert room_key in bob_personal
+
+    alice_inbox = client.get("/api/v1/discussions/inbox", headers=alice).json()
+    alice_active = {item["room_id"] for item in alice_inbox["rooms"]}
+    assert room_key in alice_active
+
+    restored = client.post(
+        "/api/v1/discussions/user-archives/toggle",
+        json={"room_id": room_key},
+        headers=bob,
+    )
+    assert restored.json()["archived_for_me"] is False
+    bob_inbox2 = client.get("/api/v1/discussions/inbox", headers=bob).json()
+    assert room_key in {item["room_id"] for item in bob_inbox2["rooms"]}
+
+
 def test_president_cannot_open_others_dm(client, db_session):
     create_president_member(db_session)
     alice_id = _approve_named(
