@@ -17,7 +17,7 @@ from app.services.local_event_photo_storage import (
     delete_local_event_photo,
     is_local_event_photo_public_id,
 )
-from app.services.organization_context import get_default_organization_id
+from app.services.organization_context import resolve_organization_id
 
 
 class MediaAlbumNotFoundError(Exception):
@@ -37,10 +37,7 @@ def _is_board_or_above(role: MemberRole) -> bool:
 
 
 def _org_id_for_member(db: Session, member: Member) -> int:
-    organization_id = getattr(member, "_active_organization_id", None)
-    if organization_id is None:
-        return get_default_organization_id(db)
-    return int(organization_id)
+    return resolve_organization_id(db, member)
 
 
 def can_manage_album(member: Member, album: MediaAlbum) -> bool:

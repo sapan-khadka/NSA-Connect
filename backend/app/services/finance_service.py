@@ -19,8 +19,10 @@ from app.schemas.finance import (
     FinanceSummaryResponse,
 )
 from app.services.event_service import EventNotFoundError
-from app.services.organization_context import get_default_organization_id
-
+from app.services.organization_context import (
+    get_default_organization_id,
+    resolve_organization_id,
+)
 
 class FinanceEntryNotFoundError(Exception):
     pass
@@ -296,7 +298,7 @@ def create_finance_entry(
         receipt_url=data.receipt_url,
         event_id=data.event_id,
         created_by_id=created_by.id,
-        organization_id=get_default_organization_id(db),
+        organization_id=resolve_organization_id(db, created_by),
     )
     db.add(entry)
     db.commit()

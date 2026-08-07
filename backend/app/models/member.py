@@ -99,7 +99,7 @@ class Member(Base):
     )
     full_name = Column(String(255), nullable=False)
     email = Column(String(255), unique=True, nullable=False)
-    student_id = Column(String(20), unique=True, nullable=False)
+    student_id = Column(String(20), unique=True, nullable=True)
     major = Column(String(255), nullable=False)
     graduation_year = Column(Integer, nullable=False)
     hashed_password = Column(String(255), nullable=False)
@@ -232,7 +232,9 @@ class Member(Base):
         return self.status == MemberStatus.PENDING
 
     def has_role_at_least(self, required_role: MemberRole) -> bool:
-        return self.role.is_at_least(required_role)
+        membership = getattr(self, "_active_membership", None)
+        role = membership.role if membership is not None else self.role
+        return role.is_at_least(required_role)
 
     def can_authenticate(self) -> bool:
         return self.is_approved

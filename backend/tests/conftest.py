@@ -301,6 +301,7 @@ def create_president_member(
 ):
     from app.core.security import hash_password
     from app.models.member import MemberRole
+    from app.services.organization_context import ensure_nsa_org_owner
 
     member = Member(
         full_name="President",
@@ -317,6 +318,7 @@ def create_president_member(
     db_session.commit()
     db_session.refresh(member)
     ensure_membership_for_member(db_session, member)
+    ensure_nsa_org_owner(db_session)
     return member
 
 

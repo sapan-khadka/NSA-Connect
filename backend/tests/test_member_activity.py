@@ -274,6 +274,52 @@ def test_general_member_cannot_see_peer_dues_or_checkins(
     assert response.json()["items"] == []
 
 
+def test_self_activity_includes_meeting_notes(
+    client,
+    db_session,
+    president_headers,
+):
+    from app.models.member import Member
+    from sqlalchemy import select
+
+    president = db_session.scalar(
+        select(Member).where(Member.email == "president@semo.edu"),
+    )
+    assert president is not None
+
+    meeting = client.post(
+        "/api/v1/events",
+        json={
+            "name": "March Board Meeting",
+            "starts_at": "2030-06-01T18:00:00+00:00",
+            "event_type": "meeting",
+            "description": "Monthly board meeting.",
+            "budget": "0.00",
+        },
+        headers=president_headers,
+    )
+    assert meeting.status_code == 201
+    event_id = meeting.json()["id"]
+
+    notes = client.put(
+        f"/api/v1/events/{event_id}/meeting/notes",
+        json={"raw_notes": "Approved Dashain budget."},
+        headers=president_headers,
+    )
+    assert notes.status_code == 200
+
+    response = client.get(
+        f"/api/v1/members/{president.id}/activity",
+        headers=president_headers,
+    )
+    assert response.status_code == 200
+    items = response.json()["items"]
+    assert any(item["type"] == "meeting_notes" for item in items)
+    notes_item = next(item for item in items if item["type"] == "meeting_notes")
+    assert notes_item["event_id"] == event_id
+    assert "meeting notes" in notes_item["description"].lower()
+
+
 def test_my_dues_status_includes_paid_at(
     client,
     db_session,

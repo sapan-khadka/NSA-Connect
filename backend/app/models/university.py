@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import Column, DateTime, Integer, String
+from sqlalchemy import Column, DateTime, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.models.base import Base
@@ -13,6 +13,8 @@ class University(Base):
     name = Column(String(255), nullable=False)
     slug = Column(String(64), nullable=False, unique=True, index=True)
     email_domain = Column(String(255), nullable=True)
+    logo_url = Column(String(2048), nullable=True)
+    theme = Column(Text, nullable=True)
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,

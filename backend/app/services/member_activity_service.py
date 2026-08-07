@@ -5,6 +5,7 @@ Sources (real timestamps only):
   - completed event tasks → completed_at
   - dues payments → paid_at
   - event check-ins → checked_in_at
+  - meeting notes authored → meeting_records.updated_at
 
 Deferred (no audit trail yet — do not invent):
   - RSVP status changes
@@ -18,6 +19,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.models.event_checkin import EventCheckIn
 from app.models.event_task import EventTask
+from app.models.meeting import MeetingRecord
 from app.models.member import Member, MemberPosition, MemberRole
 from app.models.member_dues import MemberDues
 from app.schemas.member_activity import (
@@ -54,6 +56,13 @@ def _can_view_checkin_activity(viewer: Member, subject_id: int) -> bool:
     return viewer.has_role_at_least(MemberRole.BOARD)
 
 
+def _can_view_meeting_notes_activity(viewer: Member, subject_id: int) -> bool:
+    """Self can see own notes; board+ can see notes authored by others."""
+    if viewer.id == subject_id:
+        return True
+    return viewer.has_role_at_least(MemberRole.BOARD)
+
+
 def _task_description(task: EventTask) -> str:
     title = (task.title or "task").strip() or "task"
     event_name = task.event.title if task.event is not None else None
@@ -72,6 +81,13 @@ def _dues_description(record: MemberDues) -> str:
 def _checkin_description(checkin: EventCheckIn) -> str:
     event_name = checkin.event.title if checkin.event is not None else "event"
     return f"Attended {event_name}"
+
+
+def _meeting_notes_description(record: MeetingRecord) -> str:
+    event_name = record.event.title if record.event is not None else "meeting"
+    if record.summary:
+        return f"Published meeting notes for {event_name}"
+    return f"Updated meeting notes for {event_name}"
 
 
 def get_member_activity(
@@ -147,6 +163,29 @@ def get_member_activity(
                     description=_checkin_description(checkin),
                     timestamp=checkin.checked_in_at,
                     event_id=checkin.event_id,
+                ),
+            )
+
+    if _can_view_meeting_notes_activity(viewer, member_id):
+        notes_rows = db.scalars(
+            select(MeetingRecord)
+            .where(
+                MeetingRecord.updated_by_id == member_id,
+                MeetingRecord.raw_notes != "",
+            )
+            .options(selectinload(MeetingRecord.event))
+            .order_by(MeetingRecord.updated_at.desc(), MeetingRecord.id.desc()),
+        ).all()
+        for record in notes_rows:
+            if not (record.raw_notes or "").strip():
+                continue
+            items.append(
+                MemberActivityItemResponse(
+                    id=f"meeting_notes-{record.id}",
+                    type=MemberActivityType.MEETING_NOTES,
+                    description=_meeting_notes_description(record),
+                    timestamp=record.updated_at,
+                    event_id=record.event_id,
                 ),
             )
 

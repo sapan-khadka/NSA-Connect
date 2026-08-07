@@ -20,6 +20,22 @@ async def lifespan(app: FastAPI):
         connection.execute(text("SELECT 1"))
 
     logger.info("Database connection verified")
+
+    from app.core.database import SessionLocal
+    from app.services.organization_context import (
+        ensure_default_university_and_org,
+        ensure_nsa_org_owner,
+    )
+
+    db = SessionLocal()
+    try:
+        ensure_default_university_and_org(db)
+        ensure_nsa_org_owner(db)
+    except Exception:
+        logger.exception("Tenancy bootstrap skipped or failed")
+    finally:
+        db.close()
+
     yield
     await user_notify_connection_manager.aclose()
     await discussion_connection_manager.aclose()

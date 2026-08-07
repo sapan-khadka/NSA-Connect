@@ -562,8 +562,8 @@ def get_member_activity_endpoint(
 ):
     """
     Reverse-chronological activity for a member from real timestamped sources
-    (completed tasks, dues payments, event check-ins). Item visibility follows
-    the same access rules as each underlying data source.
+    (completed tasks, dues payments, event check-ins, meeting notes). Item
+    visibility follows the same access rules as each underlying data source.
     """
     try:
         subject = get_member_by_id(db, member_id)

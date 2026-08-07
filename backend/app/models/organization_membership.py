@@ -1,11 +1,14 @@
 from datetime import UTC, datetime
 
 from sqlalchemy import (
+    Boolean,
     Column,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.orm import relationship
@@ -30,6 +33,14 @@ class OrganizationMembership(Base):
             "user_id",
             "organization_id",
             name="uq_organization_memberships_user_org",
+        ),
+        Index(
+            "ix_organization_memberships_exclusive_position",
+            "organization_id",
+            "position",
+            unique=True,
+            postgresql_where=text("position <> 'member'"),
+            sqlite_where=text("position <> 'member'"),
         ),
     )
 
@@ -77,6 +88,12 @@ class OrganizationMembership(Base):
         default=MemberPosition.MEMBER,
         server_default=MemberPosition.MEMBER.value,
         nullable=False,
+    )
+    is_org_owner = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
     )
     custom_board_position_id = Column(
         Integer,

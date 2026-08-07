@@ -19,7 +19,7 @@ from app.schemas.event import (
     EventDuplicateRequest,
     EventPatchRequest,
 )
-from app.services.organization_context import get_default_organization_id
+from app.services.organization_context import resolve_organization_id
 
 
 class EventAccessDeniedError(Exception):
@@ -35,6 +35,7 @@ def create_event(
     data: EventCreateRequest,
     *,
     created_by_id: int,
+    created_by: Member | None = None,
 ) -> Event:
     event = Event(
         title=data.name,
@@ -49,7 +50,7 @@ def create_event(
             data.meeting_visibility if data.event_type == EventType.MEETING else None
         ),
         created_by_id=created_by_id,
-        organization_id=get_default_organization_id(db),
+        organization_id=resolve_organization_id(db, created_by),
     )
     db.add(event)
     db.commit()
@@ -207,7 +208,7 @@ def list_events(
     event_type: EventType | None = None,
     viewer: Member,
 ) -> tuple[list[Event], int]:
-    org_id = get_default_organization_id(db)
+    org_id = resolve_organization_id(db, viewer)
     query = select(Event).where(Event.organization_id == org_id)
     count_query = (
         select(func.count()).select_from(Event).where(Event.organization_id == org_id)
@@ -241,7 +242,7 @@ def list_upcoming_events(
     viewer: Member,
 ) -> tuple[list[Event], int]:
     now = datetime.now(UTC)
-    org_id = get_default_organization_id(db)
+    org_id = resolve_organization_id(db, viewer)
     query = select(Event).where(
         Event.starts_at >= now, Event.organization_id == org_id
     )
@@ -269,7 +270,7 @@ def list_past_events(
     viewer: Member,
 ) -> tuple[list[Event], int]:
     now = datetime.now(UTC)
-    org_id = get_default_organization_id(db)
+    org_id = resolve_organization_id(db, viewer)
     query = select(Event).where(
         Event.starts_at < now, Event.organization_id == org_id
     )

@@ -3,8 +3,17 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.permissions import (
+    Permission,
+    can_manage_meetings,
+    can_manage_tasks,
+    can_manage_treasury,
+    can_view_task_oversight,
+    member_has,
+    member_has_role_at_least,
+)
 from app.core.security import InvalidTokenError, decode_access_token, resolve_user_id
-from app.models.member import Member, MemberPosition, MemberRole
+from app.models.member import Member, MemberRole
 from app.models.organization import Organization
 from app.services.organization_context import ensure_membership_for_member
 
@@ -89,9 +98,23 @@ def get_current_organization(
     return organization
 
 
+def require_permission(permission: Permission):
+    """FastAPI dependency: require a platform permission on the active membership."""
+
+    def guard(current_member: Member = Depends(get_current_member)) -> Member:
+        if not member_has(current_member, permission):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Requires permission: {permission.value}",
+            )
+        return current_member
+
+    return guard
+
+
 def _require_role(minimum_role: MemberRole):
     def guard(current_member: Member = Depends(get_current_member)) -> Member:
-        if not current_member.has_role_at_least(minimum_role):
+        if not member_has_role_at_least(current_member, minimum_role):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Requires {minimum_role.value} role or higher",
@@ -110,9 +133,7 @@ def require_treasury_writer(
     current_member: Member = Depends(get_current_member),
 ) -> Member:
     """Allow treasurer+, or vice president by position (board role)."""
-    if current_member.has_role_at_least(MemberRole.TREASURER):
-        return current_member
-    if current_member.position == MemberPosition.VICE_PRESIDENT:
+    if can_manage_treasury(current_member):
         return current_member
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
@@ -124,10 +145,7 @@ def require_task_manager(
     current_member: Member = Depends(get_current_member),
 ) -> Member:
     """Allow President (by role) or Vice President / Event Manager (by position)."""
-    if current_member.role == MemberRole.PRESIDENT or current_member.position in {
-        MemberPosition.VICE_PRESIDENT,
-        MemberPosition.EVENT_MANAGER,
-    }:
+    if can_manage_tasks(current_member):
         return current_member
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
@@ -139,12 +157,20 @@ def require_task_oversight(
     current_member: Member = Depends(get_current_member),
 ) -> Member:
     """Allow President (by role) or Vice President (by position)."""
-    if (
-        current_member.role == MemberRole.PRESIDENT
-        or current_member.position == MemberPosition.VICE_PRESIDENT
-    ):
+    if can_view_task_oversight(current_member):
         return current_member
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="Requires president or vice president",
+    )
+
+
+def require_meeting_manager(
+    current_member: Member = Depends(get_current_member),
+) -> Member:
+    if can_manage_meetings(current_member):
+        return current_member
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Requires secretary, vice president, or president",
     )

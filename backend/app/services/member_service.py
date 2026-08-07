@@ -76,30 +76,34 @@ def _check_member_identity_uniqueness(
     db: Session,
     *,
     email: str,
-    student_id: str,
+    student_id: str | None,
 ) -> None:
     if db.scalar(select(Member).where(Member.email == email)):
         raise MemberAlreadyExistsError
-    if db.scalar(select(Member).where(Member.student_id == student_id)):
+    if student_id and db.scalar(select(Member).where(Member.student_id == student_id)):
         raise StudentIdAlreadyExistsError
 
 
 def create_member(db: Session, data: MemberCreateRequest) -> Member:
+    from app.core.validators import university_for_email, validate_university_email
+
+    email = validate_university_email(db, data.email)
     _check_member_identity_uniqueness(
         db,
-        email=data.email,
+        email=email,
         student_id=data.student_id,
     )
 
     validate_password_strength(
         data.password,
-        email=data.email,
+        email=email,
         full_name=data.full_name,
     )
 
+    university = university_for_email(db, email)
     member = Member(
         full_name=data.full_name,
-        email=data.email,
+        email=email,
         student_id=data.student_id,
         major=normalize_major(data.major),
         graduation_year=data.graduation_year,
@@ -107,12 +111,20 @@ def create_member(db: Session, data: MemberCreateRequest) -> Member:
         role=MemberRole.GENERAL,
         status=MemberStatus.PENDING,
         talents=[],
-        university_id=get_default_university_id(db),
+        university_id=(
+            university.id if university is not None else get_default_university_id(db)
+        ),
     )
     db.add(member)
     db.commit()
     db.refresh(member)
     ensure_membership_for_member(db, member)
+
+    from app.services.organization_context import bootstrap_first_org_owner
+
+    # Empty-org recovery only: never runs when approved members already exist.
+    if bootstrap_first_org_owner(db, member):
+        return member
 
     from app.services.inbox_notification_service import notify_board_of_pending_member
 
@@ -131,19 +143,23 @@ def create_invited_member(
     Single-invite uses commit=True (default). Bulk import uses commit=False so
     the caller can flush many rows and checkpoint in chunks.
     """
+    from app.core.validators import university_for_email, validate_university_email
+
+    email = validate_university_email(db, data.email)
     # One-row path keeps friendly duplicate checks. Bulk import already checked
     # identities via upfront + seen sets and must not query once per row.
     if commit:
         _check_member_identity_uniqueness(
             db,
-            email=data.email,
+            email=email,
             student_id=data.student_id,
         )
 
+    university = university_for_email(db, email)
     unusable_secret = secrets.token_urlsafe(48)
     member = Member(
         full_name=data.full_name.strip(),
-        email=data.email,
+        email=email,
         student_id=data.student_id,
         major=normalize_major(data.major),
         graduation_year=data.graduation_year,
@@ -153,7 +169,9 @@ def create_invited_member(
         position=MemberPosition.MEMBER,
         status=MemberStatus.APPROVED,
         talents=[],
-        university_id=get_default_university_id(db),
+        university_id=(
+            university.id if university is not None else get_default_university_id(db)
+        ),
     )
     db.add(member)
     if commit:

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_member, require_board
+from app.core.dependencies import require_board, require_meeting_manager
 from app.core.safe_messages import GENERIC_AI_UNAVAILABLE
 from app.models.member import Member
 from app.schemas.meeting import (
@@ -21,7 +21,6 @@ from app.services.event_service import EventNotFoundError
 from app.services.meeting_service import (
     InvalidMeetingAttendeeError,
     NotMeetingEventError,
-    can_manage_meeting_records,
     get_meeting_detail,
     list_meetings,
     save_meeting_summary,
@@ -30,17 +29,6 @@ from app.services.meeting_service import (
 )
 
 router = APIRouter()
-
-
-def _require_meeting_manager(
-    current_member: Member = Depends(get_current_member),
-) -> Member:
-    if not can_manage_meeting_records(current_member):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Requires secretary, vice president, or president",
-        )
-    return current_member
 
 
 @router.get("/meetings", response_model=MeetingListResponse)
@@ -75,7 +63,7 @@ def get_meeting_detail_endpoint(
 def update_meeting_notes_endpoint(
     event_id: int,
     data: MeetingNotesUpdateRequest,
-    current_member: Member = Depends(_require_meeting_manager),
+    current_member: Member = Depends(require_meeting_manager),
     db: Session = Depends(get_db),
 ):
     try:
@@ -101,7 +89,7 @@ def update_meeting_notes_endpoint(
 def summarize_meeting_for_event_endpoint(
     event_id: int,
     data: MeetingNotesUpdateRequest,
-    current_member: Member = Depends(_require_meeting_manager),
+    current_member: Member = Depends(require_meeting_manager),
     db: Session = Depends(get_db),
 ):
     if not data.raw_notes.strip():
@@ -152,7 +140,7 @@ def summarize_meeting_for_event_endpoint(
 def update_meeting_attendance_endpoint(
     event_id: int,
     data: MeetingAttendanceUpdateRequest,
-    current_member: Member = Depends(_require_meeting_manager),
+    current_member: Member = Depends(require_meeting_manager),
     db: Session = Depends(get_db),
 ):
     try:

@@ -7,7 +7,8 @@ from conftest import (
 )
 
 
-def test_pending_member_cannot_login(client):
+def test_pending_member_cannot_login(client, db_session):
+    create_board_member(db_session)
     register_member(client)
 
     response = login_member(client)
@@ -17,15 +18,20 @@ def test_pending_member_cannot_login(client):
 
 
 def test_board_member_approves_pending_signup(client, db_session):
-    register_member(client, email="newmember@semo.edu", student_id="11111111")
     create_board_member(db_session)
+    pending = register_member(
+        client, email="newmember@semo.edu", student_id="11111111"
+    )
+    assert pending.status_code == 201
+    assert pending.json()["status"] == "pending"
+    member_id = pending.json()["id"]
 
     pending_login = login_member(client, email="newmember@semo.edu")
     assert pending_login.status_code == 403
 
     board_headers = auth_header(client, email="board@semo.edu")
     approve = client.patch(
-        "/api/v1/members/1/approve",
+        f"/api/v1/members/{member_id}/approve",
         headers=board_headers,
     )
 
@@ -38,11 +44,14 @@ def test_board_member_approves_pending_signup(client, db_session):
 
 
 def test_approve_queues_welcome_email(block_external_integrations, client, db_session):
-    register_member(client, email="newmember@semo.edu", student_id="11111111")
     create_board_member(db_session)
+    pending = register_member(
+        client, email="newmember@semo.edu", student_id="11111111"
+    )
+    member_id = pending.json()["id"]
 
     response = client.patch(
-        "/api/v1/members/1/approve",
+        f"/api/v1/members/{member_id}/approve",
         headers=auth_header(client, email="board@semo.edu"),
     )
 
@@ -54,9 +63,9 @@ def test_approve_queues_welcome_email(block_external_integrations, client, db_se
 
 
 def test_board_member_lists_pending_signups(client, db_session):
+    create_board_member(db_session)
     register_member(client, email="pending1@semo.edu", student_id="11111111")
     register_member(client, email="pending2@semo.edu", student_id="22222222")
-    create_board_member(db_session)
 
     response = client.get(
         "/api/v1/members/pending",
@@ -70,11 +79,14 @@ def test_board_member_lists_pending_signups(client, db_session):
 
 
 def test_board_member_rejects_pending_signup(client, db_session):
-    register_member(client, email="rejectme@semo.edu", student_id="33333333")
     create_board_member(db_session)
+    pending = register_member(
+        client, email="rejectme@semo.edu", student_id="33333333"
+    )
+    member_id = pending.json()["id"]
 
     response = client.patch(
-        "/api/v1/members/1/reject",
+        f"/api/v1/members/{member_id}/reject",
         headers=auth_header(client, email="board@semo.edu"),
     )
 
@@ -86,10 +98,10 @@ def test_board_member_rejects_pending_signup(client, db_session):
 
 
 def test_board_member_lists_all_members_with_pagination(client, db_session):
+    create_board_member(db_session)
     register_member(client, email="member1@semo.edu", student_id="11111111")
     register_member(client, email="member2@semo.edu", student_id="22222222")
     register_member(client, email="member3@semo.edu", student_id="33333333")
-    create_board_member(db_session)
 
     response = client.get(
         "/api/v1/members",
@@ -109,10 +121,10 @@ def test_board_member_lists_all_members_with_pagination(client, db_session):
 
 
 def test_board_member_lists_members_page_two(client, db_session):
+    create_board_member(db_session)
     register_member(client, email="member1@semo.edu", student_id="11111111")
     register_member(client, email="member2@semo.edu", student_id="22222222")
     register_member(client, email="member3@semo.edu", student_id="33333333")
-    create_board_member(db_session)
 
     response = client.get(
         "/api/v1/members",
@@ -128,10 +140,10 @@ def test_board_member_lists_members_page_two(client, db_session):
 
 
 def test_board_member_can_filter_members_by_status(client, db_session):
+    create_board_member(db_session)
     register_member(client, email="pending1@semo.edu", student_id="11111111")
     set_member_approved(db_session, email="pending1@semo.edu")
     register_member(client, email="pending2@semo.edu", student_id="22222222")
-    create_board_member(db_session)
 
     response = client.get(
         "/api/v1/members",
@@ -147,12 +159,13 @@ def test_board_member_can_filter_members_by_status(client, db_session):
 
 
 def test_cannot_approve_already_approved_member(client, db_session):
-    register_member(client)
-    set_member_approved(db_session)
     create_board_member(db_session)
+    registered = register_member(client)
+    member_id = registered.json()["id"]
+    set_member_approved(db_session)
 
     response = client.patch(
-        "/api/v1/members/1/approve",
+        f"/api/v1/members/{member_id}/approve",
         headers=auth_header(client, email="board@semo.edu"),
     )
 

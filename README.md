@@ -126,6 +126,26 @@ Copy `backend/.env.example` to `backend/.env`.
 | **treasurer** | Full finance (log entries, receipts, summaries) |
 | **president** | All treasurer + board capabilities, role promotion |
 
+Capabilities are also expressed as a fixed **platform permission catalog** in code (`backend/app/core/permissions.py`), mapped from role + board position + `is_org_owner`. Organizations cannot invent new permissions yet; there is no role-editor UI.
+
+---
+
+## Architecture (tenancy)
+
+NSA Connect is **multi-tenant ready** under the hood and **single-tenant at runtime** today:
+
+```
+Platform → University (SEMO) → Organization (NSA) → members, events, tasks, finance, …
+```
+
+- **Auth authority:** `OrganizationMembership` (role / status / position / `is_org_owner`) is the source of truth for org capabilities; `users.*` is dual-written during the transition.
+- **Default path:** Login → SEMO user (email domain from `University.email_domain`) → NSA membership → dashboard. No org/university switcher.
+- **Org owner:** System flag on membership (`is_org_owner`), distinct from President. Seeded for NSA (migration + `python -m scripts.ensure_org_owner`). Owner∪president permissions are unioned when the same person holds both.
+- **Empty-org bootstrap:** If the default org has **zero approved members**, the first successful registration becomes approved president + org owner so the chapter is never stuck pending forever. If any approved member already exists (normal SEMO/NSA), new signups stay pending for board approval — existing members and data are never deleted.
+- **Do not build yet:** custom RBAC UI, org/uni switchers, multi-org membership UX, university admin dashboards, public org claim flows.
+
+Services must resolve the active org via `get_current_organization` / `resolve_organization_id` / `get_default_organization_id` — never hardcode org id `1` or the `"nsa"` slug outside seed helpers.
+
 ---
 
 ## Key API Endpoints

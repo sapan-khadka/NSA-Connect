@@ -896,6 +896,7 @@ def create_event_endpoint(
         db,
         data,
         created_by_id=current_member.id,
+        created_by=current_member,
     )
     return _build_event_response(db, event, member_id=current_member.id)
 

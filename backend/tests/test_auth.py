@@ -4,26 +4,25 @@ from conftest import (
     BAD_DOMAIN_EMAIL,
     login_member,
     register_member,
-    set_member_approved,
 )
 
 from app.core.security import decode_access_token
 
 
-def test_register_creates_pending_member(client):
+def test_register_bootstraps_first_member_when_org_empty(client):
     response = register_member(client)
 
     assert response.status_code == 201
     data = response.json()
     assert data["email"] == "sapan@semo.edu"
-    assert data["status"] == "pending"
-    assert data["role"] == "general"
+    assert data["status"] == "approved"
+    assert data["role"] == "president"
     assert "password" not in data
 
 
 def test_login_returns_jwt_for_approved_member(client, db_session):
     register_member(client)
-    set_member_approved(db_session)
+    # First registrant is already approved via empty-org bootstrap.
 
     response = login_member(client)
 
@@ -51,7 +50,6 @@ def test_login_rejects_non_semo_domain(client):
 
 def test_login_rejects_wrong_password(client, db_session):
     register_member(client)
-    set_member_approved(db_session)
 
     response = login_member(client, password="wrongpassword")
 

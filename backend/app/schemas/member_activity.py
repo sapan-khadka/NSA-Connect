@@ -10,6 +10,7 @@ class MemberActivityType(StrEnum):
     TASK_COMPLETED = "task_completed"
     DUES_PAID = "dues_paid"
     EVENT_CHECKIN = "event_checkin"
+    MEETING_NOTES = "meeting_notes"
 
 
 class MemberActivityItemResponse(BaseModel):

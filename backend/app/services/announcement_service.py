@@ -16,8 +16,10 @@ from app.schemas.announcement import (
 )
 from app.services.announcement_notification_service import notify_announcement_broadcast
 from app.services.event_service import EventNotFoundError
-from app.services.organization_context import get_default_organization_id
-
+from app.services.organization_context import (
+    get_default_organization_id,
+    resolve_organization_id,
+)
 
 class AnnouncementNotFoundError(Exception):
     pass
@@ -64,7 +66,7 @@ def create_announcement(
     author: Member,
     data: AnnouncementCreateRequest,
 ) -> Announcement:
-    org_id = get_default_organization_id(db)
+    org_id = resolve_organization_id(db, author)
     event_id = data.event_id
     if event_id is not None:
         event = db.get(Event, event_id)

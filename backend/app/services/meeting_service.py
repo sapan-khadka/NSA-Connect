@@ -32,13 +32,9 @@ class InvalidMeetingAttendeeError(Exception):
 
 
 def can_manage_meeting_records(member: Member) -> bool:
-    from app.models.member import MemberPosition, MemberRole
+    from app.core.permissions import can_manage_meetings
 
-    return (
-        member.role == MemberRole.PRESIDENT
-        or member.position == MemberPosition.SECRETARY
-        or member.position == MemberPosition.VICE_PRESIDENT
-    )
+    return can_manage_meetings(member)
 
 
 def _get_meeting_event(db: Session, event_id: int) -> Event:
