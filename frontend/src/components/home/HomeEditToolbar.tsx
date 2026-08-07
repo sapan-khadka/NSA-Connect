@@ -1,11 +1,13 @@
 type HomeEditToolbarProps = {
   onAddWidget: () => void;
+  onTidy?: () => void;
   onReset: () => void;
   onDone: () => void;
 };
 
 export function HomeEditToolbar({
   onAddWidget,
+  onTidy,
   onReset,
   onDone,
 }: HomeEditToolbarProps) {
@@ -18,6 +20,15 @@ export function HomeEditToolbar({
       >
         + Widget
       </button>
+      {onTidy ? (
+        <button
+          type="button"
+          className="home-workspace-toolbar__btn"
+          onClick={onTidy}
+        >
+          Tidy layout
+        </button>
+      ) : null}
       <button
         type="button"
         className="home-workspace-toolbar__btn"

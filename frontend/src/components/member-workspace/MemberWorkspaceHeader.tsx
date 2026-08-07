@@ -198,6 +198,7 @@ export function MemberWorkspaceHeader({
       <div className="member-workspace-header-main">
         <Avatar
           name={member.full_name}
+          memberId={member.id}
           src={member.avatar_url}
           size="lg"
           className="member-workspace-avatar"

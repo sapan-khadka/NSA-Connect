@@ -45,6 +45,7 @@ import { Link, useLocation, useSearchParams } from "react-router";
 
 import { Avatar } from "../design-system/components/Avatar";
 import { useAuth } from "../context/useAuth";
+import { avatarColorForPerson } from "../lib/avatar-color";
 import { getApiErrorMessage } from "../lib/api-error";
 import type { MemberResponse } from "../lib/auth-api";
 import {
@@ -930,24 +931,8 @@ function MessageActionsBar({
   );
 }
 
-const AUTHOR_NAME_COLORS = [
-  "#0F766E",
-  "#C2410C",
-  "#7C3AED",
-  "#0369A1",
-  "#B45309",
-  "#BE185D",
-  "#15803D",
-  "#4338CA",
-] as const;
-
 function authorNameColor(author: DiscussionMessageAuthor): string {
-  const seed = `${author.id}:${author.full_name}`;
-  let hash = 0;
-  for (let i = 0; i < seed.length; i += 1) {
-    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  }
-  return AUTHOR_NAME_COLORS[hash % AUTHOR_NAME_COLORS.length]!;
+  return avatarColorForPerson(author.id, author.full_name).background;
 }
 
 function UnreadSeparator() {
@@ -1128,18 +1113,18 @@ function MessageGroup({
             >
               <Avatar
                 name={author.full_name}
+                memberId={author.id}
                 size="sm"
                 tone="colorful"
-                colorSeed={`user:${author.id}`}
                 className="!h-7 !w-7 !rounded-full !text-[10px] !font-bold"
               />
             </button>
           ) : (
             <Avatar
               name={author.full_name}
+              memberId={author.id}
               size="sm"
               tone="colorful"
-              colorSeed={`user:${author.id}`}
               className="!h-7 !w-7 !rounded-full !text-[10px] !font-bold"
             />
           )}

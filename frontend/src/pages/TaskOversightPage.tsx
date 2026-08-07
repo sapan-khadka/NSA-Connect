@@ -463,6 +463,7 @@ export function TaskOversightPage() {
                           >
                             <Avatar
                               name={row.name}
+                              memberId={row.memberId}
                               size="sm"
                               className="ops-oversight-assignee__avatar"
                             />

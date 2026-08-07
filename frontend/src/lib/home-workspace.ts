@@ -50,7 +50,7 @@ export type HomeWidgetLayout = {
 };
 
 export type HomeWorkspaceState = {
-  version: 17;
+  version: 18;
   /** Preferred gap when packing / resetting the default layout */
   spacing?: HomeLayoutSpacing;
   widgets: HomeWidgetLayout[];
@@ -95,14 +95,14 @@ export type HomeWidgetMeta = {
 export const HOME_WIDGET_CATALOG: HomeWidgetMeta[] = [
   {
     id: "featured",
-    label: "Event Hero",
-    description: "Next upcoming event — open, RSVP, or manage",
+    label: "Upcoming Event",
+    description: "Next event highlight with cover photo",
     category: "Organization",
-    defaultW: 752,
-    defaultH: 280,
+    defaultW: HOME_CANVAS_DESIGN_WIDTH,
+    defaultH: 200,
     minW: 320,
     maxW: HOME_CANVAS_DESIGN_WIDTH,
-    minH: 160,
+    minH: 120,
     maxH: 720,
   },
   {
@@ -110,8 +110,8 @@ export const HOME_WIDGET_CATALOG: HomeWidgetMeta[] = [
     label: "Today's Focus",
     description: "What deserves your attention right now",
     category: "Organization",
-    defaultW: 352,
-    defaultH: 250,
+    defaultW: HOME_CANVAS_DESIGN_WIDTH,
+    defaultH: 240,
     minW: 220,
     maxW: HOME_CANVAS_DESIGN_WIDTH,
     minH: 140,
@@ -123,23 +123,23 @@ export const HOME_WIDGET_CATALOG: HomeWidgetMeta[] = [
     description: "Optional — create entry points already live in + Create",
     category: "Work",
     requiresBoard: true,
-    defaultW: 352,
-    defaultH: 300,
+    defaultW: HOME_CANVAS_DESIGN_WIDTH,
+    defaultH: 260,
     minW: 200,
-    maxW: 700,
+    maxW: HOME_CANVAS_DESIGN_WIDTH,
     minH: 140,
     maxH: 480,
   },
   {
     id: "minutes",
     label: "Meetings",
-    description: "Optional — full minutes workflow lives under Events",
+    description: "Board meeting notes and minutes",
     category: "Organization",
     requiresBoard: true,
-    defaultW: 304,
+    defaultW: HOME_CANVAS_DESIGN_WIDTH,
     defaultH: 280,
     minW: 220,
-    maxW: 700,
+    maxW: HOME_CANVAS_DESIGN_WIDTH,
     minH: 160,
     maxH: 640,
   },
@@ -148,8 +148,8 @@ export const HOME_WIDGET_CATALOG: HomeWidgetMeta[] = [
     label: "My Tasks",
     description: "Your overdue, today, and upcoming work",
     category: "Work",
-    defaultW: 560,
-    defaultH: 460,
+    defaultW: 586,
+    defaultH: 300,
     minW: 200,
     maxW: HOME_CANVAS_DESIGN_WIDTH,
     minH: 160,
@@ -174,20 +174,20 @@ export const HOME_WIDGET_CATALOG: HomeWidgetMeta[] = [
     description: "Org signal for board — what just happened",
     category: "Organization",
     requiresBoard: true,
-    defaultW: 280,
-    defaultH: 340,
+    defaultW: 586,
+    defaultH: 300,
     minW: 200,
-    maxW: 900,
+    maxW: HOME_CANVAS_DESIGN_WIDTH,
     minH: 160,
     maxH: 1200,
   },
   {
     id: "pulse",
     label: "Organization Health",
-    description: "Optional executive snapshot — prefer Today's Focus",
+    description: "Optional executive snapshot",
     category: "Organization",
     requiresOversight: true,
-    defaultW: 560,
+    defaultW: HOME_CANVAS_DESIGN_WIDTH,
     defaultH: 260,
     minW: 240,
     maxW: HOME_CANVAS_DESIGN_WIDTH,
@@ -196,10 +196,10 @@ export const HOME_WIDGET_CATALOG: HomeWidgetMeta[] = [
   },
   {
     id: "upcoming",
-    label: "Upcoming",
-    description: "Optional — hero already features the next event",
+    label: "Upcoming Events",
+    description: "More events beyond the featured highlight",
     category: "Work",
-    defaultW: 388,
+    defaultW: HOME_CANVAS_DESIGN_WIDTH,
     defaultH: 280,
     minW: 240,
     maxW: HOME_CANVAS_DESIGN_WIDTH,
@@ -209,15 +209,15 @@ export const HOME_WIDGET_CATALOG: HomeWidgetMeta[] = [
   {
     id: "deadlines",
     label: "Team Deadlines",
-    description: "Optional — covered by My Tasks and Today's Focus",
+    description: "Open assignments by member across the chapter",
     category: "Work",
     requiresOversight: true,
-    defaultW: 632,
-    defaultH: 260,
+    defaultW: HOME_CANVAS_DESIGN_WIDTH,
+    defaultH: 420,
     minW: 200,
-    maxW: 900,
-    minH: 160,
-    maxH: 900,
+    maxW: HOME_CANVAS_DESIGN_WIDTH,
+    minH: 180,
+    maxH: 1200,
   },
 ];
 
@@ -500,7 +500,7 @@ export function applyLayoutSpacing(
   }
 
   return {
-    version: 17,
+    version: 18,
     spacing: nextSpacing,
     widgets: dedupeWidgets(widgets),
   };
@@ -532,9 +532,9 @@ function parkHidden(
  * Role-aware recommended layouts (workspace widgets only).
  * Inbox is global app chrome — never a canvas card.
  *
- * Briefing Home (v17): flat mock layout — Event → Focus → Tasks | Activity.
- * What's happening? What do I need to do? Is the org okay?
- * Everything else stays in Edit Dashboard or its own page.
+ * Briefing Home: Event banner → Today's Focus → Tasks | Activity
+ * same structure for board and general members (board adds Activity).
+ * Organization Health stays parked.
  */
 export function buildDefaultWorkspace(opts: {
   showInbox: boolean;
@@ -545,21 +545,22 @@ export function buildDefaultWorkspace(opts: {
   const gap = spacingGapPx(spacing);
   const full = HOME_CANVAS_DESIGN_WIDTH;
 
-  const eventH = 168;
-  const focusH = 240;
+  const eventH = 200;
+  const focusH = 220;
+  const eventY = 0;
   const focusY = eventH + gap;
   const workY = focusY + focusH + gap;
   const workH = 300;
   const park = (ids: HomeWidgetId[]) =>
     ids.map((id, index) => parkHidden(id, index));
 
-  /* General members: Hero + Focus + full-width My Tasks (no activity feed). */
+  /* General members: Event banner + Focus + full-width My Tasks. */
   if (!opts.showInbox) {
     return {
-      version: 17,
+      version: 18,
       spacing,
       widgets: dedupeWidgets([
-        widget("featured", 0, 0, full, eventH, 1),
+        widget("featured", 0, eventY, full, eventH, 1),
         widget("overview", 0, focusY, full, focusH, 2),
         widget("tasks", 0, workY, full, workH, 3),
         ...park([
@@ -577,7 +578,7 @@ export function buildDefaultWorkspace(opts: {
 
   /*
    * Board / leadership briefing
-   * ┌─────────── Event Hero ────────────────┐
+   * ┌─────────── Event banner ──────────────┐
    * ├─────────── Today's Focus ─────────────┤
    * ├────── My Tasks ───┬── Activity ───────┤
    */
@@ -585,10 +586,10 @@ export function buildDefaultWorkspace(opts: {
   const activityH = Math.round(workH * 0.85);
 
   return {
-    version: 17,
+    version: 18,
     spacing,
     widgets: dedupeWidgets([
-      widget("featured", 0, 0, full, eventH, 1),
+      widget("featured", 0, eventY, full, eventH, 1),
       widget("overview", 0, focusY, full, focusH, 2),
       widget("tasks", 0, workY, colW, workH, 3),
       widget("activity", colW + gap, workY, full - colW - gap, activityH, 3),
@@ -710,7 +711,7 @@ export function placeWidget(
     candidate = normalizeWidget({ ...candidate, x: slot.x, y: slot.y });
   }
   return {
-    version: 17,
+    version: 18,
     spacing: normalizeSpacing(state.spacing),
     widgets: state.widgets.map((item) => (item.id === id ? candidate : item)),
   };
@@ -939,7 +940,7 @@ export function mergeWorkspaceWithCatalog(
   );
   const base = buildDefaultWorkspace({ ...opts, spacing });
   /* Only current pixel layouts are trusted; older saves reset cleanly. */
-  if (!saved || (saved as HomeWorkspaceState).version !== 17) {
+  if (!saved || (saved as HomeWorkspaceState).version !== 18) {
     return base;
   }
 
@@ -978,7 +979,7 @@ export function mergeWorkspaceWithCatalog(
   }
 
   return {
-    version: 17,
+    version: 18,
     spacing,
     widgets,
   };
@@ -1004,8 +1005,8 @@ export function canvasHeight(widgets: HomeWidgetLayout[]): number {
 }
 
 /**
- * Place a newly shown widget just under the current visible stack
- * (not at the old "park" y=2400 off-canvas region).
+ * Place a newly shown widget (legacy helper — prefer reflowWorkspaceLayout).
+ * Appends full-width under the stack as a soft fallback.
  */
 export function placeShownWidget(
   state: HomeWorkspaceState,
@@ -1022,23 +1023,156 @@ export function placeShownWidget(
     bottom = Math.max(bottom, item.y + effectiveHeight(item));
   }
   const y = others.length === 0 ? 0 : bottom + gap;
-
-  /* Full-width default so edit + briefing feel consistent */
-  const w = Math.min(
-    Math.max(meta.defaultW, meta.minW),
-    HOME_CANVAS_DESIGN_WIDTH,
-  );
-  const x = 0;
-  const h = meta.defaultH;
+  const w = HOME_CANVAS_DESIGN_WIDTH;
+  const h = Math.max(meta.defaultH, meta.minH);
   const z =
     Math.max(0, ...state.widgets.map((item) => item.z ?? 1)) + 1;
 
   return {
-    x,
+    x: 0,
     y: clamp(y, 0, HOME_CANVAS_MAX_HEIGHT - h),
     w,
     h,
     z,
+  };
+}
+
+/**
+ * Document-order packing for the edit canvas.
+ * Keeps primary stack coherent when showing/hiding widgets:
+ *   Featured → Focus → Tasks | Activity → secondary full-width rows
+ */
+export function reflowWorkspaceLayout(
+  state: HomeWorkspaceState,
+): HomeWorkspaceState {
+  const spacing = normalizeSpacing(state.spacing);
+  const gap = spacingGapPx(spacing);
+  const full = HOME_CANVAS_DESIGN_WIDTH;
+  const byId = new Map(state.widgets.map((item) => [item.id, item]));
+
+  const visibleIds = orderVisibleWidgetsForBriefing(
+    state.widgets
+      .filter((item) => !item.hidden && !isPinnedRailWidget(item.id))
+      .map((item) => item.id),
+  );
+
+  for (const item of state.widgets) {
+    if (
+      !item.hidden &&
+      !isPinnedRailWidget(item.id) &&
+      !visibleIds.includes(item.id)
+    ) {
+      visibleIds.push(item.id);
+    }
+  }
+
+  const laid: HomeWidgetLayout[] = [];
+  const placed = new Set<HomeWidgetId>();
+  let y = 0;
+  let z = 1;
+
+  function pushVisible(
+    id: HomeWidgetId,
+    x: number,
+    rowY: number,
+    w: number,
+    h: number,
+  ) {
+    const prev = byId.get(id);
+    const collapsed = Boolean(prev?.collapsed);
+    laid.push(
+      normalizeWidget({
+        id,
+        x,
+        y: rowY,
+        w,
+        h: collapsed ? HOME_COLLAPSED_HEIGHT_PX : h,
+        z: z++,
+        collapsed,
+        hidden: false,
+      }),
+    );
+    placed.add(id);
+  }
+
+  for (const id of visibleIds) {
+    if (placed.has(id)) {
+      continue;
+    }
+
+    const meta = CATALOG_BY_ID[id];
+    if (!meta) {
+      continue;
+    }
+
+    /* Work row: My Tasks + Recent Activity side by side when both shown. */
+    if (
+      id === "tasks" &&
+      visibleIds.includes("activity") &&
+      !placed.has("activity")
+    ) {
+      const colW = Math.floor((full - gap) / 2);
+      const tasksPrev = byId.get("tasks");
+      const actPrev = byId.get("activity");
+      const tasksCollapsed = Boolean(tasksPrev?.collapsed);
+      const actCollapsed = Boolean(actPrev?.collapsed);
+      const hTasks = tasksCollapsed
+        ? HOME_COLLAPSED_HEIGHT_PX
+        : Math.max(CATALOG_BY_ID.tasks.defaultH, 280);
+      const hAct = actCollapsed
+        ? HOME_COLLAPSED_HEIGHT_PX
+        : Math.max(CATALOG_BY_ID.activity.defaultH, 260);
+      const rowH = Math.max(hTasks, hAct);
+      pushVisible("tasks", 0, y, colW, rowH);
+      pushVisible("activity", colW + gap, y, full - colW - gap, rowH);
+      y += rowH + gap;
+      continue;
+    }
+
+    if (id === "activity" && placed.has("activity")) {
+      continue;
+    }
+
+    /* Everything else is full-bleed under the stack. */
+    const h = Math.max(meta.defaultH, meta.minH);
+    pushVisible(id, 0, y, full, h);
+    const laidItem = laid[laid.length - 1]!;
+    y += effectiveHeight(laidItem) + gap;
+  }
+
+  /* Park hidden canvas widgets off-screen. */
+  let parkIndex = 0;
+  for (const item of state.widgets) {
+    if (placed.has(item.id)) {
+      continue;
+    }
+    if (isPinnedRailWidget(item.id)) {
+      laid.push(
+        normalizeWidget({
+          ...item,
+          ...parkHidden(item.id, parkIndex++),
+          hidden: true,
+          collapsed: item.collapsed,
+        }),
+      );
+      continue;
+    }
+    if (item.hidden) {
+      laid.push(
+        normalizeWidget({
+          ...item,
+          ...parkHidden(item.id, parkIndex++),
+          hidden: true,
+          collapsed: item.collapsed,
+        }),
+      );
+    }
+  }
+
+  return {
+    version: 18,
+    spacing,
+    widgets: dedupeWidgets(laid),
   };
 }
 
@@ -1054,51 +1188,49 @@ export function setWidgetHidden(
     if (hidden) {
       return state;
     }
-    const placed = placeShownWidget(state, id);
-    return {
-      version: 17,
+    const meta = CATALOG_BY_ID[id];
+    if (!meta) {
+      return state;
+    }
+    const next: HomeWorkspaceState = {
+      version: 18,
       spacing,
-      widgets: packWidgets([
+      widgets: [
         ...state.widgets,
         normalizeWidget({
           id,
-          ...placed,
+          x: 0,
+          y: 0,
+          w: meta.defaultW,
+          h: meta.defaultH,
           hidden: false,
+          collapsed: false,
+          z: 1,
         }),
-      ]),
+      ],
     };
+    return reflowWorkspaceLayout(next);
   }
 
-  if (hidden) {
-    return {
-      version: 17,
-      spacing,
-      widgets: state.widgets.map((item) =>
-        item.id === id ? { ...item, hidden: true } : item,
-      ),
-    };
-  }
+  const nextWidgets = state.widgets.map((item) =>
+    item.id === id
+      ? {
+          ...item,
+          hidden,
+          collapsed: hidden ? item.collapsed : false,
+        }
+      : item,
+  );
 
-  /* Unhide: always re-home into visible canvas (parked widgets sat at y≈2400). */
-  const placed = placeShownWidget(state, id);
-  return {
-    version: 17,
+  return reflowWorkspaceLayout({
+    version: 18,
     spacing,
-    widgets: state.widgets.map((item) =>
-      item.id === id
-        ? normalizeWidget({
-            ...item,
-            ...placed,
-            hidden: false,
-            collapsed: false,
-          })
-        : item,
-    ),
-  };
+    widgets: nextWidgets,
+  });
 }
 
 /**
- * Stable document order for reading Home (not freeform canvas x/y).
+ * Stable document order for reading Home (and edit reflow).
  * Only ids that are currently visible should be passed in.
  */
 export const BRIEFING_WIDGET_ORDER: readonly HomeWidgetId[] = [
@@ -1106,11 +1238,11 @@ export const BRIEFING_WIDGET_ORDER: readonly HomeWidgetId[] = [
   "overview",
   "tasks",
   "activity",
-  "pulse",
   "upcoming",
   "deadlines",
   "minutes",
   "actions",
+  "pulse",
 ] as const;
 
 export function orderVisibleWidgetsForBriefing(
@@ -1126,7 +1258,7 @@ export function setWidgetCollapsed(
   collapsed: boolean,
 ): HomeWorkspaceState {
   return {
-    version: 17,
+    version: 18,
     spacing: normalizeSpacing(state.spacing),
     widgets: state.widgets.map((item) =>
       item.id === id ? normalizeWidget({ ...item, collapsed }) : item,
@@ -1218,7 +1350,7 @@ export function rectForWidget(
 }
 
 export function homeWorkspaceStorageKey(memberId: number): string {
-  return `nsa_home_workspace_v17:${memberId}`;
+  return `nsa_home_workspace_v18:${memberId}`;
 }
 
 export function loadHomeWorkspace(

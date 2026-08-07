@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 
 import type { MemberResponse } from "../../lib/auth-api";
-import { avatarColorFromSeed } from "../../lib/avatar-color";
+import { avatarColorForPerson } from "../../lib/avatar-color";
 import type { EventTaskResponse } from "../../lib/event-tasks-api";
 import type { EventResponse } from "../../lib/events-api";
 import { FINANCE_APPROVALS_PATH } from "../../lib/finance-routes";
@@ -129,13 +129,9 @@ function TaskRow({
         ? "In progress"
         : null;
   const assigneeName = task.assignee_name?.trim() || null;
-  const assigneePalette = avatarColorFromSeed(
-    assigneeName
-      ? task.assignee_id != null
-        ? `user:${task.assignee_id}`
-        : assigneeName
-      : "unassigned",
-  );
+  const assigneePalette = assigneeName
+    ? avatarColorForPerson(task.assignee_id, assigneeName)
+    : avatarColorForPerson(null, "unassigned");
 
   return (
     <li className="home-task-row">

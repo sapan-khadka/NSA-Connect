@@ -276,7 +276,9 @@ export function HomeTodaysFocus({
 
   return (
     <section className="home-focus" aria-label="Today's Focus">
-      <p className="home-section-kicker">Today&apos;s Focus</p>
+      <div className="home-task-header">
+        <h2 className="home-panel-title">Today&apos;s Focus</h2>
+      </div>
 
       {isLoading ? (
         <p className="home-focus__empty">Loading…</p>

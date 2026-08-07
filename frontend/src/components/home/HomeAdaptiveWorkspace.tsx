@@ -176,6 +176,20 @@ function renderWidgetContent(
           }
           tasksPath={props.tasksPath}
           limit={previewLimitForWidget(density, "deadlines", screenHeight)}
+          memberLimit={
+            density === "xs" || density === "sm"
+              ? 4
+              : density === "md"
+                ? 8
+                : 14
+          }
+          tasksPerMember={
+            density === "xs" || density === "sm"
+              ? 3
+              : density === "md"
+                ? 5
+                : 8
+          }
         />
       );
     case "pulse":

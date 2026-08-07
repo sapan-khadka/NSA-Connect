@@ -17,6 +17,8 @@ export type ProfileMenuItem = {
 
 export type ProfileMenuProps = {
   name: string;
+  /** Platform member id — keeps avatar color consistent with chat/Members. */
+  memberId?: number | null;
   /** Secondary line under the name (role, email). */
   subtitle?: string;
   avatarSrc?: string | null;
@@ -34,6 +36,7 @@ export type ProfileMenuProps = {
  */
 export function ProfileMenu({
   name,
+  memberId = null,
   subtitle,
   avatarSrc,
   items,
@@ -77,7 +80,12 @@ export function ProfileMenu({
             avatarOnly ? "p-0.5" : "px-2 py-1.5",
           )}
         >
-          <Avatar name={name} src={avatarSrc} size="sm" />
+          <Avatar
+            name={name}
+            memberId={memberId}
+            src={avatarSrc}
+            size="sm"
+          />
           {!avatarOnly ? (
             <>
               <span className="min-w-0 hidden sm:block">

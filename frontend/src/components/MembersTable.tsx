@@ -901,6 +901,7 @@ export function MembersTable({
                       >
                         <Avatar
                           name={member.full_name}
+                          memberId={member.id}
                           src={member.avatar_url}
                           size="md"
                           className="members-table-avatar"
@@ -1080,6 +1081,7 @@ export function MembersTable({
                           >
                             <Avatar
                               name={member.full_name}
+                              memberId={member.id}
                               src={member.avatar_url}
                               size="md"
                               className="members-table-avatar"

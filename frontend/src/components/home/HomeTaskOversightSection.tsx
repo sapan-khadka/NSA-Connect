@@ -143,7 +143,7 @@ export function HomeTaskOversightSection({
     <>
       {!embedded ? (
         <div className="flex shrink-0 items-center justify-between gap-3">
-          <h2 className="home-section-title">Task Oversight</h2>
+          <h2 className="home-panel-title">Task Oversight</h2>
           <ArrowLink to="/events/oversight">View all</ArrowLink>
         </div>
       ) : (

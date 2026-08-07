@@ -85,7 +85,7 @@ export function HomeQuickActions({ member }: { member: MemberResponse }) {
       aria-label="Quick actions"
     >
       <div className="home-task-header">
-        <h2 className="home-panel-title">Quick actions</h2>
+        <h2 className="home-panel-title">Quick Actions</h2>
       </div>
       <ul className="home-quick-actions-tiles">
         {actions.map((action) => (

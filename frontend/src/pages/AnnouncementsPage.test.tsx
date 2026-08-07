@@ -93,15 +93,19 @@ describe("AnnouncementsPage", () => {
       await screen.findByRole("heading", { level: 1, name: "Announcements" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Organization-wide updates, reminders, and event notices."),
+      screen.getByText("Chapter updates, event notices, and urgent reminders."),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /^\+?\s*Announcement$/i }),
+      screen.getByRole("button", { name: /New announcement/i }),
     ).toBeInTheDocument();
 
     const feed = await screen.findByRole("feed", { name: "Announcements" });
-    expect(within(feed).getByText("Pinned")).toBeInTheDocument();
-    expect(within(feed).getByText("Recent")).toBeInTheDocument();
+    expect(
+      within(feed).getByRole("heading", { name: "Pinned" }),
+    ).toBeInTheDocument();
+    expect(
+      within(feed).getByRole("heading", { name: "Recent" }),
+    ).toBeInTheDocument();
     expect(within(feed).getByText("Semester Kickoff")).toBeInTheDocument();
     expect(within(feed).getByText("Dashain Celebration")).toBeInTheDocument();
     expect(

@@ -61,6 +61,9 @@ export function EventAttendeeStack({
           >
             <Avatar
               name={person.name}
+              memberId={
+                typeof person.id === "number" ? person.id : Number(person.id) || null
+              }
               src={person.photoUrl}
               size="sm"
               className="h-7 w-7 text-[10px]"

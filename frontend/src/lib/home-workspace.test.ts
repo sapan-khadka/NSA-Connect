@@ -43,11 +43,11 @@ describe("home-workspace pixel canvas", () => {
     ).toBeCloseTo(wide.canvasWidth, 0);
   });
 
-  it("builds a board briefing: hero, focus, tasks, and activity only", () => {
+  it("builds a board briefing: event banner, focus, tasks, and activity only", () => {
     const state = buildDefaultWorkspace({ showInbox: true, showPulse: true });
     expect(layoutHasOverlaps(state.widgets)).toBe(false);
     expect(state.spacing).toBe("loose");
-    expect(state.version).toBe(17);
+    expect(state.version).toBe(18);
 
     const visible = visibleWorkspaceWidgets(state).map((widget) => widget.id);
     expect(visible).toEqual(["featured", "overview", "tasks", "activity"]);
@@ -83,7 +83,7 @@ describe("home-workspace pixel canvas", () => {
     expect(layoutHasOverlaps(state.widgets)).toBe(false);
   });
 
-  it("builds a member briefing with hero, focus, and full-width tasks", () => {
+  it("builds a member briefing with event banner, focus, and full-width tasks", () => {
     const state = buildDefaultWorkspace({ showInbox: false, showPulse: false });
     const visible = visibleWorkspaceWidgets(state).map((w) => w.id);
     expect(visible).toEqual(["featured", "overview", "tasks"]);
@@ -199,7 +199,7 @@ describe("home-workspace pixel canvas", () => {
     expect(overview.y - (featured.y + featured.h)).toBe(HOME_SPACING_GAP_PX.tight);
   });
 
-  it("rehomes shown widgets below the visible stack instead of the park zone", () => {
+  it("rehomes shown widgets into hierarchy order (not the park zone)", () => {
     const base = buildDefaultWorkspace({ showInbox: true, showPulse: true });
     const parked = base.widgets.find((w) => w.id === "upcoming")!;
     expect(parked.hidden).toBe(true);
@@ -208,16 +208,33 @@ describe("home-workspace pixel canvas", () => {
     const shown = setWidgetHidden(base, "upcoming", false);
     const upcoming = shown.widgets.find((w) => w.id === "upcoming")!;
     expect(upcoming.hidden).toBe(false);
-    expect(upcoming.y).toBeLessThan(900);
+    expect(upcoming.y).toBeLessThan(1200);
+    expect(upcoming.w).toBe(HOME_CANVAS_DESIGN_WIDTH);
 
-    const visible = visibleWorkspaceWidgets(shown);
-    const maxBottom = Math.max(
-      ...visible
-        .filter((w) => w.id !== "upcoming")
-        .map((w) => w.y + w.h),
-    );
-    expect(upcoming.y).toBeGreaterThanOrEqual(maxBottom);
-    expect(visible.map((w) => w.id)).toContain("upcoming");
+    const featured = shown.widgets.find((w) => w.id === "featured")!;
+    const overview = shown.widgets.find((w) => w.id === "overview")!;
+    const tasks = shown.widgets.find((w) => w.id === "tasks")!;
+    expect(featured.y).toBe(0);
+    expect(overview.y).toBeGreaterThan(featured.y);
+    expect(tasks.y).toBeGreaterThan(overview.y);
+    expect(upcoming.y).toBeGreaterThan(tasks.y);
+    expect(layoutHasOverlaps(shown.widgets)).toBe(false);
+  });
+
+  it("reflows the stack when hiding a widget so gaps close", () => {
+    const base = buildDefaultWorkspace({ showInbox: true, showPulse: true });
+    const withUpcoming = setWidgetHidden(base, "upcoming", false);
+    const withoutFocus = setWidgetHidden(withUpcoming, "overview", true);
+    expect(
+      withoutFocus.widgets.find((w) => w.id === "overview")?.hidden,
+    ).toBe(true);
+    const featured = withoutFocus.widgets.find((w) => w.id === "featured")!;
+    const tasks = withoutFocus.widgets.find((w) => w.id === "tasks")!;
+    const upcoming = withoutFocus.widgets.find((w) => w.id === "upcoming")!;
+    expect(featured.y).toBe(0);
+    expect(tasks.y).toBeGreaterThan(featured.y);
+    expect(upcoming.y).toBeGreaterThan(tasks.y);
+    expect(layoutHasOverlaps(withoutFocus.widgets)).toBe(false);
   });
 
   it("orders briefing widgets in a stable product sequence", () => {
@@ -227,8 +244,9 @@ describe("home-workspace pixel canvas", () => {
         "featured",
         "upcoming",
         "tasks",
+        "overview",
       ]),
-    ).toEqual(["featured", "tasks", "upcoming", "actions"]);
+    ).toEqual(["featured", "overview", "tasks", "upcoming", "actions"]);
   });
 
   it("omits board/oversight widgets for general members", () => {
@@ -336,12 +354,12 @@ describe("home-workspace pixel canvas", () => {
     expect(softSnapToGridPx(70, 100, 10)).toBe(70);
   });
 
-  it("resets older saved layouts to the v17 default", () => {
+  it("resets older saved layouts to the v18 default", () => {
     const merged = mergeWorkspaceWithCatalog(
       { version: 12, widgets: [] },
       { showInbox: true, showPulse: false },
     );
-    expect(merged.version).toBe(17);
+    expect(merged.version).toBe(18);
     expect(visibleWorkspaceWidgets(merged).map((w) => w.id)).toEqual([
       "featured",
       "overview",

@@ -539,7 +539,11 @@ export function EventOverviewCard({
                     <ul className="details-panel-people-list">
                       {attendees.map((attendee) => (
                         <li key={attendee.member_id}>
-                          <Avatar name={attendee.full_name} size="sm" />
+                          <Avatar
+                            name={attendee.full_name}
+                            memberId={attendee.member_id}
+                            size="sm"
+                          />
                           <span>{attendee.full_name}</span>
                         </li>
                       ))}

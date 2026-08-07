@@ -10,7 +10,7 @@ import { Trash2 } from "lucide-react";
 
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/api-error";
-import { avatarColorFromSeed } from "../lib/avatar-color";
+import { avatarColorForPerson } from "../lib/avatar-color";
 import { AppIcon } from "./ui/AppIcon";
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
@@ -85,8 +85,14 @@ function calcTaskCompletionSummary(tasks: EventTaskResponse[]): {
 }
 
 /** Shared initials chip — same look for Event Manage and Kanban cards. */
-export function AssigneeAvatar({ name }: { name: string | null }) {
-  const palette = avatarColorFromSeed(name || "?");
+export function AssigneeAvatar({
+  name,
+  memberId = null,
+}: {
+  name: string | null;
+  memberId?: number | null;
+}) {
+  const palette = avatarColorForPerson(memberId, name || "?");
   return (
     <span
       aria-hidden="true"
@@ -200,7 +206,10 @@ function SimpleTaskRow({
   return (
     <Card as="li" nested padding="none" className="p-3">
       <div className="flex items-center gap-3">
-        <AssigneeAvatar name={task.assignee_name} />
+        <AssigneeAvatar
+          name={task.assignee_name}
+          memberId={task.assignee_id}
+        />
 
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium text-foreground">

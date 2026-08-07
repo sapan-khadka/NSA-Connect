@@ -175,6 +175,7 @@ export function PendingApprovals({
                   <div className="flex min-w-0 items-start gap-3">
                     <Avatar
                       name={member.full_name}
+                      memberId={member.id}
                       src={member.avatar_url}
                       size="md"
                       className="mt-0.5 shrink-0"

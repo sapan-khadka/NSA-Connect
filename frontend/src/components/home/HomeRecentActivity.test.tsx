@@ -69,7 +69,7 @@ describe("HomeRecentActivity", () => {
       within(card).getByRole("heading", { name: "Recent Activity" }),
     ).toBeInTheDocument();
     expect(
-      within(card).getByRole("link", { name: /View history/i }),
+      within(card).getByRole("link", { name: /View all/i }),
     ).toHaveAttribute("href", "/members/7");
 
     await waitFor(() => {

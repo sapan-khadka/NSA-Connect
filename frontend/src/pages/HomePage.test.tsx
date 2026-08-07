@@ -225,7 +225,7 @@ describe("HomePage", () => {
     ).not.toBeInTheDocument();
 
     expect(screen.queryByLabelText("Action Center")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Meeting Minutes")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Meetings")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Team pulse")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Upcoming deadlines")).not.toBeInTheDocument();
 
@@ -233,7 +233,7 @@ describe("HomePage", () => {
     expect(within(work).getByLabelText("My Tasks")).toBeInTheDocument();
     expect(within(work).queryByLabelText("Task Oversight")).not.toBeInTheDocument();
 
-    expect(screen.queryByLabelText("Upcoming events")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Upcoming Events")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Organization Health")).not.toBeInTheDocument();
 
     expect(screen.queryByLabelText("Today's Timeline")).not.toBeInTheDocument();
@@ -261,16 +261,19 @@ describe("HomePage", () => {
 
     await user.click(screen.getByRole("button", { name: /Edit dashboard/i }));
 
-    expect(await screen.findByText(/Drag panels/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Panels stack in Home order/i)).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Default layout" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /Move Event Hero/i }),
+      screen.getByRole("button", { name: "Tidy layout" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Move Upcoming Event/i }),
     ).toBeInTheDocument();
 
     await user.click(
-      screen.getByRole("button", { name: /Event Hero options/i }),
+      screen.getByRole("button", { name: /Upcoming Event options/i }),
     );
     expect(await screen.findByRole("menuitem", { name: "Move" })).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: /Resize/i })).toBeInTheDocument();
@@ -469,7 +472,7 @@ describe("HomePage", () => {
     expect(await screen.findByLabelText("Today's Focus")).toBeInTheDocument();
     expect(screen.queryByLabelText("Recent Activity")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Quick actions")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Meeting Minutes")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Meetings")).not.toBeInTheDocument();
   });
 
   it.each([
@@ -501,10 +504,10 @@ describe("HomePage", () => {
       expect(await screen.findByLabelText("Today's Focus")).toBeInTheDocument();
       expect(screen.queryByLabelText("Quick actions")).not.toBeInTheDocument();
       expect(screen.getByLabelText("Recent Activity")).toBeInTheDocument();
-      expect(screen.queryByLabelText("Meeting Minutes")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("Meetings")).not.toBeInTheDocument();
       expect(screen.queryByLabelText("Action Center")).not.toBeInTheDocument();
       expect(screen.queryByLabelText("Inbox")).not.toBeInTheDocument();
-      expect(screen.queryByLabelText("Upcoming events")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("Upcoming Events")).not.toBeInTheDocument();
     },
   );
 
@@ -534,7 +537,7 @@ describe("HomePage", () => {
     expect(await screen.findByLabelText("Today's Focus")).toBeInTheDocument();
     expect(screen.getByLabelText("Recent Activity")).toBeInTheDocument();
     expect(screen.queryByLabelText("Quick actions")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Meeting Minutes")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Meetings")).not.toBeInTheDocument();
   });
 
   it("shows View calendar empty state for general members with no events", async () => {

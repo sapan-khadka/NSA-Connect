@@ -95,20 +95,17 @@ export function HomeMeetingMinutesCard() {
   return (
     <HomeCard
       padding="sm"
-      className="flex h-full min-h-0 flex-col home-surface-quiet"
-      aria-label="Meeting Minutes"
+      className="flex h-full min-h-0 flex-col home-surface-quiet home-meeting-minutes"
+      aria-label="Meetings"
     >
-      <div className="flex shrink-0 items-center justify-between gap-3">
-        <h2 className="home-section-title">Meeting Minutes</h2>
-        <ArrowLink to={MEETINGS_PATH}>All meetings</ArrowLink>
+      <div className="home-task-header">
+        <h2 className="home-panel-title">Meetings</h2>
+        <ArrowLink to={MEETINGS_PATH}>View all</ArrowLink>
       </div>
 
-      <div className="mt-3 flex min-h-0 flex-1 flex-col">
+      <div className="home-panel-body">
         {isLoading ? (
-          <div className="space-y-2" aria-hidden="true">
-            <div className="h-3 w-2/3 animate-pulse rounded bg-slate-200/80" />
-            <div className="h-3 w-1/2 animate-pulse rounded bg-slate-200/60" />
-          </div>
+          <p className="home-activity-empty">Loading…</p>
         ) : null}
 
         {!isLoading && focus ? (
@@ -116,16 +113,14 @@ export function HomeMeetingMinutesCard() {
             <Link
               to={meetingPath(focus.event_id)}
               aria-label={`Open ${focus.event_name}`}
-              className="group flex items-start gap-2.5 rounded-xl p-1 transition hover:bg-surface-muted"
+              className="home-meeting-focus-row"
             >
-              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-800">
+              <span className="home-meeting-focus-row__icon" aria-hidden>
                 <AppIcon icon={NotebookPen} size="xs" className="text-current" />
               </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">
-                  {focus.event_name}
-                </p>
-                <p className="mt-0.5 text-xs text-gray-500">
+              <div className="home-meeting-focus-row__copy">
+                <p className="home-meeting-focus-row__title">{focus.event_name}</p>
+                <p className="home-meeting-focus-row__meta">
                   {formatMeetingWhen(focus.starts_at)}
                   {needsNotes
                     ? " · Notes needed"
@@ -136,37 +131,26 @@ export function HomeMeetingMinutesCard() {
               </div>
               <AppIcon
                 icon={ChevronRight}
-                size="xs"
-                className="mt-2 text-label transition group-hover:translate-x-0.5 group-hover:text-primary"
+                size="sm"
+                className="home-meeting-focus-row__chev"
               />
             </Link>
-            <div className="mt-auto flex flex-wrap gap-2 pt-4">
-              <Link
-                to={meetingNotesPath(focus.event_id)}
-                className="inline-flex rounded-xl bg-primary px-3.5 py-2 text-xs font-medium text-white transition hover:bg-primary-hover"
-              >
-                {needsNotes
-                  ? "Write notes"
-                  : focus.has_summary
-                    ? "View minutes"
-                    : "Review & publish"}
-              </Link>
-            </div>
+
+            <Link
+              to={meetingNotesPath(focus.event_id)}
+              className="home-meeting-focus-cta"
+            >
+              {needsNotes
+                ? "Write notes"
+                : focus.has_summary
+                  ? "View minutes"
+                  : "Review & publish"}
+            </Link>
           </>
         ) : null}
 
         {!isLoading && !focus ? (
-          <>
-            <p className="text-sm text-gray-600">
-              No board meetings lined up. Create a meeting to record minutes.
-            </p>
-            <Link
-              to={MEETINGS_PATH}
-              className="mt-auto inline-flex w-fit rounded-xl bg-primary px-3.5 py-2 text-xs font-medium text-white transition hover:bg-primary-hover"
-            >
-              View board meetings
-            </Link>
-          </>
+          <p className="home-activity-empty">No board meetings to show</p>
         ) : null}
       </div>
     </HomeCard>

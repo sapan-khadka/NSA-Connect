@@ -425,6 +425,12 @@ function AnnouncementMoreMenu({
   );
 }
 
+const CATEGORY_ACCENTS: Record<AnnouncementCategory, string> = {
+  general: "#111111",
+  urgent: "#b42318",
+  event_related: "#d85a30",
+};
+
 function AnnouncementFeedItem({
   announcement,
   canManage,
@@ -443,9 +449,10 @@ function AnnouncementFeedItem({
   const CategoryIcon = announcement.is_pinned
     ? Pin
     : CATEGORY_ICONS[announcement.category];
-  const categoryLabel = announcement.is_pinned
-    ? "Pinned"
-    : ANNOUNCEMENT_CATEGORY_FEED_LABELS[announcement.category];
+  const categoryLabel = ANNOUNCEMENT_CATEGORY_FEED_LABELS[announcement.category];
+  const accent = announcement.is_pinned
+    ? "#a89968"
+    : CATEGORY_ACCENTS[announcement.category];
 
   function handleActivate() {
     onOpen(announcement);
@@ -462,52 +469,72 @@ function AnnouncementFeedItem({
     <article
       className={[
         "announcements-feed-item",
+        `is-${announcement.category}`,
         announcement.is_pinned ? "is-pinned" : "",
       ]
         .filter(Boolean)
         .join(" ")}
+      style={{ ["--ann-accent" as string]: accent }}
       role="button"
       tabIndex={0}
       aria-label={`Open ${displayTitle(announcement.title)}`}
       onClick={handleActivate}
       onKeyDown={handleKeyDown}
     >
-      <div className="announcements-feed-item-top">
-        <div className="announcements-feed-title-group">
-          <span
-            className="announcements-feed-icon"
-            aria-label={categoryLabel}
-            title={categoryLabel}
-          >
-            <AppIcon icon={CategoryIcon} size="xs" className="text-current" />
-          </span>
-          <h2 className="announcements-feed-title">
-            {displayTitle(announcement.title)}
-          </h2>
+      <div className="announcements-feed-item__main">
+        <div className="announcements-feed-item-top">
+          <div className="announcements-feed-title-group">
+            <span
+              className="announcements-feed-icon"
+              aria-label={
+                announcement.is_pinned
+                  ? `Pinned · ${categoryLabel}`
+                  : categoryLabel
+              }
+              title={
+                announcement.is_pinned
+                  ? `Pinned · ${categoryLabel}`
+                  : categoryLabel
+              }
+            >
+              <AppIcon icon={CategoryIcon} size="xs" className="text-current" />
+            </span>
+            <div className="announcements-feed-title-wrap">
+              <h2 className="announcements-feed-title">
+                {displayTitle(announcement.title)}
+              </h2>
+              {announcement.is_pinned ? (
+                <span className="announcements-feed-pin">Pinned</span>
+              ) : null}
+            </div>
+          </div>
+          <div className="announcements-feed-item-end">
+            <time
+              className="announcements-feed-date"
+              dateTime={announcement.created_at}
+              title={formatEventDateTime(announcement.created_at)}
+            >
+              {formatFeedTimestamp(announcement.created_at)}
+            </time>
+            {canManage ? (
+              <AnnouncementMoreMenu
+                announcement={announcement}
+                onEdit={onEdit}
+                onDeleted={onDeleted}
+                onPinnedChange={onPinnedChange}
+              />
+            ) : (
+              <span
+                className="announcements-feed-more-spacer"
+                aria-hidden="true"
+              />
+            )}
+          </div>
         </div>
-        <div className="announcements-feed-item-end">
-          <time
-            className="announcements-feed-date"
-            dateTime={announcement.created_at}
-            title={formatEventDateTime(announcement.created_at)}
-          >
-            {formatFeedTimestamp(announcement.created_at)}
-          </time>
-          {canManage ? (
-            <AnnouncementMoreMenu
-              announcement={announcement}
-              onEdit={onEdit}
-              onDeleted={onDeleted}
-              onPinnedChange={onPinnedChange}
-            />
-          ) : (
-            <span className="announcements-feed-more-spacer" aria-hidden="true" />
-          )}
-        </div>
-      </div>
 
-      <p className="announcements-feed-body">{announcement.body}</p>
-      <AnnouncementMeta announcement={announcement} />
+        <p className="announcements-feed-body">{announcement.body}</p>
+        <AnnouncementMeta announcement={announcement} />
+      </div>
     </article>
   );
 }
@@ -742,7 +769,14 @@ export function AnnouncementsPage() {
       <header className="announcements-page-header">
         <div className="announcements-page-heading">
           <div className="announcements-page-title-row">
-            <h1 className="announcements-page-title">Announcements</h1>
+            <div className="announcements-page-title-block">
+              <h1 className="announcements-page-title">Announcements</h1>
+              {!loading && announcements.length > 0 ? (
+                <span className="announcements-page-count">
+                  {announcements.length}
+                </span>
+              ) : null}
+            </div>
             {canManage && !composing ? (
               <button
                 type="button"
@@ -754,12 +788,12 @@ export function AnnouncementsPage() {
                 }}
               >
                 <AppIcon icon={Plus} size="xs" className="text-current" />
-                Announcement
+                New announcement
               </button>
             ) : null}
           </div>
           <p className="announcements-page-subtitle">
-            Organization-wide updates, reminders, and event notices.
+            Chapter updates, event notices, and urgent reminders.
           </p>
         </div>
       </header>

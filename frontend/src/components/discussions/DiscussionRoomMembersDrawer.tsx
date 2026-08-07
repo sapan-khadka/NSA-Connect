@@ -474,9 +474,9 @@ export function DiscussionRoomMembersDrawer({
                           >
                             <Avatar
                               name={entry.full_name}
+                              memberId={entry.id}
                               size="md"
                               tone="colorful"
-                              colorSeed={`user:${entry.id}`}
                               className="!h-10 !w-10 !text-[12px] !font-bold"
                             />
                             <div className="min-w-0 flex-1">

@@ -220,6 +220,7 @@ export function AppTopBar({
 
           {member ? (
             <AccountMenu
+              memberId={member.id}
               fullName={member.full_name}
               avatarUrl={member.avatar_url}
               onLogout={logout}

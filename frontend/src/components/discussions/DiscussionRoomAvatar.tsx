@@ -1,6 +1,9 @@
 import { MessagesSquare, Users } from "lucide-react";
 
-import { avatarColorFromSeed } from "../../lib/avatar-color";
+import {
+  avatarColorFromSeed,
+  avatarColorForPerson,
+} from "../../lib/avatar-color";
 import type { DiscussionInboxRoom } from "../../lib/discussion-api";
 import { AppIcon } from "../ui/AppIcon";
 
@@ -78,10 +81,9 @@ export function DiscussionRoomAvatar({
           <span
             className={baseClass}
             style={(() => {
-              const palette = avatarColorFromSeed(
-                room.peer_user_id != null
-                  ? `user:${room.peer_user_id}`
-                  : room.label,
+              const palette = avatarColorForPerson(
+                room.peer_user_id,
+                room.label,
               );
               return {
                 backgroundColor: palette.background,

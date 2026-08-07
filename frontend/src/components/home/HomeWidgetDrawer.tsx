@@ -78,7 +78,13 @@ export function HomeWidgetDrawer({
       />
       <aside className="home-widget-drawer__panel">
         <header className="home-widget-drawer__head">
-          <h2 className="home-widget-drawer__title">Widgets</h2>
+          <div>
+            <h2 className="home-widget-drawer__title">Widgets</h2>
+            <p className="home-widget-drawer__subtitle">
+              Toggle panels — they stack in Home order (event, focus, work,
+              then extras).
+            </p>
+          </div>
           <button
             type="button"
             className="home-widget-drawer__icon-btn"

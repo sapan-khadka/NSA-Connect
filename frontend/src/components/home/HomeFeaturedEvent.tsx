@@ -130,6 +130,13 @@ function FeaturedCarouselControls({
   );
 }
 
+function formatEventDateShort(isoDate: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+  }).format(new Date(isoDate));
+}
+
 type HomeFeaturedEventProps = {
   events: EventResponse[];
   canManage?: boolean;
@@ -138,14 +145,15 @@ type HomeFeaturedEventProps = {
   density?: "xs" | "sm" | "md" | "lg" | "xl";
   contentScale?: number;
   /**
-   * `hero` — photo banner (default Home).
-   * `strip` — compact row for small edit-dashboard widgets.
+   * `hero` — photo banner (edit canvas / large widgets).
+   * `strip` — dense row for medium widgets.
+   * `line` — document row for Home briefing (no hero photo).
    */
-  presentation?: "hero" | "strip";
+  presentation?: "hero" | "strip" | "line";
 };
 
 /**
- * Next-event spotlight — photo banner on Home, compact strip when rescaled.
+ * Next-event spotlight — briefing line by default, hero/strip on freeform edit.
  */
 export function HomeFeaturedEvent({
   events,
@@ -165,7 +173,9 @@ export function HomeFeaturedEvent({
   const safeIndex = events.length === 0 ? 0 : Math.min(index, events.length - 1);
   const event = events[safeIndex] ?? null;
   const eventIdsKey = events.map((item) => item.id).join(",");
-  const useHero = presentation === "hero" && density !== "xs" && density !== "sm";
+  const useLine = presentation === "line";
+  const useHero =
+    !useLine && presentation === "hero" && density !== "xs" && density !== "sm";
 
   useEffect(() => {
     setIndex(0);
@@ -176,7 +186,7 @@ export function HomeFeaturedEvent({
   }, [event?.id, event?.event_photo_url]);
 
   useEffect(() => {
-    if (!event) {
+    if (!event || useLine) {
       setGoingCount(null);
       setMaybeCount(null);
       setNotGoingCount(null);
@@ -204,7 +214,7 @@ export function HomeFeaturedEvent({
     return () => {
       cancelled = true;
     };
-  }, [event?.id]);
+  }, [event?.id, useLine]);
 
   function goPrev() {
     setIndex((current) =>
@@ -217,6 +227,20 @@ export function HomeFeaturedEvent({
   function goNext() {
     setIndex((current) =>
       events.length === 0 ? 0 : (current + 1) % events.length,
+    );
+  }
+
+  if (useLine) {
+    return (
+      <FeaturedEventLine
+        event={event}
+        isLoading={isLoading}
+        safeIndex={safeIndex}
+        total={events.length}
+        canCreateEvent={canCreateEvent}
+        onPrev={goPrev}
+        onNext={goNext}
+      />
     );
   }
 
@@ -454,6 +478,83 @@ export function HomeFeaturedEvent({
           onNext={goNext}
           tone="light"
         />
+      </div>
+    </section>
+  );
+}
+
+function FeaturedEventLine({
+  event,
+  isLoading,
+  safeIndex,
+  total,
+  canCreateEvent,
+  onPrev,
+  onNext,
+}: {
+  event: EventResponse | null;
+  isLoading: boolean;
+  safeIndex: number;
+  total: number;
+  canCreateEvent: boolean;
+  onPrev: () => void;
+  onNext: () => void;
+}) {
+  if (isLoading) {
+    return (
+      <section aria-label="Featured Event" className="home-featured-line is-loading">
+        <p className="home-section-kicker">Upcoming event</p>
+        <p className="home-featured-line__muted">Loading…</p>
+      </section>
+    );
+  }
+
+  if (!event) {
+    return (
+      <section aria-label="Featured Event" className="home-featured-line is-empty">
+        <p className="home-section-kicker">Upcoming event</p>
+        <div className="home-featured-line__row">
+          <p className="home-featured-line__muted">No upcoming events</p>
+          <div className="home-featured-line__aside">
+            {canCreateEvent ? (
+              <Link to="/events/calendar?create=1" className="home-featured-line__link">
+                Create
+              </Link>
+            ) : null}
+            <Link to="/events/calendar" className="home-featured-line__link">
+              View calendar
+            </Link>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  const eventPath = eventDetailPath(event.id);
+  const when = `${formatEventDateShort(event.starts_at)} · ${formatEventTime(event.starts_at)}`;
+
+  return (
+    <section aria-label="Featured Event" className="home-featured-line">
+      <div className="home-featured-line__head">
+        <p className="home-section-kicker">Upcoming event</p>
+        <FeaturedCarouselControls
+          index={safeIndex}
+          total={total}
+          onPrev={onPrev}
+          onNext={onNext}
+        />
+      </div>
+      <div className="home-featured-line__row">
+        <Link to={eventPath} className="home-featured-line__main">
+          <span className="home-featured-line__name">{event.name}</span>
+          <span className="home-featured-line__sep" aria-hidden>
+            ·
+          </span>
+          <span className="home-featured-line__when">{when}</span>
+        </Link>
+        <Link to={eventPath} className="home-featured-line__open" aria-label="Open event">
+          <AppIcon icon={ChevronRight} size="sm" />
+        </Link>
       </div>
     </section>
   );

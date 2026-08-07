@@ -4,14 +4,15 @@ import {
   HOME_WIDGET_CATALOG,
   densityForSize,
   getHomeWidgetMeta,
+  layoutHasOverlaps,
   loadHomeWorkspace,
   mergeWorkspaceWithCatalog,
-  normalizeSpacing,
-  nudgeWidget,
   placeWidgetFree,
+  reflowWorkspaceLayout,
   saveHomeWorkspace,
   setWidgetCollapsed,
   setWidgetHidden,
+  nudgeWidget,
   visibleWorkspaceWidgets,
   type HomeWidgetId,
   type HomeWidgetLayout,
@@ -88,6 +89,11 @@ export function useHomeWorkspace(opts: {
   }
 
   function enterCustomize() {
+    setState((current) =>
+      layoutHasOverlaps(current.widgets)
+        ? reflowWorkspaceLayout(current)
+        : current,
+    );
     setIsCustomizing(true);
   }
 
@@ -142,6 +148,9 @@ export function useHomeWorkspace(opts: {
         return;
       }
       setState((current) => nudgeWidget(current, selectedId, dx, dy));
+    },
+    tidyLayout: () => {
+      setState((current) => reflowWorkspaceLayout(current));
     },
     resetToDefault: () => {
       setState(

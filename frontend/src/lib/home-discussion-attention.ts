@@ -247,8 +247,8 @@ function pinnedTimeMs(room: DiscussionInboxRoom): number {
 }
 
 /**
- * Match Discussions inbox ordering: pinned block first (Board always first),
- * then attention rank among peers, then recency.
+ * Match Discussions inbox ordering: pinned block first (Board first among
+ * pins when it is pinned), then attention rank among peers, then recency.
  */
 export function compareAttentionItems(
   a: DiscussionAttentionItem,
@@ -290,8 +290,8 @@ export function compareAttentionItems(
 
 /**
  * Compact attention feed for Home Inbox + App Inbox rail.
- * Pins (incl. always-pinned Board Discussion) stay above unpinned rooms,
- * same as /discussions. Within each block: mentions → unread → active → recent.
+ * User-pinned rooms stay above unpinned rooms, same as /discussions.
+ * Within each block: mentions → unread → active → recent.
  */
 export function buildDiscussionAttentionItems(
   rooms: DiscussionInboxRoom[],
@@ -318,8 +318,8 @@ export function buildDiscussionAttentionItems(
     }
 
     const kind = classifyKind(room, nowMs, viewerName);
-    // Keep pinned rooms in the feed even when quiet so Board Discussion
-    // (always pinned) and user pins stay visible and ordered at the top.
+    // Keep user-pinned rooms in the feed even when quiet so pins stay
+    // visible and ordered at the top.
     if (
       kind === "recent" &&
       !room.pinned &&

@@ -1,6 +1,9 @@
 import { useState, type HTMLAttributes } from "react";
 
-import { avatarColorFromSeed } from "../../lib/avatar-color";
+import {
+  avatarColorFromSeed,
+  personAvatarSeed,
+} from "../../lib/avatar-color";
 import { cx } from "../cx";
 
 export type AvatarSize = "sm" | "md" | "lg" | "xl";
@@ -14,10 +17,18 @@ export type AvatarProps = HTMLAttributes<HTMLSpanElement> & {
   alt?: string;
   /** Display name used to derive initials when no image. */
   name?: string;
+  /**
+   * Platform member id — preferred for color so chat, Home, Members, etc. match.
+   * Same as `colorSeed={personAvatarSeed(memberId, name)}`.
+   */
+  memberId?: number | null;
   size?: AvatarSize;
   /** Colorful = seeded palette; neutral = gray initials. */
   tone?: AvatarTone;
-  /** Optional seed for colorful palette (e.g. `user:12`) so colors match across surfaces. */
+  /**
+   * Optional override seed. Prefer `memberId` for people.
+   * Rooms/channels may pass a room id seed instead.
+   */
   colorSeed?: string;
 };
 
@@ -39,11 +50,13 @@ function initialsFromName(name: string): string {
 
 /**
  * User avatar with image or initials fallback.
+ * Colors are stable per member id (not random per session).
  */
 export function Avatar({
   src,
   alt = "",
   name = "",
+  memberId = null,
   size = "md",
   tone = "colorful",
   colorSeed,
@@ -54,10 +67,12 @@ export function Avatar({
   const showImage = Boolean(src) && !failed;
   const initials = name ? initialsFromName(name) : "?";
   const label = alt || name || "Avatar";
+  const resolvedSeed =
+    colorSeed?.trim() || personAvatarSeed(memberId, name || alt);
   const palette =
     tone === "neutral"
       ? { background: "#F0F0EE", color: "#52525B" }
-      : avatarColorFromSeed(colorSeed || name || alt || "member");
+      : avatarColorFromSeed(resolvedSeed);
 
   return (
     <span

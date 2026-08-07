@@ -196,18 +196,16 @@ export function HomeRecentActivity({
 
   return (
     <section className="home-ya" aria-label="Recent Activity">
-      <div className="home-ya__head">
-        <h2 className="home-ya__title">Recent Activity</h2>
-        <ArrowLink to={`/members/${memberId}`} className="home-ya__history">
-          View history
-        </ArrowLink>
+      <div className="home-task-header">
+        <h2 className="home-panel-title">Recent Activity</h2>
+        <ArrowLink to={`/members/${memberId}`}>View all</ArrowLink>
       </div>
 
       {loading ? (
-        <p className="home-ya__empty">Loading activity…</p>
+        <p className="home-activity-empty">Loading…</p>
       ) : entries.length === 0 ? (
-        <p className="home-ya__empty">
-          Your completions and updates will show up here.
+        <p className="home-activity-empty">
+          Completions and updates will show up here.
         </p>
       ) : (
         <ul className="home-ya__list">

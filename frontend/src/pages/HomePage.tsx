@@ -158,7 +158,7 @@ function MemberHomeLayout({
             </p>
             <p className="home-workspace-toolbar__detail">
               {workspace.isCustomizing
-                ? "Drag panels · ⋮ to hide or resize · Done saves layout"
+                ? "Panels stack in Home order · drag to fine-tune · Done saves"
                 : greeting.detail}
             </p>
           </div>
@@ -166,6 +166,7 @@ function MemberHomeLayout({
         {workspace.isCustomizing ? (
           <HomeEditToolbar
             onAddWidget={() => workspace.setWidgetDrawerOpen(true)}
+            onTidy={() => workspace.tidyLayout()}
             onReset={() => workspace.resetToDefault()}
             onDone={() => workspace.exitCustomize()}
           />

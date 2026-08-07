@@ -1,35 +1,46 @@
+import { ChevronRight } from "lucide-react";
 import { Link } from "react-router";
+import type { CSSProperties } from "react";
 
+import {
+  EVENT_TYPE_COLOR,
+  EVENT_TYPE_LABELS,
+  type EventType,
+} from "../../lib/event-types";
 import type { EventResponse } from "../../lib/events-api";
+import { AppIcon } from "../ui/AppIcon";
 import { ArrowLink } from "../ui/ArrowLink";
 import { HomeCard } from "../ui/HomeCard";
 
-function getDateBlockParts(isoDate: string): { month: string; day: string } {
+function formatEventSchedule(isoDate: string): {
+  dateLine: string;
+  timeLine: string;
+} {
   const date = new Date(isoDate);
   return {
-    month: new Intl.DateTimeFormat(undefined, { month: "short" })
-      .format(date)
-      .toUpperCase(),
-    day: new Intl.DateTimeFormat(undefined, { day: "numeric" }).format(date),
+    dateLine: new Intl.DateTimeFormat(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    }).format(date),
+    timeLine: new Intl.DateTimeFormat(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(date),
   };
-}
-
-function formatEventWhen(isoDate: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    weekday: "short",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(isoDate));
 }
 
 type HomeUpcomingEventsProps = {
   events: EventResponse[];
   isLoading?: boolean;
   limit?: number;
-  /** Skip the first event when Event Hero already features it. */
+  /** Skip the first event when the featured banner already shows it. */
   skipFeatured?: boolean;
 };
 
+/**
+ * Secondary event list for Home — light schedule rows (not date-card chrome).
+ */
 export function HomeUpcomingEvents({
   events,
   isLoading = false,
@@ -43,10 +54,10 @@ export function HomeUpcomingEvents({
     <HomeCard
       padding="sm"
       className="home-surface-quiet home-upcoming-events"
-      aria-label="Upcoming events"
+      aria-label="Upcoming Events"
     >
       <div className="home-task-header">
-        <h2 className="home-panel-title">Upcoming</h2>
+        <h2 className="home-panel-title">Upcoming Events</h2>
         <ArrowLink to="/events">View all</ArrowLink>
       </div>
 
@@ -61,30 +72,55 @@ export function HomeUpcomingEvents({
       ) : (
         <ul className="home-upcoming-events-list">
           {visible.map((event) => {
-            const date = getDateBlockParts(event.starts_at);
+            const schedule = formatEventSchedule(event.starts_at);
+            const type = event.event_type as EventType;
+            const typeColor = EVENT_TYPE_COLOR[type] ?? "#737373";
+            const typeLabel = EVENT_TYPE_LABELS[type] ?? "Event";
+            const location = event.location?.trim();
+
             return (
               <li key={event.id}>
                 <Link
                   to={`/events/${event.id}`}
-                  className="home-upcoming-event-row home-upcoming-event-row--link"
+                  className="home-upcoming-event"
+                  style={
+                    {
+                      ["--event-accent" as string]: typeColor,
+                    } as CSSProperties
+                  }
                 >
-                  <span className="home-upcoming-date-block" aria-hidden>
-                    <span className="home-upcoming-date-block__month">
-                      {date.month}
+                  <span className="home-upcoming-event__body">
+                    <span className="home-upcoming-event__top">
+                      <span className="home-upcoming-event__title">
+                        {event.name}
+                      </span>
+                      <span className="home-upcoming-event__type">
+                        {typeLabel}
+                      </span>
                     </span>
-                    <span className="home-upcoming-date-block__day">
-                      {date.day}
+                    <span className="home-upcoming-event__meta">
+                      <span>{schedule.dateLine}</span>
+                      <span className="home-upcoming-event__dot" aria-hidden>
+                        ·
+                      </span>
+                      <span>{schedule.timeLine}</span>
+                      {location ? (
+                        <>
+                          <span className="home-upcoming-event__dot" aria-hidden>
+                            ·
+                          </span>
+                          <span className="home-upcoming-event__place">
+                            {location}
+                          </span>
+                        </>
+                      ) : null}
                     </span>
                   </span>
-                  <span className="home-upcoming-event-copy">
-                    <span className="home-upcoming-event-title">
-                      {event.name}
-                    </span>
-                    <span className="home-upcoming-event-meta">
-                      {formatEventWhen(event.starts_at)}
-                      {event.location ? ` · ${event.location}` : ""}
-                    </span>
-                  </span>
+                  <AppIcon
+                    icon={ChevronRight}
+                    size="sm"
+                    className="home-upcoming-event__chev"
+                  />
                 </Link>
               </li>
             );

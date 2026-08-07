@@ -2,7 +2,7 @@ import { ChevronDown } from "lucide-react";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { NavLink } from "react-router";
 
-import { avatarColorFromSeed } from "../lib/avatar-color";
+import { avatarColorForPerson } from "../lib/avatar-color";
 import { AppIcon } from "./ui/AppIcon";
 
 type NavDropdownItem = {
@@ -112,6 +112,7 @@ function getInitials(fullName: string): string {
 }
 
 type AccountMenuProps = {
+  memberId?: number | null;
   fullName: string;
   avatarUrl?: string | null;
   onLogout: () => void;
@@ -120,6 +121,7 @@ type AccountMenuProps = {
 };
 
 export function AccountMenu({
+  memberId = null,
   fullName,
   avatarUrl = null,
   onLogout,
@@ -128,7 +130,7 @@ export function AccountMenu({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
-  const palette = avatarColorFromSeed(fullName);
+  const palette = avatarColorForPerson(memberId, fullName);
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = Boolean(avatarUrl) && !imageFailed;
 

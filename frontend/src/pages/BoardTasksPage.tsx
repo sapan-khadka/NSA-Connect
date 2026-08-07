@@ -385,9 +385,11 @@ function PriorityMark({ urgency }: { urgency: TaskUrgency }) {
 
 function TaskAssignee({
   name,
+  memberId = null,
   avatarUrl,
 }: {
   name: string | null;
+  memberId?: number | null;
   avatarUrl?: string | null;
 }) {
   const label = name?.trim() || "Unassigned";
@@ -396,6 +398,7 @@ function TaskAssignee({
     <span className="my-tasks-assignee">
       <Avatar
         name={label}
+        memberId={memberId}
         src={avatarUrl}
         size="sm"
         className="my-tasks-assignee__avatar"
@@ -469,6 +472,7 @@ function TaskRow({
         <div className="my-tasks-row__meta">
           <TaskAssignee
             name={task.assignee_name}
+            memberId={task.assignee_id}
             avatarUrl={assigneeAvatarUrl}
           />
           {column !== "done" ? <PriorityMark urgency={urgency} /> : null}

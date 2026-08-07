@@ -37,8 +37,8 @@ type HomeBriefingLayoutProps = {
 };
 
 /**
- * Reading Home — flat document flow driven by workspace visibility.
- * Freeform x/y only applies while customizing; Done returns here.
+ * Reading Home — flat document flow for board and members.
+ * Photo event banner is the shared chapter highlight; Focus + work follow.
  */
 export function HomeBriefingLayout({
   member,
@@ -137,19 +137,6 @@ export function HomeBriefingLayout({
         </div>
       ) : null}
 
-      {show("pulse") ? (
-        <section className="home-briefing__section home-briefing__section--plain">
-          <HomeTeamPulse
-            members={overviewMembers}
-            isLoading={overviewLoading}
-            density="lg"
-            pendingMemberApprovals={pendingMemberApprovals}
-            financePendingCount={financePendingCount}
-            nextEvent={featuredEvents[0] ?? null}
-          />
-        </section>
-      ) : null}
-
       {show("upcoming") ? (
         <section className="home-briefing__section home-briefing__section--plain">
           <HomeUpcomingEvents
@@ -171,7 +158,8 @@ export function HomeBriefingLayout({
               showTaskOversight ? overviewLoading : isLoading
             }
             tasksPath={tasksPath}
-            limit={6}
+            memberLimit={14}
+            tasksPerMember={8}
           />
         </section>
       ) : null}
@@ -185,6 +173,19 @@ export function HomeBriefingLayout({
       {show("actions") ? (
         <section className="home-briefing__section home-briefing__section--plain">
           <HomeQuickActions member={member} />
+        </section>
+      ) : null}
+
+      {show("pulse") ? (
+        <section className="home-briefing__section home-briefing__section--plain">
+          <HomeTeamPulse
+            members={overviewMembers}
+            isLoading={overviewLoading}
+            density="lg"
+            pendingMemberApprovals={pendingMemberApprovals}
+            financePendingCount={financePendingCount}
+            nextEvent={featuredEvents[0] ?? null}
+          />
         </section>
       ) : null}
     </div>

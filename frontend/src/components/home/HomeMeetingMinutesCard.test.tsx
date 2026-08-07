@@ -63,7 +63,7 @@ describe("HomeMeetingMinutesCard", () => {
     });
     renderCard();
 
-    const card = await screen.findByLabelText("Meeting Minutes");
+    const card = await screen.findByLabelText("Meetings");
     expect(
       within(card).getByRole("link", { name: "Open WT Meeting 5" }),
     ).toHaveAttribute("href", "/events/meetings/5");
@@ -80,12 +80,12 @@ describe("HomeMeetingMinutesCard", () => {
     vi.mocked(fetchMeetings).mockResolvedValue({ meetings: [], total: 0 });
     renderCard();
 
-    const card = await screen.findByLabelText("Meeting Minutes");
+    const card = await screen.findByLabelText("Meetings");
     expect(
-      within(card).getByRole("link", { name: "All meetings" }),
+      within(card).getByRole("link", { name: "View all" }),
     ).toHaveAttribute("href", "/events/meetings");
     expect(
-      within(card).getByRole("link", { name: "View board meetings" }),
-    ).toHaveAttribute("href", "/events/meetings");
+      within(card).getByText("No board meetings to show"),
+    ).toBeInTheDocument();
   });
 });

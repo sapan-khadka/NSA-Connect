@@ -13,6 +13,8 @@ export type ProfileCardField = {
 export type ProfileCardProps = {
   title?: ReactNode;
   name?: string;
+  /** Platform member id for consistent avatar color. */
+  memberId?: number | null;
   subtitle?: ReactNode;
   avatarSrc?: string | null;
   /** Leading icon next to the section title. */
@@ -34,6 +36,7 @@ export type ProfileCardProps = {
 export function ProfileCard({
   title = "Profile",
   name,
+  memberId = null,
   subtitle,
   avatarSrc,
   icon,
@@ -82,7 +85,12 @@ export function ProfileCard({
       <div className="mt-4 flex flex-1 flex-col">
         {name || avatarSrc ? (
           <div className="mb-4 flex items-center gap-3">
-            <Avatar name={name ?? ""} src={avatarSrc} size="md" />
+            <Avatar
+              name={name ?? ""}
+              memberId={memberId}
+              src={avatarSrc}
+              size="md"
+            />
             <div className="min-w-0">
               {name ? (
                 <p className="truncate font-semibold text-foreground">{name}</p>

@@ -173,6 +173,7 @@ export function NewDirectMessageModal({
                   >
                     <Avatar
                       name={member.full_name}
+                      memberId={member.id}
                       size="md"
                       className="shrink-0"
                       aria-hidden="true"

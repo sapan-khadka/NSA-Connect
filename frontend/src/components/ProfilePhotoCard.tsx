@@ -69,6 +69,7 @@ export function ProfilePhotoCard({
       <div className="flex flex-wrap items-center gap-4">
         <Avatar
           name={member.full_name}
+          memberId={member.id}
           src={member.avatar_url}
           size="xl"
           alt={`${member.full_name} profile photo`}

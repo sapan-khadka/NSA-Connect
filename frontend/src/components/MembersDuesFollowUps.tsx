@@ -96,6 +96,7 @@ export function MembersDuesFollowUps({
             >
               <Avatar
                 name={member.full_name}
+                memberId={member.id}
                 src={member.avatar_url}
                 size="sm"
                 className="shrink-0"
