@@ -31,7 +31,7 @@ const DAY_CELL_BASE =
 
 const DAY_CELL_TODAY = "is-today text-foreground hover:bg-[#EEF7F3]";
 
-const DAY_CELL_SELECTED = "is-selected hover:bg-[color-mix(in_srgb,var(--color-primary,#0f766e)_7%,#fff)]";
+const DAY_CELL_SELECTED = "is-selected hover:bg-[color-mix(in_srgb,var(--color-primary,#111111)_7%,#fff)]";
 
 export function getDayCellSurfaceClass({
   isCurrentMonth,

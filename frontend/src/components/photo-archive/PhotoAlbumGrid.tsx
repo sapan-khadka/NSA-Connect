@@ -75,7 +75,7 @@ function albumCoverStyle(album: PhotoAlbumSummary): {
   const accent =
     album.event_type && album.event_type in EVENT_TYPE_COLOR
       ? EVENT_TYPE_COLOR[album.event_type]
-      : "#0f766e";
+      : "#6366F1";
   return {
     background: `linear-gradient(
       145deg,
