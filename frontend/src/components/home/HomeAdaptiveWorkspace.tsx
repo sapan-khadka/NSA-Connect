@@ -37,12 +37,12 @@ import {
   type ScaleMetrics,
   type WidgetDensity,
 } from "../../lib/home-workspace";
-import { HomeDiscussionSection } from "../HomeDiscussionSection";
 import { HomeFeaturedEvent } from "./HomeFeaturedEvent";
 import { HomeMeetingMinutesCard } from "./HomeMeetingMinutesCard";
-import { HomeQuickStats } from "./HomeQuickStats";
+import { HomeQuickActions } from "./HomeQuickActions";
 import { HomeRecentActivity } from "./HomeRecentActivity";
 import { HomeTeamPulse } from "./HomeTeamPulse";
+import { HomeTodaysFocus } from "./HomeTodaysFocus";
 import { HomeUpcomingDeadlines } from "./HomeUpcomingDeadlines";
 import { HomeUpcomingEvents } from "./HomeUpcomingEvents";
 import { HomeWidgetShell } from "./HomeWidgetShell";
@@ -69,6 +69,7 @@ type HomeAdaptiveWorkspaceProps = {
   onCompleteTask: (taskId: number) => void;
   onFeaturedEventsChange: (events: EventResponse[]) => void;
   onSelect: (id: HomeWidgetId | null) => void;
+  onEnterCustomize: () => void;
   onExitCustomize: () => void;
   onToggleCollapsed: (id: HomeWidgetId) => void;
   onHide: (id: HomeWidgetId) => void;
@@ -110,20 +111,25 @@ function renderWidgetContent(
           isLoading={props.isLoading}
           density={density}
           contentScale={contentFitScale(screenWidth, screenHeight)}
+          presentation={
+            density === "xs" || density === "sm" ? "strip" : "hero"
+          }
         />
       );
     case "overview":
       return (
-        <HomeQuickStats
+        <HomeTodaysFocus
           member={props.member}
-          upcomingEvents={props.featuredEvents}
           tasksSummary={props.tasksSummary}
+          tasksPath={props.tasksPath}
           pendingMemberApprovals={props.pendingMemberApprovals}
           financePendingCount={props.financePendingCount}
-          isLoadingEvents={props.isLoading}
-          density={density}
+          nextEvent={props.featuredEvents[0] ?? null}
+          isLoading={props.isLoading}
         />
       );
+    case "actions":
+      return <HomeQuickActions member={props.member} />;
     case "tasks":
       return (
         <HomeWorkCenter
@@ -138,17 +144,16 @@ function renderWidgetContent(
         />
       );
     case "inbox":
-      return (
-        <HomeDiscussionSection
-          previewLimit={previewLimitForWidget(density, "inbox", screenHeight)}
-        />
-      );
+      /* Inbox is rendered as a fixed right rail on Home — not a canvas widget. */
+      return null;
     case "activity":
       return (
         <HomeRecentActivity
           memberId={props.member.id}
-          memberName={props.member.full_name}
-          limit={previewLimitForWidget(density, "activity", screenHeight)}
+          limit={Math.min(
+            3,
+            previewLimitForWidget(density, "activity", screenHeight),
+          )}
         />
       );
     case "upcoming":
@@ -179,6 +184,9 @@ function renderWidgetContent(
           members={props.overviewMembers}
           isLoading={props.overviewLoading}
           density={density}
+          pendingMemberApprovals={props.pendingMemberApprovals}
+          financePendingCount={props.financePendingCount}
+          nextEvent={props.featuredEvents[0] ?? null}
         />
       );
     case "minutes":
@@ -249,12 +257,16 @@ export function HomeAdaptiveWorkspace(props: HomeAdaptiveWorkspaceProps) {
     };
   }, []);
 
+  /* Only tear down an active gesture when leaving customize — never when
+   * entering it mid-drag (Move / grip can call onEnterCustomize + beginMove). */
+  const wasCustomizingRef = useRef(isCustomizing);
   useEffect(() => {
-    if (!isCustomizing) {
+    if (wasCustomizingRef.current && !isCustomizing) {
       setSession(null);
       setDraft(null);
       setGuides([]);
     }
+    wasCustomizingRef.current = isCustomizing;
   }, [isCustomizing]);
 
   useEffect(() => {
@@ -299,7 +311,7 @@ export function HomeAdaptiveWorkspace(props: HomeAdaptiveWorkspaceProps) {
   }, [props, session, isCustomizing]);
 
   useEffect(() => {
-    if (!session || !isCustomizing) {
+    if (!session) {
       return;
     }
 
@@ -432,14 +444,22 @@ export function HomeAdaptiveWorkspace(props: HomeAdaptiveWorkspaceProps) {
     widget: HomeWidgetLayout,
     event: React.PointerEvent<HTMLButtonElement>,
   ) {
-    if (!isCustomizing) {
+    if (!isDesktopCanvas) {
       return;
     }
     event.preventDefault();
     event.stopPropagation();
+    if (!props.isCustomizing) {
+      props.onEnterCustomize();
+    }
     const canvas = canvasRef.current;
     if (!canvas) {
       return;
+    }
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      /* jsdom / unsupported — ignore */
     }
     const rect = canvas.getBoundingClientRect();
     const box = rectForWidget(widget, scale, offsetX);
@@ -459,11 +479,19 @@ export function HomeAdaptiveWorkspace(props: HomeAdaptiveWorkspaceProps) {
     handle: ResizeHandle,
     event: React.PointerEvent<HTMLButtonElement>,
   ) {
-    if (!isCustomizing) {
+    if (!isDesktopCanvas) {
       return;
     }
     event.preventDefault();
     event.stopPropagation();
+    if (!props.isCustomizing) {
+      props.onEnterCustomize();
+    }
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      /* jsdom / unsupported — ignore */
+    }
     props.onSelect(widget.id);
     setDraft(props.widgets);
     setSession({
@@ -541,7 +569,7 @@ export function HomeAdaptiveWorkspace(props: HomeAdaptiveWorkspaceProps) {
           ? box.height
           : Math.max(180, Math.min(420, widget.h * 0.85));
         const density = densityForSize(screenW, screenH);
-        const dragging = isCustomizing && session?.id === widget.id;
+        const dragging = session?.id === widget.id;
         return (
           <HomeWidgetShell
             key={widget.id}
@@ -549,8 +577,10 @@ export function HomeAdaptiveWorkspace(props: HomeAdaptiveWorkspaceProps) {
             density={density}
             collapsed={widget.collapsed}
             active={dragging}
-            selected={isCustomizing && props.selectedId === widget.id}
-            isCustomizing={isCustomizing}
+            selected={
+              dragging || (isCustomizing && props.selectedId === widget.id)
+            }
+            isCustomizing={isCustomizing || dragging}
             sizePreset={detectSizePreset(widget)}
             screenWidth={screenW}
             screenHeight={screenH}
@@ -579,6 +609,7 @@ export function HomeAdaptiveWorkspace(props: HomeAdaptiveWorkspaceProps) {
                   }
             }
             onSelect={() => props.onSelect(widget.id)}
+            onEnterCustomize={props.onEnterCustomize}
             onToggleCollapsed={() => props.onToggleCollapsed(widget.id)}
             onHide={() => props.onHide(widget.id)}
             onCycleSize={() => {
@@ -597,7 +628,7 @@ export function HomeAdaptiveWorkspace(props: HomeAdaptiveWorkspaceProps) {
 
       {isCustomizing ? (
         <p className="home-canvas__hint">
-          Drag to move · corner to resize · Esc when done
+          Drag the ⋮⋮ grip to move · corner to resize · Esc when done
         </p>
       ) : null}
     </div>

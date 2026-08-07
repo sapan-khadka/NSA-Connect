@@ -64,6 +64,10 @@ export function useHomeWorkspace(opts: {
 
   const catalog = useMemo(() => {
     return HOME_WIDGET_CATALOG.filter((item) => {
+      if (item.id === "inbox") {
+        /* Fixed right rail — not a canvas / drawer widget. */
+        return false;
+      }
       if (item.requiresBoard && !showInbox) {
         return false;
       }

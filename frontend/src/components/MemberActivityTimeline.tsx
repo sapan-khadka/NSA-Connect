@@ -64,8 +64,8 @@ function ActivityEmpty() {
         <div className="min-w-0">
           <p className="member-activity-empty-title">No recent activity yet.</p>
           <p className="member-activity-empty-desc">
-            Completed tasks, dues payments, and event check-ins will show up
-            here as they happen.
+            Completed tasks, dues payments, event check-ins, and meeting notes
+            will show up here as they happen.
           </p>
         </div>
       </div>

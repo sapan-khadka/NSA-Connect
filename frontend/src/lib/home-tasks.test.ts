@@ -167,7 +167,7 @@ describe("home-tasks", () => {
     );
   });
 
-  it("builds a concise Home greeting from overdue work and next event", () => {
+  it("builds a concise Home greeting with only actionable problems", () => {
     const morning = new Date("2026-07-31T09:00:00");
     expect(
       buildHomeGreeting({
@@ -179,32 +179,31 @@ describe("home-tasks", () => {
       }),
     ).toEqual({
       salutation: "Good morning, Mukesh.",
-      detail:
-        "You have 3 overdue tasks and WT Cultural Night starts in 6 hours.",
+      detail: "You have 3 overdue tasks.",
     });
 
     expect(
       buildHomeGreeting({
         firstName: "Mukesh",
         overdueCount: 0,
+        nextEventName: "dashian",
+        nextEventStartsAt: "2026-08-12T18:00:00",
         now: morning,
       }),
     ).toEqual({
       salutation: "Good morning, Mukesh.",
-      detail: "You’re all caught up for now.",
+      detail: "Here’s what’s happening with NSA today.",
     });
 
     expect(
       buildHomeGreeting({
         firstName: "Mukesh",
         overdueCount: 1,
-        nextEventName: "Dashain",
-        nextEventStartsAt: "2026-08-11T18:00:00",
         now: morning,
       }),
     ).toEqual({
       salutation: "Good morning, Mukesh.",
-      detail: "You have 1 overdue task and Dashain starts in 11 days.",
+      detail: "You have 1 overdue task.",
     });
   });
 });

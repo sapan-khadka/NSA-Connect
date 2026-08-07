@@ -125,6 +125,7 @@ const sampleEvent = createMockEventResponse({
 describe("HomePage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
     mockSummary();
     mockedTaskOverview.mockResolvedValue({
       members: [],
@@ -201,13 +202,10 @@ describe("HomePage", () => {
     expect(screen.queryByText("Active Tasks")).not.toBeInTheDocument();
     expect(screen.queryByText("Needs Review")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Needs attention")).not.toBeInTheDocument();
-    expect(
-      await screen.findByLabelText("Organization overview"),
-    ).toBeInTheDocument();
+    expect(await screen.findByLabelText("Today's Focus")).toBeInTheDocument();
     expect(screen.queryByLabelText("Quick actions")).not.toBeInTheDocument();
+    expect(await screen.findByLabelText("Recent Activity")).toBeInTheDocument();
     expect(screen.queryByLabelText("Your activity")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Recent activity")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Task summary")).toBeInTheDocument();
     expect(screen.queryByLabelText("Today at a glance")).not.toBeInTheDocument();
 
     const featured = screen.getByLabelText("Featured Event");
@@ -215,37 +213,35 @@ describe("HomePage", () => {
       within(featured).getByRole("heading", { name: "Dashain Celebration" }),
     ).toBeInTheDocument();
     expect(
-      within(featured).getByRole("link", { name: /Open event/i }),
+      within(featured).getByRole("link", { name: /Open Workspace/i }),
     ).toHaveAttribute("href", "/events/5");
-    expect(within(featured).getByText(/Going/i)).toBeInTheDocument();
+    expect(
+      await within(featured).findByText(/Going/i),
+    ).toBeInTheDocument();
     expect(within(featured).getByText(/RSVP/i)).toBeInTheDocument();
-    expect(within(featured).getByText(/Budget/i)).toBeInTheDocument();
     expect(within(featured).queryByText("Preparation")).not.toBeInTheDocument();
     expect(
       within(featured).queryByText("Confirmed attendance"),
     ).not.toBeInTheDocument();
 
     expect(screen.queryByLabelText("Action Center")).not.toBeInTheDocument();
-    expect(await screen.findByLabelText("Meeting Minutes")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Meeting Minutes")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Team pulse")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Upcoming deadlines")).not.toBeInTheDocument();
 
     const work = await screen.findByLabelText("Work Center");
     expect(within(work).getByLabelText("My Tasks")).toBeInTheDocument();
     expect(within(work).queryByLabelText("Task Oversight")).not.toBeInTheDocument();
-    const teamPulse = await screen.findByLabelText("Team pulse");
-    expect(within(teamPulse).getByText("Team Pulse")).toBeInTheDocument();
-    expect(within(teamPulse).getByText("Print flyers")).toBeInTheDocument();
 
-    const deadlines = await screen.findByLabelText("Upcoming deadlines");
-    expect(within(deadlines).getByText("Print flyers")).toBeInTheDocument();
     expect(screen.queryByLabelText("Upcoming events")).not.toBeInTheDocument();
-
-    expect(screen.queryByLabelText("Today's Timeline")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Organization Health")).not.toBeInTheDocument();
 
-    expect(await screen.findByLabelText("Inbox")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Today's Timeline")).not.toBeInTheDocument();
+    /* Inbox lives in AppLayout chrome, not on the Home canvas */
+    expect(screen.queryByLabelText("Inbox")).not.toBeInTheDocument();
   });
 
-  it("keeps layout editing off until Customize is clicked", async () => {
+  it("keeps layout editing off until Edit Dashboard is clicked", async () => {
     mockedUpcoming.mockResolvedValue({ events: [sampleEvent], total: 1 });
     mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
 
@@ -259,30 +255,26 @@ describe("HomePage", () => {
     );
 
     expect(await screen.findByLabelText("Featured Event")).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /Move Event Hero/i }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /Resize Event Hero/i }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByText("Editing Layout")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Hover any card/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Widgets")).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Move" })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Customize" }));
+    await user.click(screen.getByRole("button", { name: /Edit dashboard/i }));
 
-    expect(await screen.findByText("Editing Layout")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /Move Event Hero/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /Resize Event Hero/i }),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Drag panels/i)).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Default layout" }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "More layout actions" }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("button", { name: /Move Event Hero/i }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: /Event Hero options/i }),
+    );
+    expect(await screen.findByRole("menuitem", { name: "Move" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /Resize/i })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Hide" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "+ Widget" }));
     const drawer = await screen.findByLabelText("Widgets");
@@ -298,11 +290,9 @@ describe("HomePage", () => {
     ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Done" }));
-    expect(screen.queryByText("Editing Layout")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Hover any card/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Widgets")).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /Move Event Hero/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Move" })).not.toBeInTheDocument();
   });
 
   it("surfaces overdue task counts in My tasks tabs", async () => {
@@ -341,11 +331,11 @@ describe("HomePage", () => {
     );
 
     const summary = await screen.findByLabelText("Task summary");
-    expect(within(summary).getByText("Overdue")).toBeInTheDocument();
+    expect(within(summary).getByText(/Overdue/i)).toBeInTheDocument();
     expect(screen.queryByLabelText("Quick actions")).not.toBeInTheDocument();
   });
 
-  it("shows personal My tasks and Team pulse for President", async () => {
+  it("shows personal My tasks without Team Pulse for President", async () => {
     const openTask = {
       id: 1,
       event_id: 5,
@@ -382,11 +372,12 @@ describe("HomePage", () => {
     const work = await screen.findByLabelText("Work Center");
     expect(await within(work).findByText("Book venue")).toBeInTheDocument();
     expect(within(work).queryByLabelText("Task Oversight")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Team pulse")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Team pulse")).not.toBeInTheDocument();
+    expect(await screen.findByLabelText("Today's Focus")).toBeInTheDocument();
     expect(within(work).queryByText("High")).not.toBeInTheDocument();
   });
 
-  it("hides quick actions on Home for treasurer", async () => {
+  it("shows board Home briefing for treasurer", async () => {
     mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
     mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
     mockSummary({ members_pending: 2, finance_pending: 1 });
@@ -400,12 +391,12 @@ describe("HomePage", () => {
     );
 
     await screen.findByLabelText("My Tasks");
+    expect(await screen.findByLabelText("Today's Focus")).toBeInTheDocument();
     expect(screen.queryByLabelText("Quick actions")).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /Add Expense/i })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Action Center")).not.toBeInTheDocument();
   });
 
-  it("hides quick actions on Home for board members", async () => {
+  it("shows board Home briefing for board members", async () => {
     mockedUpcoming.mockResolvedValue({ events: [], total: 0 });
     mockedMyTasks.mockResolvedValue({ tasks: [], total: 0 });
 
@@ -418,10 +409,8 @@ describe("HomePage", () => {
     );
 
     await screen.findByLabelText("Work Center");
+    expect(await screen.findByLabelText("Today's Focus")).toBeInTheDocument();
     expect(screen.queryByLabelText("Quick actions")).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("link", { name: /Post Announcement/i }),
-    ).not.toBeInTheDocument();
   });
 
   it("cycles featured upcoming events with carousel controls", async () => {
@@ -474,9 +463,12 @@ describe("HomePage", () => {
     );
 
     await screen.findByLabelText("Featured Event");
-    expect(screen.queryByRole("link", { name: /^Manage$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Manage Event/i })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Action Center")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Inbox")).not.toBeInTheDocument();
+    expect(await screen.findByLabelText("Today's Focus")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Recent Activity")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Quick actions")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Meeting Minutes")).not.toBeInTheDocument();
   });
 
@@ -506,9 +498,13 @@ describe("HomePage", () => {
         </MemoryRouter>,
       );
 
-      expect(await screen.findByLabelText("Inbox")).toBeInTheDocument();
-      expect(screen.getByLabelText("Meeting Minutes")).toBeInTheDocument();
+      expect(await screen.findByLabelText("Today's Focus")).toBeInTheDocument();
+      expect(screen.queryByLabelText("Quick actions")).not.toBeInTheDocument();
+      expect(screen.getByLabelText("Recent Activity")).toBeInTheDocument();
+      expect(screen.queryByLabelText("Meeting Minutes")).not.toBeInTheDocument();
       expect(screen.queryByLabelText("Action Center")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("Inbox")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("Upcoming events")).not.toBeInTheDocument();
     },
   );
 
@@ -535,8 +531,10 @@ describe("HomePage", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByLabelText("Inbox")).toBeInTheDocument();
-    expect(screen.getByLabelText("Meeting Minutes")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Today's Focus")).toBeInTheDocument();
+    expect(screen.getByLabelText("Recent Activity")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Quick actions")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Meeting Minutes")).not.toBeInTheDocument();
   });
 
   it("shows View calendar empty state for general members with no events", async () => {
@@ -591,8 +589,8 @@ describe("HomePage", () => {
     const featured = await screen.findByLabelText("Featured Event");
     expect(within(featured).getByText(sampleEvent.name)).toBeInTheDocument();
     expect(within(featured).queryByText("Board Sync")).not.toBeInTheDocument();
-    expect(await screen.findByLabelText("Inbox")).toBeInTheDocument();
-    expect(screen.getByLabelText("Organization overview")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Today's Focus")).toBeInTheDocument();
+    expect(screen.getByLabelText("Recent Activity")).toBeInTheDocument();
     expect(screen.queryByLabelText("Quick actions")).not.toBeInTheDocument();
   });
 
@@ -649,7 +647,7 @@ describe("HomePage", () => {
     await waitFor(() => {
       expect(screen.queryByText("Book venue")).not.toBeInTheDocument();
     });
-    expect(screen.getByText("Inbox zero")).toBeInTheDocument();
+    expect(screen.getByText("No open tasks")).toBeInTheDocument();
   });
 
   it("rolls back and shows an error when completing a task fails", async () => {

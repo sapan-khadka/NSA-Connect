@@ -1,29 +1,46 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
+import {
+  Banknote,
+  CalendarCheck2,
+  Check,
+  NotebookPen,
+  type LucideIcon,
+} from "lucide-react";
 
+import { startOfLocalDay } from "../../lib/calendar";
 import { fetchMemberActivity } from "../../lib/members-api";
 import {
   mapMemberActivityApiItem,
+  sortMemberActivityItems,
   type MemberActivityItem,
   type MemberActivityKind,
 } from "../../lib/member-activity-timeline";
+import { AppIcon } from "../ui/AppIcon";
 import { ArrowLink } from "../ui/ArrowLink";
-import { HomeCard } from "../ui/HomeCard";
 
-const DEFAULT_ACTIVITY_LIMIT = 16;
+const DEFAULT_ACTIVITY_LIMIT = 3;
 
-function activityVerb(kind: MemberActivityKind): string {
-  switch (kind) {
-    case "task_completed":
-      return "completed";
-    case "dues_paid":
-      return "paid";
-    case "event_checkin":
-      return "attended";
-    default:
-      return "updated";
-  }
-}
+type TimelineEntry = {
+  id: string;
+  verb: string;
+  subject: string;
+  when: string;
+  occurredAt: string;
+  href: string | null;
+  Icon: LucideIcon;
+  tone: MemberActivityKind;
+};
+
+const KIND_META: Record<
+  MemberActivityKind,
+  { verb: string; Icon: LucideIcon }
+> = {
+  task_completed: { verb: "Completed", Icon: Check },
+  dues_paid: { verb: "Paid", Icon: Banknote },
+  event_checkin: { verb: "Attended", Icon: CalendarCheck2 },
+  meeting_notes: { verb: "Notes", Icon: NotebookPen },
+};
 
 function activitySubject(item: MemberActivityItem): string {
   const raw = item.title.trim();
@@ -39,94 +56,110 @@ function activitySubject(item: MemberActivityItem): string {
   if (item.kind === "event_checkin") {
     return raw.replace(/^Attended\s+/i, "").trim() || "an event";
   }
+  if (item.kind === "meeting_notes") {
+    return (
+      raw
+        .replace(/^Published meeting notes for\s+/i, "")
+        .replace(/^Updated meeting notes for\s+/i, "")
+        .trim() || "Meeting notes"
+    );
+  }
   return raw;
 }
 
-function dayKey(iso: string): string {
-  const date = new Date(iso);
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-}
-
-function dayLabel(iso: string, now = new Date()): string {
-  const date = new Date(iso);
-  const startToday = new Date(now);
-  startToday.setHours(0, 0, 0, 0);
-  const startThat = new Date(date);
-  startThat.setHours(0, 0, 0, 0);
-  const diffDays = Math.round(
-    (startToday.getTime() - startThat.getTime()) / 86_400_000,
-  );
-  if (diffDays === 0) {
-    return "Today";
-  }
-  if (diffDays === 1) {
-    return "Yesterday";
-  }
+function formatClock(date: Date): string {
   return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   }).format(date);
 }
 
-type DayGroup = {
-  key: string;
-  label: string;
-  people: Array<{
-    name: string;
-    actions: Array<{ id: string; text: string; href: string | null }>;
-  }>;
-};
-
-function groupActivity(
-  items: MemberActivityItem[],
-  actorName: string,
-): DayGroup[] {
-  const actorFirst = actorName.split(/\s+/).filter(Boolean)[0] ?? actorName;
-  const byDay = new Map<string, MemberActivityItem[]>();
-  for (const item of items) {
-    const key = dayKey(item.occurredAt);
-    const list = byDay.get(key) ?? [];
-    list.push(item);
-    byDay.set(key, list);
+/** Screenshot format: "Today, 11:30 AM" / "Yesterday, 4:15 PM" / "Jul 30, 9:10 PM" */
+export function formatPersonalActivityWhen(
+  iso: string,
+  now = new Date(),
+): string {
+  const date = new Date(iso);
+  if (!Number.isFinite(date.getTime())) {
+    return "—";
   }
 
-  return [...byDay.entries()].map(([key, dayItems]) => {
-    const peopleMap = new Map<
-      string,
-      Array<{ id: string; text: string; href: string | null }>
-    >();
-    for (const item of dayItems) {
-      const actions = peopleMap.get(actorFirst) ?? [];
-      actions.push({
-        id: item.id,
-        text: `${activityVerb(item.kind)} ${activitySubject(item)}`,
-        href: item.href,
-      });
-      peopleMap.set(actorFirst, actions);
-    }
-    return {
-      key,
-      label: dayLabel(dayItems[0]!.occurredAt),
-      people: [...peopleMap.entries()].map(([name, actions]) => ({
-        name,
-        actions,
-      })),
-    };
-  });
+  const today = startOfLocalDay(now);
+  const thatDay = startOfLocalDay(date);
+  const diffDays = Math.round(
+    (today.getTime() - thatDay.getTime()) / 86_400_000,
+  );
+  const time = formatClock(date);
+
+  if (diffDays === 0) {
+    return `Today, ${time}`;
+  }
+  if (diffDays === 1) {
+    return `Yesterday, ${time}`;
+  }
+
+  const day = new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+  }).format(date);
+  return `${day}, ${time}`;
+}
+
+function toTimelineEntry(
+  item: MemberActivityItem,
+  now: Date,
+): TimelineEntry {
+  const meta = KIND_META[item.kind];
+  return {
+    id: item.id,
+    verb: meta.verb,
+    subject: activitySubject(item),
+    when: formatPersonalActivityWhen(item.occurredAt, now),
+    occurredAt: item.occurredAt,
+    href: item.href ?? null,
+    Icon: meta.Icon,
+    tone: item.kind,
+  };
+}
+
+function ActivityRow({ entry }: { entry: TimelineEntry }) {
+  const inner = (
+    <>
+      <span
+        className={`home-ya__badge home-ya__badge--${entry.tone}`}
+        aria-hidden="true"
+      >
+        <AppIcon icon={entry.Icon} size="sm" />
+      </span>
+      <span className="home-ya__verb">{entry.verb}</span>
+      <time className="home-ya__when" dateTime={entry.occurredAt}>
+        {entry.when}
+      </time>
+      <span className="home-ya__subject">{entry.subject}</span>
+    </>
+  );
+
+  if (entry.href) {
+    return (
+      <Link to={entry.href} className="home-ya__row">
+        {inner}
+      </Link>
+    );
+  }
+
+  return <div className="home-ya__row">{inner}</div>;
 }
 
 export function HomeRecentActivity({
   memberId,
-  memberName,
   limit = DEFAULT_ACTIVITY_LIMIT,
 }: {
   memberId: number;
-  memberName: string;
+  memberName?: string;
   limit?: number;
 }) {
   const [items, setItems] = useState<MemberActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const actorName = memberName.trim() || "Member";
 
   useEffect(() => {
     let cancelled = false;
@@ -135,7 +168,9 @@ export function HomeRecentActivity({
       .then((response) => {
         if (!cancelled) {
           setItems(
-            response.items.map(mapMemberActivityApiItem).slice(0, limit),
+            sortMemberActivityItems(
+              response.items.map(mapMemberActivityApiItem),
+            ).slice(0, limit),
           );
         }
       })
@@ -154,58 +189,35 @@ export function HomeRecentActivity({
     };
   }, [memberId, limit]);
 
-  const groups = useMemo(
-    () => groupActivity(items, actorName),
-    [items, actorName],
-  );
+  const entries = useMemo(() => {
+    const now = new Date();
+    return items.map((item) => toTimelineEntry(item, now));
+  }, [items]);
 
   return (
-    <HomeCard
-      padding="sm"
-      className="home-activity home-activity--grouped home-surface-quiet"
-      aria-label="Your activity"
-    >
-      <div className="home-activity-head">
-        <h2 className="home-panel-title">Your activity</h2>
-        <ArrowLink to={`/members/${memberId}`}>View all</ArrowLink>
+    <section className="home-ya" aria-label="Recent Activity">
+      <div className="home-ya__head">
+        <h2 className="home-ya__title">Recent Activity</h2>
+        <ArrowLink to={`/members/${memberId}`} className="home-ya__history">
+          View history
+        </ArrowLink>
       </div>
 
       {loading ? (
-        <p className="home-activity-empty">Loading activity…</p>
-      ) : groups.length === 0 ? (
-        <p className="home-activity-empty">No recent activity yet.</p>
+        <p className="home-ya__empty">Loading activity…</p>
+      ) : entries.length === 0 ? (
+        <p className="home-ya__empty">
+          Your completions and updates will show up here.
+        </p>
       ) : (
-        <div className="home-activity-groups">
-          {groups.map((group) => (
-            <section key={group.key} className="home-activity-day">
-              <h3 className="home-activity-day__label">{group.label}</h3>
-              {group.people.map((person) => (
-                <div key={person.name} className="home-activity-person">
-                  <p className="home-activity-person__name">{person.name}</p>
-                  <ul className="home-activity-person__actions">
-                    {person.actions.map((action) => (
-                      <li key={action.id}>
-                        {action.href ? (
-                          <Link
-                            to={action.href}
-                            className="home-activity-person__action"
-                          >
-                            {action.text}
-                          </Link>
-                        ) : (
-                          <span className="home-activity-person__action">
-                            {action.text}
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </section>
+        <ul className="home-ya__list">
+          {entries.map((entry) => (
+            <li key={entry.id}>
+              <ActivityRow entry={entry} />
+            </li>
           ))}
-        </div>
+        </ul>
       )}
-    </HomeCard>
+    </section>
   );
 }

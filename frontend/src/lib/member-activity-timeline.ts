@@ -2,7 +2,7 @@
  * Member profile Recent Activity helpers.
  *
  * Feed types returned by GET /v1/members/{id}/activity (real timestamps only):
- *   task_completed | dues_paid | event_checkin
+ *   task_completed | dues_paid | event_checkin | meeting_notes
  *
  * Deferred — no audit trail exists yet (do not invent in the UI):
  *   - RSVP status changes
@@ -15,6 +15,7 @@ import {
   Banknote,
   CalendarCheck2,
   CheckCircle2,
+  NotebookPen,
 } from "lucide-react";
 
 import {
@@ -23,11 +24,13 @@ import {
   formatActivityTimeLabel,
 } from "./event-activity-timeline";
 import { toLocalIsoDate } from "./calendar";
+import { meetingWorkspacePath } from "./meeting-workspace";
 
 export type MemberActivityKind =
   | "task_completed"
   | "dues_paid"
-  | "event_checkin";
+  | "event_checkin"
+  | "meeting_notes";
 
 export type MemberActivityItem = {
   id: string;
@@ -68,6 +71,7 @@ export const MEMBER_ACTIVITY_ICONS: Record<MemberActivityKind, LucideIcon> = {
   task_completed: CheckCircle2,
   dues_paid: Banknote,
   event_checkin: CalendarCheck2,
+  meeting_notes: NotebookPen,
 };
 
 /** Short label for icons / empty-state chips. */
@@ -75,12 +79,14 @@ export const MEMBER_ACTIVITY_TITLES: Record<MemberActivityKind, string> = {
   task_completed: "Task completed",
   dues_paid: "Dues paid",
   event_checkin: "Event check-in",
+  meeting_notes: "Meeting notes",
 };
 
 export const MEMBER_ACTIVITY_KINDS: MemberActivityKind[] = [
   "task_completed",
   "dues_paid",
   "event_checkin",
+  "meeting_notes",
 ];
 
 export const MEMBER_ACTIVITY_PREVIEW_LIMIT = 6;
@@ -95,6 +101,9 @@ export function createMemberActivityItem(
 }
 
 function activityHref(item: MemberActivityApiItem): string | null {
+  if (item.type === "meeting_notes" && item.event_id != null) {
+    return meetingWorkspacePath(item.event_id, "minutes");
+  }
   if (item.event_id != null) {
     return `/events/${item.event_id}`;
   }

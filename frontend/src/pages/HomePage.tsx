@@ -1,3 +1,4 @@
+import { Pencil } from "lucide-react";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Link } from "react-router";
 
@@ -8,8 +9,10 @@ function homeStage(stage: number): CSSProperties {
 import { CoverBanner } from "../components/CoverBanner";
 import { HomeHeroBrand } from "../components/AppLogo";
 import { HomeAdaptiveWorkspace } from "../components/home/HomeAdaptiveWorkspace";
+import { HomeBriefingLayout } from "../components/home/HomeBriefingLayout";
 import { HomeEditToolbar } from "../components/home/HomeEditToolbar";
 import { HomeWidgetDrawer } from "../components/home/HomeWidgetDrawer";
+import { AppIcon } from "../components/ui/AppIcon";
 import { useAuth } from "../context/useAuth";
 import { useNotificationSummary } from "../context/NotificationSummaryProvider";
 import { useHomeWorkspace } from "../hooks/useHomeWorkspace";
@@ -126,7 +129,7 @@ function MemberHomeLayout({
   return (
     <div
       className={[
-        "home-dashboard home-dashboard--v4 home-dashboard--apple home-dashboard--nsa home-dashboard--adaptive flex w-full min-w-0 flex-col pb-12",
+        "home-dashboard home-dashboard--v4 home-dashboard--apple home-dashboard--briefing flex w-full min-w-0 flex-col pb-10",
         workspace.isCustomizing ? "home-dashboard--editing" : "",
       ]
         .filter(Boolean)
@@ -148,17 +151,17 @@ function MemberHomeLayout({
         style={homeStage(0)}
       >
         <div>
-          <h1 className="home-workspace-toolbar__title">Home</h1>
-          {workspace.isCustomizing ? (
-            <p className="home-workspace-toolbar__mode">Editing Layout</p>
-          ) : (
-            <div className="home-workspace-toolbar__briefing">
-              <p className="home-workspace-toolbar__greeting">
-                {greeting.salutation}
-              </p>
-              <p className="home-workspace-toolbar__detail">{greeting.detail}</p>
-            </div>
-          )}
+          <h1 className="sr-only">Home</h1>
+          <div className="home-workspace-toolbar__briefing">
+            <p className="home-workspace-toolbar__greeting">
+              {greeting.salutation}
+            </p>
+            <p className="home-workspace-toolbar__detail">
+              {workspace.isCustomizing
+                ? "Drag panels · ⋮ to hide or resize · Done saves layout"
+                : greeting.detail}
+            </p>
+          </div>
         </div>
         {workspace.isCustomizing ? (
           <HomeEditToolbar
@@ -169,10 +172,11 @@ function MemberHomeLayout({
         ) : (
           <button
             type="button"
-            className="home-workspace-toolbar__btn"
+            className="home-workspace-toolbar__btn home-workspace-toolbar__btn--quiet"
             onClick={() => workspace.enterCustomize()}
           >
-            Customize
+            <AppIcon icon={Pencil} size="xs" />
+            Edit dashboard
           </button>
         )}
       </div>
@@ -185,34 +189,56 @@ function MemberHomeLayout({
         onClose={() => workspace.setWidgetDrawerOpen(false)}
       />
 
-      <div className="home-enter" style={homeStage(1)}>
-        <HomeAdaptiveWorkspace
-          widgets={workspace.visible}
-          isCustomizing={workspace.isCustomizing}
-          selectedId={workspace.selectedId}
-          member={member}
-          featuredEvents={featuredEvents}
-          myTasks={myTasks}
-          overviewMembers={overviewMembers}
-          overviewLoading={overviewLoading}
-          tasksSummary={tasksSummary}
-          isLoading={isLoading}
-          financePendingCount={financePendingCount}
-          pendingMemberApprovals={pendingMemberApprovals}
-          showAssistant={showAssistant}
-          showTaskOversight={showTaskOversight}
-          tasksPath={tasksPath}
-          completingTaskId={completingTaskId}
-          taskCompleteError={taskCompleteError}
-          onCompleteTask={onCompleteTask}
-          onFeaturedEventsChange={onFeaturedEventsChange}
-          onSelect={workspace.setSelectedId}
-          onExitCustomize={workspace.exitCustomize}
-          onToggleCollapsed={workspace.toggleCollapsed}
-          onHide={workspace.hideWidget}
-          onPatchWidget={workspace.patchWidget}
-          onNudgeSelected={workspace.nudgeSelected}
-        />
+      <div className="home-enter home-dashboard__main" style={homeStage(1)}>
+        {workspace.isCustomizing ? (
+          <HomeAdaptiveWorkspace
+            widgets={workspace.visible}
+            isCustomizing={workspace.isCustomizing}
+            selectedId={workspace.selectedId}
+            member={member}
+            featuredEvents={featuredEvents}
+            myTasks={myTasks}
+            overviewMembers={overviewMembers}
+            overviewLoading={overviewLoading}
+            tasksSummary={tasksSummary}
+            isLoading={isLoading}
+            financePendingCount={financePendingCount}
+            pendingMemberApprovals={pendingMemberApprovals}
+            showAssistant={showAssistant}
+            showTaskOversight={showTaskOversight}
+            tasksPath={tasksPath}
+            completingTaskId={completingTaskId}
+            taskCompleteError={taskCompleteError}
+            onCompleteTask={onCompleteTask}
+            onFeaturedEventsChange={onFeaturedEventsChange}
+            onSelect={workspace.setSelectedId}
+            onEnterCustomize={workspace.enterCustomize}
+            onExitCustomize={workspace.exitCustomize}
+            onToggleCollapsed={workspace.toggleCollapsed}
+            onHide={workspace.hideWidget}
+            onPatchWidget={workspace.patchWidget}
+            onNudgeSelected={workspace.nudgeSelected}
+          />
+        ) : (
+          <HomeBriefingLayout
+            member={member}
+            featuredEvents={featuredEvents}
+            myTasks={myTasks}
+            overviewMembers={overviewMembers}
+            overviewLoading={overviewLoading}
+            tasksSummary={tasksSummary}
+            isLoading={isLoading}
+            financePendingCount={financePendingCount}
+            pendingMemberApprovals={pendingMemberApprovals}
+            showAssistant={showAssistant}
+            showTaskOversight={showTaskOversight}
+            tasksPath={tasksPath}
+            completingTaskId={completingTaskId}
+            taskCompleteError={taskCompleteError}
+            onCompleteTask={onCompleteTask}
+            visibleWidgetIds={workspace.visible.map((widget) => widget.id)}
+          />
+        )}
       </div>
     </div>
   );

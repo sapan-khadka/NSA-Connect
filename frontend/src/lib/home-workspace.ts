@@ -27,6 +27,7 @@ export type HomeWidgetId =
   | "tasks"
   | "inbox"
   | "activity"
+  | "actions"
   | "upcoming"
   | "deadlines"
   | "pulse"
@@ -49,7 +50,7 @@ export type HomeWidgetLayout = {
 };
 
 export type HomeWorkspaceState = {
-  version: 8;
+  version: 17;
   /** Preferred gap when packing / resetting the default layout */
   spacing?: HomeLayoutSpacing;
   widgets: HomeWidgetLayout[];
@@ -106,21 +107,33 @@ export const HOME_WIDGET_CATALOG: HomeWidgetMeta[] = [
   },
   {
     id: "overview",
-    label: "Organization",
-    description: "Chapter health, approvals, and treasury signals",
+    label: "Today's Focus",
+    description: "What deserves your attention right now",
     category: "Organization",
-    requiresBoard: true,
-    defaultW: 320,
-    defaultH: 280,
-    minW: 240,
-    maxW: 900,
-    minH: 180,
+    defaultW: 352,
+    defaultH: 250,
+    minW: 220,
+    maxW: HOME_CANVAS_DESIGN_WIDTH,
+    minH: 140,
     maxH: 640,
+  },
+  {
+    id: "actions",
+    label: "Quick Actions",
+    description: "Optional — create entry points already live in + Create",
+    category: "Work",
+    requiresBoard: true,
+    defaultW: 352,
+    defaultH: 300,
+    minW: 200,
+    maxW: 700,
+    minH: 140,
+    maxH: 480,
   },
   {
     id: "minutes",
     label: "Meetings",
-    description: "Next board meeting that needs minutes",
+    description: "Optional — full minutes workflow lives under Events",
     category: "Organization",
     requiresBoard: true,
     defaultW: 304,
@@ -145,11 +158,11 @@ export const HOME_WIDGET_CATALOG: HomeWidgetMeta[] = [
   {
     id: "inbox",
     label: "Inbox",
-    description: "Discussions that need attention",
+    description: "Global chrome — not a dashboard widget",
     category: "Communication",
     requiresBoard: true,
-    defaultW: 504,
-    defaultH: 460,
+    defaultW: 352,
+    defaultH: 490,
     minW: 260,
     maxW: HOME_CANVAS_DESIGN_WIDTH,
     minH: 180,
@@ -157,20 +170,34 @@ export const HOME_WIDGET_CATALOG: HomeWidgetMeta[] = [
   },
   {
     id: "activity",
-    label: "Your Activity",
-    description: "Your recent completions and updates",
+    label: "Recent Activity",
+    description: "Org signal for board — what just happened",
     category: "Organization",
+    requiresBoard: true,
     defaultW: 280,
-    defaultH: 400,
+    defaultH: 340,
     minW: 200,
     maxW: 900,
     minH: 160,
     maxH: 1200,
   },
   {
+    id: "pulse",
+    label: "Organization Health",
+    description: "Optional executive snapshot — prefer Today's Focus",
+    category: "Organization",
+    requiresOversight: true,
+    defaultW: 560,
+    defaultH: 260,
+    minW: 240,
+    maxW: HOME_CANVAS_DESIGN_WIDTH,
+    minH: 160,
+    maxH: 640,
+  },
+  {
     id: "upcoming",
-    label: "Upcoming Events",
-    description: "Events after the featured one",
+    label: "Upcoming",
+    description: "Optional — hero already features the next event",
     category: "Work",
     defaultW: 388,
     defaultH: 280,
@@ -182,23 +209,10 @@ export const HOME_WIDGET_CATALOG: HomeWidgetMeta[] = [
   {
     id: "deadlines",
     label: "Team Deadlines",
-    description: "Open due dates across the team",
+    description: "Optional — covered by My Tasks and Today's Focus",
     category: "Work",
     requiresOversight: true,
     defaultW: 632,
-    defaultH: 260,
-    minW: 200,
-    maxW: 900,
-    minH: 160,
-    maxH: 900,
-  },
-  {
-    id: "pulse",
-    label: "Team Pulse",
-    description: "Team task health for leadership",
-    category: "Work",
-    requiresOversight: true,
-    defaultW: 540,
     defaultH: 260,
     minW: 200,
     maxW: 900,
@@ -486,10 +500,22 @@ export function applyLayoutSpacing(
   }
 
   return {
-    version: 8,
+    version: 17,
     spacing: nextSpacing,
     widgets: dedupeWidgets(widgets),
   };
+}
+
+/**
+ * Widgets rendered outside the freeform canvas (fixed chrome).
+ * Inbox is a sticky right rail for board+ — not a movable card.
+ */
+export const HOME_PINNED_RAIL_WIDGETS: ReadonlySet<HomeWidgetId> = new Set([
+  "inbox",
+]);
+
+export function isPinnedRailWidget(id: HomeWidgetId): boolean {
+  return HOME_PINNED_RAIL_WIDGETS.has(id);
 }
 
 function parkHidden(
@@ -503,15 +529,12 @@ function parkHidden(
 }
 
 /**
- * Role-aware recommended layouts.
+ * Role-aware recommended layouts (workspace widgets only).
+ * Inbox is global app chrome — never a canvas card.
  *
- * General — “What’s next for me?”
- *   Hero + upcoming strip on top; My Tasks full-width below.
- *
- * Board — “What needs the chapter?”
- *   Hero · Org · Meetings on top; My Tasks · Inbox below.
- *
- * Leadership — board + Team Pulse · Team Deadlines underneath.
+ * Briefing Home (v17): flat mock layout — Event → Focus → Tasks | Activity.
+ * What's happening? What do I need to do? Is the org okay?
+ * Everything else stays in Edit Dashboard or its own page.
  */
 export function buildDefaultWorkspace(opts: {
   showInbox: boolean;
@@ -522,67 +545,62 @@ export function buildDefaultWorkspace(opts: {
   const gap = spacingGapPx(spacing);
   const full = HOME_CANVAS_DESIGN_WIDTH;
 
+  const eventH = 168;
+  const focusH = 240;
+  const focusY = eventH + gap;
+  const workY = focusY + focusH + gap;
+  const workH = 300;
+  const park = (ids: HomeWidgetId[]) =>
+    ids.map((id, index) => parkHidden(id, index));
+
+  /* General members: Hero + Focus + full-width My Tasks (no activity feed). */
   if (!opts.showInbox) {
-    const heroW = 784;
-    const sideW = full - heroW - gap;
-    const heroH = 300;
-    const tasksY = heroH + gap;
     return {
-      version: 8,
+      version: 17,
       spacing,
       widgets: dedupeWidgets([
-        widget("featured", 0, 0, heroW, heroH, 1),
-        widget("upcoming", heroW + gap, 0, sideW, heroH, 1),
-        widget("tasks", 0, tasksY, full, 520, 2),
-        parkHidden("activity", 0),
+        widget("featured", 0, 0, full, eventH, 1),
+        widget("overview", 0, focusY, full, focusH, 2),
+        widget("tasks", 0, workY, full, workH, 3),
+        ...park([
+          "activity",
+          "upcoming",
+          "inbox",
+          "actions",
+          "deadlines",
+          "pulse",
+          "minutes",
+        ]),
       ]),
     };
   }
 
   /*
-   * Board / leadership — Hero leads; Org + Meetings stack as one status rail.
-   *
-   * ┌──────── Hero ────────┬─ Org status ─┐
-   * │                      ├─ Meetings ───┤
-   * ├──── My Tasks ────────┼─── Inbox ────┤
-   * ├──── Pulse ───────────┼─ Deadlines ──┤  (leadership)
-   *
-   * Meetings must be ≥ HOME_SECONDARY_MIN_H so merge-time stretch cannot
-   * grow it into the Tasks/Inbox row.
+   * Board / leadership briefing
+   * ┌─────────── Event Hero ────────────────┐
+   * ├─────────── Today's Focus ─────────────┤
+   * ├────── My Tasks ───┬── Activity ───────┤
    */
-  const gapY = gap;
-  const heroW = 700;
-  const railW = full - heroW - gap;
-  const minutesH = HOME_SECONDARY_MIN_H;
-  const orgH = 180;
-  const topH = orgH + gapY + minutesH;
-  const workH = opts.showPulse ? 460 : 560;
-  const workY = topH + gapY;
-  const railX = heroW + gap;
-
-  const widgets: HomeWidgetLayout[] = [
-    widget("featured", 0, 0, heroW, topH, 1),
-    widget("overview", railX, 0, railW, orgH, 1),
-    widget("minutes", railX, orgH + gapY, railW, minutesH, 1),
-    widget("tasks", 0, workY, heroW, workH, 2),
-    widget("inbox", railX, workY, railW, workH, 2),
-    parkHidden("upcoming", 0),
-    parkHidden("activity", 1),
-  ];
-
-  if (opts.showPulse) {
-    const bottomY = workY + workH + gapY;
-    const bottomH = 340;
-    widgets.push(
-      widget("pulse", 0, bottomY, heroW, bottomH, 3),
-      widget("deadlines", railX, bottomY, railW, bottomH, 3),
-    );
-  }
+  const colW = Math.floor((full - gap) / 2);
+  const activityH = Math.round(workH * 0.85);
 
   return {
-    version: 8,
+    version: 17,
     spacing,
-    widgets: dedupeWidgets(widgets),
+    widgets: dedupeWidgets([
+      widget("featured", 0, 0, full, eventH, 1),
+      widget("overview", 0, focusY, full, focusH, 2),
+      widget("tasks", 0, workY, colW, workH, 3),
+      widget("activity", colW + gap, workY, full - colW - gap, activityH, 3),
+      ...park([
+        "upcoming",
+        "inbox",
+        "actions",
+        "deadlines",
+        "pulse",
+        "minutes",
+      ]),
+    ]),
   };
 }
 
@@ -692,7 +710,7 @@ export function placeWidget(
     candidate = normalizeWidget({ ...candidate, x: slot.x, y: slot.y });
   }
   return {
-    version: 8,
+    version: 17,
     spacing: normalizeSpacing(state.spacing),
     widgets: state.widgets.map((item) => (item.id === id ? candidate : item)),
   };
@@ -921,7 +939,7 @@ export function mergeWorkspaceWithCatalog(
   );
   const base = buildDefaultWorkspace({ ...opts, spacing });
   /* Only current pixel layouts are trusted; older saves reset cleanly. */
-  if (!saved || (saved as HomeWorkspaceState).version !== 8) {
+  if (!saved || (saved as HomeWorkspaceState).version !== 17) {
     return base;
   }
 
@@ -960,7 +978,7 @@ export function mergeWorkspaceWithCatalog(
   }
 
   return {
-    version: 8,
+    version: 17,
     spacing,
     widgets,
   };
@@ -969,7 +987,9 @@ export function mergeWorkspaceWithCatalog(
 export function visibleWorkspaceWidgets(
   state: HomeWorkspaceState,
 ): HomeWidgetLayout[] {
-  return state.widgets.filter((item) => !item.hidden);
+  return state.widgets.filter(
+    (item) => !item.hidden && !isPinnedRailWidget(item.id),
+  );
 }
 
 export function canvasHeight(widgets: HomeWidgetLayout[]): number {
@@ -983,6 +1003,45 @@ export function canvasHeight(widgets: HomeWidgetLayout[]): number {
   return clamp(max, HOME_CANVAS_MIN_HEIGHT, HOME_CANVAS_MAX_HEIGHT);
 }
 
+/**
+ * Place a newly shown widget just under the current visible stack
+ * (not at the old "park" y=2400 off-canvas region).
+ */
+export function placeShownWidget(
+  state: HomeWorkspaceState,
+  id: HomeWidgetId,
+): Pick<HomeWidgetLayout, "x" | "y" | "w" | "h" | "z"> {
+  const meta = CATALOG_BY_ID[id];
+  const gap = spacingGapPx(state.spacing);
+  const others = state.widgets.filter(
+    (item) => item.id !== id && !item.hidden && !isPinnedRailWidget(item.id),
+  );
+
+  let bottom = 0;
+  for (const item of others) {
+    bottom = Math.max(bottom, item.y + effectiveHeight(item));
+  }
+  const y = others.length === 0 ? 0 : bottom + gap;
+
+  /* Full-width default so edit + briefing feel consistent */
+  const w = Math.min(
+    Math.max(meta.defaultW, meta.minW),
+    HOME_CANVAS_DESIGN_WIDTH,
+  );
+  const x = 0;
+  const h = meta.defaultH;
+  const z =
+    Math.max(0, ...state.widgets.map((item) => item.z ?? 1)) + 1;
+
+  return {
+    x,
+    y: clamp(y, 0, HOME_CANVAS_MAX_HEIGHT - h),
+    w,
+    h,
+    z,
+  };
+}
+
 export function setWidgetHidden(
   state: HomeWorkspaceState,
   id: HomeWidgetId,
@@ -990,31 +1049,75 @@ export function setWidgetHidden(
 ): HomeWorkspaceState {
   const spacing = normalizeSpacing(state.spacing);
   const exists = state.widgets.some((item) => item.id === id);
+
   if (!exists) {
-    const meta = CATALOG_BY_ID[id];
+    if (hidden) {
+      return state;
+    }
+    const placed = placeShownWidget(state, id);
     return {
-      version: 8,
+      version: 17,
       spacing,
       widgets: packWidgets([
         ...state.widgets,
         normalizeWidget({
           id,
-          x: 0,
-          y: canvasHeight(state.widgets),
-          w: meta.defaultW,
-          h: meta.defaultH,
-          hidden,
+          ...placed,
+          hidden: false,
         }),
       ]),
     };
   }
+
+  if (hidden) {
+    return {
+      version: 17,
+      spacing,
+      widgets: state.widgets.map((item) =>
+        item.id === id ? { ...item, hidden: true } : item,
+      ),
+    };
+  }
+
+  /* Unhide: always re-home into visible canvas (parked widgets sat at y≈2400). */
+  const placed = placeShownWidget(state, id);
   return {
-    version: 8,
+    version: 17,
     spacing,
     widgets: state.widgets.map((item) =>
-      item.id === id ? { ...item, hidden } : item,
+      item.id === id
+        ? normalizeWidget({
+            ...item,
+            ...placed,
+            hidden: false,
+            collapsed: false,
+          })
+        : item,
     ),
   };
+}
+
+/**
+ * Stable document order for reading Home (not freeform canvas x/y).
+ * Only ids that are currently visible should be passed in.
+ */
+export const BRIEFING_WIDGET_ORDER: readonly HomeWidgetId[] = [
+  "featured",
+  "overview",
+  "tasks",
+  "activity",
+  "pulse",
+  "upcoming",
+  "deadlines",
+  "minutes",
+  "actions",
+] as const;
+
+export function orderVisibleWidgetsForBriefing(
+  visibleIds: Iterable<HomeWidgetId>,
+): HomeWidgetId[] {
+  const present = new Set(visibleIds);
+  return BRIEFING_WIDGET_ORDER.filter((id) => present.has(id));
 }
 
 export function setWidgetCollapsed(
@@ -1023,7 +1126,7 @@ export function setWidgetCollapsed(
   collapsed: boolean,
 ): HomeWorkspaceState {
   return {
-    version: 8,
+    version: 17,
     spacing: normalizeSpacing(state.spacing),
     widgets: state.widgets.map((item) =>
       item.id === id ? normalizeWidget({ ...item, collapsed }) : item,
@@ -1115,7 +1218,7 @@ export function rectForWidget(
 }
 
 export function homeWorkspaceStorageKey(memberId: number): string {
-  return `nsa_home_workspace_v8:${memberId}`;
+  return `nsa_home_workspace_v17:${memberId}`;
 }
 
 export function loadHomeWorkspace(

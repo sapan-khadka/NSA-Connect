@@ -56,6 +56,23 @@ describe("mapMemberActivityApiItem", () => {
       taskId: 9,
     });
   });
+
+  it("maps meeting notes to the minutes workspace tab", () => {
+    expect(
+      mapMemberActivityApiItem({
+        id: "meeting_notes-3",
+        type: "meeting_notes",
+        description: "Updated meeting notes for March Board Meeting",
+        timestamp: "2030-06-15T12:00:00.000Z",
+        task_id: null,
+        event_id: 12,
+        dues_record_id: null,
+      }),
+    ).toMatchObject({
+      kind: "meeting_notes",
+      href: "/events/meetings/12?tab=minutes",
+    });
+  });
 });
 
 describe("groupMemberActivityByDay", () => {

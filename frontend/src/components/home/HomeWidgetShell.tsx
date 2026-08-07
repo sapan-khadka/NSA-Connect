@@ -22,7 +22,7 @@ function homeWeightFor(id: HomeWidgetId): "hero" | "medium" | "light" {
   if (id === "featured") {
     return "hero";
   }
-  if (id === "tasks" || id === "inbox") {
+  if (id === "tasks" || id === "inbox" || id === "activity" || id === "overview") {
     return "medium";
   }
   return "light";
@@ -41,6 +41,7 @@ type HomeWidgetShellProps = {
   screenWidth?: number;
   screenHeight?: number;
   onSelect: () => void;
+  onEnterCustomize: () => void;
   onToggleCollapsed: () => void;
   onHide: () => void;
   onCycleSize: () => void;
@@ -65,6 +66,7 @@ export function HomeWidgetShell({
   screenWidth,
   screenHeight,
   onSelect,
+  onEnterCustomize,
   onToggleCollapsed,
   onHide,
   onCycleSize,
@@ -105,6 +107,17 @@ export function HomeWidgetShell({
     ...(screenHeight != null ? { ["--hh" as string]: `${screenHeight}px` } : {}),
   } as CSSProperties;
 
+  function startDrag(event: React.PointerEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    setMenuOpen(false);
+    if (!isCustomizing) {
+      onEnterCustomize();
+    }
+    onSelect();
+    onDragPointerDown(event);
+  }
+
   return (
     <div
       ref={rootRef}
@@ -114,6 +127,7 @@ export function HomeWidgetShell({
         active ? "is-active" : "",
         selected ? "is-selected" : "",
         isCustomizing ? "is-customizing" : "",
+        menuOpen ? "is-menu-open" : "",
         `is-density-${density}`,
       ]
         .filter(Boolean)
@@ -124,68 +138,81 @@ export function HomeWidgetShell({
       style={cssVars}
       onPointerDown={isCustomizing ? onSelect : undefined}
     >
-      {isCustomizing ? (
-        <div className="home-widget__chrome">
-          <button
-            type="button"
-            className="home-widget__drag"
-            aria-label={`Move ${meta.label}`}
-            title="Move"
-            onPointerDown={onDragPointerDown}
-          >
-            <AppIcon icon={GripVertical} size="sm" className="text-current" />
-          </button>
-          <span className="home-widget__chrome-label">{meta.label}</span>
-          <button
-            type="button"
-            className="home-widget__size-chip"
-            aria-label={`Size ${WIDGET_SIZE_PRESET_LABEL[sizePreset]}. Click to cycle.`}
-            title="Cycle size"
-            onClick={(event) => {
-              event.stopPropagation();
-              onCycleSize();
-            }}
-          >
-            {WIDGET_SIZE_PRESET_LABEL[sizePreset]}
-          </button>
-          <button
-            type="button"
-            className="home-widget__menu-btn"
-            aria-label={`${meta.label} options`}
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
-            aria-controls={menuId}
-            onClick={() => setMenuOpen((open) => !open)}
-          >
-            <AppIcon icon={MoreHorizontal} size="sm" className="text-current" />
-          </button>
-          {menuOpen ? (
-            <div className="home-widget__menu" id={menuId} role="menu">
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  onToggleCollapsed();
-                  setMenuOpen(false);
-                }}
-              >
-                {collapsed ? "Expand" : "Collapse"}
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                className="is-danger"
-                onClick={() => {
-                  onHide();
-                  setMenuOpen(false);
-                }}
-              >
-                Hide
-              </button>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+      <div className="home-widget__chrome">
+        <button
+          type="button"
+          className="home-widget__drag"
+          aria-label={`Move ${meta.label}`}
+          title="Drag to move"
+          onPointerDown={startDrag}
+        >
+          <AppIcon icon={GripVertical} size="sm" className="text-current" />
+        </button>
+
+        <button
+          type="button"
+          className="home-widget__menu-btn"
+          aria-label={`${meta.label} options`}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          aria-controls={menuId}
+          onClick={(event) => {
+            event.stopPropagation();
+            setMenuOpen((open) => !open);
+          }}
+        >
+          <AppIcon icon={MoreHorizontal} size="sm" className="text-current" />
+        </button>
+
+        {menuOpen ? (
+          <div className="home-widget__menu" id={menuId} role="menu">
+            <button
+              type="button"
+              role="menuitem"
+              onPointerDown={startDrag}
+            >
+              Move
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={(event) => {
+                event.stopPropagation();
+                onEnterCustomize();
+                onSelect();
+                onCycleSize();
+                setMenuOpen(false);
+              }}
+            >
+              Resize
+              <span>{WIDGET_SIZE_PRESET_LABEL[sizePreset]}</span>
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleCollapsed();
+                setMenuOpen(false);
+              }}
+            >
+              {collapsed ? "Expand" : "Collapse"}
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="is-danger"
+              onClick={(event) => {
+                event.stopPropagation();
+                onHide();
+                setMenuOpen(false);
+              }}
+            >
+              Hide
+            </button>
+          </div>
+        ) : null}
+      </div>
 
       {isCustomizing && sizeLabel ? (
         <div className="home-widget__size-badge" aria-live="polite">
@@ -210,12 +237,21 @@ export function HomeWidgetShell({
         <div className="home-widget__body">{children}</div>
       )}
 
-      {isCustomizing && !collapsed ? (
+      {!collapsed ? (
         <button
           type="button"
           className="home-widget__resize home-widget__resize--se"
           aria-label={`Resize ${meta.label}`}
-          onPointerDown={(event) => onResizePointerDown("se", event)}
+          onPointerDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setMenuOpen(false);
+            if (!isCustomizing) {
+              onEnterCustomize();
+            }
+            onSelect();
+            onResizePointerDown("se", event);
+          }}
         />
       ) : null}
     </div>

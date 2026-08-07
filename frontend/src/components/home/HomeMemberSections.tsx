@@ -20,7 +20,6 @@ import {
 } from "../../lib/roles";
 import { AppIcon } from "../ui/AppIcon";
 import { ArrowLink } from "../ui/ArrowLink";
-import { HomeCard } from "../ui/HomeCard";
 
 function initialsFromName(fullName: string): string {
   return fullName
@@ -204,6 +203,9 @@ function pickDefaultTab(summary: MyTasksSummary): MyTasksTab {
   if (summary.overdueCount > 0) {
     return "overdue";
   }
+  if (summary.openCount === 0) {
+    return "all";
+  }
   if (summary.dueTodayCount > 0) {
     return "today";
   }
@@ -230,7 +232,7 @@ export function HomeYourWorkSection({
   embedded?: boolean;
   taskLimit?: number;
 }) {
-  const [tab, setTab] = useState<MyTasksTab>("upcoming");
+  const [tab, setTab] = useState<MyTasksTab>("all");
   const [userPickedTab, setUserPickedTab] = useState(false);
 
   useEffect(() => {
@@ -248,79 +250,78 @@ export function HomeYourWorkSection({
     Math.min(3, Math.max(1, taskLimit)),
   );
   const showCompletedToday = !isLoading && completedToday.length > 0;
+  const allClear = !isLoading && tasksSummary.openCount === 0;
   const emptyCopy =
     tab === "overdue"
       ? "No overdue tasks."
       : tab === "today"
         ? "Nothing due today."
-        : "No upcoming tasks.";
+        : tab === "upcoming"
+          ? "No upcoming tasks."
+          : "No open tasks.";
 
   const body = (
     <div className="home-task-panel">
       {!embedded ? (
         <div className="home-task-header">
-          <h2 className="home-panel-title">My tasks</h2>
+          <h2 className="home-panel-title">My Tasks</h2>
           <ArrowLink to={tasksPath}>View all</ArrowLink>
         </div>
       ) : (
         <div className="home-task-header home-task-header--embedded">
+          <h2 className="home-panel-title">My Tasks</h2>
           <ArrowLink to={tasksPath}>View all</ArrowLink>
         </div>
       )}
 
-      {!isLoading ? (
-        <div
-          className="home-task-tabs"
-          role="tablist"
-          aria-label="Task summary"
-        >
-          {(
-            [
-              {
-                id: "overdue" as const,
-                label: "Overdue",
-                count: tasksSummary.overdueCount,
-              },
-              {
-                id: "today" as const,
-                label: "Today",
-                count: tasksSummary.dueTodayCount,
-              },
-              {
-                id: "upcoming" as const,
-                label: "Upcoming",
-                count: tasksSummary.upcomingCount,
-              },
-            ] as const
-          ).map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              role="tab"
-              aria-selected={tab === item.id}
-              className={[
-                "home-task-tab",
-                tab === item.id ? "is-active" : "",
-                item.id === "overdue" && item.count > 0 ? "is-overdue" : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              onClick={() => {
-                setUserPickedTab(true);
-                setTab(item.id);
-              }}
-            >
-              <span>{item.label}</span>
-              <span className="home-task-tab-count">{item.count}</span>
-            </button>
-          ))}
-        </div>
-      ) : null}
+      <div className="home-task-tabs" role="tablist" aria-label="Task summary">
+        {(
+          [
+            {
+              id: "all" as const,
+              label: "All",
+              count: tasksSummary.openCount,
+            },
+            {
+              id: "overdue" as const,
+              label: "Overdue",
+              count: tasksSummary.overdueCount,
+            },
+            {
+              id: "upcoming" as const,
+              label: "Upcoming",
+              count: tasksSummary.upcomingCount,
+            },
+          ] as const
+        ).map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === item.id}
+            className={[
+              "home-task-tab",
+              tab === item.id ? "is-active" : "",
+              item.id === "overdue" && item.count > 0 ? "is-overdue" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            onClick={() => {
+              setUserPickedTab(true);
+              setTab(item.id);
+            }}
+          >
+            <span>
+              {item.label} ({item.count})
+            </span>
+          </button>
+        ))}
+      </div>
 
       <div className="home-task-body">
         {isLoading ? (
           <ul className="home-task-list" aria-label="Loading tasks">
-            {[0, 1, 2, 3].map((row) => (
+            {[0, 1, 2].map((row) => (
               <li key={row} className="home-task-skeleton">
                 <span className="h-4 w-4 animate-pulse rounded-[0.3rem] bg-slate-200/80" />
                 <span className="block h-2.5 w-3/5 animate-pulse rounded bg-slate-200/80" />
@@ -351,14 +352,36 @@ export function HomeYourWorkSection({
 
         {!isLoading && tabTasks.length === 0 ? (
           <div className="home-task-empty">
+            <svg
+              className="home-task-empty-icon"
+              width="40"
+              height="40"
+              viewBox="0 0 40 40"
+              fill="none"
+              aria-hidden="true"
+            >
+              <rect
+                x="9"
+                y="6"
+                width="22"
+                height="28"
+                rx="2"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
+              <path
+                d="M14 14h12M14 19h12M14 24h8"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
             <p className="home-task-empty-title">
-              {tasksSummary.openCount === 0 ? "Inbox zero" : "Nothing here"}
+              {allClear ? "No open tasks" : emptyCopy}
             </p>
-            <p className="home-task-empty-copy">
-              {tasksSummary.openCount === 0
-                ? "No open tasks."
-                : emptyCopy}
-            </p>
+            {allClear ? (
+              <p className="home-task-empty-copy">You&apos;re all caught up.</p>
+            ) : null}
           </div>
         ) : null}
 
@@ -387,12 +410,6 @@ export function HomeYourWorkSection({
           </div>
         ) : null}
       </div>
-
-      <div className="home-task-footer">
-        <Link to={tasksPath} className="home-panel-footer-link">
-          View tasks
-        </Link>
-      </div>
     </div>
   );
 
@@ -405,13 +422,12 @@ export function HomeYourWorkSection({
   }
 
   return (
-    <HomeCard
-      padding="sm"
-      className="flex flex-col home-surface-quiet home-task-card home-task-surface"
+    <div
+      className="flex h-full min-h-0 flex-col home-task-card home-task-surface"
       aria-label="My Tasks"
     >
       {body}
-    </HomeCard>
+    </div>
   );
 }
 

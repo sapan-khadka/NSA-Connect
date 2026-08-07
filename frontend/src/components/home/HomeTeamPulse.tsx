@@ -1,4 +1,3 @@
-import { AlertTriangle, Check, UserRound } from "lucide-react";
 import { useMemo } from "react";
 import { Link } from "react-router";
 
@@ -6,9 +5,8 @@ import type {
   EventTaskResponse,
   TaskOverviewMember,
 } from "../../lib/event-tasks-api";
-import { getTaskDisplayName } from "../../lib/home-tasks";
+import type { EventResponse } from "../../lib/events-api";
 import type { WidgetDensity } from "../../lib/home-workspace";
-import { AppIcon } from "../ui/AppIcon";
 import { ArrowLink } from "../ui/ArrowLink";
 import { HomeCard } from "../ui/HomeCard";
 
@@ -16,6 +14,19 @@ type HomeTeamPulseProps = {
   members: TaskOverviewMember[];
   isLoading?: boolean;
   density?: WidgetDensity;
+  pendingMemberApprovals?: number;
+  financePendingCount?: number;
+  nextEvent?: EventResponse | null;
+  approvedMemberCount?: number | null;
+};
+
+type HealthTone = "ok" | "warn" | "alert";
+
+type HealthRow = {
+  id: string;
+  tone: HealthTone;
+  label: string;
+  href: string;
 };
 
 function isCompletedToday(task: EventTaskResponse, now: Date): boolean {
@@ -30,12 +41,28 @@ function isCompletedToday(task: EventTaskResponse, now: Date): boolean {
   );
 }
 
+function formatNextEvent(event: EventResponse): string {
+  const when = new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+  }).format(new Date(event.starts_at));
+  return `${event.name} · ${when}`;
+}
+
+/**
+ * Executive org summary for the Home workspace (not a task laundry list).
+ */
 export function HomeTeamPulse({
   members,
   isLoading = false,
   density = "md",
+  pendingMemberApprovals = 0,
+  financePendingCount = 0,
+  nextEvent = null,
+  approvedMemberCount = null,
 }: HomeTeamPulseProps) {
   const now = useMemo(() => new Date(), []);
+  const compact = density === "xs" || density === "sm";
 
   const openTasks = useMemo(() => {
     const byId = new Map<number, EventTaskResponse>();
@@ -52,17 +79,6 @@ export function HomeTeamPulse({
 
   const overdueCount = openTasks.filter((task) => task.is_overdue).length;
 
-  const membersNeedingHelp = useMemo(() => {
-    return members.filter((member) =>
-      member.tasks.some(
-        (task) =>
-          !task.is_complete &&
-          task.status !== "done" &&
-          (task.is_overdue || task.status === "blocked"),
-      ),
-    ).length;
-  }, [members]);
-
   const completedToday = useMemo(() => {
     const byId = new Map<number, EventTaskResponse>();
     for (const member of members) {
@@ -75,112 +91,111 @@ export function HomeTeamPulse({
     return byId.size;
   }, [members, now]);
 
-  const topPriority = useMemo(() => {
-    const overdue = openTasks
-      .filter((task) => task.is_overdue)
-      .sort((a, b) =>
-        (a.due_date ?? "").localeCompare(b.due_date ?? ""),
-      );
-    const pick = overdue[0] ?? openTasks[0] ?? null;
-    if (!pick) {
-      return null;
-    }
-    return {
-      title: getTaskDisplayName(pick),
-      assignee: pick.assignee_name?.trim() || "Unassigned",
-      eventName: pick.event_name,
-    };
-  }, [openTasks]);
+  const rows = useMemo((): HealthRow[] => {
+    const next: HealthRow[] = [];
 
-  const compact = density === "xs" || density === "sm";
+    if (approvedMemberCount != null && approvedMemberCount > 0) {
+      next.push({
+        id: "members",
+        tone: "ok",
+        label: `${approvedMemberCount} active member${approvedMemberCount === 1 ? "" : "s"}`,
+        href: "/members",
+      });
+    }
+
+    if (pendingMemberApprovals > 0) {
+      next.push({
+        id: "pending",
+        tone: "warn",
+        label: `${pendingMemberApprovals} pending approval${pendingMemberApprovals === 1 ? "" : "s"}`,
+        href: "/members?tab=pending",
+      });
+    }
+
+    if (overdueCount > 0) {
+      next.push({
+        id: "overdue",
+        tone: "alert",
+        label: `${overdueCount} overdue task${overdueCount === 1 ? "" : "s"}`,
+        href: "/events/oversight",
+      });
+    } else if (!compact) {
+      next.push({
+        id: "tasks-ok",
+        tone: "ok",
+        label:
+          completedToday > 0
+            ? `${completedToday} completed today`
+            : "No overdue tasks",
+        href: "/events/tasks",
+      });
+    }
+
+    if (financePendingCount > 0) {
+      next.push({
+        id: "treasury",
+        tone: "alert",
+        label: `${financePendingCount} treasury item${financePendingCount === 1 ? "" : "s"} need review`,
+        href: "/finance",
+      });
+    } else {
+      next.push({
+        id: "treasury-ok",
+        tone: "ok",
+        label: "Treasury clear",
+        href: "/finance",
+      });
+    }
+
+    if (nextEvent) {
+      next.push({
+        id: "next-event",
+        tone: "ok",
+        label: `Next · ${formatNextEvent(nextEvent)}`,
+        href: `/events/${nextEvent.id}`,
+      });
+    }
+
+    return next.slice(0, compact ? 3 : 4);
+  }, [
+    approvedMemberCount,
+    pendingMemberApprovals,
+    overdueCount,
+    completedToday,
+    financePendingCount,
+    nextEvent,
+    compact,
+  ]);
 
   return (
     <HomeCard
       padding="sm"
-      className="home-surface-quiet home-team-pulse home-task-surface"
-      aria-label="Team pulse"
+      className="home-surface-quiet home-org-health home-task-surface"
+      aria-label="Organization Health"
     >
       <div className="home-task-header">
-        <h2 className="home-panel-title">Team Pulse</h2>
+        <h2 className="home-panel-title">Organization Health</h2>
         <ArrowLink to="/events/oversight" className="home-hide-xs">
-          Go to tasks
+          Details
         </ArrowLink>
       </div>
 
       {isLoading ? (
         <p className="home-activity-empty">Loading…</p>
       ) : (
-        <>
-          <ul className="home-team-pulse-narrative" aria-label="Team summary">
-            <li
-              className={
-                overdueCount > 0
-                  ? "home-team-pulse-narrative__item is-alert"
-                  : "home-team-pulse-narrative__item"
-              }
-            >
-              <AppIcon
-                icon={AlertTriangle}
-                size="sm"
-                className="text-current"
-              />
-              <span>
-                {overdueCount === 0
-                  ? "No overdue tasks"
-                  : `${overdueCount} overdue task${overdueCount === 1 ? "" : "s"}`}
-              </span>
-            </li>
-            <li
-              className={
-                membersNeedingHelp > 0
-                  ? "home-team-pulse-narrative__item is-alert"
-                  : "home-team-pulse-narrative__item"
-              }
-            >
-              <AppIcon icon={UserRound} size="sm" className="text-current" />
-              <span>
-                {membersNeedingHelp === 0
-                  ? "Nobody needs help"
-                  : `${membersNeedingHelp} member${
-                      membersNeedingHelp === 1 ? "" : "s"
-                    } need${membersNeedingHelp === 1 ? "s" : ""} help`}
-              </span>
-            </li>
-            {!compact ? (
-              <li className="home-team-pulse-narrative__item is-ok">
-                <AppIcon icon={Check} size="sm" className="text-current" />
-                <span>
-                  {completedToday === 0
-                    ? "No completions today"
-                    : `${completedToday} completed today`}
-                </span>
-              </li>
-            ) : null}
-          </ul>
-
-          {!compact && topPriority ? (
-            <div className="home-team-pulse-priority">
-              <p className="home-team-pulse-deadlines-label">Top priority</p>
-              <Link to="/events/oversight" className="home-team-pulse-priority__card">
-                <span className="home-team-pulse-priority__person">
-                  {topPriority.assignee}
-                </span>
-                <span className="home-team-pulse-priority__title">
-                  {topPriority.title}
-                </span>
-                {topPriority.eventName ? (
-                  <span className="home-team-pulse-priority__meta">
-                    {topPriority.eventName}
-                  </span>
-                ) : null}
+        <ul className="home-org-health__list" aria-label="Health summary">
+          {rows.map((row) => (
+            <li key={row.id}>
+              <Link
+                to={row.href}
+                className={`home-org-health__row is-${row.tone}`}
+              >
+                <span className="home-org-health__dot" aria-hidden />
+                <span className="home-org-health__label">{row.label}</span>
               </Link>
-            </div>
-          ) : null}
-
-          {!compact && !topPriority ? (
-            <p className="home-team-pulse-clear">Everyone is on track</p>
-          ) : null}
-        </>
+            </li>
+          ))}
+        </ul>
       )}
     </HomeCard>
   );

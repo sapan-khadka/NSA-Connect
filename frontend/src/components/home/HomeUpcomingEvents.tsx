@@ -46,7 +46,7 @@ export function HomeUpcomingEvents({
       aria-label="Upcoming events"
     >
       <div className="home-task-header">
-        <h2 className="home-panel-title">Coming up</h2>
+        <h2 className="home-panel-title">Upcoming</h2>
         <ArrowLink to="/events">View all</ArrowLink>
       </div>
 
