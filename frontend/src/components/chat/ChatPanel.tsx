@@ -204,7 +204,7 @@ export function ChatPanel({
   return (
     <Card
       padding="none"
-      className="flex h-[min(72vh,720px)] flex-col overflow-hidden"
+      className="flex h-[min(58dvh,720px)] flex-col overflow-hidden sm:h-[min(72vh,720px)]"
     >
       <div
         ref={scrollRef}

@@ -112,7 +112,7 @@ export function CreateMenu({ onLogTransaction, className = "" }: CreateMenuProps
         <div
           id={menuId}
           role="menu"
-          className="absolute right-0 top-full z-50 mt-2 min-w-[11rem] ds-card py-1"
+          className="absolute right-0 top-full z-[60] mt-2 min-w-[11rem] ds-card py-1"
         >
           {items.map((item) => (
             <button

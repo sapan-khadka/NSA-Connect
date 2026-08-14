@@ -1,24 +1,20 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 
 import { EventAttendanceSummaryPanel } from "./EventAttendanceSummaryPanel";
 import { EventCheckInPanel } from "./EventCheckInPanel";
-import { EventDeleteSection } from "./EventDeleteSection";
 import { EventFeedbackSection } from "./EventFeedbackSection";
 import { EventFinanceCloseoutBanner } from "./EventFinanceCloseoutBanner";
 import { EventInvitedParticipantsSection } from "./EventInvitedParticipantsSection";
+import { EventManageAttendeesWorkspace } from "./EventManageAttendeesWorkspace";
 import { EventManageBudgetCard } from "./EventManageBudgetCard";
-import { EventManageCheckInCard } from "./EventManageCheckInCard";
-import { EventManageActivityFeed } from "./EventManageActivityFeed";
-import { EventManageCommunicationsCard } from "./EventManageCommunicationsCard";
 import { EventManageDetailsCard } from "./EventManageDetailsCard";
 import {
   EventManageOverview,
   type EventManageTab,
 } from "./EventManageOverview";
-import { EventManageRsvpAnalyticsCard } from "./EventManageRsvpAnalyticsCard";
+import { EventManageRecordWorkspace } from "./EventManageRecordWorkspace";
 import { EventManageVolunteersCard } from "./EventManageVolunteersCard";
-import { EventManageWrapUpCard } from "./EventManageWrapUpCard";
 import { EventManageBudgetSummaryCard } from "./EventManageLogisticsSection";
 import { EventTaskManager } from "./EventTaskManager";
 import { EventVolunteersSection } from "./EventVolunteersSection";
@@ -27,13 +23,14 @@ import { InviteMembersToEventModal } from "./InviteMembersToEventModal";
 import { LogFinanceEntryForm } from "./LogFinanceEntryForm";
 import { MeetingRecordSection } from "./MeetingRecordSection";
 import { ArrowAction } from "./ui/ArrowLink";
-import { HomeCard } from "./ui/HomeCard";
 import { Modal } from "./ui/Modal";
+import { Drawer } from "../design-system/components/feedback/Drawer";
 import type { MemberResponse } from "../lib/auth-api";
 import { canCreateEventTasks } from "../lib/event-finance";
 import {
   fetchEventCheckIns,
   type EventAttendanceSummary,
+  type EventCheckInRecord,
 } from "../lib/event-checkin-api";
 import type { FinanceEventBudgetSummary } from "../lib/finance-api";
 import {
@@ -43,17 +40,19 @@ import {
   fetchEventVolunteerSlots,
   type EventAttendeesResponse,
   type EventDetailResponse,
+  type EventParticipantInvitation,
   type EventVolunteerSignupMember,
 } from "../lib/events-api";
 import { summarizeVolunteerSlots } from "../lib/event-volunteer-summary";
 import type { EventTaskDraft } from "../lib/event-task-draft";
 import type { EventTaskResponse } from "../lib/event-tasks-api";
-import { computeEventReadiness } from "../lib/event-readiness";
+import {
+  parseManageTab,
+  shouldOpenEventEditor,
+  type AttentionAction,
+} from "../lib/event-manage-command";
 import {
   EVENT_MANAGE_ACTION_LINK,
-  EVENT_MANAGE_CARD_CLASS,
-  EVENT_MANAGE_EMPTY,
-  EVENT_MANAGE_EYEBROW,
   EVENT_MANAGE_LOADING,
   EVENT_MANAGE_SECONDARY_BTN,
 } from "../lib/event-manage-ui";
@@ -105,22 +104,10 @@ type EventManageDashboardProps = {
 
 const TABS: { id: EventManageTab; label: string }[] = [
   { id: "overview", label: "Overview" },
-  { id: "details", label: "Details" },
-  { id: "people", label: "People" },
-  { id: "ops", label: "Ops" },
+  { id: "attendees", label: "Attendees" },
+  { id: "operations", label: "Operations" },
   { id: "record", label: "Record" },
 ];
-
-const MANAGE_TAB_IDS = new Set<EventManageTab>(
-  TABS.map((tab) => tab.id),
-);
-
-function parseManageTab(value: string | null): EventManageTab {
-  if (value && MANAGE_TAB_IDS.has(value as EventManageTab)) {
-    return value as EventManageTab;
-  }
-  return "overview";
-}
 
 const MANAGE_MODAL_IDS = new Set<Exclude<ManageModal, null>>([
   "volunteers",
@@ -138,42 +125,6 @@ function parseManageModal(value: string | null): ManageModal {
     return value as Exclude<ManageModal, null>;
   }
   return null;
-}
-
-function ManageCardShell({
-  title,
-  subtitle,
-  action,
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  action?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <HomeCard padding="sm" className={EVENT_MANAGE_CARD_CLASS}>
-      <div className="flex shrink-0 items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h2 className="home-section-title">{title}</h2>
-          {subtitle ? (
-            <p className="mt-1 text-xs text-gray-500">{subtitle}</p>
-          ) : null}
-        </div>
-        {action}
-      </div>
-      <div className="mt-3 flex min-h-0 flex-1 flex-col">{children}</div>
-    </HomeCard>
-  );
-}
-
-function tabButtonClassName(active: boolean): string {
-  return [
-    "rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors",
-    active
-      ? "bg-surface-card text-foreground shadow-sm"
-      : "text-label hover:text-foreground",
-  ].join(" ");
 }
 
 export function EventManageDashboard({
@@ -203,10 +154,14 @@ export function EventManageDashboard({
   const initialTab = parseManageTab(searchParams.get("tab"));
   const modalFromUrl = parseManageModal(searchParams.get("modal"));
   const [activeTab, setActiveTab] = useState<EventManageTab>(initialTab);
+  const [editorOpen, setEditorOpen] = useState(
+    shouldOpenEventEditor(searchParams.get("tab"), searchParams.get("edit")),
+  );
   const [modal, setModal] = useState<ManageModal>(
     initialOpenModal ?? modalFromUrl,
   );
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [addRoleToken, setAddRoleToken] = useState(0);
   const consumedInitialModalRef = useRef(false);
   const [volunteers, setVolunteers] = useState<EventVolunteerSignupMember[]>(
     [],
@@ -214,33 +169,45 @@ export function EventManageDashboard({
   const [volunteersLoading, setVolunteersLoading] = useState(true);
   const [volunteerFilled, setVolunteerFilled] = useState<number | null>(null);
   const [volunteerNeeded, setVolunteerNeeded] = useState<number | null>(null);
-  const [checkInCount, setCheckInCount] = useState(0);
-  const [invitedCount, setInvitedCount] = useState<number | null>(null);
+  const [checkIns, setCheckIns] = useState<EventCheckInRecord[]>([]);
+  const [invitations, setInvitations] = useState<EventParticipantInvitation[]>(
+    [],
+  );
   const [invitedMemberIds, setInvitedMemberIds] = useState<number[]>([]);
   const [attendees, setAttendees] = useState<EventAttendeesResponse | null>(
     null,
   );
   const [attendeesLoading, setAttendeesLoading] = useState(true);
 
-  const isMeetingEvent = event.event_type === "meeting";
   const incompleteTasks = tasks
     .filter((task) => task.status !== "done")
     .slice(0, 2);
   const completed = tasks.filter((task) => task.status === "done").length;
   const totalTasks = tasks.length;
-  const taskPercent = totalTasks
-    ? Math.round((completed / totalTasks) * 100)
-    : 0;
 
   function selectTab(tab: EventManageTab) {
     setActiveTab(tab);
     const next = new URLSearchParams(searchParams);
+    next.delete("edit");
     if (tab === "overview") {
       next.delete("tab");
     } else {
       next.set("tab", tab);
     }
     setSearchParams(next, { replace: true });
+  }
+
+  function closeEditor() {
+    setEditorOpen(false);
+    onDismissOpenTokens?.();
+    if (searchParams.has("edit") || searchParams.get("tab") === "details") {
+      const next = new URLSearchParams(searchParams);
+      next.delete("edit");
+      if (next.get("tab") === "details") {
+        next.delete("tab");
+      }
+      setSearchParams(next, { replace: true });
+    }
   }
 
   useEffect(() => {
@@ -254,31 +221,20 @@ export function EventManageDashboard({
 
   useEffect(() => {
     if (openTasksModalToken > 0) {
-      selectTab("ops");
+      selectTab("operations");
       setModal("tasks");
     }
   }, [openTasksModalToken]);
 
   useEffect(() => {
     if (openCheckInModalToken > 0) {
-      selectTab("people");
       setModal("checkin");
     }
   }, [openCheckInModalToken]);
 
   useEffect(() => {
     if (editDetailsToken > 0) {
-      selectTab("details");
-      window.setTimeout(() => {
-        const schedule = document.getElementById("event-manage-schedule");
-        if (schedule && typeof schedule.scrollIntoView === "function") {
-          schedule.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-        const dateInput = document.getElementById("manage-event-date");
-        if (dateInput instanceof HTMLElement) {
-          dateInput.focus();
-        }
-      }, 80);
+      setEditorOpen(true);
     }
   }, [editDetailsToken]);
 
@@ -293,12 +249,12 @@ export function EventManageDashboard({
       initialOpenModal === "attendance" ||
       initialOpenModal === "invited"
     ) {
-      selectTab("people");
+      selectTab("attendees");
     } else if (
       initialOpenModal === "tasks" ||
       initialOpenModal === "transactions"
     ) {
-      selectTab("ops");
+      selectTab("operations");
     } else if (
       initialOpenModal === "meeting" ||
       initialOpenModal === "feedback"
@@ -319,12 +275,12 @@ export function EventManageDashboard({
       modalFromUrl === "attendance" ||
       modalFromUrl === "invited"
     ) {
-      selectTab("people");
+      selectTab("attendees");
     } else if (
       modalFromUrl === "tasks" ||
       modalFromUrl === "transactions"
     ) {
-      selectTab("ops");
+      selectTab("operations");
     } else if (
       modalFromUrl === "meeting" ||
       modalFromUrl === "feedback"
@@ -379,7 +335,7 @@ export function EventManageDashboard({
 
   useEffect(() => {
     if (!canViewBoard) {
-      setCheckInCount(0);
+      setCheckIns([]);
       return;
     }
 
@@ -388,12 +344,12 @@ export function EventManageDashboard({
     void fetchEventCheckIns(event.id)
       .then((response) => {
         if (!cancelled) {
-          setCheckInCount(response.checkins.length);
+          setCheckIns(response.checkins);
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setCheckInCount(0);
+          setCheckIns([]);
         }
       });
 
@@ -404,7 +360,7 @@ export function EventManageDashboard({
 
   useEffect(() => {
     if (!canViewBoard) {
-      setInvitedCount(null);
+      setInvitations([]);
       setInvitedMemberIds([]);
       return;
     }
@@ -414,7 +370,7 @@ export function EventManageDashboard({
     void fetchEventInvitedParticipants(event.id)
       .then((response) => {
         if (!cancelled) {
-          setInvitedCount(response.invitations.length);
+          setInvitations(response.invitations);
           setInvitedMemberIds(
             response.invitations.map((invitation) => invitation.member_id),
           );
@@ -422,7 +378,7 @@ export function EventManageDashboard({
       })
       .catch(() => {
         if (!cancelled) {
-          setInvitedCount(0);
+          setInvitations([]);
           setInvitedMemberIds([]);
         }
       });
@@ -487,42 +443,26 @@ export function EventManageDashboard({
     }
   }
 
-  function handleResolveReadiness(
-    target: NonNullable<
-      ReturnType<typeof computeEventReadiness>["resolveTarget"]
-    >,
-  ) {
-    if (target === "volunteers") {
-      selectTab("people");
-      setModal("volunteers");
+  function handleAttentionAction(action: AttentionAction) {
+    if (action === "volunteers") {
+      selectTab("operations");
+      setAddRoleToken((current) => current + 1);
       return;
     }
-    if (target === "budget") {
-      selectTab("ops");
-      if (canViewTreasury) {
-        setModal("transactions");
-      }
+    if (action === "budget") {
+      selectTab("operations");
       return;
     }
-    if (target === "schedule" || target === "cover" || target === "details") {
-      selectTab("details");
-      window.setTimeout(() => {
-        if (target === "schedule") {
-          document
-            .getElementById("event-manage-schedule")
-            ?.scrollIntoView({ behavior: "smooth", block: "start" });
-          const dateInput = document.getElementById("manage-event-date");
-          if (dateInput instanceof HTMLElement) {
-            dateInput.focus();
-          }
-          return;
-        }
-        document
-          .querySelector('[aria-label="Event Details"]')
-          ?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 80);
+    if (action === "tasks") {
+      selectTab("operations");
+      setModal("tasks");
+      return;
     }
+    setEditorOpen(true);
   }
+
+  const checkInCount = checkIns.length;
+  const openTasks = tasks.filter((task) => task.status !== "done");
 
   if (!canViewBoard) {
     return (
@@ -533,275 +473,99 @@ export function EventManageDashboard({
   }
 
   const tasksCard = (
-    <ManageCardShell
-      title="Tasks"
-      subtitle="Open work for this event"
-      action={
-        totalTasks > 0 ? (
-          <ArrowAction onClick={() => setModal("tasks")}>View all</ArrowAction>
-        ) : undefined
-      }
-    >
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <p className={EVENT_MANAGE_EYEBROW}>Completion</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-foreground">
-            {taskPercent}%
-          </p>
-          <p className="mt-0.5 text-xs text-gray-500">
-            {completed}/{totalTasks} done
-          </p>
-        </div>
+    <section aria-label="Tasks">
+      <div className="event-command-section-head">
+        <h2 className="event-command-kicker">Tasks</h2>
+        <p className="event-command-count">
+          {totalTasks === 0 ? "None" : `${completed}/${totalTasks} done`}
+        </p>
       </div>
-
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-gray-100">
-        <div
-          className="h-full rounded-full bg-accent transition-all duration-200 ease-out"
-          style={{ width: `${taskPercent}%` }}
-        />
-      </div>
-
       {totalTasks === 0 ? (
-        <div className={`mt-4 flex flex-1 flex-col ${EVENT_MANAGE_EMPTY}`}>
-          <p className="text-sm font-medium text-foreground">No tasks yet</p>
-          <p className="mt-1.5 text-xs leading-relaxed text-gray-500">
-            Break the event into clear owner-ready tasks so nothing slips before
-            doors open.
-          </p>
-          <div className="mt-auto pt-4">
-            <button
-              type="button"
-              onClick={() => setModal("tasks")}
-              className={`${EVENT_MANAGE_SECONDARY_BTN} w-full`}
-            >
-              Add first task
-            </button>
-          </div>
-        </div>
+        <p className="event-command-stat">No tasks yet.</p>
       ) : incompleteTasks.length > 0 ? (
-        <ul className="mt-4 space-y-1.5">
+        <ul className="event-attention-list">
           {incompleteTasks.map((task) => (
-            <li
-              key={task.id}
-              className="truncate rounded-lg border border-gray-100 bg-white px-2.5 py-2 text-sm text-gray-700"
-            >
-              {task.title}
+            <li key={task.id} className="event-attention-item is-open">
+              <span className="event-attention-mark" aria-hidden="true" />
+              <span className="event-attention-label">{task.title}</span>
             </li>
           ))}
         </ul>
       ) : (
-        <div className={`mt-4 ${EVENT_MANAGE_EMPTY}`}>
-          <p className="text-sm font-medium text-foreground">
-            All tasks complete
-          </p>
-          <p className="mt-1 text-xs text-gray-500">
-            Nice work — nothing left on the board.
-          </p>
-        </div>
+        <p className="event-command-stat">All tasks complete.</p>
       )}
-
-      {totalTasks > 0 ? (
-        <div className="mt-auto pt-4">
-          <button
-            type="button"
-            onClick={() => setModal("tasks")}
-            className={`${EVENT_MANAGE_SECONDARY_BTN} w-full`}
-          >
-            Manage tasks
-          </button>
-        </div>
-      ) : null}
-    </ManageCardShell>
-  );
-
-  const invitesCard = (
-    <ManageCardShell
-      title="Invited participants"
-      subtitle="Guest list outside RSVP"
-      action={
-        invitedCount && invitedCount > 0 ? (
-          <button
-            type="button"
-            onClick={() => setModal("invited")}
-            className={EVENT_MANAGE_ACTION_LINK}
-          >
-            View all
-          </button>
-        ) : undefined
-      }
-    >
-      {invitedCount === null ? (
-        <p className={EVENT_MANAGE_LOADING}>Loading invites…</p>
-      ) : invitedCount === 0 ? (
-        <div className={`flex flex-1 flex-col ${EVENT_MANAGE_EMPTY}`}>
-          <p className="text-sm font-medium text-foreground">
-            No invited participants yet
-          </p>
-          <p className="mt-1.5 text-xs leading-relaxed text-gray-500">
-            Invite members for program roles or special participation.
-          </p>
-          <div className="mt-auto flex flex-col gap-2 pt-4">
-            <button
-              type="button"
-              onClick={() => setInviteOpen(true)}
-              className={`${EVENT_MANAGE_SECONDARY_BTN} w-full`}
-            >
-              Invite members
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex flex-1 flex-col">
-          <p className={EVENT_MANAGE_EYEBROW}>Invited</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-foreground">
-            {invitedCount}
-          </p>
-          <p className="mt-0.5 text-xs text-gray-500">
-            {invitedCount === 1
-              ? "1 person invited"
-              : `${invitedCount} people invited`}
-          </p>
-          <div className="mt-auto flex flex-col gap-2 pt-4">
-            <button
-              type="button"
-              onClick={() => setInviteOpen(true)}
-              className={`${EVENT_MANAGE_SECONDARY_BTN} w-full`}
-            >
-              Invite more
-            </button>
-            <button
-              type="button"
-              onClick={() => setModal("invited")}
-              className={`${EVENT_MANAGE_SECONDARY_BTN} w-full`}
-            >
-              View invites
-            </button>
-          </div>
-        </div>
-      )}
-    </ManageCardShell>
+      <div className="mt-2.5">
+        <ArrowAction onClick={() => setModal("tasks")}>
+          {totalTasks === 0 ? "Add first task" : "Manage tasks"}
+        </ArrowAction>
+      </div>
+    </section>
   );
 
   return (
     <>
-      <div className="sticky top-0 z-20 -mx-1 border-b border-gray-100/80 bg-surface/95 px-1 py-2 backdrop-blur-sm">
-        <div
-          role="tablist"
-          aria-label="Manage event sections"
-          className="inline-flex max-w-full flex-wrap rounded-xl border border-gray-200 bg-surface-muted/40 p-1"
-        >
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              aria-selected={activeTab === tab.id}
-              className={tabButtonClassName(activeTab === tab.id)}
-              onClick={() => selectTab(tab.id)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+      <div
+        role="tablist"
+        aria-label="Manage event sections"
+        className="event-command-tabs"
+      >
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            className={activeTab === tab.id ? "is-active" : undefined}
+            onClick={() => selectTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {activeTab === "overview" ? (
-        <div className="mt-5">
+        <div className="event-command-body">
           <EventManageOverview
             event={event}
             budget={budget}
             volunteerCount={volunteersLoading ? null : (volunteerFilled ?? 0)}
             volunteerNeeded={volunteersLoading ? null : (volunteerNeeded ?? 0)}
             volunteersLoading={volunteersLoading}
-            attendeeCount={attendeesLoading ? null : (attendees?.going_count ?? null)}
-            attendeesLoading={attendeesLoading}
-            checkInCount={checkInCount}
-            invitedCount={invitedCount}
-            openTaskCount={totalTasks - completed}
-            totalTaskCount={totalTasks}
-            onResolve={handleResolveReadiness}
-            onGoToTab={selectTab}
-            onOpenVolunteers={() => {
-              selectTab("people");
-              setModal("volunteers");
-            }}
-            onOpenTasks={() => {
-              selectTab("ops");
-              setModal("tasks");
-            }}
-            onOpenBudget={() => {
-              selectTab("ops");
-              if (canViewTreasury) {
-                setModal("transactions");
-              }
-            }}
-            onOpenCheckIn={() => {
-              selectTab("people");
-              setModal("checkin");
-            }}
-            onOpenAttendance={() => {
-              selectTab("people");
-              if (attendanceSummary) {
-                setModal("attendance");
-              }
-            }}
-            onOpenInvites={() => {
-              selectTab("people");
-              if (invitedCount && invitedCount > 0) {
-                setModal("invited");
-              } else {
-                setInviteOpen(true);
-              }
-            }}
-            onOpenCommunications={() => selectTab("record")}
+            openTasks={openTasks}
+            onAttentionAction={handleAttentionAction}
           />
         </div>
       ) : null}
 
-      {activeTab === "details" ? (
-        <div className="mt-5">
-          <EventManageDetailsCard event={event} onUpdated={onUpdated} />
+      {activeTab === "attendees" ? (
+        <div className="event-command-body">
+          <EventManageAttendeesWorkspace
+            eventName={event.name}
+            eventCapacity={event.capacity}
+            attendees={attendees}
+            attendeesLoading={attendeesLoading}
+            invitations={invitations}
+            checkIns={checkIns}
+            attendanceSummary={attendanceSummary}
+            onInvite={() => setInviteOpen(true)}
+            onCheckIn={() => setModal("checkin")}
+            onViewAttendance={() => setModal("attendance")}
+          />
         </div>
       ) : null}
 
-      {activeTab === "people" ? (
-        <div className="event-manage-grid mt-5 grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {activeTab === "operations" ? (
+        <div className="event-command-body event-command-ops">
           <EventManageVolunteersCard
             eventId={event.id}
             eventName={event.name}
             volunteers={volunteers}
             isLoading={volunteersLoading}
             alreadyInvitedMemberIds={invitedMemberIds}
+            focusAddRoleToken={addRoleToken}
             onViewSignups={() => setModal("volunteers")}
-            onConvertToTasks={() => {
-              selectTab("ops");
-              setModal("tasks");
-            }}
             onSlotsChanged={onRefresh}
           />
-          {invitesCard}
-          <EventManageCheckInCard
-            eventId={event.id}
-            checkedInCount={checkInCount}
-            eventCapacity={event.capacity}
-            goingCount={attendees?.going_count ?? null}
-            onOpenCheckIn={() => setModal("checkin")}
-          />
-          <EventManageRsvpAnalyticsCard
-            attendees={attendees}
-            attendeesLoading={attendeesLoading}
-            attendanceSummary={attendanceSummary}
-            eventCapacity={event.capacity}
-            eventName={event.name}
-            onViewDetails={
-              attendanceSummary ? () => setModal("attendance") : undefined
-            }
-          />
-        </div>
-      ) : null}
-
-      {activeTab === "ops" ? (
-        <div className="event-manage-grid mt-5 grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2">
           {tasksCard}
           <EventManageBudgetCard
             budget={budget}
@@ -812,108 +576,35 @@ export function EventManageDashboard({
       ) : null}
 
       {activeTab === "record" ? (
-        <div className="mt-5 space-y-5">
-          <EventManageCommunicationsCard
-            event={event}
-            canSharePublicly={
-              !isMeetingEvent || event.meeting_visibility === "public"
-            }
-          />
-
-          <EventManageActivityFeed eventId={event.id} />
-
-          <EventManageWrapUpCard
+        <div className="event-command-body">
+          <EventManageRecordWorkspace
             event={event}
             budget={budget}
             attendanceSummary={attendanceSummary}
-            feedbackCount={null}
+            checkInCount={checkInCount}
+            goingCount={attendees?.going_count ?? null}
             onOpenFeedback={() => setModal("feedback")}
             onOpenTransactions={() => setModal("transactions")}
             onOpenAttendance={() => setModal("attendance")}
+            onOpenMeeting={() => setModal("meeting")}
           />
-
-          {isMeetingEvent || event.is_past ? (
-            <div className="event-manage-grid grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2">
-              {isMeetingEvent ? (
-                <ManageCardShell
-                  title="Meeting record"
-                  subtitle="Minutes and attendance"
-                  action={
-                    <button
-                      type="button"
-                      onClick={() => setModal("meeting")}
-                      className={EVENT_MANAGE_ACTION_LINK}
-                    >
-                      Open
-                    </button>
-                  }
-                >
-                  <div className={`flex flex-1 flex-col ${EVENT_MANAGE_EMPTY}`}>
-                    <p className="text-sm font-medium text-foreground">
-                      Meeting tools
-                    </p>
-                    <p className="mt-1.5 text-xs leading-relaxed text-gray-500">
-                      Capture minutes, attendance, and follow-ups for this
-                      meeting.
-                    </p>
-                    <div className="mt-auto pt-4">
-                      <button
-                        type="button"
-                        onClick={() => setModal("meeting")}
-                        className={`${EVENT_MANAGE_SECONDARY_BTN} w-full`}
-                      >
-                        Open meeting record
-                      </button>
-                    </div>
-                  </div>
-                </ManageCardShell>
-              ) : null}
-
-              {event.is_past ? (
-                <ManageCardShell
-                  title="Feedback"
-                  subtitle="Post-event responses"
-                  action={
-                    <button
-                      type="button"
-                      onClick={() => setModal("feedback")}
-                      className={EVENT_MANAGE_ACTION_LINK}
-                    >
-                      Open
-                    </button>
-                  }
-                >
-                  <div className={`flex flex-1 flex-col ${EVENT_MANAGE_EMPTY}`}>
-                    <p className="text-sm font-medium text-foreground">
-                      Member feedback
-                    </p>
-                    <p className="mt-1.5 text-xs leading-relaxed text-gray-500">
-                      Review ratings and comments collected after this event.
-                    </p>
-                    <div className="mt-auto pt-4">
-                      <button
-                        type="button"
-                        onClick={() => setModal("feedback")}
-                        className={`${EVENT_MANAGE_SECONDARY_BTN} w-full`}
-                      >
-                        View feedback
-                      </button>
-                    </div>
-                  </div>
-                </ManageCardShell>
-              ) : null}
-            </div>
-          ) : null}
-
-          <div className="border-t border-gray-100 pt-6">
-            <EventDeleteSection
-              eventId={event.id}
-              eventName={event.name}
-              dangerZone
-            />
-          </div>
         </div>
       ) : null}
+
+      <Drawer
+        open={editorOpen}
+        onClose={closeEditor}
+        title="Edit event"
+        side="right"
+        size="lg"
+      >
+        <EventManageDetailsCard
+          event={event}
+          onUpdated={onUpdated}
+          onSaved={closeEditor}
+          variant="drawer"
+        />
+      </Drawer>
 
       <Modal
         open={modal === "volunteers"}
@@ -929,7 +620,7 @@ export function EventManageDashboard({
           canAssignTasks={canManageTasks && canCreateEventTasks(event)}
           onConvertToTask={(signup) => {
             onConvertVolunteerToTask(signup);
-            selectTab("ops");
+            selectTab("operations");
             setModal("tasks");
           }}
         />

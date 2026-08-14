@@ -1,6 +1,7 @@
 import { getMonthLabel } from "../lib/calendar";
 import {
-  buildCategoryDots,
+  buildCategoryMarks,
+  CalendarEventMark,
   getYearMonthLabelClass,
   getYearMonthTileClass,
 } from "./calendar-grid-utils";
@@ -29,7 +30,7 @@ export function YearCalendarGrid({
       {Array.from({ length: 12 }, (_, month) => {
         const eventTypes = eventTypesByMonth.get(month) ?? [];
         const isCurrentMonth = year === currentYear && month === currentMonth;
-        const dots = buildCategoryDots(eventTypes, false);
+        const marks = buildCategoryMarks(eventTypes, false);
 
         return (
           <button
@@ -41,15 +42,16 @@ export function YearCalendarGrid({
             <span className={getYearMonthLabelClass(isCurrentMonth)}>
               {getMonthLabel(month)}
             </span>
-            <div className="mt-2 flex min-h-[5px] items-center justify-center gap-[3px]">
-              {dots.length === 0 ? (
+            <div className="mt-2 flex min-h-[14px] items-end justify-center gap-[4px]">
+              {marks.length === 0 ? (
                 <span className="text-[11px] text-[#C8C8C4]">No events</span>
               ) : (
-                dots.slice(0, 5).map((dot) => (
-                  <span
-                    key={dot.key}
-                    aria-hidden="true"
-                    className={`h-[5px] w-[5px] rounded-full ${dot.className}`}
+                marks.slice(0, 5).map((mark) => (
+                  <CalendarEventMark
+                    key={mark.key}
+                    kind={mark.key}
+                    className={mark.className}
+                    size="cell"
                   />
                 ))
               )}

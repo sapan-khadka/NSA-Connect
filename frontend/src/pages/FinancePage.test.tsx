@@ -151,7 +151,7 @@ describe("FinancePage", () => {
     renderFinancePage("board");
 
     expect(
-      await screen.findByRole("heading", { name: "Event budget tracking" }),
+      await screen.findByRole("heading", { name: "Event budgets" }),
     ).toBeInTheDocument();
     expect(screen.getByTestId("event-budget-list")).toBeInTheDocument();
     expect(screen.getByText("Dashain Celebration")).toBeInTheDocument();
@@ -199,7 +199,8 @@ describe("FinancePage", () => {
     );
     expect(screen.queryByTestId("finance-pending-count")).not.toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Pulse" })).toBeInTheDocument();
-    expect(screen.getByText("Insights")).toBeInTheDocument();
+    expect(screen.getByText("Spend by category")).toBeInTheDocument();
+    expect(screen.getByText("Event budgets")).toBeInTheDocument();
     expect(screen.queryByTestId("finance-entry-list")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "Books" }));

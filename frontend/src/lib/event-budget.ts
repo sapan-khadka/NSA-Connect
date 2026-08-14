@@ -64,26 +64,26 @@ export function budgetStatusLabel(row: EventBudgetRow): string {
 
 export function budgetStatusClass(row: EventBudgetRow): string {
   if (row.over_budget) {
-    return "bg-urgent/30 text-foreground";
+    return "text-overdue";
   }
 
   if (parseCurrencyAmount(row.actual_expense) === 0) {
-    return "bg-surface-muted text-foreground";
+    return "text-label";
   }
 
-  return "bg-mint text-primary";
+  return "text-foreground";
 }
 
 export function budgetProgressBarClass(row: EventBudgetRow): string {
   if (row.over_budget) {
-    return "bg-urgent";
+    return "is-over bg-[#b91c1c]";
   }
 
   if (parseCurrencyAmount(row.actual_expense) === 0) {
-    return "bg-gray-300";
+    return "is-empty bg-[#d4d4d4]";
   }
 
-  return "bg-mint";
+  return "is-used bg-[#171717]";
 }
 
 export function formatBudgetRemaining(amount: string): string {

@@ -9,18 +9,8 @@ import {
   patchVolunteerSlot,
   type VolunteerSlotResponse,
 } from "../lib/events-api";
-import {
-  EVENT_MANAGE_ACTION_LINK,
-  EVENT_MANAGE_CARD_CLASS,
-  EVENT_MANAGE_EMPTY,
-  EVENT_MANAGE_EYEBROW,
-  EVENT_MANAGE_LOADING,
-  EVENT_MANAGE_PRIMARY_BTN_FLEX,
-  EVENT_MANAGE_SECONDARY_BTN_FLEX,
-} from "../lib/event-manage-ui";
-import { volunteerInitials } from "../lib/event-volunteer-summary";
+import { EVENT_MANAGE_ACTION_LINK } from "../lib/event-manage-ui";
 import { InviteMembersToEventModal } from "./InviteMembersToEventModal";
-import { HomeCard } from "./ui/HomeCard";
 import { inputFieldClassName } from "./ui/Input";
 
 type EventManageVolunteersCardProps = {
@@ -29,8 +19,8 @@ type EventManageVolunteersCardProps = {
   volunteers: EventVolunteerSignupMember[];
   isLoading: boolean;
   alreadyInvitedMemberIds?: number[];
+  focusAddRoleToken?: number;
   onViewSignups: () => void;
-  onConvertToTasks: () => void;
   onSlotsChanged?: () => void;
 };
 
@@ -40,8 +30,8 @@ export function EventManageVolunteersCard({
   volunteers,
   isLoading,
   alreadyInvitedMemberIds = [],
+  focusAddRoleToken = 0,
   onViewSignups,
-  onConvertToTasks,
   onSlotsChanged,
 }: EventManageVolunteersCardProps) {
   const [slots, setSlots] = useState<VolunteerSlotResponse[]>([]);
@@ -58,14 +48,7 @@ export function EventManageVolunteersCard({
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
 
-  const preview = volunteers.slice(0, 3);
   const pendingCount = volunteers.filter((row) => row.status === "pending").length;
-  const countLabel =
-    pendingCount > 0
-      ? `${pendingCount} pending review`
-      : volunteers.length === 1
-        ? "1 interest"
-        : `${volunteers.length} interests`;
 
   async function loadSlots() {
     setSlotsLoading(true);
@@ -82,6 +65,12 @@ export function EventManageVolunteersCard({
   useEffect(() => {
     void loadSlots();
   }, [eventId]);
+
+  useEffect(() => {
+    if (focusAddRoleToken > 0) {
+      setShowAddRole(true);
+    }
+  }, [focusAddRoleToken]);
 
   async function handleAddRole() {
     const name = roleName.trim();
@@ -177,14 +166,10 @@ export function EventManageVolunteersCard({
   }
 
   return (
-    <HomeCard
-      padding="sm"
-      className={EVENT_MANAGE_CARD_CLASS}
-      aria-label="Volunteers"
-    >
-      <div className="flex shrink-0 items-center justify-between gap-2">
-        <h2 className="home-section-title">Volunteers</h2>
-        <div className="flex items-center gap-2">
+    <section aria-label="Volunteers">
+      <div className="event-command-section-head">
+        <h2 className="event-command-kicker">Volunteers</h2>
+        <div className="flex items-center gap-3">
           {slots.length > 0 ? (
             <button
               type="button"
@@ -194,302 +179,198 @@ export function EventManageVolunteersCard({
               Invite
             </button>
           ) : null}
-          {!isLoading && volunteers.length > 0 ? (
-            <button
-              type="button"
-              onClick={onViewSignups}
-              className={EVENT_MANAGE_ACTION_LINK}
-            >
-              View interests
-            </button>
-          ) : null}
+          <button
+            type="button"
+            onClick={onViewSignups}
+            className={EVENT_MANAGE_ACTION_LINK}
+          >
+            View interests
+          </button>
         </div>
       </div>
 
       {slotsLoading ? (
-        <p className={`mt-3 ${EVENT_MANAGE_LOADING}`}>Loading roles…</p>
+        <p className="event-command-stat">Loading roles…</p>
+      ) : slots.length === 0 ? (
+        showAddRole ? null : (
+          <p className="event-command-stat">
+            Add roles with how many people you need, then invite helpers.
+          </p>
+        )
       ) : (
-        <div className="mt-3 space-y-3">
-          <div>
-            <p className={EVENT_MANAGE_EYEBROW}>Roles</p>
-            {slots.length === 0 ? (
-              <div className="mt-1.5 space-y-1.5">
-                <p className="text-xs leading-relaxed text-gray-500">
-                  1. Add roles with how many people you need (Setup × 2,
-                  Cleanup × 2).
-                </p>
-                <p className="text-xs leading-relaxed text-gray-500">
-                  2. Invite members personally or invite everyone.
-                </p>
-              </div>
-            ) : (
-              <ul className="mt-2 space-y-2">
-                {slots.map((slot) => (
-                  <li
-                    key={slot.id}
-                    className="rounded-xl border border-gray-100 bg-white px-2.5 py-2"
-                  >
-                    {editingSlotId === slot.id ? (
-                      <div className="space-y-2">
-                        <input
-                          type="text"
-                          value={editName}
-                          onChange={(changeEvent) =>
-                            setEditName(changeEvent.target.value)
-                          }
-                          className={inputFieldClassName}
-                          aria-label="Role name"
-                        />
-                        <input
-                          type="number"
-                          min={1}
-                          step={1}
-                          value={editCapacity}
-                          onChange={(changeEvent) =>
-                            setEditCapacity(changeEvent.target.value)
-                          }
-                          className={inputFieldClassName}
-                          aria-label="Spots"
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => void handleSaveEdit(slot.id)}
-                            disabled={savingEdit}
-                            className={EVENT_MANAGE_PRIMARY_BTN_FLEX}
-                          >
-                            {savingEdit ? "Saving…" : "Save"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEditingSlotId(null)}
-                            className={EVENT_MANAGE_SECONDARY_BTN_FLEX}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-foreground">
-                              {slot.task_name}
-                            </p>
-                            {slot.description?.trim() ? (
-                              <p className="mt-0.5 truncate text-xs text-gray-500">
-                                {slot.description}
-                              </p>
-                            ) : null}
-                          </div>
-                          <span
-                            className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                              slot.is_full
-                                ? "bg-amber-50 text-amber-800"
-                                : "bg-emerald-50 text-emerald-700"
-                            }`}
-                          >
-                            {slot.signup_count}/{slot.max_signup_count}
-                          </span>
-                        </div>
-                        {slot.filled_by && slot.filled_by.length > 0 ? (
-                          <p className="mt-1.5 text-xs text-gray-500">
-                            {slot.filled_by
-                              .map((person) => person.full_name)
-                              .join(", ")}
-                          </p>
-                        ) : null}
-                        <div className="mt-2 flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => startEdit(slot)}
-                            className={EVENT_MANAGE_ACTION_LINK}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => void handleDelete(slot.id)}
-                            disabled={deletingId === slot.id}
-                            className="text-xs font-medium text-red-700 hover:text-red-800"
-                          >
-                            {deletingId === slot.id ? "Deleting…" : "Delete"}
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          {roleError ? (
-            <p className="text-xs text-red-700" role="alert">
-              {roleError}
-            </p>
-          ) : null}
-
-          {showAddRole ? (
-            <div className="space-y-2 rounded-xl border border-gray-100 bg-gray-50/80 p-3">
-              <div>
-                <label
-                  htmlFor={`volunteer-role-name-${eventId}`}
-                  className="block text-xs font-medium text-gray-500"
-                >
-                  Role name
-                </label>
-                <input
-                  id={`volunteer-role-name-${eventId}`}
-                  type="text"
-                  value={roleName}
-                  onChange={(changeEvent) => {
-                    setRoleName(changeEvent.target.value);
-                    setRoleError(null);
-                  }}
-                  placeholder="e.g. Setup crew"
-                  className={`${inputFieldClassName} mt-1`}
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor={`volunteer-role-spots-${eventId}`}
-                  className="block text-xs font-medium text-gray-500"
-                >
-                  Spots
-                </label>
-                <input
-                  id={`volunteer-role-spots-${eventId}`}
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={roleCapacity}
-                  onChange={(changeEvent) => {
-                    setRoleCapacity(changeEvent.target.value);
-                    setRoleError(null);
-                  }}
-                  className={`${inputFieldClassName} mt-1`}
-                />
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => void handleAddRole()}
-                  disabled={addingRole}
-                  className={EVENT_MANAGE_PRIMARY_BTN_FLEX}
-                >
-                  {addingRole ? "Adding…" : "Add role"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddRole(false);
-                    setRoleError(null);
-                  }}
-                  className={EVENT_MANAGE_SECONDARY_BTN_FLEX}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setShowAddRole(true)}
-              className={EVENT_MANAGE_SECONDARY_BTN_FLEX}
-            >
-              Add role
-            </button>
-          )}
-        </div>
-      )}
-
-      {isLoading ? (
-        <p className={`mt-4 ${EVENT_MANAGE_LOADING}`}>Loading interests…</p>
-      ) : (
-        <div className="mt-4 border-t border-gray-100 pt-3">
-          <div className="flex items-end justify-between gap-3">
-            <div>
-              <p className={EVENT_MANAGE_EYEBROW}>General interest</p>
-              <p className="mt-1 text-lg font-semibold tabular-nums tracking-tight text-foreground">
-                {volunteers.length}
-              </p>
-              <p className="mt-0.5 text-xs text-gray-500">{countLabel}</p>
-            </div>
-          </div>
-
-          {volunteers.length === 0 ? (
-            <div className={`mt-3 ${EVENT_MANAGE_EMPTY}`}>
-              <p className="text-xs leading-relaxed text-gray-500">
-                Members can also mark general interest from the event page.
-              </p>
-            </div>
-          ) : (
-            <ul className="mt-3 space-y-2">
-              {preview.map((signup) => (
-                <li
-                  key={signup.id}
-                  className="flex items-center gap-2.5 rounded-xl border border-gray-100 bg-white px-2.5 py-2"
-                >
-                  <span
-                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-badge-teal-bg text-[10px] font-semibold text-primary"
-                    aria-hidden="true"
-                  >
-                    {volunteerInitials(signup.full_name)}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {signup.full_name}
-                      {signup.status === "pending" ? (
-                        <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-                          Pending
-                        </span>
-                      ) : null}
-                    </p>
-                    <p className="mt-0.5 truncate text-xs text-gray-500">
-                      {signup.note?.trim() || "No note"}
-                    </p>
+        <ul className="event-attention-list">
+          {slots.map((slot) => (
+            <li key={slot.id} className="event-attention-item">
+              {editingSlotId === slot.id ? (
+                <div className="w-full space-y-2">
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(changeEvent) => setEditName(changeEvent.target.value)}
+                    className={inputFieldClassName}
+                    aria-label="Role name"
+                  />
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={editCapacity}
+                    onChange={(changeEvent) =>
+                      setEditCapacity(changeEvent.target.value)
+                    }
+                    className={inputFieldClassName}
+                    aria-label="Spots"
+                  />
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => void handleSaveEdit(slot.id)}
+                      disabled={savingEdit}
+                      className={EVENT_MANAGE_ACTION_LINK}
+                    >
+                      {savingEdit ? "Saving…" : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingSlotId(null)}
+                      className={EVENT_MANAGE_ACTION_LINK}
+                    >
+                      Cancel
+                    </button>
                   </div>
-                </li>
-              ))}
-            </ul>
-          )}
+                </div>
+              ) : (
+                <>
+                  <span className="event-attention-label">
+                    {slot.task_name}
+                    <span className="text-[#737373]">
+                      {" "}
+                      · {slot.signup_count}/{slot.max_signup_count}
+                    </span>
+                    {slot.filled_by && slot.filled_by.length > 0 ? (
+                      <span className="mt-0.5 block text-xs font-normal text-[#737373]">
+                        {slot.filled_by
+                          .map((person) => person.full_name)
+                          .join(", ")}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="flex shrink-0 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => startEdit(slot)}
+                      className={EVENT_MANAGE_ACTION_LINK}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleDelete(slot.id)}
+                      disabled={deletingId === slot.id}
+                      className="text-xs font-medium text-red-700 hover:text-red-800"
+                    >
+                      {deletingId === slot.id ? "Deleting…" : "Delete"}
+                    </button>
+                  </span>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
 
-          <div className="mt-auto flex flex-wrap gap-2 pt-3">
-            {slots.length > 0 ? (
-              <button
-                type="button"
-                onClick={() => setInviteOpen(true)}
-                className={EVENT_MANAGE_PRIMARY_BTN_FLEX}
-              >
-                Invite volunteers
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowAddRole(true)}
-                className={EVENT_MANAGE_PRIMARY_BTN_FLEX}
-              >
-                Add first role
-              </button>
-            )}
+      {roleError ? (
+        <p className="mt-2 text-xs text-red-700" role="alert">
+          {roleError}
+        </p>
+      ) : null}
+
+      {showAddRole ? (
+        <div className="mt-3 space-y-2">
+          <div>
+            <label
+              htmlFor={`volunteer-role-name-${eventId}`}
+              className="block text-xs font-medium text-gray-500"
+            >
+              Role name
+            </label>
+            <input
+              id={`volunteer-role-name-${eventId}`}
+              type="text"
+              value={roleName}
+              onChange={(changeEvent) => {
+                setRoleName(changeEvent.target.value);
+                setRoleError(null);
+              }}
+              placeholder="e.g. Setup crew"
+              className={`${inputFieldClassName} mt-1`}
+            />
+          </div>
+          <div>
+            <label
+              htmlFor={`volunteer-role-spots-${eventId}`}
+              className="block text-xs font-medium text-gray-500"
+            >
+              Spots
+            </label>
+            <input
+              id={`volunteer-role-spots-${eventId}`}
+              type="number"
+              min={1}
+              step={1}
+              value={roleCapacity}
+              onChange={(changeEvent) => {
+                setRoleCapacity(changeEvent.target.value);
+                setRoleError(null);
+              }}
+              className={`${inputFieldClassName} mt-1`}
+            />
+          </div>
+          <div className="flex gap-3">
             <button
               type="button"
-              onClick={onViewSignups}
-              className={EVENT_MANAGE_SECONDARY_BTN_FLEX}
+              onClick={() => void handleAddRole()}
+              disabled={addingRole}
+              className={EVENT_MANAGE_ACTION_LINK}
             >
-              View interests
+              {addingRole ? "Adding…" : "Add role"}
             </button>
             <button
               type="button"
-              onClick={onConvertToTasks}
-              className={EVENT_MANAGE_SECONDARY_BTN_FLEX}
+              onClick={() => {
+                setShowAddRole(false);
+                setRoleError(null);
+              }}
+              className={EVENT_MANAGE_ACTION_LINK}
             >
-              Manage tasks
+              Cancel
             </button>
           </div>
         </div>
+      ) : (
+        <div className="mt-2.5">
+          <button
+            type="button"
+            onClick={() => setShowAddRole(true)}
+            className={EVENT_MANAGE_ACTION_LINK}
+          >
+            Add role
+          </button>
+        </div>
       )}
+
+      <dl className="event-command-facts mt-3">
+        <div>
+          <dt>General interest</dt>
+          <dd>
+            {isLoading
+              ? "—"
+              : pendingCount > 0
+                ? `${volunteers.length} · ${pendingCount} pending`
+                : volunteers.length}
+          </dd>
+        </div>
+      </dl>
 
       <InviteMembersToEventModal
         open={inviteOpen}
@@ -499,6 +380,6 @@ export function EventManageVolunteersCard({
         alreadyInvitedMemberIds={alreadyInvitedMemberIds}
         onClose={() => setInviteOpen(false)}
       />
-    </HomeCard>
+    </section>
   );
 }

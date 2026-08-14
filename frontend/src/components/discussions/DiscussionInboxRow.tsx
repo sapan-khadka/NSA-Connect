@@ -54,13 +54,13 @@ export function DiscussionInboxRow({
   }
 
   const className = [
-    "discussion-inbox-row group relative flex min-h-[42px] w-full cursor-pointer items-center gap-2 px-2.5 py-1.5 transition-colors",
+    "discussion-inbox-row group relative flex min-h-[42px] w-full cursor-pointer items-center gap-2 rounded-md px-2.5 py-1.5 transition-colors",
     longPressActions ? "select-none touch-manipulation [-webkit-touch-callout:none]" : "",
     selected
-      ? "bg-[#EFEFEF] before:absolute before:inset-y-1 before:left-0 before:w-[3px] before:rounded-full before:bg-primary"
+      ? "bg-[#E8E8E6] before:absolute before:inset-y-1 before:left-0 before:w-[3px] before:rounded-full before:bg-primary"
       : room.pinned
-        ? "bg-[#F6F6F5] hover:bg-[#F0F0EF]"
-        : "hover:bg-[#F5F5F4]",
+        ? "bg-[#F0F0EF] hover:bg-[#EBEBEA]"
+        : "hover:bg-[#EBEBEA]",
     unread && !selected ? "is-unread" : "",
   ]
     .filter(Boolean)

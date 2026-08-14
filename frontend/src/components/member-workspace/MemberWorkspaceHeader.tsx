@@ -4,7 +4,6 @@
  */
 
 import {
-  ChevronLeft,
   Copy,
   KeyRound,
   Mail,
@@ -31,6 +30,7 @@ import {
 import { EditMemberDrawer } from "../EditMemberDrawer";
 import { AppIcon } from "../ui/AppIcon";
 import { Button } from "../ui/Button";
+import { PageBackLink } from "../ui/PageBackLink";
 
 const MISSING = "—";
 
@@ -190,10 +190,7 @@ export function MemberWorkspaceHeader({
 
   return (
     <div className="member-workspace-header-inner">
-      <Link to={backTo} className="member-workspace-back">
-        <AppIcon icon={ChevronLeft} size="sm" className="text-current" />
-        {backLabel}
-      </Link>
+      <PageBackLink to={backTo} label={backLabel} className="member-workspace-back" />
 
       <div className="member-workspace-header-main">
         <Avatar

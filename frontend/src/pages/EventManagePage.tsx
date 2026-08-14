@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useLocation, useParams } from "react-router";
+import { useLocation, useParams } from "react-router";
 
 import { EventManageDashboard } from "../components/EventManageDashboard";
 import { EventManageHero } from "../components/EventManageHero";
+import { PageBackLink } from "../components/ui/PageBackLink";
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage } from "../lib/api-error";
 import { calendarDeepLink } from "../lib/event-links";
@@ -197,13 +198,9 @@ export function EventManagePage() {
         aria-live="polite"
       >
         <p className="event-manage-loading">Loading event…</p>
-        <div className="event-manage-skeleton h-44 w-full" />
+        <div className="event-manage-skeleton h-28 w-full" />
+        <div className="event-manage-skeleton h-10 w-full" />
         <div className="event-manage-skeleton h-64 w-full" />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="event-manage-skeleton h-56" />
-          <div className="event-manage-skeleton h-56" />
-          <div className="event-manage-skeleton h-56" />
-        </div>
       </div>
     );
   }
@@ -215,12 +212,7 @@ export function EventManagePage() {
 
     return (
       <div className="event-manage-page mx-auto flex w-full max-w-[1280px] flex-col gap-5">
-        <Link
-          to={calendarBackTo}
-          className="inline-flex items-center text-sm font-medium text-gray-500 transition duration-150 hover:text-primary"
-        >
-          ← Back to Events
-        </Link>
+        <PageBackLink to={calendarBackTo} label="Events" />
         <div role="alert" className="ds-alert-banner rounded-2xl p-6">
           {error ?? "Event not found."}
         </div>
@@ -244,7 +236,7 @@ export function EventManagePage() {
   }
 
   return (
-    <div className="event-manage-page mx-auto flex w-full max-w-[1280px] flex-col gap-5 px-0">
+    <div className="event-manage-page mx-auto flex w-full max-w-[1280px] flex-col gap-4 px-0">
       <EventManageHero
         event={event}
         budget={budget}
@@ -283,6 +275,7 @@ export function EventManagePage() {
         onDismissOpenTokens={() => {
           setOpenTasksModalToken(0);
           setOpenCheckInModalToken(0);
+          setEditDetailsToken(0);
         }}
       />
     </div>

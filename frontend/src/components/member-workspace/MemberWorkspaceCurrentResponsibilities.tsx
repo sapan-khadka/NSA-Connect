@@ -136,7 +136,10 @@ export function MemberWorkspaceCurrentResponsibilities({
             </h2>
           </div>
         </div>
-        <Link to={viewAllPath} className="member-workspace-resp-view-all">
+        <Link
+          to={viewAllPath}
+          className="ds-view-all member-workspace-resp-view-all"
+        >
           View all
         </Link>
       </div>

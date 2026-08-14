@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
 
-import type { EventAttendeesResponse, RsvpStatus } from "../lib/events-api";
+import type { EventAttendeesResponse } from "../lib/events-api";
 import { downloadAttendeesCsv } from "../lib/event-attendees-export";
 import { formatCompactAttendeeSummary, formatRsvpStatus } from "../lib/event-rsvp";
+import { ArrowAction } from "./ui/ArrowLink";
+import { inputFieldClassName } from "./ui/Input";
 
 type EventAttendeesPanelProps = {
   eventName: string;
@@ -10,19 +12,6 @@ type EventAttendeesPanelProps = {
   loading: boolean;
   error: string | null;
 };
-
-function statusBadgeClass(status: RsvpStatus | null): string {
-  if (status === "going") {
-    return "bg-accent/10 text-foreground";
-  }
-  if (status === "maybe") {
-    return "bg-surface-muted text-label";
-  }
-  if (status === "not_going") {
-    return "bg-gray-100 text-foreground";
-  }
-  return "border border-urgent/30 bg-urgent/5 text-foreground";
-}
 
 function buildCompactSummary(data: EventAttendeesResponse): string {
   return formatCompactAttendeeSummary(data);
@@ -45,19 +34,12 @@ function AttendeeGroup({
 
   return (
     <section>
-      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-      <ul className="mt-2 space-y-2">
+      <h3 className="event-command-kicker">{title}</h3>
+      <ul className="event-page-list">
         {attendees.map((attendee) => (
-          <li
-            key={attendee.member_id}
-            className="flex items-center justify-between gap-3 rounded-md border border-gray-100 bg-surface-muted/40 px-3 py-2"
-          >
-            <span className="text-sm font-medium text-foreground">
-              {attendee.full_name}
-            </span>
-            <span
-              className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusBadgeClass(attendee.rsvp_status)}`}
-            >
+          <li key={attendee.member_id} className="event-page-list-row">
+            <span className="event-page-list-title">{attendee.full_name}</span>
+            <span className="event-command-stat">
               {formatRsvpStatus(attendee.rsvp_status)}
             </span>
           </li>
@@ -99,11 +81,18 @@ export function EventAttendeesPanel({
   );
 
   return (
-    <div className="space-y-3">
-      <h2 className="text-lg font-light tracking-subhead text-foreground">Attendees</h2>
+    <div>
+      <div className="event-command-section-head">
+        <h2 className="event-command-kicker">Attendees</h2>
+        {data ? (
+          <ArrowAction onClick={() => setExpanded((current) => !current)}>
+            {expanded ? "Hide" : "View"}
+          </ArrowAction>
+        ) : null}
+      </div>
 
       {loading ? (
-        <p className="text-sm text-label">Loading attendees…</p>
+        <p className="event-command-stat">Loading attendees…</p>
       ) : null}
       {error ? (
         <p role="alert" className="ds-field-error">
@@ -113,48 +102,35 @@ export function EventAttendeesPanel({
 
       {data ? (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p
-              className="text-sm text-label"
-              data-testid="attendee-rsvp-summary"
-            >
-              {expanded ? buildFullSummary(data) : buildCompactSummary(data)}
-            </p>
-            <button
-              type="button"
-              onClick={() => setExpanded((current) => !current)}
-              className="rounded-full border border-gray-200 px-3 py-1 text-sm font-medium text-foreground transition-colors hover:border-accent hover:text-accent"
-            >
-              {expanded ? "Hide ⌃" : "Show ⌄"}
-            </button>
-          </div>
+          <p className="event-command-stat" data-testid="attendee-rsvp-summary">
+            {expanded ? buildFullSummary(data) : buildCompactSummary(data)}
+          </p>
 
           {expanded ? (
-            <div className="space-y-4 border-t border-gray-100 pt-4">
-              <div className="flex flex-wrap items-center justify-end gap-3">
+            <div className="mt-4 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <label className="min-w-0 flex-1">
+                  <span className="sr-only">Search attendees</span>
+                  <input
+                    type="search"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Search by name…"
+                    className={`${inputFieldClassName} event-workspace-search`}
+                  />
+                </label>
                 <button
                   type="button"
                   onClick={() => downloadAttendeesCsv(data.attendees, eventName)}
-                  className="rounded-full border border-gray-200 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:border-accent hover:text-accent"
+                  className="event-command-btn"
                 >
-                  Export attendee list
+                  Export
                 </button>
               </div>
 
-              <label className="block">
-                <span className="sr-only">Search attendees</span>
-                <input
-                  type="search"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search by name…"
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
-                />
-              </label>
-
               <div className="max-h-80 space-y-4 overflow-y-auto pr-1">
                 {filteredAttendees.length === 0 ? (
-                  <p className="text-sm text-label">
+                  <p className="event-command-stat">
                     {query.trim()
                       ? "No attendees match your search."
                       : "No approved members found."}

@@ -171,9 +171,8 @@ export const HOME_WIDGET_CATALOG: HomeWidgetMeta[] = [
   {
     id: "activity",
     label: "Recent Activity",
-    description: "Org signal for board — what just happened",
+    description: "What just happened for you and the org",
     category: "Organization",
-    requiresBoard: true,
     defaultW: 586,
     defaultH: 300,
     minW: 200,
@@ -533,8 +532,7 @@ function parkHidden(
  * Inbox is global app chrome — never a canvas card.
  *
  * Briefing Home: Event banner → Today's Focus → Tasks | Activity
- * same structure for board and general members (board adds Activity).
- * Organization Health stays parked.
+ * Secondary panels stay parked until Edit dashboard.
  */
 export function buildDefaultWorkspace(opts: {
   showInbox: boolean;
@@ -545,8 +543,8 @@ export function buildDefaultWorkspace(opts: {
   const gap = spacingGapPx(spacing);
   const full = HOME_CANVAS_DESIGN_WIDTH;
 
-  const eventH = 200;
-  const focusH = 220;
+  const eventH = 240;
+  const focusH = 200;
   const eventY = 0;
   const focusY = eventH + gap;
   const workY = focusY + focusH + gap;
@@ -554,36 +552,21 @@ export function buildDefaultWorkspace(opts: {
   const park = (ids: HomeWidgetId[]) =>
     ids.map((id, index) => parkHidden(id, index));
 
-  /* General members: Event banner + Focus + full-width My Tasks. */
-  if (!opts.showInbox) {
-    return {
-      version: 18,
-      spacing,
-      widgets: dedupeWidgets([
-        widget("featured", 0, eventY, full, eventH, 1),
-        widget("overview", 0, focusY, full, focusH, 2),
-        widget("tasks", 0, workY, full, workH, 3),
-        ...park([
-          "activity",
-          "upcoming",
-          "inbox",
-          "actions",
-          "deadlines",
-          "pulse",
-          "minutes",
-        ]),
-      ]),
-    };
-  }
-
-  /*
-   * Board / leadership briefing
-   * ┌─────────── Event banner ──────────────┐
-   * ├─────────── Today's Focus ─────────────┤
-   * ├────── My Tasks ───┬── Activity ───────┤
-   */
   const colW = Math.floor((full - gap) / 2);
   const activityH = Math.round(workH * 0.85);
+
+  const parked: HomeWidgetId[] = [
+    "upcoming",
+    "actions",
+    "deadlines",
+    "minutes",
+    "pulse",
+    "inbox",
+  ];
+
+  /* Role flags still park reserved widgets for older saved layouts. */
+  void opts.showInbox;
+  void opts.showPulse;
 
   return {
     version: 18,
@@ -593,14 +576,7 @@ export function buildDefaultWorkspace(opts: {
       widget("overview", 0, focusY, full, focusH, 2),
       widget("tasks", 0, workY, colW, workH, 3),
       widget("activity", colW + gap, workY, full - colW - gap, activityH, 3),
-      ...park([
-        "upcoming",
-        "inbox",
-        "actions",
-        "deadlines",
-        "pulse",
-        "minutes",
-      ]),
+      ...park(parked),
     ]),
   };
 }

@@ -131,7 +131,7 @@ export function HomeBriefingLayout({
 
           {showActivity ? (
             <section className="home-briefing__pane">
-              <HomeRecentActivity memberId={member.id} limit={5} />
+              <HomeRecentActivity memberId={member.id} />
             </section>
           ) : null}
         </div>

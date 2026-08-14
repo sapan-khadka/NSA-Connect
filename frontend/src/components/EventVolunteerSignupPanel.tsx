@@ -7,8 +7,6 @@ import {
   withdrawVolunteerSignup,
 } from "../lib/events-api";
 import { formatEventDateTime } from "../lib/format-datetime";
-import { Button } from "./ui/Button";
-import { Card } from "./ui/Card";
 import { inputFieldClassName } from "./ui/Input";
 
 type EventVolunteerSignupPanelProps = {
@@ -71,11 +69,13 @@ export function EventVolunteerSignupPanel({
   }
 
   return (
-    <Card as="div" padding="none" className="p-3">
-      <p className="text-sm text-foreground">Volunteer for this event</p>
+    <div>
+      <div className="event-command-section-head">
+        <h2 className="event-command-kicker">Volunteer</h2>
+      </div>
 
       {!canVolunteer ? (
-        <p className="mt-3 text-sm text-label">
+        <p className="event-command-stat">
           {signup
             ? "You're signed up to help. Volunteer signups are closed for past events."
             : "Volunteer signups are closed for past events."}
@@ -84,19 +84,17 @@ export function EventVolunteerSignupPanel({
 
       {canShowNewRequest ? (
         <>
-          <p className="mt-2 text-sm text-label">
-            Let organizers know you&apos;d like to help with setup, cleanup, or
-            other tasks. Requests need organizer approval before tasks can be
-            assigned.
+          <p className="event-command-stat">
+            Let organizers know you can help with setup, cleanup, or other
+            tasks. Requests need approval before tasks are assigned.
           </p>
-          <Button
+          <button
             type="button"
             onClick={() => setShowForm(true)}
-            size="lg"
-            className="mt-3 w-full sm:w-auto"
+            className="event-command-btn event-command-btn--primary mt-3"
           >
-            Volunteer for this event
-          </Button>
+            Volunteer
+          </button>
         </>
       ) : null}
 
@@ -109,50 +107,48 @@ export function EventVolunteerSignupPanel({
               onChange={(event) => setNote(event.target.value)}
               rows={3}
               maxLength={2000}
-              placeholder='e.g. "I can help with decoration" or "available for setup/cleanup"'
+              placeholder='e.g. "I can help with decoration"'
               className={`${inputFieldClassName} mt-1`}
             />
           </label>
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            <Button
+          <div className="flex flex-wrap gap-2">
+            <button
               type="submit"
               disabled={submitting}
-              loading={submitting}
-              size="lg"
-              className="w-full sm:w-auto"
+              className="event-command-btn event-command-btn--primary"
             >
-              {signup?.status === "rejected"
-                ? "Submit again"
-                : "Submit volunteer signup"}
-            </Button>
-            <Button
+              {submitting
+                ? "Submitting…"
+                : signup?.status === "rejected"
+                  ? "Submit again"
+                  : "Submit"}
+            </button>
+            <button
               type="button"
-              variant="outline"
               disabled={submitting}
               onClick={() => {
                 setShowForm(false);
                 setNote("");
                 setErrorMessage(null);
               }}
-              size="lg"
-              className="w-full sm:w-auto"
+              className="event-command-btn"
             >
               Cancel
-            </Button>
+            </button>
           </div>
         </form>
       ) : null}
 
       {canShowStatus && signup ? (
-        <div className="mt-3 rounded-lg border border-accent/20 bg-accent/5 px-3 py-3">
-          <p className="text-sm font-medium text-foreground">
+        <div className="event-page-note">
+          <p className="event-page-list-title">
             {signup.status === "approved"
               ? "You're approved to volunteer"
               : signup.status === "rejected"
                 ? "Volunteer request declined"
-                : "Volunteer request pending approval"}
+                : "Volunteer request pending"}
           </p>
-          <p className="mt-1 text-xs text-label">
+          <p className="event-command-stat">
             {signup.status === "pending"
               ? "Organizers will review your request."
               : signup.status === "rejected"
@@ -161,35 +157,29 @@ export function EventVolunteerSignupPanel({
             Signed up {formatEventDateTime(signup.created_at)}
           </p>
           {signup.note ? (
-            <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
-              {signup.note}
-            </p>
+            <p className="event-page-description">{signup.note}</p>
           ) : null}
           {canVolunteer && signup.status !== "rejected" ? (
-            <Button
+            <button
               type="button"
-              variant="outline"
               onClick={() => void handleWithdraw()}
               disabled={withdrawing}
-              loading={withdrawing}
-              size="lg"
-              className="mt-3 w-full sm:w-auto"
+              className="event-command-btn mt-3"
             >
-              Withdraw signup
-            </Button>
+              {withdrawing ? "Updating…" : "Withdraw"}
+            </button>
           ) : null}
           {canVolunteer && signup.status === "rejected" ? (
-            <Button
+            <button
               type="button"
               onClick={() => {
                 setShowForm(true);
                 setNote(signup.note ?? "");
               }}
-              size="lg"
-              className="mt-3 w-full sm:w-auto"
+              className="event-command-btn event-command-btn--primary mt-3"
             >
               Request again
-            </Button>
+            </button>
           ) : null}
         </div>
       ) : null}
@@ -199,6 +189,6 @@ export function EventVolunteerSignupPanel({
           {errorMessage}
         </p>
       ) : null}
-    </Card>
+    </div>
   );
 }

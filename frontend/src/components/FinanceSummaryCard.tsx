@@ -1,4 +1,3 @@
-import { TrendingDown } from "lucide-react";
 import type { ReactNode } from "react";
 
 import type { FinanceSummaryResponse } from "../lib/finance-api";
@@ -9,7 +8,6 @@ import {
 } from "../lib/format-currency";
 import { DataTable } from "../design-system/components/data-display/DataTable";
 import type { DataTableColumn } from "../design-system/components/data-display/DataTable";
-import { AppIcon } from "./ui/AppIcon";
 import { Card } from "./ui/Card";
 
 type FinanceSummaryMetricsProps = {
@@ -175,9 +173,6 @@ function MetricCard({
       className={metricCardClasses(variant)}
     >
       <div className="finance-metric-label-row">
-        {variant === "negative" ? (
-          <AppIcon icon={TrendingDown} size="sm" className="text-overdue" />
-        ) : null}
         <h2 className="finance-metric-label">{title}</h2>
       </div>
       <div className="finance-metric-value">{children}</div>

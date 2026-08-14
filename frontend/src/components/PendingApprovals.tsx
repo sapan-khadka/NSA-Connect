@@ -189,10 +189,6 @@ export function PendingApprovals({
                           {member.full_name}
                         </Link>
                         <span className="members-table-status-pill members-table-status-pill--pending">
-                          <span
-                            className="members-table-status-dot"
-                            aria-hidden="true"
-                          />
                           Pending
                         </span>
                       </div>

@@ -9,17 +9,20 @@ import {
 } from "lucide-react";
 
 import { startOfLocalDay } from "../../lib/calendar";
+import {
+  HOME_ACTIVITY_FETCH_LIMIT,
+  HOME_ACTIVITY_LIMIT,
+  HOME_ACTIVITY_WINDOW_DAYS,
+  selectHomeRecentActivity,
+} from "../../lib/home-recent-activity";
 import { fetchMemberActivity } from "../../lib/members-api";
 import {
   mapMemberActivityApiItem,
-  sortMemberActivityItems,
   type MemberActivityItem,
   type MemberActivityKind,
 } from "../../lib/member-activity-timeline";
 import { AppIcon } from "../ui/AppIcon";
 import { ArrowLink } from "../ui/ArrowLink";
-
-const DEFAULT_ACTIVITY_LIMIT = 3;
 
 type TimelineEntry = {
   id: string;
@@ -105,10 +108,7 @@ export function formatPersonalActivityWhen(
   return `${day}, ${time}`;
 }
 
-function toTimelineEntry(
-  item: MemberActivityItem,
-  now: Date,
-): TimelineEntry {
+function toTimelineEntry(item: MemberActivityItem, now: Date): TimelineEntry {
   const meta = KIND_META[item.kind];
   return {
     id: item.id,
@@ -152,7 +152,7 @@ function ActivityRow({ entry }: { entry: TimelineEntry }) {
 
 export function HomeRecentActivity({
   memberId,
-  limit = DEFAULT_ACTIVITY_LIMIT,
+  limit = HOME_ACTIVITY_LIMIT,
 }: {
   memberId: number;
   memberName?: string;
@@ -164,13 +164,14 @@ export function HomeRecentActivity({
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    void fetchMemberActivity(memberId, { limit })
+    void fetchMemberActivity(memberId, { limit: HOME_ACTIVITY_FETCH_LIMIT })
       .then((response) => {
         if (!cancelled) {
           setItems(
-            sortMemberActivityItems(
+            selectHomeRecentActivity(
               response.items.map(mapMemberActivityApiItem),
-            ).slice(0, limit),
+              { limit },
+            ),
           );
         }
       })
@@ -197,7 +198,7 @@ export function HomeRecentActivity({
   return (
     <section className="home-ya" aria-label="Recent Activity">
       <div className="home-task-header">
-        <h2 className="home-panel-title">Recent Activity</h2>
+        <h2 className="home-section-kicker">Recent Activity</h2>
         <ArrowLink to={`/members/${memberId}`}>View all</ArrowLink>
       </div>
 
@@ -205,7 +206,8 @@ export function HomeRecentActivity({
         <p className="home-activity-empty">Loading…</p>
       ) : entries.length === 0 ? (
         <p className="home-activity-empty">
-          Completions and updates will show up here.
+          Completions and updates from the last {HOME_ACTIVITY_WINDOW_DAYS}{" "}
+          days will show here.
         </p>
       ) : (
         <ul className="home-ya__list">

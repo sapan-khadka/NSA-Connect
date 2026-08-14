@@ -69,7 +69,10 @@ export function MemberWorkspaceFinancialStatus({
             <h2 className="member-workspace-card-title">Financial Status</h2>
           </div>
         </div>
-        <Link to={financePath} className="member-workspace-resp-view-all">
+        <Link
+          to={financePath}
+          className="ds-view-all member-workspace-resp-view-all"
+        >
           View all
         </Link>
       </div>

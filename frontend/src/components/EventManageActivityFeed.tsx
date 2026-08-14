@@ -20,6 +20,7 @@ import { HomeCard } from "./ui/HomeCard";
 
 type EventManageActivityFeedProps = {
   eventId: number;
+  compact?: boolean;
 };
 
 function toTimelineItem(item: EventActivityItem): TimelineItem {
@@ -32,7 +33,10 @@ function toTimelineItem(item: EventActivityItem): TimelineItem {
   };
 }
 
-export function EventManageActivityFeed({ eventId }: EventManageActivityFeedProps) {
+export function EventManageActivityFeed({
+  eventId,
+  compact = false,
+}: EventManageActivityFeedProps) {
   const [items, setItems] = useState<TimelineItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -61,7 +65,37 @@ export function EventManageActivityFeed({ eventId }: EventManageActivityFeedProp
   }, [eventId]);
 
   const now = new Date();
-  const groups = groupEventActivityByDay(items, now);
+  const visible = compact ? items.slice(0, 5) : items;
+  const groups = groupEventActivityByDay(visible, now);
+
+  if (compact) {
+    return (
+      <section aria-label="Event Activity">
+        <div className="event-command-section-head">
+          <h2 className="event-command-kicker">Activity</h2>
+        </div>
+        {loading ? (
+          <p className="event-command-stat">Loading activity…</p>
+        ) : items.length === 0 ? (
+          <p className="event-command-stat">No activity yet.</p>
+        ) : (
+          <ul className="event-command-activity">
+            {visible.map((item) => (
+              <li key={item.id}>
+                <span>{item.title}</span>
+                <time
+                  dateTime={item.occurredAt}
+                  className="shrink-0 text-xs tabular-nums text-gray-400"
+                >
+                  {formatActivityTimeLabel(item.occurredAt, now)}
+                </time>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    );
+  }
 
   return (
     <HomeCard

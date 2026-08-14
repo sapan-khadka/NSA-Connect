@@ -1,19 +1,19 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  buildCategoryDots,
+  buildCategoryMarks,
   getDayCellSurfaceClass,
   getYearMonthTileClass,
 } from "./calendar-grid-utils";
 
 describe("calendar-grid-utils", () => {
-  it("builds category dots with festival and overflow", () => {
-    const dots = buildCategoryDots(
+  it("builds category marks with festival and overflow", () => {
+    const marks = buildCategoryMarks(
       ["cultural", "meeting", "fundraiser", "social"],
       true,
     );
-    expect(dots).toHaveLength(5);
-    expect(dots[4]?.key).toBe("festival");
+    expect(marks).toHaveLength(5);
+    expect(marks[4]?.key).toBe("festival");
   });
 
   it("styles selected day as a flat grid cell", () => {
@@ -69,17 +69,17 @@ describe("calendar-grid-utils", () => {
     expect(className).toContain("is-outside");
   });
 
-  it("styles current year month tiles flat without glow", () => {
+  it("styles current year month tiles with a charcoal hairline", () => {
     const className = getYearMonthTileClass({ isCurrentMonth: true });
-    expect(className).toContain("bg-[#EEF7F3]");
-    expect(className).toContain("rounded-lg");
+    expect(className).toContain("bg-[#fafafa]");
+    expect(className).toContain("border-[#171717]");
     expect(className).not.toContain("from-[#E7F4F0]");
     expect(className).not.toContain("shadow-[");
   });
 
   it("styles regular year month tiles without raised hover", () => {
     const className = getYearMonthTileClass({ isCurrentMonth: false });
-    expect(className).toContain("border-[#E8E8E6]");
+    expect(className).toContain("border-[#ebebea]");
     expect(className).not.toContain("shadow-[");
     expect(className).not.toContain("translate-y");
   });

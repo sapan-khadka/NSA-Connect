@@ -9,11 +9,18 @@ type ArrowLinkProps = {
   className?: string;
 };
 
+/**
+ * Compact section “View all” / trailing nav control.
+ * Shared token: `.ds-view-all` (same hover + type everywhere).
+ */
 export function ArrowLink({ to, children, className = "" }: ArrowLinkProps) {
   return (
-    <Link to={to} className={["ds-link", className].join(" ")}>
+    <Link
+      to={to}
+      className={["ds-view-all", className].filter(Boolean).join(" ")}
+    >
       {children}
-      <AppIcon icon={ChevronRight} size="sm" className="text-current" />
+      <AppIcon icon={ChevronRight} size="xs" className="text-current" />
     </Link>
   );
 }
@@ -32,10 +39,10 @@ export function ArrowAction({
     <button
       type="button"
       onClick={onClick}
-      className={["ds-link", className].join(" ")}
+      className={["ds-view-all", className].filter(Boolean).join(" ")}
     >
       {children}
-      <AppIcon icon={ChevronRight} size="sm" className="text-current" />
+      <AppIcon icon={ChevronRight} size="xs" className="text-current" />
     </button>
   );
 }

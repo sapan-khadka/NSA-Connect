@@ -16,6 +16,7 @@ import { MemberWorkspaceLayout } from "../components/member-workspace/MemberWork
 import { MemberWorkspacePrivateNotes } from "../components/member-workspace/MemberWorkspacePrivateNotes";
 import { MemberWorkspaceRecentActivity } from "../components/member-workspace/MemberWorkspaceRecentActivity";
 import { MemberWorkspaceUpcomingSchedule } from "../components/member-workspace/MemberWorkspaceUpcomingSchedule";
+import { PageBackLink } from "../components/ui/PageBackLink";
 import { Skeleton } from "../design-system/components/Skeleton";
 import { useAuth } from "../context/useAuth";
 import { type MemberResponse } from "../lib/auth-api";
@@ -362,7 +363,8 @@ export function MemberProfilePage() {
   if (!profile) {
     return (
       <div className="member-workspace">
-        <div className="member-workspace-shell">
+        <div className="member-workspace-shell space-y-4">
+          <PageBackLink to="/members" label="Members" />
           <p className="ds-field-error" role="alert">
             {error ?? "Member not found."}
           </p>

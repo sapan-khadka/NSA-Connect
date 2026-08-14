@@ -260,12 +260,12 @@ export function HomeYourWorkSection({
     <div className="home-task-panel">
       {!embedded ? (
         <div className="home-task-header">
-          <h2 className="home-panel-title">My Tasks</h2>
+          <h2 className="home-section-kicker">My Tasks</h2>
           <ArrowLink to={tasksPath}>View all</ArrowLink>
         </div>
       ) : (
         <div className="home-task-header home-task-header--embedded">
-          <h2 className="home-panel-title">My Tasks</h2>
+          <h2 className="home-section-kicker">My Tasks</h2>
           <ArrowLink to={tasksPath}>View all</ArrowLink>
         </div>
       )}

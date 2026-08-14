@@ -42,22 +42,38 @@ export function EventDeleteSection({
     }
   }
 
+  if (dangerZone) {
+    return (
+      <section aria-label="Delete event">
+        <div className="event-command-section-head">
+          <h2 className="event-command-kicker">Delete event</h2>
+        </div>
+        <p className="event-command-stat">
+          Permanently remove this event and its RSVPs, tasks, invitations, and
+          notification history. Linked finance entries stay in the treasury log.
+        </p>
+        <div className="mt-2.5">
+          <button
+            type="button"
+            onClick={() => void handleDelete()}
+            disabled={isDeleting}
+            className="text-xs font-medium text-overdue hover:text-red-800"
+          >
+            {isDeleting ? "Deleting…" : "Delete event"}
+          </button>
+        </div>
+        {errorMessage ? (
+          <p className="mt-2 text-sm text-overdue" role="alert">
+            {errorMessage}
+          </p>
+        ) : null}
+      </section>
+    );
+  }
+
   return (
-    <Card
-      padding="md"
-      className={
-        dangerZone
-          ? "border-2 border-overdue/40 bg-overdue/5"
-          : "border border-overdue/30"
-      }
-    >
-      <h2
-        className={
-          dangerZone
-            ? "text-base font-medium text-overdue"
-            : "text-lg font-light tracking-subhead text-foreground"
-        }
-      >
+    <Card padding="md" className="border border-overdue/30">
+      <h2 className="text-lg font-light tracking-subhead text-foreground">
         Delete event
       </h2>
       <p className="mt-2 text-sm text-label">

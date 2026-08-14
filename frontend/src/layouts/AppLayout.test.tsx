@@ -129,10 +129,9 @@ describe("AppLayout navigation", () => {
     expect(
       within(sidebar).getByRole("link", { name: "AI & Documents" }),
     ).toHaveAttribute("href", "/assistant");
-    expect(screen.getByRole("link", { name: /Need help/i })).toHaveAttribute(
-      "href",
-      "/assistant",
-    );
+    expect(
+      screen.queryByRole("link", { name: /Need help/i }),
+    ).not.toBeInTheDocument();
     expect(within(sidebar).getByRole("link", { name: "Settings" })).toHaveAttribute(
       "href",
       "/profile",

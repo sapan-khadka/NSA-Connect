@@ -236,7 +236,7 @@ describe("EventManagePage", () => {
     vi.clearAllMocks();
   });
 
-  it("renders a tabbed manage workspace with overview snapshot tiles", async () => {
+  it("renders a command-center overview instead of five equal tabs", async () => {
     await mockBoardEventLoad();
     renderPage("board");
 
@@ -244,50 +244,32 @@ describe("EventManagePage", () => {
       await screen.findByRole("heading", { name: "Dashain Celebration" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Back to Events/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Edit Event" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View Public Page" })).toHaveAttribute(
-      "href",
-      "/e/1",
-    );
-    expect(
-      screen.getByRole("button", { name: "Share Public Link" }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Check In" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Duplicate Event" }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Attendees")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit event" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Share" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Check-in" })).toBeInTheDocument();
     expect(screen.getByText("Published")).toBeInTheDocument();
+    expect(screen.getByTestId("event-command-metrics")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("event-command-metrics"),
+    ).toHaveTextContent("Attending");
 
     expect(screen.getByRole("tab", { name: "Overview" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
-    expect(screen.getByRole("tab", { name: "Details" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "People" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Ops" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Attendees" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Operations" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Record" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Details" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "People" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Ops" })).not.toBeInTheDocument();
 
-    expect(screen.getByRole("heading", { name: "Event Readiness" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Resolve Issues" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Event snapshot")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Attending/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Volunteers/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Open tasks/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Budget left/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Checked in/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Invited/i })).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /Share & announce/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Needs attention")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "View attendees" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "View operations" })).not.toBeInTheDocument();
 
-    expect(screen.queryByLabelText("Volunteers")).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Tasks" })).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Budget")).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Check-in" })).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Event Communications")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Event Activity Timeline")).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Event Details" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Event Communications")).not.toBeInTheDocument();
 
     const backLink = screen.getByRole("link", { name: /Back to Events/i });
     expect(backLink.getAttribute("href")).toMatch(
@@ -295,15 +277,15 @@ describe("EventManagePage", () => {
     );
   });
 
-  it("opens details tab for editing core fields", async () => {
+  it("opens a drawer for editing core fields instead of a Details tab", async () => {
     const user = userEvent.setup();
     await mockBoardEventLoad();
     renderPage("board");
 
     await screen.findByRole("heading", { name: "Dashain Celebration" });
-    await user.click(screen.getByRole("button", { name: "Edit Event" }));
+    await user.click(screen.getByRole("button", { name: "Edit event" }));
 
-    expect(await screen.findByRole("heading", { name: "Event Details" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Edit event" })).toBeInTheDocument();
     expect(screen.getByLabelText("Event name")).toBeInTheDocument();
     expect(screen.getByLabelText("Venue")).toBeInTheDocument();
     expect(screen.getByLabelText("Max attendees (optional)")).toBeInTheDocument();
@@ -314,17 +296,17 @@ describe("EventManagePage", () => {
     ).toBeChecked();
   });
 
-  it("opens the tasks modal from overview open-tasks tile", async () => {
+  it("opens the tasks modal from operations", async () => {
     const user = userEvent.setup();
     await mockBoardEventLoad();
     renderPage("board");
 
     await screen.findByRole("heading", { name: "Dashain Celebration" });
-    await user.click(screen.getByRole("button", { name: /Open tasks/i }));
+    await user.click(screen.getByRole("button", { name: "View task" }));
     expect(screen.getByTestId("event-task-manager")).toBeInTheDocument();
   });
 
-  it("opens transactions modal for treasurer from overview budget tile", async () => {
+  it("opens transactions modal for treasurer from operations budget", async () => {
     const user = userEvent.setup();
     await mockBoardEventLoad();
     const { fetchEventTasks } = await import("../lib/event-tasks-api");
@@ -333,7 +315,8 @@ describe("EventManagePage", () => {
     renderPage("treasurer");
 
     await screen.findByRole("heading", { name: "Dashain Celebration" });
-    await user.click(screen.getByRole("button", { name: /Budget left/i }));
+    await user.click(screen.getByRole("tab", { name: "Operations" }));
+    await user.click(screen.getByRole("button", { name: "View transactions" }));
 
     await waitFor(() =>
       expect(screen.getByTestId("finance-entry-list")).toBeInTheDocument(),
@@ -347,46 +330,26 @@ describe("EventManagePage", () => {
     ).toBeInTheDocument();
   });
 
-  it("opens check-in and attendance detail modals", async () => {
+  it("opens check-in from the command header", async () => {
     const user = userEvent.setup();
-    const { fetchEventAttendanceSummary } = await import(
-      "../lib/event-checkin-api"
-    );
-    vi.mocked(fetchEventAttendanceSummary).mockResolvedValue({
-      event_id: 1,
-      event_name: "Dashain Celebration",
-      going_attended: { count: 4, members: [] },
-      going_no_show: { count: 2, members: [] },
-      walk_ins: { count: 1, members: [] },
-      not_going: { count: 3, members: [] },
-      guests_checked_in: { count: 0 },
-    });
-
     await mockBoardEventLoad();
     renderPage("board");
 
     await screen.findByRole("heading", { name: "Dashain Celebration" });
-    await user.click(screen.getByRole("button", { name: /Checked in/i }));
+    await user.click(screen.getByRole("button", { name: "Check-in" }));
     expect(screen.getByTestId("event-checkin-panel")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Overview" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
 
     await user.click(screen.getByRole("button", { name: "Close" }));
     await waitFor(() =>
       expect(screen.queryByTestId("event-checkin-panel")).not.toBeInTheDocument(),
     );
-
-    await user.click(screen.getByRole("button", { name: "Check In" }));
-    expect(screen.getByTestId("event-checkin-panel")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Close" }));
-    await waitFor(() =>
-      expect(screen.queryByTestId("event-checkin-panel")).not.toBeInTheDocument(),
-    );
-
-    await selectTab(user, "Overview");
-    await user.click(screen.getByRole("button", { name: /Attending/i }));
-    expect(screen.getByTestId("event-attendance-summary")).toBeInTheDocument();
   });
 
-  it("shows meeting record card for meeting events", async () => {
+  it("shows meeting record tools on the Record workspace", async () => {
     const user = userEvent.setup();
     await mockBoardEventLoad({
       event_type: "meeting",
@@ -399,43 +362,35 @@ describe("EventManagePage", () => {
 
     await screen.findByRole("heading", { name: "March Board Meeting" });
     await selectTab(user, "Record");
-    expect(
-      await screen.findByRole("heading", { name: "Meeting record" }),
-    ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /Open meeting record/i }));
     expect(screen.getByTestId("meeting-record-section")).toBeInTheDocument();
   });
 
-  it("lets board invite participants from the People tab", async () => {
+  it("lets board invite participants from the Attendees workspace", async () => {
     const user = userEvent.setup();
     await mockBoardEventLoad();
     renderPage("board");
 
     await screen.findByRole("heading", { name: "Dashain Celebration" });
-    await selectTab(user, "People");
+    await selectTab(user, "Attendees");
     expect(
       await screen.findByRole("button", { name: "Invite members" }),
     ).toBeInTheDocument();
-    expect(await screen.findByRole("button", { name: "Add role" })).toBeInTheDocument();
-    expect(screen.getByText("Going RSVPs")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Invite members" }));
     expect(
       await screen.findByRole("heading", { name: "Invite participants" }),
     ).toBeInTheDocument();
   });
 
-  it("opens real communications tools from the Record tab", async () => {
+  it("opens communications tools from the Record workspace", async () => {
     const user = userEvent.setup();
     await mockBoardEventLoad();
     renderPage("board");
 
     await screen.findByRole("heading", { name: "Dashain Celebration" });
-    await user.click(screen.getByRole("button", { name: /Share & announce/i }));
+    await selectTab(user, "Record");
     expect(
       await screen.findByLabelText("Event Communications"),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Copy public link" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Compose update" }),
@@ -444,5 +399,45 @@ describe("EventManagePage", () => {
     expect(
       screen.getByRole("button", { name: "Send reminder now" }),
     ).toBeInTheDocument();
+  });
+
+  it("sends Add roles to Operations instead of the signups modal", async () => {
+    const user = userEvent.setup();
+    await mockBoardEventLoad();
+    renderPage("board");
+
+    await screen.findByRole("heading", { name: "Dashain Celebration" });
+    await user.click(await screen.findByRole("button", { name: "Add roles" }));
+
+    expect(screen.getByRole("tab", { name: "Operations" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.queryByTestId("event-volunteers-section")).not.toBeInTheDocument();
+    expect(await screen.findByLabelText("Role name")).toBeInTheDocument();
+  });
+
+  it("closes the editor after saving event details", async () => {
+    const user = userEvent.setup();
+    const { patchEvent } = await import("../lib/events-api");
+    await mockBoardEventLoad();
+    vi.mocked(patchEvent).mockResolvedValue({
+      ...mockEvent,
+      location: "Dempster Hall",
+    });
+    renderPage("board");
+
+    await screen.findByRole("heading", { name: "Dashain Celebration" });
+    await user.click(screen.getByRole("button", { name: "Edit event" }));
+    expect(await screen.findByRole("heading", { name: "Edit event" })).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Venue"), "Dempster Hall");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("heading", { name: "Edit event" }),
+      ).not.toBeInTheDocument(),
+    );
   });
 });

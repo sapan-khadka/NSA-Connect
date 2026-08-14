@@ -132,7 +132,7 @@ export function NotificationMenu({
           id={menuId}
           role="menu"
           aria-label="Notifications"
-          className="absolute right-0 top-full z-50 mt-2 w-[22rem] overflow-hidden rounded-2xl border border-gray-200 bg-surface-card shadow-card"
+          className="absolute right-0 top-full z-[60] mt-2 w-[22rem] overflow-hidden rounded-2xl border border-gray-200 bg-surface-card shadow-card"
         >
           <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3">
             <div>
@@ -267,7 +267,7 @@ export function NotificationMenu({
               <Link
                 to={viewAllTo}
                 role="menuitem"
-                className="block px-4 py-3 text-center text-sm font-semibold text-primary transition hover:bg-surface-muted"
+                className="block px-4 py-3 text-center text-xs font-medium text-label transition hover:bg-surface-muted hover:text-foreground"
                 onClick={() => setOpen(false)}
               >
                 {viewAllLabel}

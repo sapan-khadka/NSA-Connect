@@ -1,7 +1,6 @@
 import {
   CalendarDays,
   ChevronDown,
-  ChevronRight,
   ClipboardList,
   Home,
   LogOut,
@@ -15,7 +14,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
-import { Link, NavLink } from "react-router";
+import { NavLink } from "react-router";
 
 import {
   NavCountBadge,
@@ -49,18 +48,17 @@ const focusRingClass =
   "outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-card";
 
 const navItemBaseClass = [
-  "group relative flex w-full items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13px] font-medium tracking-body",
-  "transition-[background-color,color,box-shadow] duration-150 ease-out",
+  "group relative flex w-full items-center gap-2.5 rounded-md px-2.5 py-[6px] text-[13px] font-medium tracking-body",
+  "transition-[background-color,color] duration-150 ease-out",
   focusRingClass,
 ].join(" ");
 
 const navItemIdleClass =
-  "text-label hover:bg-surface-muted hover:text-foreground";
+  "text-[#737373] hover:bg-[#ebebea] hover:text-[#111111]";
 
 const navItemActiveClass = [
-  "bg-gray-200/80 font-semibold text-foreground",
-  "before:absolute before:inset-y-1 before:left-0 before:w-[3px] before:rounded-full before:bg-primary",
-  "shadow-[inset_0_0_0_1px_rgba(17,24,39,0.08)]",
+  "bg-[#e8e8e6] font-semibold text-[#111111]",
+  "before:absolute before:inset-y-1.5 before:left-0 before:w-[2px] before:rounded-full before:bg-[#171717]",
 ].join(" ");
 
 function getInitials(fullName: string): string {
@@ -138,9 +136,9 @@ function SidebarAccountMenu({
         onClick={() => setOpen((current) => !current)}
         className={[
           "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left",
-          "transition-colors duration-150 hover:bg-surface-muted",
+          "transition-colors duration-150 hover:bg-[#ebebea]",
           focusRingClass,
-          open ? "bg-surface-muted" : "",
+          open ? "bg-[#ebebea]" : "",
         ].join(" ")}
       >
         <span
@@ -391,7 +389,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
   return (
     <aside className="ds-sidebar">
-      <div className="shrink-0 border-b border-gray-100 px-4 pb-4 pt-5">
+      <div className="ds-sidebar__brand shrink-0 border-b px-4 pb-4 pt-5">
         <AppLogo asLink size="nav" showTagline={false} />
       </div>
 
@@ -423,25 +421,8 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         </div>
       </nav>
 
-      <div className="shrink-0 space-y-2.5 border-t border-gray-100 px-2.5 pb-3 pt-3">
-        <Link
-          to="/assistant"
-          onClick={onNavigate}
-          className={[
-            "inline-flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2",
-            "text-[13px] font-medium text-label transition duration-150",
-            "hover:bg-surface-muted hover:text-foreground",
-            focusRingClass,
-          ].join(" ")}
-        >
-          <span className="inline-flex items-center gap-2">
-            <AppIcon icon={Sparkles} size="sm" className="text-primary" />
-            Need help?
-          </span>
-          <AppIcon icon={ChevronRight} size="xs" className="text-current" />
-        </Link>
-
-        {member ? (
+      {member ? (
+        <div className="shrink-0 border-t border-[#ebebea] px-2.5 pb-3 pt-3">
           <SidebarAccountMenu
             memberId={member.id}
             fullName={member.full_name}
@@ -450,8 +431,8 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
             onLogout={logout}
             onNavigate={onNavigate}
           />
-        ) : null}
-      </div>
+        </div>
+      ) : null}
     </aside>
   );
 }

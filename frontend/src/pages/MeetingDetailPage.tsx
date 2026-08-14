@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 
 import { MeetingWorkspace } from "../components/MeetingWorkspace";
+import { PageBackLink } from "../components/ui/PageBackLink";
 import { getApiErrorMessage } from "../lib/api-error";
 import {
   fetchMeetingDetail,
@@ -53,15 +54,18 @@ export function MeetingDetailPage() {
   }, [numericEventId]);
 
   if (isLoading) {
-    return <p className="text-sm text-label">Loading meeting…</p>;
+    return (
+      <div className="space-y-4">
+        <PageBackLink to="/events/meetings" label="Meetings" />
+        <p className="text-sm text-label">Loading meeting…</p>
+      </div>
+    );
   }
 
   if (error || !detail) {
     return (
       <div className="space-y-4">
-        <Link to="/events/meetings" className="ds-link">
-          ← Back to meetings
-        </Link>
+        <PageBackLink to="/events/meetings" label="Meetings" />
         <div role="alert" className="ds-alert-banner p-6">
           {error ?? "Meeting not found."}
         </div>
@@ -71,9 +75,7 @@ export function MeetingDetailPage() {
 
   return (
     <div className="space-y-4">
-      <Link to="/events/meetings" className="ds-link">
-        ← Back to meetings
-      </Link>
+      <PageBackLink to="/events/meetings" label="Meetings" historyFirst />
       <MeetingWorkspace detail={detail} onDetailChange={setDetail} />
     </div>
   );

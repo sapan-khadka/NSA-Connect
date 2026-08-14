@@ -15,7 +15,6 @@ import { Avatar } from "../design-system/components/Avatar";
 import { useAuth } from "../context/useAuth";
 import type { EventType } from "../lib/event-types";
 import { eventDetailPath } from "../lib/event-links";
-import { computeEventHealth } from "../lib/event-health";
 import { isEventUpcoming } from "../lib/event-rsvp";
 import { summarizeVolunteerSlots } from "../lib/event-volunteer-summary";
 import {
@@ -40,15 +39,10 @@ import {
   DetailsPanel,
   DetailsSection,
   DetailsSkeleton,
-  detailsActionClass,
 } from "./details-panel";
 import { EventAttendeeStack } from "./EventAttendeeStack";
 import { EventBanner } from "./EventBanner";
-import {
-  EventHealthBadgePill,
-  EventHealthCard,
-} from "./EventHealthCard";
-import { type NeedsAttentionItem } from "./EventNeedsAttentionCard";
+import { EventHealthCard } from "./EventHealthCard";
 import { EventRsvpSegmented } from "./EventRsvpSegmented";
 
 const AVATAR_STACK_MAX = 4;
@@ -279,84 +273,6 @@ export function EventOverviewCard({
   const plannedBudget = budget ? Number(budget.planned_budget) || 0 : 0;
   const spentBudget = budget ? Number(budget.actual_expense) || 0 : 0;
 
-  const attentionItems = useMemo((): NeedsAttentionItem[] => {
-    if (!canManage) {
-      return [];
-    }
-    const items: NeedsAttentionItem[] = [];
-    if (overdueTasks > 0) {
-      items.push({
-        id: "overdue-tasks",
-        label:
-          overdueTasks === 1
-            ? "1 task overdue"
-            : `${overdueTasks} tasks overdue`,
-        severity: "urgent",
-      });
-    }
-    if (plannedBudget > 0 && spentBudget > plannedBudget) {
-      items.push({
-        id: "budget-over",
-        label: "Budget overspent",
-        severity: "urgent",
-      });
-    }
-    if (!volunteersTargetSet) {
-      items.push({
-        id: "volunteers-unset",
-        label: "Volunteer targets not set",
-        severity: "pending",
-      });
-    } else {
-      const shortfall = Math.max(0, volunteersNeeded - volunteersFilled);
-      if (shortfall > 0) {
-        items.push({
-          id: "volunteers-short",
-          label:
-            shortfall === 1
-              ? "Need 1 more volunteer"
-              : `Need ${shortfall} more volunteers`,
-          severity: "pending",
-        });
-      }
-    }
-    return items;
-  }, [
-    canManage,
-    overdueTasks,
-    plannedBudget,
-    spentBudget,
-    volunteersFilled,
-    volunteersNeeded,
-    volunteersTargetSet,
-  ]);
-
-  const healthBadge = useMemo(
-    () =>
-      computeEventHealth({
-        preparationPct,
-        checklistDone,
-        checklistTotal,
-        overdueTasks,
-        budgetSpent: spentBudget,
-        budgetCap: plannedBudget,
-        volunteersFilled,
-        volunteersNeeded,
-        volunteersTargetSet,
-      }),
-    [
-      preparationPct,
-      checklistDone,
-      checklistTotal,
-      overdueTasks,
-      spentBudget,
-      plannedBudget,
-      volunteersFilled,
-      volunteersNeeded,
-      volunteersTargetSet,
-    ],
-  );
-
   const stackAttendees = useMemo(
     () =>
       attendees.map((attendee) => ({
@@ -366,11 +282,6 @@ export function EventOverviewCard({
     [attendees],
   );
 
-  const navDateValue =
-    selectedDate ?? (previewEvent ? previewEvent.starts_at : null);
-  const navDateLabel = navDateValue
-    ? formatCompactNavDate(navDateValue)
-    : null;
   const heroDate = previewEvent
     ? formatCompactNavDate(previewEvent.starts_at)
     : null;
@@ -416,51 +327,36 @@ export function EventOverviewCard({
     >
       {showEmptySelect ? (
         <DetailsEmptyState
-          title="Select an event"
-          description="Choose an event from the calendar to view details, RSVP information, preparation progress, budget, and attendees."
+          title="Select a day"
+          description="Pick a date on the calendar to see the event."
         />
       ) : null}
 
-      {previewEvent ||
-      showEmptyDay ||
-      detailLoading ||
-      detailError ||
-      dayEvents.length > 1 ? (
+      {dayEvents.length > 1 ? (
         <DetailsHeader
           label={
-            dayEvents.length > 1 ? (
-              <ul className="details-panel-chips details-panel-chips--in-header">
-                {dayEvents.map((event) => {
-                  const isActive = event.id === selectedEventId;
-                  return (
-                    <li key={event.id}>
-                      <button
-                        type="button"
-                        aria-pressed={isActive}
-                        onClick={() => onSelectEvent(event.id)}
-                        className={[
-                          "details-panel-chip",
-                          isActive ? "is-active" : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
-                      >
-                        {event.name}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : showingDefaultUpcoming && !previewEvent ? (
-              "Event details"
-            ) : undefined
-          }
-          trailing={
-            navDateLabel && previewEvent ? (
-              <span className="details-panel-header-trailing-text">
-                {navDateLabel}
-              </span>
-            ) : null
+            <ul className="details-panel-chips details-panel-chips--in-header">
+              {dayEvents.map((event) => {
+                const isActive = event.id === selectedEventId;
+                return (
+                  <li key={event.id}>
+                    <button
+                      type="button"
+                      aria-pressed={isActive}
+                      onClick={() => onSelectEvent(event.id)}
+                      className={[
+                        "details-panel-chip",
+                        isActive ? "is-active" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                    >
+                      {event.name}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           }
         />
       ) : null}
@@ -476,8 +372,8 @@ export function EventOverviewCard({
       showingDefaultUpcoming &&
       dayEvents.length === 0 ? (
         <DetailsEmptyState
-          title="Select an event"
-          description="Choose an event from the calendar to view details, RSVP information, preparation progress, budget, and attendees."
+          title="Select a day"
+          description="Pick a date on the calendar to see the event."
         />
       ) : null}
 
@@ -550,65 +446,35 @@ export function EventOverviewCard({
                     </ul>
                   ) : null}
                 </>
-              ) : (
-                <p className="text-[12px] font-medium text-label">
-                  0 attending
-                </p>
-              )}
+              ) : null}
             </div>
 
             {canManage ? (
-              <details className="event-health-disclosure">
-                <summary className="event-health-disclosure-summary">
-                  <span className="event-health-disclosure-summary__row">
-                    <span>Event health</span>
-                    <EventHealthBadgePill
-                      level={healthBadge.level}
-                      label={healthBadge.label}
-                    />
-                  </span>
-                </summary>
-                <div className="event-health-disclosure-body">
-                  <EventHealthCard
-                    preparationPct={preparationPct}
-                    checklistDone={checklistDone}
-                    checklistTotal={checklistTotal}
-                    overdueTasks={overdueTasks}
-                    budgetSpent={spentBudget}
-                    budgetCap={plannedBudget}
-                    volunteersFilled={volunteersFilled}
-                    volunteersNeeded={volunteersNeeded}
-                    volunteersTargetSet={volunteersTargetSet}
-                    attentionItems={attentionItems}
-                    manageHref={
-                      manageEventId != null
-                        ? `/events/${manageEventId}/manage`
-                        : null
-                    }
-                    showHeading={false}
-                    className="border-0 bg-transparent p-0"
-                  />
-                </div>
-              </details>
+              <EventHealthCard
+                preparationPct={preparationPct}
+                checklistDone={checklistDone}
+                checklistTotal={checklistTotal}
+                overdueTasks={overdueTasks}
+                budgetSpent={spentBudget}
+                budgetCap={plannedBudget}
+                volunteersFilled={volunteersFilled}
+                volunteersNeeded={volunteersNeeded}
+                volunteersTargetSet={volunteersTargetSet}
+                manageEventId={manageEventId}
+              />
             ) : null}
 
-            <DetailsActions className="details-panel-actions--stack details-panel-actions--dense">
+            <DetailsActions className="details-panel-actions--dense">
               <Link
                 to={eventDetailPath(previewEvent.id)}
-                className={detailsActionClass(
-                  "primary",
-                  "details-panel-btn--dominant w-full",
-                )}
+                className="event-command-btn event-command-btn--primary w-full"
               >
-                Open Workspace
+                Open Event
               </Link>
               {canManage && manageEventId != null ? (
                 <Link
                   to={`/events/${manageEventId}/manage`}
-                  className={detailsActionClass(
-                    "secondary",
-                    "details-panel-btn--quiet w-full",
-                  )}
+                  className="event-command-btn w-full"
                 >
                   Manage Event
                 </Link>

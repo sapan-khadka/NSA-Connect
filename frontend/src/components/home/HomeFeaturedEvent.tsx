@@ -448,7 +448,7 @@ export function HomeFeaturedEvent({
               to={eventPath}
               className="home-featured-banner__btn home-featured-banner__btn--primary"
             >
-              Open workspace
+              Open event
               <AppIcon icon={ChevronRight} size="sm" />
             </Link>
             {canManage ? (
@@ -731,11 +731,11 @@ function FeaturedEventStrip({
           <Link
             to={eventPath}
             className="home-event-strip__countdown"
-            aria-label={`Open Workspace · ${countdown}`}
+            aria-label={`Open event · ${countdown}`}
           >
             <span>{countdown}</span>
             <AppIcon icon={ChevronRight} size="sm" />
-            <span className="home-sr-only">Open Workspace</span>
+            <span className="home-sr-only">Open event</span>
           </Link>
         </div>
       </div>

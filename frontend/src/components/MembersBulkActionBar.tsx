@@ -1,16 +1,9 @@
 /**
- * Members bulk-selection toolbar — Gmail / GitHub / Linear style.
- * Presentation only: actions without backend support stay disabled.
+ * Members bulk-selection toolbar.
+ * Selection management only until bulk mutations have backends.
  */
 
-import {
-  BadgeCheck,
-  CheckSquare,
-  Mail,
-  Shield,
-  Trash2,
-  X,
-} from "lucide-react";
+import { CheckSquare, X } from "lucide-react";
 
 import { AppIcon } from "./ui/AppIcon";
 import { Button } from "./ui/Button";
@@ -22,28 +15,6 @@ type MembersBulkActionBarProps = {
   onClear: () => void;
   onSelectAll: () => void;
 };
-
-const ACTIONS = [
-  {
-    id: "assign-role",
-    label: "Assign Role",
-    icon: Shield,
-    tone: "default" as const,
-  },
-  { id: "email", label: "Send Email", icon: Mail, tone: "default" as const },
-  {
-    id: "mark-paid",
-    label: "Mark Paid",
-    icon: BadgeCheck,
-    tone: "default" as const,
-  },
-  {
-    id: "delete",
-    label: "Delete",
-    icon: Trash2,
-    tone: "danger" as const,
-  },
-] as const;
 
 export function MembersBulkActionBar({
   selectedCount,
@@ -76,49 +47,6 @@ export function MembersBulkActionBar({
           </div>
 
           <div
-            className="members-bulk-bar-actions"
-            role="group"
-            aria-label="Actions"
-          >
-            {ACTIONS.map((action) => {
-              const showDivider = action.id === "delete";
-
-              return (
-                <span key={action.id} className="members-bulk-bar-action-wrap">
-                  {showDivider ? (
-                    <span
-                      className="members-bulk-bar-divider"
-                      aria-hidden="true"
-                    />
-                  ) : null}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled
-                    title="Coming Soon"
-                    className={
-                      action.tone === "danger"
-                        ? "members-bulk-bar-action is-danger is-soon"
-                        : "members-bulk-bar-action is-soon"
-                    }
-                    aria-label={`${action.label} (Coming Soon)`}
-                  >
-                    <AppIcon
-                      icon={action.icon}
-                      size="xs"
-                      className="text-current"
-                    />
-                    <span className="members-bulk-bar-action-label">
-                      {action.label}
-                    </span>
-                  </Button>
-                </span>
-              );
-            })}
-          </div>
-
-          <div
             className="members-bulk-bar-meta"
             role="group"
             aria-label="Selection controls"
@@ -132,7 +60,7 @@ export function MembersBulkActionBar({
               aria-label="Clear Selection"
             >
               <AppIcon icon={X} size="xs" className="text-current" />
-              <span>Clear Selection</span>
+              <span>Clear</span>
             </Button>
             <Button
               type="button"

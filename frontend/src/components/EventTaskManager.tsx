@@ -633,28 +633,24 @@ export function EventTaskManager({
 
   return (
     <section aria-label="Event tasks" id="event-tasks-section">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-baseline gap-2">
-          <h2 className="text-lg font-light tracking-subhead text-foreground">
-            Tasks
-          </h2>
+      <div className="event-command-section-head">
+        <h2 className="event-command-kicker">Tasks</h2>
+        <div className="flex items-center gap-3">
           {completionSummary.total > 0 ? (
-            <span className="text-sm text-label">
+            <p className="event-command-count">
               {completionSummary.completed}/{completionSummary.total} done
-            </span>
+            </p>
+          ) : null}
+          {allowCreateTasks && !showAddForm ? (
+            <button
+              type="button"
+              className="event-command-btn"
+              onClick={() => setShowAddForm(true)}
+            >
+              New task
+            </button>
           ) : null}
         </div>
-
-        {allowCreateTasks && !showAddForm ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setShowAddForm(true)}
-          >
-            + Add task
-          </Button>
-        ) : null}
       </div>
 
       {canManageSimple && !canCreateTasks ? (

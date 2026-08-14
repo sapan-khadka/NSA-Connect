@@ -239,7 +239,7 @@ describe("MembersPage", () => {
       screen.getByRole("heading", { level: 1, name: "Members" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Manage members, roles and dues."),
+      screen.getByText("Directory, roles, and dues."),
     ).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByLabelText("Members summary")).toBeInTheDocument();
@@ -416,11 +416,9 @@ describe("MembersPage", () => {
 
     await user.click(screen.getByRole("button", { name: /^Filters$/i }));
 
-    expect(await screen.findByLabelText("Member Status")).toBeInTheDocument();
-    expect(screen.getByLabelText("Payment Status")).toBeInTheDocument();
-    expect(screen.getByLabelText("Graduation Year")).toBeInTheDocument();
-    expect(screen.getByLabelText("Roster")).toBeInTheDocument();
-    expect(screen.getByLabelText("Focus")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Membership")).toBeInTheDocument();
+    expect(screen.getByLabelText("Payment")).toBeInTheDocument();
+    expect(screen.getByLabelText("Graduation year")).toBeInTheDocument();
     expect(screen.getByLabelText("Search members")).toBeInTheDocument();
     expect(screen.queryByLabelText("Committee")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Attendance")).not.toBeInTheDocument();
@@ -565,8 +563,11 @@ describe("MembersPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("1 Member")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /Assign Role \(Coming Soon\)/i }),
-    ).toBeDisabled();
+      screen.getByRole("button", { name: "Clear Selection" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Coming Soon/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows Idle status for approved members without engagement", async () => {

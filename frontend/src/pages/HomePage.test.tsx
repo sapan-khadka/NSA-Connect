@@ -213,7 +213,7 @@ describe("HomePage", () => {
       within(featured).getByRole("heading", { name: "Dashain Celebration" }),
     ).toBeInTheDocument();
     expect(
-      within(featured).getByRole("link", { name: /Open Workspace/i }),
+      within(featured).getByRole("link", { name: /Open event/i }),
     ).toHaveAttribute("href", "/events/5");
     expect(
       await within(featured).findByText(/Going/i),
@@ -470,7 +470,7 @@ describe("HomePage", () => {
     expect(screen.queryByLabelText("Action Center")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Inbox")).not.toBeInTheDocument();
     expect(await screen.findByLabelText("Today's Focus")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Recent Activity")).not.toBeInTheDocument();
+    expect(await screen.findByLabelText("Recent Activity")).toBeInTheDocument();
     expect(screen.queryByLabelText("Quick actions")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Meetings")).not.toBeInTheDocument();
   });

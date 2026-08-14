@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -21,6 +21,7 @@ const defaultProps = {
 describe("EventsCalendarPanel", () => {
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
   });
 
   it("renders weekday headers and June 2030 days", () => {
@@ -51,7 +52,30 @@ describe("EventsCalendarPanel", () => {
     expect(onMonthChange).toHaveBeenCalledWith(2030, 6);
   });
 
-  it("renders category dots on event days and legend", () => {
+  it("jumps to a selected year from the title control", () => {
+    const onMonthChange = vi.fn();
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-13T12:00:00"));
+
+    render(
+      <EventsCalendarPanel
+        {...defaultProps}
+        year={2026}
+        month={7}
+        onMonthChange={onMonthChange}
+      />,
+    );
+
+    const yearSelect = screen.getByRole("combobox", { name: "Select year" });
+    fireEvent.change(yearSelect, { target: { value: "2025" } });
+    expect(onMonthChange).toHaveBeenCalledWith(2025, 7);
+
+    fireEvent.change(yearSelect, { target: { value: "2027" } });
+    expect(onMonthChange).toHaveBeenCalledWith(2027, 7);
+  });
+
+  it("renders category marks on event days and legend", () => {
     render(
       <EventsCalendarPanel
         {...defaultProps}
@@ -76,24 +100,24 @@ describe("EventsCalendarPanel", () => {
     const dayCell = screen.getByRole("button", {
       name: "2030-06-15, Cultural, Meeting",
     });
-    const dots = dayCell.querySelector('[data-testid="calendar-category-dots"]');
-    expect(dots?.querySelector(".bg-\\[\\#D85A30\\]")).toBeTruthy();
-    expect(dots?.querySelector(".bg-\\[\\#378ADD\\]")).toBeTruthy();
+    const marks = dayCell.querySelector('[data-testid="calendar-category-marks"]');
+    expect(marks?.querySelector(".bg-\\[\\#D85A30\\]")).toBeTruthy();
+    expect(marks?.querySelector(".bg-\\[\\#378ADD\\]")).toBeTruthy();
   });
 
-  it("shows Bikram Sambat labels for current-month days", () => {
+  it("renders the Gregorian day number in each cell", () => {
     render(<EventsCalendarPanel {...defaultProps} />);
 
     const juneFirst = screen.getByRole("button", { name: /^2030-06-01/ });
-    expect(juneFirst.textContent).toMatch(/\d{1,2} \w+/);
+    expect(juneFirst).toHaveTextContent("1");
   });
 
   it("highlights festival days without NSA events", () => {
     render(<EventsCalendarPanel {...defaultProps} month={2} year={2030} />);
 
     const holiCell = screen.getByRole("button", { name: /2030-03-20, Holi/ });
-    const dots = holiCell.querySelector('[data-testid="calendar-category-dots"]');
-    expect(dots?.querySelector(".bg-\\[\\#7F77DD\\]")).toBeTruthy();
+    const marks = holiCell.querySelector('[data-testid="calendar-category-marks"]');
+    expect(marks?.querySelector(".bg-\\[\\#7F77DD\\]")).toBeTruthy();
     expect(screen.getAllByText("Nepali festival").length).toBeGreaterThan(0);
   });
 

@@ -53,10 +53,10 @@ describe("calendar date math", () => {
   it("builds month labels and year options for pickers", () => {
     expect(getMonthLabel(5)).toBe("June");
     expect(getCalendarYearOptions(2026, new Date(2026, 5, 15))).toEqual([
-      2024, 2025, 2026, 2027, 2028, 2029,
+      2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030,
     ]);
-    expect(getCalendarYearOptions(2030, new Date(2026, 5, 15))).toEqual([
-      2024, 2025, 2026, 2027, 2028, 2029, 2030,
+    expect(getCalendarYearOptions(2031, new Date(2026, 5, 15))).toEqual([
+      2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031,
     ]);
   });
 });

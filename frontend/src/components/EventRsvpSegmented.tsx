@@ -86,27 +86,31 @@ export function EventRsvpSegmented({
       aria-label="RSVP options"
       className="rsvp-segmented rsvp-segmented--equal"
     >
-      {RSVP_SEGMENTS.map((option) => {
-        const isSelected = displayStatus === option.value;
-        return (
-          <button
-            key={option.value}
-            ref={(element) => {
-              buttonRefs.current[option.value] = element ?? undefined;
-            }}
-            type="button"
-            data-rsvp-reaction-host
-            aria-pressed={isSelected}
-            disabled={loading}
-            onClick={() => handleOptionClick(option.value)}
-            className={segmentClass(isSelected)}
-          >
-            <span className="truncate">
-              {loading && isSelected ? "Updating…" : option.label}
-            </span>
-          </button>
-        );
-      })}
+        {RSVP_SEGMENTS.map((option) => {
+          const isSelected = displayStatus === option.value;
+          return (
+            <div
+              key={option.value}
+              data-rsvp-reaction-host
+              className="relative min-w-0 flex-1 overflow-visible"
+            >
+              <button
+                ref={(element) => {
+                  buttonRefs.current[option.value] = element ?? undefined;
+                }}
+                type="button"
+                aria-pressed={isSelected}
+                disabled={loading}
+                onClick={() => handleOptionClick(option.value)}
+                className={segmentClass(isSelected)}
+              >
+                <span>
+                  {loading && isSelected ? "Updating…" : option.label}
+                </span>
+              </button>
+            </div>
+          );
+        })}
     </div>
   );
 }

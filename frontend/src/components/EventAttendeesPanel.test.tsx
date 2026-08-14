@@ -52,7 +52,7 @@ describe("EventAttendeesPanel", () => {
     expect(screen.queryByText("Board members")).not.toBeInTheDocument();
     expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Show ⌄" }));
+    await user.click(screen.getByRole("button", { name: "View" }));
 
     expect(screen.getByTestId("attendee-rsvp-summary")).toHaveTextContent(
       "1 going · 1 maybe · 0 not going · 2 not yet responded",
@@ -60,7 +60,7 @@ describe("EventAttendeesPanel", () => {
     expect(screen.getByText("Board members")).toBeInTheDocument();
     expect(screen.getByText("General members")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Export attendee list" }),
+      screen.getByRole("button", { name: "Export" }),
     ).toBeInTheDocument();
 
     await user.type(screen.getByRole("searchbox"), "Zeta");

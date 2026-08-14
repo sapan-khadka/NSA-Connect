@@ -7,6 +7,7 @@ import { getApiErrorMessage } from "../lib/api-error";
 import {
   combineDateAndTime,
   getMinEventDate,
+  initialCreateEventValues,
   splitEventDateTime,
   validateCreateEventField,
 } from "../lib/event-form";
@@ -49,22 +50,24 @@ export function EventManageScheduleFields({
     eventDate !== savedSchedule.event_date || eventTime !== savedSchedule.event_time;
 
   async function handleSave() {
-    const nextDateError = validateCreateEventField("event_date", eventDate, {
+    const formValues = {
+      ...initialCreateEventValues,
       name: event.name,
       description: event.description,
       event_type: event.event_type,
       event_date: eventDate,
       event_time: eventTime,
-      budget: "",
-    });
-    const nextTimeError = validateCreateEventField("event_time", eventTime, {
-      name: event.name,
-      description: event.description,
-      event_type: event.event_type,
-      event_date: eventDate,
-      event_time: eventTime,
-      budget: "",
-    });
+    };
+    const nextDateError = validateCreateEventField(
+      "event_date",
+      eventDate,
+      formValues,
+    );
+    const nextTimeError = validateCreateEventField(
+      "event_time",
+      eventTime,
+      formValues,
+    );
 
     setDateError(nextDateError);
     setTimeError(nextTimeError);

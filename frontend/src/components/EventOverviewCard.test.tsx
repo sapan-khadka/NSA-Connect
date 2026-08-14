@@ -141,15 +141,21 @@ describe("EventOverviewCard", () => {
     expect(screen.queryByText(/organizer/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/committee/i)).not.toBeInTheDocument();
 
-    expect(await screen.findByText("Event health")).toBeInTheDocument();
-    expect(screen.getByText("Preparation")).toBeInTheDocument();
-    expect(await screen.findByText("67%")).toBeInTheDocument();
-    expect(screen.getByText(/\$100\.00 \/ \$300\.00/i)).toBeInTheDocument();
+    expect(await screen.findByLabelText("Event health")).toBeInTheDocument();
+    expect(screen.queryByText("Prep")).not.toBeInTheDocument();
+    expect(screen.queryByText("67%")).not.toBeInTheDocument();
+    expect(screen.getByText("$100")).toBeInTheDocument();
+    expect(screen.getByText("2/3")).toBeInTheDocument();
+    expect(screen.getByText("Budget")).toBeInTheDocument();
+    expect(screen.getByText("Volunteers")).toBeInTheDocument();
+    expect(screen.getByText("Tasks")).toBeInTheDocument();
+    expect(screen.getByText("Set volunteer targets")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Review" })).toHaveAttribute(
+      "href",
+      "/events/7/manage?tab=operations",
+    );
 
-    const disclosure = screen.getByText("Event health").closest("details");
-    expect(disclosure).not.toHaveAttribute("open");
-
-    expect(screen.getByRole("link", { name: "Open Workspace" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Open Event" })).toHaveAttribute(
       "href",
       "/events/7",
     );
@@ -192,7 +198,7 @@ describe("EventOverviewCard", () => {
     const meta = screen.getByLabelText("Date, time, and location");
     const rsvp = screen.getByLabelText("Your RSVP");
     const attendees = screen.getByTestId("event-attendees-row");
-    const health = await screen.findByText("Event health");
+    const health = await screen.findByLabelText("Event health");
 
     const order = [
       banner.closest(".event-banner") ?? banner,
@@ -200,7 +206,7 @@ describe("EventOverviewCard", () => {
       meta,
       rsvp,
       attendees,
-      health.closest("details") ?? health,
+      health,
     ];
 
     for (let index = 1; index < order.length; index += 1) {

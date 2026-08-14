@@ -1,11 +1,9 @@
 import type { EventResponse } from "../lib/events-api";
 import {
   getFinanceCloseoutMessage,
-  getEventFinanceStatusClass,
   getEventFinanceStatusLabel,
   formatFinanceLockDeadline,
 } from "../lib/event-finance";
-import { Card } from "./ui/Card";
 
 type EventFinanceCloseoutBannerProps = {
   event: EventResponse;
@@ -19,28 +17,22 @@ export function EventFinanceCloseoutBanner({
     return null;
   }
 
-  const toneClass = event.is_finance_locked
-    ? "bg-surface-muted text-foreground"
-    : "bg-urgent/20 text-foreground";
-
   return (
-    <Card aria-live="polite" padding="sm" className={toneClass}>
-      <div className="flex flex-wrap items-center gap-2">
-        <p className="text-sm">
-          {event.is_finance_locked ? "Post-event close-out complete" : "Finance close-out window"}
-        </p>
-        <span
-          className={`rounded-full px-2 py-0.5 text-xs ${getEventFinanceStatusClass(event)}`}
-        >
+    <section className="event-command-section" aria-live="polite">
+      <div className="event-command-section-head">
+        <h2 className="event-command-kicker">
+          {event.is_finance_locked ? "Close-out" : "Finance"}
+        </h2>
+        <p className="event-command-status">
           {getEventFinanceStatusLabel(event)}
-        </span>
+        </p>
       </div>
-      <p className="mt-2 text-sm">{message}</p>
+      <p className="event-command-stat">{message}</p>
       {event.is_finance_grace_period ? (
-        <p className="mt-2 text-xs text-label">
+        <p className="event-command-stat">
           Closes {formatFinanceLockDeadline(event.finance_lock_at)}
         </p>
       ) : null}
-    </Card>
+    </section>
   );
 }

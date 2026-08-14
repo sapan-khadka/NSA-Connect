@@ -4,8 +4,6 @@ import { getApiErrorMessage } from "../lib/api-error";
 import type { EventFeedback } from "../lib/events-api";
 import { submitEventFeedback } from "../lib/events-api";
 import { formatEventDateTime } from "../lib/format-datetime";
-import { Button } from "./ui/Button";
-import { Card } from "./ui/Card";
 import { inputFieldClassName } from "./ui/Input";
 import { StarRatingDisplay, StarRatingInput } from "./StarRatingInput";
 
@@ -73,49 +71,42 @@ export function EventFeedbackPanel({
   }
 
   return (
-    <Card as="div" padding="none" className="p-3">
-      <p className="text-sm font-medium text-foreground">Post-event feedback</p>
+    <section className="event-command-section" aria-label="Feedback">
+      <div className="event-command-section-head">
+        <h2 className="event-command-kicker">Feedback</h2>
+      </div>
 
       {!feedback && !isEditing ? (
         <>
-          <p className="mt-2 text-sm text-label">
-            How was this event? Share a quick rating and optional comment for
-            the board.
+          <p className="event-command-stat">
+            How was this event? Share a rating and optional comment.
           </p>
-          <Button
+          <button
             type="button"
             onClick={() => startEditing()}
-            size="lg"
-            className="mt-3 w-full sm:w-auto"
+            className="event-command-btn event-command-btn--primary mt-3"
           >
             Leave feedback
-          </Button>
+          </button>
         </>
       ) : null}
 
       {feedback && !isEditing ? (
-        <div className="mt-3 rounded-lg border border-accent/20 bg-accent/5 px-3 py-3">
-          <p className="text-sm font-medium text-foreground">Your feedback</p>
-          <div className="mt-2">
-            <StarRatingDisplay rating={feedback.rating} />
-          </div>
+        <div className="event-page-note">
+          <StarRatingDisplay rating={feedback.rating} />
           {feedback.comment ? (
-            <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
-              {feedback.comment}
-            </p>
+            <p className="event-page-description">{feedback.comment}</p>
           ) : null}
-          <p className="mt-2 text-xs text-label">
+          <p className="event-command-stat">
             Submitted {formatEventDateTime(feedback.created_at)}
           </p>
-          <Button
+          <button
             type="button"
-            variant="outline"
             onClick={() => startEditing(feedback)}
-            size="lg"
-            className="mt-3 w-full sm:w-auto"
+            className="event-command-btn mt-3"
           >
             Edit feedback
-          </Button>
+          </button>
         </div>
       ) : null}
 
@@ -139,26 +130,26 @@ export function EventFeedbackPanel({
             />
           </label>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            <Button
+          <div className="flex flex-wrap gap-2">
+            <button
               type="submit"
               disabled={submitting || rating < 1}
-              loading={submitting}
-              size="lg"
-              className="w-full sm:w-auto"
+              className="event-command-btn event-command-btn--primary"
             >
-              {feedback ? "Save changes" : "Submit feedback"}
-            </Button>
-            <Button
+              {submitting
+                ? "Saving…"
+                : feedback
+                  ? "Save changes"
+                  : "Submit feedback"}
+            </button>
+            <button
               type="button"
-              variant="outline"
               disabled={submitting}
               onClick={cancelEditing}
-              size="lg"
-              className="w-full sm:w-auto"
+              className="event-command-btn"
             >
               Cancel
-            </Button>
+            </button>
           </div>
         </form>
       ) : null}
@@ -168,6 +159,6 @@ export function EventFeedbackPanel({
           {errorMessage}
         </p>
       ) : null}
-    </Card>
+    </section>
   );
 }

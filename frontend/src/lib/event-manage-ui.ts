@@ -27,5 +27,6 @@ export const EVENT_MANAGE_PRIMARY_BTN_FLEX = `${EVENT_MANAGE_PRIMARY_BTN} flex-1
 
 export const EVENT_MANAGE_SECONDARY_BTN_FLEX = `${EVENT_MANAGE_SECONDARY_BTN} flex-1`;
 
+/** Section trailing actions — matches platform `.ds-view-all` tokens. */
 export const EVENT_MANAGE_ACTION_LINK =
-  "text-sm font-medium text-primary transition duration-150 ease-out hover:text-primary-hover focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2";
+  "ds-view-all focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 focus-visible:ring-offset-2";

@@ -151,7 +151,6 @@ function MembersDirectoryStatusPill({
               : "Membership approved"
         }
       >
-        <span className="members-table-status-dot" aria-hidden="true" />
         {label}
       </span>
     );
@@ -178,7 +177,6 @@ function MembersDirectoryStatusPill({
     <span
       className={`members-table-status-pill members-table-status-pill--${resolved.tone}`}
     >
-      <span className="members-table-status-dot" aria-hidden="true" />
       {resolved.label}
     </span>
   );
@@ -473,19 +471,15 @@ function MembersTableSkeleton({
     return (
       <div className="members-table-shell members-table-shell--skeleton" aria-hidden="true">
         <div className="members-table-mobile-list">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="members-table-card">
+          {Array.from({ length: 10 }).map((_, index) => (
+            <div key={index} className="members-table-card members-table-card--row">
               <div className="members-table-card-top">
-                <Skeleton height={16} width={16} variant="rectangular" />
-                <Skeleton height={40} width={40} variant="circular" />
-                <div className="min-w-0 flex-1 space-y-2">
-                  <Skeleton height={14} width="55%" />
-                  <Skeleton height={12} width="35%" />
+                <Skeleton height={32} width={32} variant="circular" />
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <Skeleton height={12} width="48%" />
+                  <Skeleton height={10} width="32%" />
                 </div>
-              </div>
-              <div className="members-table-card-meta mt-3">
-                <Skeleton height={12} width="40%" />
-                <Skeleton height={12} width="40%" />
+                <Skeleton height={12} width={40} />
               </div>
             </div>
           ))}
@@ -630,6 +624,8 @@ export function MembersTable({
   const canEditMembers = Boolean(
     currentMember && canViewMemberDirectory(currentMember.role),
   );
+  /** Multi-select is desktop-table only — mobile keeps a clean dense list. */
+  const bulkSelectionEnabled = enableBulkSelection && !isMobile;
   const isControlled = controlledMembers !== undefined;
   const members = isControlled ? controlledMembers : internalMembers;
   const isLoading = isControlled
@@ -706,7 +702,7 @@ export function MembersTable({
     [sectionCounts.leadership, sectionCounts.board, sectionCounts.general].filter(
       (count) => count > 0,
     ).length > 1;
-  const tableColumnCount = enableBulkSelection ? 6 : 5;
+  const tableColumnCount = bulkSelectionEnabled ? 6 : 5;
 
   const allVisibleSelected =
     displayedMembers.length > 0 &&
@@ -853,12 +849,12 @@ export function MembersTable({
     <>
       <div
         className={
-          enableBulkSelection && selectedCount > 0
+          bulkSelectionEnabled && selectedCount > 0
             ? "members-table-shell is-bulk-active"
             : "members-table-shell"
         }
       >
-        {enableBulkSelection ? (
+        {bulkSelectionEnabled ? (
           <MembersBulkActionBar
             selectedCount={selectedCount}
             allVisibleSelected={allVisibleSelected}
@@ -870,92 +866,84 @@ export function MembersTable({
         {isMobile ? (
           <ul className="members-table-mobile-list">
             {displayedMembers.map((member, index) => {
-              const selected = selectedIds.has(member.id);
               const dues = duesCellFromRecord(duesByMemberId?.get(member.id));
+              const section = getMemberDirectorySection(member);
+              const previousSection =
+                index > 0
+                  ? getMemberDirectorySection(displayedMembers[index - 1])
+                  : null;
+              const showSectionHeader =
+                showDirectorySections && section !== previousSection;
+              const subtitle = getMemberDirectorySubtitle(member, section);
               return (
-                <li key={member.id}>
-                  <article
-                    className="members-table-card"
-                    data-selected={
-                      enableBulkSelection && selected ? "true" : undefined
-                    }
-                  >
-                    <div className="members-table-card-top">
-                      {enableBulkSelection ? (
-                        <input
-                          type="checkbox"
-                          className="members-table-checkbox"
-                          checked={selected}
-                          onChange={() => undefined}
-                          onClick={(event) =>
-                            handleSelectClick(event, member.id, index)
-                          }
-                          aria-label={`Select ${member.full_name}`}
-                        />
-                      ) : null}
-                      <button
-                        type="button"
-                        className="members-table-avatar-btn"
-                        aria-label={`Preview ${member.full_name}`}
-                        onClick={() => openQuickView(member)}
-                      >
-                        <Avatar
-                          name={member.full_name}
-                          memberId={member.id}
-                          src={member.avatar_url}
-                          size="md"
-                          className="members-table-avatar"
-                        />
-                      </button>
-                      <div className="members-table-card-identity">
-                        <p className="members-table-name">
-                          {getMemberDirectorySection(member) ===
-                          "leadership" ? (
-                            <span
-                              className="members-table-leadership-dot"
-                              aria-hidden="true"
-                            />
-                          ) : null}
-                          <Link
-                            to={`/members/${member.id}`}
-                            className="members-table-name-link"
-                          >
-                            {member.full_name}
-                          </Link>
-                        </p>
-                        {(() => {
-                          const subtitle = getMemberDirectorySubtitle(member);
-                          return subtitle ? (
+                <Fragment key={member.id}>
+                  {showSectionHeader ? (
+                    <li className="members-table-mobile-section" aria-hidden="false">
+                      <div className="members-table-section-heading">
+                        <span className="members-table-section-label">
+                          {getDirectorySectionLabel(section)}
+                        </span>
+                        <span className="members-table-section-count">
+                          {sectionCounts[section]}
+                        </span>
+                      </div>
+                    </li>
+                  ) : null}
+                  <li>
+                    <article className="members-table-card members-table-card--row">
+                      <div className="members-table-card-top">
+                        <button
+                          type="button"
+                          className="members-table-avatar-btn"
+                          aria-label={`Preview ${member.full_name}`}
+                          onClick={() => openQuickView(member)}
+                        >
+                          <Avatar
+                            name={member.full_name}
+                            memberId={member.id}
+                            src={member.avatar_url}
+                            size="sm"
+                            className="members-table-avatar"
+                          />
+                        </button>
+                        <div className="members-table-card-identity">
+                          <p className="members-table-name">
+                            <Link
+                              to={`/members/${member.id}`}
+                              className="members-table-name-link"
+                            >
+                              {member.full_name}
+                            </Link>
+                          </p>
+                          {subtitle ? (
                             <p className="members-table-role-line">{subtitle}</p>
-                          ) : null;
-                        })()}
-                        <MembersDirectoryStatusPill
-                          status={member.status}
-                          engagement={
-                            engagementByMemberId?.get(member.id) ?? null
-                          }
-                        />
+                          ) : null}
+                        </div>
+                        <div className="members-table-card-trailing">
+                          <MembersDirectoryStatusPill
+                            status={member.status}
+                            engagement={
+                              engagementByMemberId?.get(member.id) ?? null
+                            }
+                          />
+                          {dues.tone !== "missing" && dues.tone !== "paid" ? (
+                            <span className="members-table-card-dues-inline">
+                              <MembersDuesCell view={dues} />
+                            </span>
+                          ) : null}
+                          <div className="members-table-card-actions">
+                            <MembersRowActions
+                              member={member}
+                              canEdit={canEditMembers}
+                              onEdit={openEditMember}
+                              isSelf={currentMember?.id === member.id}
+                            />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-
-                    <div className="members-table-card-footer">
-                      <div className="members-table-card-chips">
-                        {dues.tone !== "missing" ? (
-                          <MembersDuesCell view={dues} />
-                        ) : null}
-                      </div>
-                      <div className="members-table-card-actions">
-                        <MembersRowActions
-                          member={member}
-                          alwaysVisible
-                          canEdit={canEditMembers}
-                          onEdit={openEditMember}
-                          isSelf={currentMember?.id === member.id}
-                        />
-                      </div>
-                    </div>
-                  </article>
-                </li>
+                    </article>
+                  </li>
+                </Fragment>
               );
             })}
           </ul>
@@ -965,7 +953,7 @@ export function MembersTable({
               <caption className="sr-only">Organization members</caption>
               <thead>
                 <tr>
-                  {enableBulkSelection ? (
+                  {bulkSelectionEnabled ? (
                     <th scope="col" className="members-table-check-col">
                       <input
                         id={selectAllId}
@@ -1050,7 +1038,7 @@ export function MembersTable({
                       ) : null}
                       <tr
                         data-selected={
-                          enableBulkSelection && selected ? "true" : undefined
+                          bulkSelectionEnabled && selected ? "true" : undefined
                         }
                         className={
                           isLeadership
@@ -1058,7 +1046,7 @@ export function MembersTable({
                             : "members-table-row"
                         }
                       >
-                        {enableBulkSelection ? (
+                        {bulkSelectionEnabled ? (
                           <td className="members-table-check-col">
                             <input
                               type="checkbox"
@@ -1090,19 +1078,7 @@ export function MembersTable({
                         </td>
                         <td>
                           <div className="min-w-0">
-                            <p
-                              className={
-                                isLeadership
-                                  ? "members-table-name members-table-name--leadership"
-                                  : "members-table-name"
-                              }
-                            >
-                              {isLeadership ? (
-                                <span
-                                  className="members-table-leadership-dot"
-                                  aria-hidden="true"
-                                />
-                              ) : null}
+                            <p className="members-table-name">
                               <Link
                                 to={`/members/${member.id}`}
                                 className="members-table-name-link"

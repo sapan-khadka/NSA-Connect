@@ -7,6 +7,7 @@ import { CalendarMonthYearPicker } from "./CalendarMonthYearPicker";
 describe("CalendarMonthYearPicker", () => {
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
   });
 
   it("lists months and nearby years including next year", () => {
@@ -24,7 +25,13 @@ describe("CalendarMonthYearPicker", () => {
       "2026",
     );
     expect(
-      screen.getByRole("option", { name: "2029" }),
+      screen.getByRole("option", { name: "2025" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "2027" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "2030" }),
     ).toBeInTheDocument();
 
     vi.useRealTimers();

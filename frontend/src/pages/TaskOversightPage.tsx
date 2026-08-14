@@ -3,12 +3,9 @@
  * Answers: who needs attention, who's behind, is the event on track?
  */
 
-import { Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 
-import { AppIcon } from "../components/ui/AppIcon";
-import { Card } from "../components/ui/Card";
 import { useAuth } from "../context/useAuth";
 import { Avatar } from "../design-system/components/Avatar";
 import { getApiErrorMessage } from "../lib/api-error";
@@ -18,6 +15,7 @@ import {
   type EventTaskResponse,
   type TaskOverviewResponse,
 } from "../lib/event-tasks-api";
+import { EVENT_MANAGE_ACTION_LINK } from "../lib/event-manage-ui";
 import { formatRelativeTimestamp } from "../lib/format-datetime";
 import {
   getTaskDisplayName,
@@ -74,6 +72,10 @@ function overdueLabel(task: EventTaskResponse, now = new Date()): string {
   return days === 1 ? "1 day overdue" : `${days} days overdue`;
 }
 
+function eventOperationsPath(eventId: number): string {
+  return `/events/${eventId}/manage?tab=operations&modal=tasks`;
+}
+
 function AttentionRow({
   title,
   person,
@@ -81,6 +83,7 @@ function AttentionRow({
   showEvent,
   endLabel,
   urgency,
+  href,
 }: {
   title: string;
   person: string | null;
@@ -88,6 +91,7 @@ function AttentionRow({
   showEvent: boolean;
   endLabel: string;
   urgency: TaskUrgency;
+  href: string;
 }) {
   const metaParts = [
     person?.trim() || "Unassigned",
@@ -96,28 +100,31 @@ function AttentionRow({
   ].filter(Boolean) as string[];
 
   return (
-    <li className={["ops-oversight-attention", `is-${urgency}`].join(" ")}>
-      <div className="ops-oversight-attention__main">
-        <div className="ops-oversight-attention__body">
-          <div className="ops-oversight-attention__heading">
-            <span className="ops-oversight-attention__dot" aria-hidden="true" />
-            <p className="ops-oversight-attention__title">{title}</p>
-          </div>
-          <p className="ops-oversight-attention__meta">
-            {metaParts.map((part, index) => (
-              <span key={`${part}-${index}`}>
-                {index > 0 ? (
-                  <span className="ops-oversight-sep" aria-hidden="true">
-                    ·
-                  </span>
-                ) : null}
-                {part}
-              </span>
-            ))}
-          </p>
-        </div>
-        <span className="ops-oversight-attention__end">{endLabel}</span>
-      </div>
+    <li
+      className={[
+        "event-attention-item",
+        urgency === "high" ? "is-fail" : "",
+        urgency === "low" ? "is-open" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <span className="event-attention-mark" aria-hidden="true" />
+      <Link to={href} className="event-attention-label ops-oversight-task-link">
+        {title}
+        <span className="ops-oversight-task-meta">{metaParts.join(" · ")}</span>
+      </Link>
+      <span
+        className={[
+          "ops-oversight-end",
+          urgency === "high" ? "is-fail" : "",
+          urgency === "medium" ? "is-warn" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        {endLabel}
+      </span>
     </li>
   );
 }
@@ -287,16 +294,18 @@ export function TaskOversightPage() {
 
   if (!allowed) {
     return (
-      <Card padding="md" className="text-foreground">
-        Only the President or Vice President can view the task oversight
-        dashboard.
-      </Card>
+      <div className="ops-oversight event-command">
+        <p className="event-command-stat">
+          Only the President or Vice President can view the task oversight
+          dashboard.
+        </p>
+      </div>
     );
   }
 
   const newTaskPath =
     canCreateTask && ops?.createEventId != null
-      ? `/events/${ops.createEventId}/manage`
+      ? eventOperationsPath(ops.createEventId)
       : null;
 
   function updateParam(key: "event" | "member", value: string) {
@@ -309,49 +318,37 @@ export function TaskOversightPage() {
     setSearchParams(nextParams);
   }
 
+  function toggleMemberFilter(memberId: number) {
+    updateParam(
+      "member",
+      selectedMemberId === memberId ? "all" : String(memberId),
+    );
+  }
+
   return (
-    <div className="ops-oversight">
-      <header className="ops-oversight-header">
-        <div className="ops-oversight-heading">
-          <div className="ops-oversight-title-row">
-            <h1 className="ops-oversight-title">Oversight</h1>
-            {newTaskPath ? (
-              <Link to={newTaskPath} className="ops-oversight-cta">
-                <AppIcon icon={Plus} size="xs" className="text-current" />
-                New Task
-              </Link>
-            ) : null}
-          </div>
-          <p className="ops-oversight-subtitle">
-            Track team progress and identify blockers.
-          </p>
+    <div className="ops-oversight event-command">
+      <header className="event-command-header">
+        <div className="event-command-title-row">
+          <h1 className="event-command-title ops-oversight-title">Oversight</h1>
+          {newTaskPath ? (
+            <Link to={newTaskPath} className={EVENT_MANAGE_ACTION_LINK}>
+              New task
+            </Link>
+          ) : null}
         </div>
-      </header>
-
-      {isLoading ? (
-        <p className="ops-oversight-loading">Loading oversight…</p>
-      ) : null}
-
-      {error ? (
-        <div role="alert" className="ds-alert-banner">
-          {error}
-        </div>
-      ) : null}
-
-      {overview && !isLoading && !error ? (
-        allTasks.length === 0 ? (
-          <div className="ops-oversight-empty">
-            <h3>No event tasks yet</h3>
-            <p>Create tasks on an event to oversee them here.</p>
-          </div>
-        ) : ops ? (
+        <p className="event-command-meta">
+          Who’s blocked, who’s behind, and whether events are on track.
+        </p>
+        {overview && !isLoading && !error && allTasks.length > 0 && ops ? (
           <>
-            <div className="ops-oversight-filters">
+            <div className="event-command-actions ops-oversight-filters">
               <label className="ops-oversight-filter">
                 <span className="sr-only">Event</span>
                 <select
                   aria-label="Event"
-                  value={selectedEventId == null ? "all" : String(selectedEventId)}
+                  value={
+                    selectedEventId == null ? "all" : String(selectedEventId)
+                  }
                   onChange={(event) => updateParam("event", event.target.value)}
                 >
                   <option value="all">All events</option>
@@ -382,178 +379,203 @@ export function TaskOversightPage() {
                 </select>
               </label>
             </div>
-
             <div
-              className="ops-oversight-kpi"
+              className="event-command-metrics"
               aria-label="Oversight summary"
             >
-              <div className="ops-oversight-kpi__cell">
-                <p className="ops-oversight-kpi__value">{ops.openCount}</p>
-                <p className="ops-oversight-kpi__label">Open</p>
-              </div>
-              <div
+              <section className="event-command-metric">
+                <p className="event-command-metric-value">{ops.openCount}</p>
+                <span className="event-command-metric-label">Open</span>
+              </section>
+              <section
                 className={[
-                  "ops-oversight-kpi__cell",
+                  "event-command-metric",
                   ops.overdueCount > 0 ? "is-overdue" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
               >
-                <p className="ops-oversight-kpi__value">{ops.overdueCount}</p>
-                <p className="ops-oversight-kpi__label">Overdue</p>
-              </div>
-              <div className="ops-oversight-kpi__cell">
-                <p className="ops-oversight-kpi__value">{ops.completedCount}</p>
-                <p className="ops-oversight-kpi__label">Completed</p>
-              </div>
-              <div className="ops-oversight-kpi__cell">
-                <p className="ops-oversight-kpi__value">{ops.completePercent}%</p>
-                <p className="ops-oversight-kpi__label">Completion</p>
-              </div>
+                <p className="event-command-metric-value">{ops.overdueCount}</p>
+                <span className="event-command-metric-label">Overdue</span>
+              </section>
+              <section className="event-command-metric">
+                <p className="event-command-metric-value">
+                  {ops.completedCount}
+                </p>
+                <span className="event-command-metric-label">Completed</span>
+              </section>
+              <section className="event-command-metric">
+                <p className="event-command-metric-value">
+                  {ops.completePercent}%
+                </p>
+                <span className="event-command-metric-label">Completion</span>
+              </section>
             </div>
+          </>
+        ) : null}
+      </header>
 
-            <div className="ops-oversight-workspace" aria-label="Event operations">
-              {ops.needsAttention.length > 0 ? (
+      {isLoading ? (
+        <p className="event-command-stat">Loading oversight…</p>
+      ) : null}
+
+      {error ? (
+        <div role="alert" className="ds-alert-banner">
+          {error}
+        </div>
+      ) : null}
+
+      {overview && !isLoading && !error ? (
+        allTasks.length === 0 ? (
+          <p className="event-command-stat">
+            No event tasks yet. Create tasks on an event to oversee them here.
+          </p>
+        ) : ops ? (
+          <>
+            <div
+              className="event-command-body"
+              aria-label="Event operations"
+            >
+              <div className="event-command-layout">
                 <section
-                  className="ops-oversight-panel"
+                  className="event-command-section is-flush"
                   aria-label="Needs Attention"
                 >
-                  <h2 className="ops-oversight-panel__title">
-                    Needs Attention
-                    <span className="ops-oversight-panel__count">
-                      {" "}
-                      · {ops.needsAttention.length}
-                    </span>
-                  </h2>
-                  <ul className="ops-oversight-attention-list">
-                    {ops.needsAttention.map(({ task, urgency, endLabel }) => (
-                      <AttentionRow
-                        key={`attention-${task.id}`}
-                        title={getTaskDisplayName(task)}
-                        person={task.assignee_name}
-                        eventName={task.event_name}
-                        showEvent={selectedEventId == null}
-                        endLabel={endLabel}
-                        urgency={urgency}
-                      />
-                    ))}
-                  </ul>
+                  <div className="event-command-section-head">
+                    <h2 className="event-command-kicker">Needs attention</h2>
+                    <p className="event-command-count">
+                      {ops.needsAttention.length === 0
+                        ? "Clear"
+                        : String(ops.needsAttention.length)}
+                    </p>
+                  </div>
+                  {ops.needsAttention.length === 0 ? (
+                    <p className="event-command-stat">
+                      Nothing is overdue or due in the next 48 hours.
+                    </p>
+                  ) : (
+                    <ul className="event-attention-list">
+                      {ops.needsAttention.map(({ task, urgency, endLabel }) => (
+                        <AttentionRow
+                          key={`attention-${task.id}`}
+                          title={getTaskDisplayName(task)}
+                          person={task.assignee_name}
+                          eventName={task.event_name}
+                          showEvent={selectedEventId == null}
+                          endLabel={endLabel}
+                          urgency={urgency}
+                          href={eventOperationsPath(task.event_id)}
+                        />
+                      ))}
+                    </ul>
+                  )}
                 </section>
-              ) : null}
 
-              {ops.workload.length > 0 ? (
-                <section
-                  className="ops-oversight-panel"
-                  aria-label="Team Progress"
-                >
-                  <h2 className="ops-oversight-panel__title">
-                    Team Progress
-                    <span className="ops-oversight-panel__count">
-                      {" "}
-                      · {ops.workload.length}
-                    </span>
-                  </h2>
-                  <ul className="ops-oversight-team">
-                    {ops.workload.map((row) => (
-                      <li key={row.memberId} className="ops-oversight-team__row">
-                        <div className="ops-oversight-team__top">
-                          <Link
-                            to={`/members/${row.memberId}`}
-                            className="ops-oversight-team__person"
-                          >
-                            <Avatar
-                              name={row.name}
-                              memberId={row.memberId}
-                              size="sm"
-                              className="ops-oversight-assignee__avatar"
-                            />
-                            <span className="ops-oversight-team__name">
-                              {row.name}
-                            </span>
-                          </Link>
-                          <span className="ops-oversight-team__fraction">
-                            {row.done} / {row.total}
-                            {row.overdue > 0 ? (
-                              <span className="is-overdue">
-                                {" "}
-                                · {row.overdue} overdue
-                              </span>
-                            ) : null}
-                          </span>
-                        </div>
-                        <div className="ops-oversight-team__barline">
-                          <div
-                            className="ops-oversight-workload"
-                            aria-hidden="true"
-                          >
-                            <div
+                {ops.workload.length > 0 ? (
+                  <aside
+                    className="event-command-section event-command-aside"
+                    aria-label="Team Progress"
+                  >
+                    <div className="event-command-section-head">
+                      <h2 className="event-command-kicker">Team</h2>
+                      <p className="event-command-count">
+                        {ops.workload.length}
+                      </p>
+                    </div>
+                    <ul className="ops-oversight-team">
+                      {ops.workload.map((row) => (
+                        <li key={row.memberId} className="ops-oversight-team__row">
+                          <div className="ops-oversight-team__top">
+                            <button
+                              type="button"
                               className={[
-                                "ops-oversight-workload__fill",
-                                row.overdue > 0 ? "is-overdue" : "",
+                                "ops-oversight-team__person",
+                                selectedMemberId === row.memberId
+                                  ? "is-active"
+                                  : "",
                               ]
                                 .filter(Boolean)
                                 .join(" ")}
-                              style={{ width: `${row.completePercent}%` }}
-                            />
+                              onClick={() => toggleMemberFilter(row.memberId)}
+                              aria-pressed={selectedMemberId === row.memberId}
+                            >
+                              <Avatar
+                                name={row.name}
+                                memberId={row.memberId}
+                                size="sm"
+                                className="ops-oversight-assignee__avatar"
+                              />
+                              <span className="ops-oversight-team__name">
+                                {row.name}
+                              </span>
+                            </button>
+                            <span className="ops-oversight-team__fraction">
+                              {row.done}/{row.total}
+                              {row.overdue > 0 ? (
+                                <span className="is-overdue">
+                                  {" "}
+                                  · {row.overdue} overdue
+                                </span>
+                              ) : null}
+                            </span>
                           </div>
-                          <span className="ops-oversight-team__pct">
-                            {row.completePercent}%
-                          </span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              ) : null}
+                          <div
+                            className={[
+                              "event-command-progress",
+                              row.overdue > 0 ? "is-fail" : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            role="progressbar"
+                            aria-valuenow={row.completePercent}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-label={`${row.name} completion`}
+                          >
+                            <span style={{ width: `${row.completePercent}%` }} />
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </aside>
+                ) : null}
+              </div>
 
               {ops.recentlyCompleted.length > 0 ? (
                 <section
-                  className="ops-oversight-panel"
+                  className="event-command-section"
                   aria-label="Recently Completed"
                 >
-                  <h2 className="ops-oversight-panel__title">
-                    Recently Completed
-                    <span className="ops-oversight-panel__count">
-                      {" "}
-                      · {ops.recentlyCompleted.length}
-                    </span>
-                  </h2>
-                  <ul className="ops-oversight-done-list">
+                  <div className="event-command-section-head">
+                    <h2 className="event-command-kicker">Recently completed</h2>
+                    <p className="event-command-count">
+                      {ops.recentlyCompleted.length}
+                    </p>
+                  </div>
+                  <ul className="event-command-activity">
                     {ops.recentlyCompleted.map((task) => {
                       const doneMeta = [
                         task.assignee_name,
                         selectedEventId == null ? task.event_name : null,
-                      ].filter(Boolean) as string[];
+                      ]
+                        .filter(Boolean)
+                        .join(" · ");
 
                       return (
-                        <li
-                          key={`done-${task.id}`}
-                          className="ops-oversight-done"
-                        >
-                          <div className="ops-oversight-done__body">
-                            <p className="ops-oversight-done__title">
-                              {getTaskDisplayName(task)}
-                            </p>
-                            {doneMeta.length > 0 ? (
-                              <p className="ops-oversight-done__meta">
-                                {doneMeta.map((part, index) => (
-                                  <span key={`${part}-${index}`}>
-                                    {index > 0 ? (
-                                      <span
-                                        className="ops-oversight-sep"
-                                        aria-hidden="true"
-                                      >
-                                        ·
-                                      </span>
-                                    ) : null}
-                                    {part}
-                                  </span>
-                                ))}
-                              </p>
+                        <li key={`done-${task.id}`}>
+                          <Link
+                            to={eventOperationsPath(task.event_id)}
+                            className="ops-oversight-task-link"
+                          >
+                            {getTaskDisplayName(task)}
+                            {doneMeta ? (
+                              <span className="ops-oversight-task-meta">
+                                {doneMeta}
+                              </span>
                             ) : null}
-                          </div>
+                          </Link>
                           <time
-                            className="ops-oversight-done__when"
+                            className="shrink-0 text-xs tabular-nums text-gray-400"
                             dateTime={task.completed_at ?? undefined}
                           >
                             {task.completed_at
@@ -570,10 +592,10 @@ export function TaskOversightPage() {
               {ops.needsAttention.length === 0 &&
               ops.workload.length === 0 &&
               ops.recentlyCompleted.length === 0 ? (
-                <div className="ops-oversight-empty">
-                  <h3>Nothing to show for this filter</h3>
-                  <p>Try All events or All members to widen the view.</p>
-                </div>
+                <p className="event-command-stat">
+                  Nothing to show for this filter. Try All events or All
+                  members.
+                </p>
               ) : null}
             </div>
           </>

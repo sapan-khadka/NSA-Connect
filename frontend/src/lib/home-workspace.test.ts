@@ -83,17 +83,19 @@ describe("home-workspace pixel canvas", () => {
     expect(layoutHasOverlaps(state.widgets)).toBe(false);
   });
 
-  it("builds a member briefing with event banner, focus, and full-width tasks", () => {
+  it("builds a member briefing with event banner, focus, tasks, and activity", () => {
     const state = buildDefaultWorkspace({ showInbox: false, showPulse: false });
     const visible = visibleWorkspaceWidgets(state).map((w) => w.id);
-    expect(visible).toEqual(["featured", "overview", "tasks"]);
+    expect(visible).toEqual(["featured", "overview", "tasks", "activity"]);
     expect(state.widgets.find((w) => w.id === "inbox")?.hidden).toBe(true);
-    expect(state.widgets.find((w) => w.id === "activity")?.hidden).toBe(true);
+    expect(state.widgets.find((w) => w.id === "activity")?.hidden).not.toBe(
+      true,
+    );
     expect(state.widgets.find((w) => w.id === "upcoming")?.hidden).toBe(true);
     expect(layoutHasOverlaps(state.widgets)).toBe(false);
 
     const tasks = state.widgets.find((w) => w.id === "tasks")!;
-    expect(tasks.w).toBe(HOME_CANVAS_DESIGN_WIDTH);
+    expect(tasks.w).toBeLessThan(HOME_CANVAS_DESIGN_WIDTH);
   });
 
   it("keeps secondary widgets parked on the default briefing layout", () => {
@@ -249,14 +251,14 @@ describe("home-workspace pixel canvas", () => {
     ).toEqual(["featured", "overview", "tasks", "upcoming", "actions"]);
   });
 
-  it("omits board/oversight widgets for general members", () => {
+  it("omits secondary panels for general members on default Home", () => {
     const state = buildDefaultWorkspace({ showInbox: false, showPulse: false });
     const visible = visibleWorkspaceWidgets(state).map((widget) => widget.id);
-    expect(visible).toEqual(["featured", "overview", "tasks"]);
+    expect(visible).toEqual(["featured", "overview", "tasks", "activity"]);
     expect(visible).not.toContain("inbox");
     expect(visible).not.toContain("pulse");
-    expect(visible).not.toContain("activity");
     expect(visible).not.toContain("minutes");
+    expect(visible).not.toContain("upcoming");
     expect(layoutHasOverlaps(state.widgets)).toBe(false);
   });
 

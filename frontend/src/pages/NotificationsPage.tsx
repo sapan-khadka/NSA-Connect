@@ -1,151 +1,231 @@
-import { Bell } from "lucide-react";
+/**
+ * Notifications — matches Recent Activity + Announcements list rhythm.
+ * Flat feed, compact icons, no heavy card chrome.
+ */
+
+import { Bell, CheckCheck, RefreshCw } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router";
 
+import { AppIcon } from "../components/ui/AppIcon";
+import { PageBackLink } from "../components/ui/PageBackLink";
+import { formatPersonalActivityWhen } from "../components/home/HomeRecentActivity";
 import { useNotificationSummary } from "../context/NotificationSummaryProvider";
 import { getNotificationVisual } from "../design-system/components/navigation/notificationVisuals";
-import { EmptyState } from "../design-system/components/data-display/EmptyState";
-import { AppIcon } from "../components/ui/AppIcon";
-import { Button } from "../components/ui/Button";
-import { formatRelativeTimestamp } from "../lib/format-datetime";
+import type { InboxNotification } from "../lib/notifications-api";
+
+function NotificationRow({
+  item,
+  onMarkRead,
+}: {
+  item: InboxNotification;
+  onMarkRead: (id: number) => void;
+}) {
+  const visual = getNotificationVisual(item.type);
+  const Icon = visual.icon;
+  const when = formatPersonalActivityWhen(item.created_at);
+
+  const className = [
+    "notifications-feed-item",
+    item.unread ? "is-unread" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const body = (
+    <>
+      <span
+        className={[
+          "notifications-feed-icon",
+          `notifications-feed-icon--${item.type || "update"}`,
+        ].join(" ")}
+        aria-hidden="true"
+      >
+        <Icon className="h-3.5 w-3.5" strokeWidth={2.1} />
+      </span>
+
+      <span className="notifications-feed-copy">
+        <span className="notifications-feed-meta">
+          <span className="notifications-feed-kind">{visual.label}</span>
+          <time
+            className="notifications-feed-when"
+            dateTime={item.created_at}
+          >
+            {when}
+          </time>
+        </span>
+        <span className="notifications-feed-title">{item.title}</span>
+        {item.body ? (
+          <span className="notifications-feed-body">{item.body}</span>
+        ) : null}
+      </span>
+
+      {item.unread ? (
+        <span className="notifications-feed-dot" aria-label="Unread" />
+      ) : (
+        <span className="notifications-feed-dot-spacer" aria-hidden="true" />
+      )}
+    </>
+  );
+
+  if (item.href) {
+    return (
+      <Link
+        to={item.href}
+        className={className}
+        onClick={() => {
+          if (item.unread) {
+            onMarkRead(item.id);
+          }
+        }}
+      >
+        {body}
+      </Link>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className={`${className} w-full text-left`}
+      onClick={() => {
+        if (item.unread) {
+          onMarkRead(item.id);
+        }
+      }}
+    >
+      {body}
+    </button>
+  );
+}
+
+function NotificationSection({
+  label,
+  items,
+  onMarkRead,
+}: {
+  label: string;
+  items: InboxNotification[];
+  onMarkRead: (id: number) => void;
+}) {
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="notifications-feed-section" aria-label={label}>
+      <h2 className="notifications-feed-section-title">{label}</h2>
+      <ul className="notifications-feed-list">
+        {items.map((item) => (
+          <li key={item.id}>
+            <NotificationRow item={item} onMarkRead={onMarkRead} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 export function NotificationsPage() {
   const { inbox, loading, markRead, markAllRead, refresh } =
     useNotificationSummary();
+  const [markingAll, setMarkingAll] = useState(false);
 
-  const hasUnread = inbox.unread_count > 0;
   const items = inbox.notifications;
+  // Prefer list flags; unread_count can lag behind optimistic row updates.
+  const unreadItems = items.filter((item) => item.unread);
+  const earlierItems = items.filter((item) => !item.unread);
+  const unreadTotal = Math.max(inbox.unread_count, unreadItems.length);
+  const hasUnread = unreadTotal > 0;
+
+  async function handleMarkAllRead() {
+    if (!hasUnread || markingAll) {
+      return;
+    }
+    setMarkingAll(true);
+    try {
+      await markAllRead();
+    } finally {
+      setMarkingAll(false);
+    }
+  }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:px-0">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Notifications
-          </h1>
-          <p className="mt-1 text-sm text-label">
+    <div className="notifications-page">
+      <header className="notifications-page__head">
+        <div className="min-w-0">
+          <PageBackLink
+            to="/"
+            label="Home"
+            historyFirst
+            className="mb-2.5"
+          />
+          <h1 className="notifications-page__title">Notifications</h1>
+          <p className="notifications-page__subtitle">
             {hasUnread
-              ? `${inbox.unread_count} unread · tasks, budget, and announcements`
+              ? `${unreadTotal} unread · tasks, budget, and board updates`
               : "You're all caught up."}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
+        <div className="notifications-page__actions">
+          <button
             type="button"
-            variant="outline"
-            size="sm"
+            className="notifications-page__action"
             onClick={() => refresh()}
-            disabled={loading}
+            disabled={loading || markingAll}
           >
+            <AppIcon icon={RefreshCw} size="xs" className="text-current" />
             Refresh
-          </Button>
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            onClick={() => void markAllRead()}
-            disabled={!hasUnread}
-          >
-            Mark all read
-          </Button>
+          </button>
+          {hasUnread ? (
+            <button
+              type="button"
+              className="notifications-page__action is-primary"
+              onClick={() => void handleMarkAllRead()}
+              disabled={markingAll}
+              aria-busy={markingAll}
+            >
+              <AppIcon icon={CheckCheck} size="xs" className="text-current" />
+              {markingAll ? "Marking…" : "Mark all read"}
+            </button>
+          ) : null}
         </div>
       </header>
 
-      {items.length === 0 ? (
-        <div className="rounded-2xl border border-gray-200 bg-surface-card">
-          <EmptyState
-            icon={<AppIcon icon={Bell} size="sm" className="text-current" />}
-            title="No notifications yet"
-            description="When someone assigns you a task, posts an announcement, or needs a budget review, it will appear here."
+      {loading && items.length === 0 ? (
+        <p className="notifications-page__empty">Loading…</p>
+      ) : items.length === 0 ? (
+        <div className="notifications-page__empty-state">
+          <span className="notifications-page__empty-icon" aria-hidden="true">
+            <AppIcon icon={Bell} size="sm" className="text-current" />
+          </span>
+          <p className="notifications-page__empty-title">Nothing here yet</p>
+          <p className="notifications-page__empty-copy">
+            Task assignments, announcements, budget reviews, and board messages
+            will land here.
+          </p>
+        </div>
+      ) : hasUnread ? (
+        <div className="notifications-feed">
+          <NotificationSection
+            label="Unread"
+            items={unreadItems}
+            onMarkRead={(id) => void markRead(id)}
+          />
+          <NotificationSection
+            label="Earlier"
+            items={earlierItems}
+            onMarkRead={(id) => void markRead(id)}
           />
         </div>
       ) : (
-        <ul className="overflow-hidden rounded-2xl border border-gray-200 bg-surface-card">
-          {items.map((item) => {
-            const visual = getNotificationVisual(item.type);
-            const Icon = visual.icon;
-
-            const content = (
-              <span className="flex items-start gap-3">
-                <span
-                  className={[
-                    "mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
-                    visual.chipClass,
-                  ].join(" ")}
-                  aria-hidden="true"
-                >
-                  <Icon
-                    className={["h-4 w-4", visual.iconClass].join(" ")}
-                    strokeWidth={1.75}
-                  />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-start justify-between gap-3">
-                    <span className="min-w-0">
-                      <span className="block text-sm font-semibold text-foreground">
-                        {item.title}
-                      </span>
-                      {item.body ? (
-                        <span className="mt-0.5 block text-sm text-label">
-                          {item.body}
-                        </span>
-                      ) : null}
-                      <span className="mt-1.5 flex items-center gap-1.5 text-[11px] text-label/80">
-                        <span>{visual.label}</span>
-                        <span aria-hidden="true">·</span>
-                        <span>{formatRelativeTimestamp(item.created_at)}</span>
-                      </span>
-                    </span>
-                    {item.unread ? (
-                      <span
-                        className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-overdue"
-                        aria-label="Unread"
-                      />
-                    ) : null}
-                  </span>
-                </span>
-              </span>
-            );
-
-            const className = [
-              "block border-b border-gray-100 px-4 py-3.5 transition-colors last:border-b-0 hover:bg-surface-muted",
-              item.unread ? "bg-badge-teal-bg/25" : "",
-            ].join(" ");
-
-            if (item.href) {
-              return (
-                <li key={item.id}>
-                  <Link
-                    to={item.href}
-                    className={className}
-                    onClick={() => {
-                      if (item.unread) {
-                        void markRead(item.id);
-                      }
-                    }}
-                  >
-                    {content}
-                  </Link>
-                </li>
-              );
-            }
-
-            return (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  className={`${className} w-full text-left`}
-                  onClick={() => {
-                    if (item.unread) {
-                      void markRead(item.id);
-                    }
-                  }}
-                >
-                  {content}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="notifications-feed">
+          <NotificationSection
+            label="Recent"
+            items={items}
+            onMarkRead={(id) => void markRead(id)}
+          />
+        </div>
       )}
     </div>
   );

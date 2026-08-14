@@ -5,7 +5,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 
 import { PageHeader } from "../components/PageHeader";
 import { DownloadAlbumButton } from "../components/photo-archive/DownloadAlbumButton";
@@ -16,6 +16,7 @@ import { ArrowLink } from "../components/ui/ArrowLink";
 import { Button } from "../components/ui/Button";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Modal } from "../components/ui/Modal";
+import { PageBackLink } from "../components/ui/PageBackLink";
 import { getApiErrorMessage } from "../lib/api-error";
 import { photoArchivePath } from "../lib/event-links";
 import {
@@ -177,12 +178,7 @@ export function CustomMediaAlbumPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link
-          to={photoArchivePath()}
-          className="text-sm text-accent hover:text-accent-hover"
-        >
-          ← Media
-        </Link>
+        <PageBackLink to={photoArchivePath()} label="Media" />
       </div>
 
       <div className="flex flex-wrap items-start justify-between gap-4">

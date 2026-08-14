@@ -9,6 +9,7 @@ import {
 } from "../components/IdeaPolishSections";
 import { WorkflowProgress } from "../components/WorkflowProgress";
 import { Card } from "../components/ui/Card";
+import { PageBackLink } from "../components/ui/PageBackLink";
 import { getApiErrorMessage } from "../lib/api-error";
 import {
   clearEventSuggestionInterest,
@@ -422,15 +423,18 @@ export function IdeaWorkspacePage() {
   }, [numericId]);
 
   if (loading) {
-    return <p className="text-sm text-label">Loading idea…</p>;
+    return (
+      <div className="space-y-4">
+        <PageBackLink to="/events/ideas" label="Ideas" />
+        <p className="text-sm text-label">Loading idea…</p>
+      </div>
+    );
   }
 
   if (errorMessage || !idea) {
     return (
       <div className="space-y-4">
-        <Link to="/events/ideas" className="ds-link">
-          ← Back to ideas
-        </Link>
+        <PageBackLink to="/events/ideas" label="Ideas" />
         <div className="ds-alert-banner p-6" role="alert">
           {errorMessage ?? "Idea not found."}
         </div>
@@ -469,9 +473,7 @@ export function IdeaWorkspacePage() {
   return (
     <div className="idea-ws space-y-4">
       <div>
-        <Link to="/events/ideas" className="ds-link">
-          ← Back to ideas
-        </Link>
+        <PageBackLink to="/events/ideas" label="Ideas" historyFirst />
       </div>
 
       <Card padding="none" className="idea-ws-card idea-ws-hero">

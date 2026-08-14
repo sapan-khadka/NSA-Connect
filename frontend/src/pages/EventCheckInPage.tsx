@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { CheckCircle2, ChevronRight, Circle } from "lucide-react";
 import { Link, useLocation, useParams, useSearchParams } from "react-router";
 
+import { PageBackLink } from "../components/ui/PageBackLink";
 import { AppIcon } from "../components/ui/AppIcon";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -84,9 +85,7 @@ export function EventCheckInPage() {
         <div className="ds-alert-banner p-5 sm:p-6" role="alert">
           This check-in link is invalid.
         </div>
-        <Link to="/" className="ds-link">
-          Back to home
-        </Link>
+        <PageBackLink to="/" label="Home" />
       </div>
     );
   }

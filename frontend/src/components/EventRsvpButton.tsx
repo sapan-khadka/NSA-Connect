@@ -124,7 +124,7 @@ export function EventRsvpButton({
   const isSegmented = variant === "segmented";
   const isMenu = variant === "menu";
   const useSegmentedControl = isSegmented || isMenu;
-  const showConfirmation = Boolean(displayStatus) && !embedded && !isMenu;
+  const showConfirmation = Boolean(displayStatus) && !isMenu;
   const options = atCapacity
     ? [
         ...RSVP_OPTIONS.filter((option) => option.value !== "going"),
@@ -146,41 +146,47 @@ export function EventRsvpButton({
     onStatusChange(status);
   }
 
-  const shellClass = embedded
-    ? useSegmentedControl
-      ? ""
-      : "mt-3 border-t border-gray-100 pt-3"
-    : "ds-card p-3";
+  const shellClass = isSegmented
+    ? ""
+    : embedded
+      ? useSegmentedControl
+        ? ""
+        : "mt-3 border-t border-gray-100 pt-3"
+      : "ds-card p-3";
 
   function renderSegmentedControl() {
     return (
-      <div role="group" aria-label="RSVP options" className="rsvp-segmented">
+      <div role="group" aria-label="RSVP options" className="rsvp-segmented rsvp-segmented--equal">
         {options.map((option) => {
           const isSelected = displayStatus === option.value;
           return (
-            <button
+            <div
               key={option.value}
-              ref={(element) => {
-                buttonRefs.current[option.value] = element ?? undefined;
-              }}
-              type="button"
               data-rsvp-reaction-host
-              aria-pressed={isSelected}
-              disabled={loading}
-              onClick={() => handleOptionClick(option.value)}
-              className={segmentedButtonClass(isSelected)}
+              className="relative min-w-0 flex-1 overflow-visible"
             >
-              {isSelected ? (
-                <AppIcon
-                  icon={option.icon}
-                  size="xs"
-                  className="shrink-0 text-current"
-                />
-              ) : null}
-              <span className="truncate">
-                {loading && isSelected ? "Updating…" : option.label}
-              </span>
-            </button>
+              <button
+                ref={(element) => {
+                  buttonRefs.current[option.value] = element ?? undefined;
+                }}
+                type="button"
+                aria-pressed={isSelected}
+                disabled={loading}
+                onClick={() => handleOptionClick(option.value)}
+                className={segmentedButtonClass(isSelected)}
+              >
+                {isSelected ? (
+                  <AppIcon
+                    icon={option.icon}
+                    size="xs"
+                    className="shrink-0 text-current"
+                  />
+                ) : null}
+                <span>
+                  {loading && isSelected ? "Updating…" : option.label}
+                </span>
+              </button>
+            </div>
           );
         })}
       </div>

@@ -173,7 +173,12 @@ export function NsaDocumentsPanel() {
             />
           </label>
           <div className="mt-4">
-            <Button type="submit" size="sm" disabled={uploading || !file}>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={uploading || !file}
+              className="w-full sm:w-auto"
+            >
               <AppIcon icon={Upload} size="xs" />
               {uploading ? "Uploading & indexing…" : "Upload for AI + members"}
             </Button>

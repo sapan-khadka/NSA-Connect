@@ -78,7 +78,10 @@ export function MemberWorkspaceUpcomingSchedule({
           </div>
         </div>
         {hasMore ? (
-          <Link to={viewAllPath} className="member-workspace-resp-view-all">
+          <Link
+            to={viewAllPath}
+            className="ds-view-all member-workspace-resp-view-all"
+          >
             View all
           </Link>
         ) : null}

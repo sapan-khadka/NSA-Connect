@@ -4,6 +4,7 @@ import { AnnouncementEmailDraft } from "../components/AnnouncementEmailDraft";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { inputFieldClassName } from "../components/ui/Input";
+import { PageBackLink } from "../components/ui/PageBackLink";
 import { getApiErrorMessage } from "../lib/api-error";
 import {
   draftAnnouncementEmail,
@@ -68,6 +69,7 @@ export function AnnouncementEmailPage() {
   return (
     <div className="space-y-6">
       <header>
+        <PageBackLink to="/announcements" label="Announcements" className="mb-3" />
         <h1 className="text-3xl font-light tracking-headline text-foreground">Announcement Email</h1>
         <p className="mt-2 max-w-2xl text-label">
           Enter an event name and generate a ready-to-send member announcement

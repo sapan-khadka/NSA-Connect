@@ -142,7 +142,7 @@ describe("EventTaskManager", () => {
     expect(screen.getByText("Board Member")).toBeInTheDocument();
     expect(screen.getByText("0/1 done")).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "+ Add task" }),
+      screen.queryByRole("button", { name: "New task" }),
     ).not.toBeInTheDocument();
   });
 
@@ -205,7 +205,7 @@ describe("EventTaskManager", () => {
       expect(mockedFetchAssignees).toHaveBeenCalledWith("all_approved"),
     );
 
-    await user.click(screen.getByRole("button", { name: "+ Add task" }));
+    await user.click(screen.getByRole("button", { name: "New task" }));
     await user.type(screen.getByLabelText("Title"), "Print flyers");
     await user.selectOptions(screen.getByLabelText("Assign to"), "2");
     await user.click(screen.getByRole("button", { name: "Add task" }));
@@ -269,7 +269,7 @@ describe("EventTaskManager", () => {
     );
 
     expect(
-      screen.queryByRole("button", { name: "+ Add task" }),
+      screen.queryByRole("button", { name: "New task" }),
     ).not.toBeInTheDocument();
     expect(
       screen.getByText("This event has ended — new tasks can't be added."),

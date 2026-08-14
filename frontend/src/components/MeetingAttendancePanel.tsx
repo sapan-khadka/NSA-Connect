@@ -147,7 +147,7 @@ export function MeetingAttendancePanel({
               <div
                 role="group"
                 aria-label={`Attendance for ${entry.full_name}`}
-                className="inline-flex rounded-full border border-gray-200 bg-gray-100 p-0.5"
+                className="ds-seg is-bare"
               >
                 {STATUS_OPTIONS.map((option) => {
                   const selected = statuses[entry.member_id] === option.value;
@@ -158,10 +158,7 @@ export function MeetingAttendancePanel({
                       aria-label={option.ariaLabel}
                       aria-pressed={selected}
                       onClick={() => setStatus(entry.member_id, option.value)}
-                      className={[
-                        "min-w-[2rem] rounded-full px-2 py-1 text-xs font-semibold transition-colors",
-                        segmentClass(option.value, selected),
-                      ].join(" ")}
+                      className={segmentClass(option.value, selected)}
                     >
                       {option.label}
                     </button>

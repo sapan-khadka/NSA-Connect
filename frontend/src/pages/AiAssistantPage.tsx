@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { ChatPanel } from "../components/chat/ChatPanel";
 import { NsaDocumentsPanel } from "../components/NsaDocumentsPanel";
+import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { useAuth } from "../context/useAuth";
 import { isRoleAtLeast } from "../lib/roles";
 
@@ -14,6 +15,11 @@ const STARTERS = [
   "What is our treasury balance?",
 ];
 
+const ASSISTANT_TABS = [
+  { id: "chat", label: "Chat" },
+  { id: "documents", label: "NSA Documents" },
+] as const;
+
 export function AiAssistantPage() {
   const { member } = useAuth();
   const isBoard = member ? isRoleAtLeast(member.role, "board") : false;
@@ -21,9 +27,9 @@ export function AiAssistantPage() {
   const [starterQuery, setStarterQuery] = useState<string | null>(null);
 
   return (
-    <div className="space-y-6">
+    <div className="ai-assistant-page space-y-5 sm:space-y-6">
       <header>
-        <h1 className="text-2xl font-light tracking-headline text-foreground">
+        <h1 className="text-xl font-semibold tracking-headline text-foreground sm:text-2xl sm:font-light">
           AI Assistant
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-label">
@@ -33,42 +39,22 @@ export function AiAssistantPage() {
         </p>
       </header>
 
-      <div className="flex gap-1 rounded-full border border-[#EBEBEA] bg-[#F7F7F6] p-1 w-fit">
-        <button
-          type="button"
-          onClick={() => setTab("chat")}
-          className={[
-            "rounded-full px-4 py-1.5 text-[13px] font-medium transition",
-            tab === "chat"
-              ? "bg-white text-foreground shadow-sm"
-              : "text-label hover:text-foreground",
-          ].join(" ")}
-        >
-          Chat
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab("documents")}
-          className={[
-            "rounded-full px-4 py-1.5 text-[13px] font-medium transition",
-            tab === "documents"
-              ? "bg-white text-foreground shadow-sm"
-              : "text-label hover:text-foreground",
-          ].join(" ")}
-        >
-          NSA Documents
-        </button>
-      </div>
+      <SegmentedControl
+        ariaLabel="Assistant section"
+        value={tab}
+        options={ASSISTANT_TABS}
+        onChange={setTab}
+      />
 
       {tab === "chat" ? (
-        <div className="space-y-4">
-          <div className="flex flex-wrap gap-2">
+        <div className="space-y-3 sm:space-y-4">
+          <div className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden">
             {STARTERS.map((prompt) => (
               <button
                 key={prompt}
                 type="button"
                 onClick={() => setStarterQuery(prompt)}
-                className="rounded-full border border-[#E8E8E6] bg-white px-3 py-1.5 text-left text-[12px] font-medium text-foreground transition hover:border-gray-300 hover:bg-[#FAFAF9]"
+                className="shrink-0 rounded-full border border-[#E8E8E6] bg-white px-3 py-1.5 text-left text-[12px] font-medium text-foreground transition hover:border-gray-300 hover:bg-[#FAFAF9] sm:shrink"
               >
                 {prompt}
               </button>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 
+import { PageBackLink } from "../components/ui/PageBackLink";
 import { ReportDocument } from "../components/ReportDocument";
 import { getApiErrorMessage } from "../lib/api-error";
 import {
@@ -63,27 +64,38 @@ export function ReportDetailPage({ reportId: reportIdProp }: ReportDetailPagePro
   }
 
   if (!Number.isFinite(reportId)) {
-    return <p className="ds-field-error">Invalid report.</p>;
+    return (
+      <div className="space-y-4">
+        <PageBackLink to="/reports" label="Reports" />
+        <p className="ds-field-error">Invalid report.</p>
+      </div>
+    );
   }
 
   if (isLoading) {
-    return <p className="text-sm text-label">Loading report…</p>;
+    return (
+      <div className="space-y-4">
+        <PageBackLink to="/reports" label="Reports" />
+        <p className="text-sm text-label">Loading report…</p>
+      </div>
+    );
   }
 
   if (error || !report) {
     return (
-      <p role="alert" className="ds-field-error">
-        {error ?? "Report not found."}
-      </p>
+      <div className="space-y-4">
+        <PageBackLink to="/reports" label="Reports" />
+        <p role="alert" className="ds-field-error">
+          {error ?? "Report not found."}
+        </p>
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
       <div className="report-toolbar no-print flex flex-wrap items-center justify-between gap-3">
-        <Link to="/reports" className="text-sm text-accent hover:underline">
-          ← All reports
-        </Link>
+        <PageBackLink to="/reports" label="Reports" historyFirst />
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -98,16 +110,12 @@ export function ReportDetailPage({ reportId: reportIdProp }: ReportDetailPagePro
             onClick={() => void handleDownloadPdf()}
             className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-60"
           >
-            {isDownloading ? "Preparing PDF…" : "Download PDF"}
+            {isDownloading ? "Downloading…" : "Download PDF"}
           </button>
         </div>
       </div>
 
-      <ReportDocument
-        data={report.data}
-        generatedByName={report.generated_by_name}
-        createdAt={report.created_at}
-      />
+      <ReportDocument report={report} />
     </div>
   );
 }

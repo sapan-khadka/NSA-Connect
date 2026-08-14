@@ -279,13 +279,6 @@ export function HomeQuickStats({
       <header className="home-org-status__head">
         <p className="home-org-status__eyebrow">Organization</p>
         <div className="home-org-status__health">
-          <span
-            className={[
-              "home-org-status__dot",
-              `home-org-status__dot--${health}`,
-            ].join(" ")}
-            aria-hidden="true"
-          />
           <h2 className="home-org-status__title">{healthCopy(health)}</h2>
         </div>
       </header>

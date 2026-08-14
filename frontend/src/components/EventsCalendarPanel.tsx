@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { AppIcon } from "./ui/AppIcon";
+import { SegmentedControl } from "./ui/SegmentedControl";
 
 import {
   WEEKDAY_LABELS,
@@ -16,12 +17,11 @@ import { groupEventTypesByDate, groupEventTypesByMonth } from "../lib/calendar-e
 import {
   EVENT_TYPE_LABELS,
 } from "../lib/event-types";
-import { formatNepaliMonthRange } from "../lib/nepali-calendar";
-import { getFestivalsOnDate, toBikramSambat } from "../lib/nepali-calendar";
-import { CalendarMonthYearPicker } from "./CalendarMonthYearPicker";
+import { getFestivalsOnDate } from "../lib/nepali-calendar";
 import { YearCalendarGrid } from "./YearCalendarGrid";
+import { CalendarMonthYearPicker } from "./CalendarMonthYearPicker";
 import {
-  CalendarCategoryDots,
+  CalendarCategoryMarks,
   CalendarLegendList,
   getDayCellSurfaceClass,
   getMonthEnterAnimationClass,
@@ -44,6 +44,11 @@ type EventsCalendarPanelProps = {
   yearEvents: CalendarEventInput[];
 };
 
+const CALENDAR_VIEW_OPTIONS = [
+  { id: "month", label: "Month" },
+  { id: "year", label: "Year" },
+] as const;
+
 function CalendarViewToggle({
   viewMode,
   onViewModeChange,
@@ -52,31 +57,12 @@ function CalendarViewToggle({
   onViewModeChange: (mode: CalendarViewMode) => void;
 }) {
   return (
-    <div
-      role="group"
-      aria-label="Calendar view"
-      className="inline-flex rounded-md border border-[#E8E8E6] bg-white p-0.5"
-    >
-      {(["month", "year"] as const).map((mode) => {
-        const active = viewMode === mode;
-        return (
-          <button
-            key={mode}
-            type="button"
-            aria-pressed={active}
-            onClick={() => onViewModeChange(mode)}
-            className={[
-              "min-h-8 rounded px-2.5 py-1 text-[13px] font-medium capitalize transition-colors",
-              active
-                ? "bg-[#F3F4F6] text-foreground"
-                : "text-label hover:text-foreground",
-            ].join(" ")}
-          >
-            {mode}
-          </button>
-        );
-      })}
-    </div>
+    <SegmentedControl
+      ariaLabel="Calendar view"
+      value={viewMode}
+      options={CALENDAR_VIEW_OPTIONS}
+      onChange={onViewModeChange}
+    />
   );
 }
 
@@ -106,7 +92,6 @@ export function EventsCalendarPanel({
   );
   const today = new Date();
   const monthAnimationClass = getMonthEnterAnimationClass(monthEnterDirection);
-  const nepaliRange = formatNepaliMonthRange(year, month);
 
   function goToPrevious() {
     if (viewMode === "year") {
@@ -142,7 +127,7 @@ export function EventsCalendarPanel({
         <button
           type="button"
           onClick={onGoToToday}
-          className="min-h-8 shrink-0 rounded-md px-2.5 py-1 text-[13px] font-medium text-primary transition-colors duration-200 hover:bg-primary/5"
+          className="event-command-btn"
         >
           Today
         </button>
@@ -152,44 +137,28 @@ export function EventsCalendarPanel({
             type="button"
             aria-label={viewMode === "year" ? "Previous year" : "Previous month"}
             onClick={goToPrevious}
-            className="ds-icon-btn h-8 w-8 rounded-md text-foreground transition-colors duration-200 hover:bg-[#F5F5F7]"
+            className="event-command-btn event-command-btn--icon"
           >
             <AppIcon icon={ChevronLeft} size="sm" className="text-foreground" />
           </button>
 
-          <div className="events-calendar-panel-nav-center min-w-0">
-            {viewMode === "month" ? (
-              <>
-                <h2
-                  data-testid="calendar-month-label"
-                  className="truncate text-[15px] font-semibold tracking-[-0.02em] text-foreground"
-                >
-                  {getMonthLabel(month)}{" "}
-                  <span className="font-medium text-label">{year}</span>
-                </h2>
-                {nepaliRange ? (
-                  <p className="events-calendar-nepali-range">{nepaliRange}</p>
-                ) : null}
-                <div className="events-calendar-panel-picker hidden md:flex">
-                  <CalendarMonthYearPicker
-                    year={year}
-                    month={month}
-                    onChange={onMonthChange}
-                  />
-                </div>
-              </>
-            ) : (
-              <h2 className="text-[15px] font-semibold tracking-[-0.02em] text-foreground">
-                <span className="font-medium text-label">{year}</span>
-              </h2>
-            )}
+          <div
+            className="events-calendar-panel-nav-center min-w-0"
+            data-testid="calendar-month-label"
+          >
+            <CalendarMonthYearPicker
+              year={year}
+              month={month}
+              showMonth={viewMode === "month"}
+              onChange={onMonthChange}
+            />
           </div>
 
           <button
             type="button"
             aria-label={viewMode === "year" ? "Next year" : "Next month"}
             onClick={goToNext}
-            className="ds-icon-btn h-8 w-8 rounded-md text-foreground transition-colors duration-200 hover:bg-[#F5F5F7]"
+            className="event-command-btn event-command-btn--icon"
           >
             <AppIcon icon={ChevronRight} size="sm" className="text-foreground" />
           </button>
@@ -229,7 +198,6 @@ export function EventsCalendarPanel({
               festivals.length > 0
                 ? `, ${festivals.map((festival) => festival.name).join(", ")}`
                 : "";
-            const bsLabel = cell.isCurrentMonth ? toBikramSambat(cell.isoDate) : null;
 
             return (
               <button
@@ -248,12 +216,7 @@ export function EventsCalendarPanel({
                 <span className={getTodayDateNumberClass(cellIsToday, isSelected)}>
                   {cell.day}
                 </span>
-                {bsLabel ? (
-                  <span className="events-calendar-bs-date hidden text-[10px] leading-none text-label min-[400px]:inline">
-                    {bsLabel}
-                  </span>
-                ) : null}
-                <CalendarCategoryDots
+                <CalendarCategoryMarks
                   eventTypes={dayEventTypes}
                   hasFestival={festivals.length > 0}
                 />

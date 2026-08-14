@@ -190,7 +190,6 @@ export function HomeTeamPulse({
                 to={row.href}
                 className={`home-org-health__row is-${row.tone}`}
               >
-                <span className="home-org-health__dot" aria-hidden />
                 <span className="home-org-health__label">{row.label}</span>
               </Link>
             </li>

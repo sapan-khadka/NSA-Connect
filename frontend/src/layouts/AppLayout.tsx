@@ -44,7 +44,11 @@ export function AppLayout() {
     pathname === "/events" ||
     pathname.startsWith("/events/") ||
     pathname === "/finance" ||
-    pathname.startsWith("/finance");
+    pathname.startsWith("/finance") ||
+    pathname === "/announcements" ||
+    pathname.startsWith("/announcements/") ||
+    pathname === "/assistant" ||
+    pathname.startsWith("/assistant/");
   const eventsCalendarCanvas =
     pathname === "/events" || pathname === "/events/calendar";
   const hideMobileBottomNav = isDiscussionThreadPath(pathname);

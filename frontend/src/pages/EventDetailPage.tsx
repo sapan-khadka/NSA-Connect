@@ -6,17 +6,20 @@ import { EventAttendanceSummaryPanel } from "../components/EventAttendanceSummar
 import { DiscussionFeed } from "../components/DiscussionFeed";
 import { canCreateEventTasks } from "../lib/event-finance";
 import { EventFinanceCloseoutBanner } from "../components/EventFinanceCloseoutBanner";
+import { EventBanner } from "../components/EventBanner";
 import { EventRsvpButton } from "../components/EventRsvpButton";
 import { EventVolunteerRolesPanel } from "../components/EventVolunteerRolesPanel";
 import { EventVolunteerSignupPanel } from "../components/EventVolunteerSignupPanel";
 import { EventFeedbackPanel } from "../components/EventFeedbackPanel";
 import { EventTaskManager } from "../components/EventTaskManager";
+import { formatEventCountdown } from "../components/EventOverviewCard";
 import { ArrowLink } from "../components/ui/ArrowLink";
-import { HomeCard } from "../components/ui/HomeCard";
+import { PageBackLink } from "../components/ui/PageBackLink";
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage } from "../lib/api-error";
 import { calendarDeepLink } from "../lib/event-links";
-import { EVENT_TYPE_BADGE_CLASS, EVENT_TYPE_LABELS } from "../lib/event-types";
+import { formatEventCommandWhen } from "../lib/event-manage-command";
+import { EVENT_TYPE_LABELS } from "../lib/event-types";
 import { applyRsvpStatus, isEventUpcoming } from "../lib/event-rsvp";
 import {
   fetchEvent,
@@ -32,8 +35,6 @@ import {
 } from "../lib/event-checkin-api";
 import { fetchAssignableMembers } from "../lib/members-api";
 import type { MemberResponse } from "../lib/auth-api";
-import { formatCurrency } from "../lib/format-currency";
-import { formatEventDateTime } from "../lib/format-datetime";
 import {
   canManageEventTasks,
   isRoleAtLeast,
@@ -258,95 +259,115 @@ export function EventDetailPage() {
   }
 
   if (isLoading) {
-    return <p className="text-sm text-label">Loading event…</p>;
+    return <p className="event-command-stat">Loading event…</p>;
   }
 
   if (error || !event) {
     return (
-      <div className="space-y-4">
-        <Link to="/" className="ds-link">
-          ← Back to home
-        </Link>
-        <div
-          role="alert"
-          className="ds-alert-banner p-6"
-        >
+      <div className="event-page event-command">
+        <PageBackLink to="/events/calendar" label="Events" />
+        <div role="alert" className="event-command-stat">
           {error ?? "Event not found."}
         </div>
       </div>
     );
   }
 
+  const countdown = formatEventCountdown(event.starts_at);
+  const metaLine = formatEventCommandWhen(event.starts_at, event.location);
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link to="/" className="ds-link">
-          ← Back to home
-        </Link>
+    <div className="event-page event-command">
+      <div className="event-page-nav">
+        <PageBackLink to="/events/calendar" label="Events" historyFirst />
         <ArrowLink to={calendarDeepLink(event)}>View on calendar</ArrowLink>
       </div>
 
-      <HomeCard>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-3xl font-light tracking-headline text-foreground">{event.name}</h1>
-              <span
-                className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${EVENT_TYPE_BADGE_CLASS[event.event_type]}`}
-              >
-                {EVENT_TYPE_LABELS[event.event_type]}
-              </span>
-            </div>
-            <p className="text-label">{formatEventDateTime(event.starts_at)}</p>
-            <p className="text-sm text-label">
-              <span className="font-medium text-foreground">Location: </span>
-              {event.location?.trim() ? event.location : "Not specified"}
+      <header className="event-command-header">
+        <EventBanner
+          eventType={event.event_type}
+          imageUrl={event.event_photo_url}
+          countdown={countdown}
+          className="event-page-hero"
+        />
+
+        <div className="event-command-title-row">
+          <div className="min-w-0">
+            <p className="event-command-kicker">
+              {EVENT_TYPE_LABELS[event.event_type]}
             </p>
-            {canViewBoard ? (
-              <p className="text-sm text-label">
-                <span className="font-medium text-foreground">
-                  Budget allocated:{" "}
-                </span>
-                {formatCurrency(event.budget)}
-              </p>
-            ) : null}
+            <h1 className="event-command-title">{event.name}</h1>
+            <p className="event-command-meta">{metaLine}</p>
           </div>
           {canViewBoard ? (
             <Link
               to={`/events/${event.id}/manage`}
-              className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-semibold text-foreground transition hover:border-accent hover:text-accent sm:w-auto"
+              className="event-command-btn event-command-btn--primary"
             >
-              Manage event
+              Manage Event
             </Link>
           ) : null}
         </div>
 
-        <p className="mt-5 text-sm leading-relaxed text-foreground">
-          {event.description}
-        </p>
+        {event.description?.trim() ? (
+          <p className="event-page-description">{event.description}</p>
+        ) : null}
+      </header>
 
-        <div className="mt-5">
-          {invitedToVolunteer || event.current_member_is_invited_participant ? (
-            <p className="mb-3 inline-flex rounded-full bg-[#EEF4FF] px-3 py-1 text-sm text-[#1B4B8A]">
-              {invitedToVolunteer
-                ? "You've been invited to volunteer — claim a role below"
-                : "You've been invited to participate"}
-            </p>
-          ) : null}
-          <EventRsvpButton
-            currentStatus={event.current_member_rsvp_status}
-            canRsvp={isEventUpcoming(event.starts_at)}
-            loading={rsvpLoading}
-            atCapacity={event.current_member_rsvp_status === "waitlisted"}
-            onStatusChange={(status) => void handleRsvpStatusChange(status)}
-          />
-          <div className="mt-3 space-y-3" id="volunteer-roles">
-            <EventVolunteerRolesPanel
-              eventId={event.id}
-              canVolunteer={isEventUpcoming(event.starts_at)}
-              onSlotsLoaded={(count) => setHasVolunteerRoles(count > 0)}
+      <div className="event-command-layout">
+        <div className="event-page-main">
+          <section
+            className="event-command-section is-flush"
+            aria-label="Your RSVP"
+          >
+            <div className="event-command-section-head">
+              <h2 className="event-command-kicker">RSVP</h2>
+            </div>
+            {invitedToVolunteer || event.current_member_is_invited_participant ? (
+              <p className="event-command-stat event-page-invite">
+                {invitedToVolunteer
+                  ? "You've been invited to volunteer — claim a role below."
+                  : "You've been invited to participate."}
+              </p>
+            ) : null}
+            <EventRsvpButton
+              currentStatus={event.current_member_rsvp_status}
+              canRsvp={isEventUpcoming(event.starts_at)}
+              loading={rsvpLoading}
+              atCapacity={event.current_member_rsvp_status === "waitlisted"}
+              onStatusChange={(status) => void handleRsvpStatusChange(status)}
+              variant="segmented"
+              embedded
             />
-            {!hasVolunteerRoles || event.current_member_volunteer_signup ? (
+          </section>
+
+      <section
+        className="event-command-section"
+        id="volunteer-roles"
+        aria-label="Volunteer"
+      >
+        <EventVolunteerRolesPanel
+          eventId={event.id}
+          canVolunteer={isEventUpcoming(event.starts_at)}
+          onSlotsLoaded={(count) => setHasVolunteerRoles(count > 0)}
+        />
+        {!hasVolunteerRoles || event.current_member_volunteer_signup ? (
+          <EventVolunteerSignupPanel
+            eventId={event.id}
+            canVolunteer={isEventUpcoming(event.starts_at)}
+            signup={event.current_member_volunteer_signup}
+            onSignupChange={(signup) =>
+              setEvent((current) =>
+                current
+                  ? { ...current, current_member_volunteer_signup: signup }
+                  : current,
+              )
+            }
+          />
+        ) : (
+          <details className="event-page-disclosure">
+            <summary>Can't claim a role? Leave a note</summary>
+            <div className="event-page-disclosure-body">
               <EventVolunteerSignupPanel
                 eventId={event.id}
                 canVolunteer={isEventUpcoming(event.starts_at)}
@@ -354,92 +375,44 @@ export function EventDetailPage() {
                 onSignupChange={(signup) =>
                   setEvent((current) =>
                     current
-                      ? { ...current, current_member_volunteer_signup: signup }
+                      ? {
+                          ...current,
+                          current_member_volunteer_signup: signup,
+                        }
                       : current,
                   )
                 }
               />
-            ) : (
-              <details className="rounded-xl border border-gray-100 bg-white px-3 py-2">
-                <summary className="cursor-pointer text-sm text-label">
-                  Can&apos;t claim a role? Leave a general volunteer note
-                </summary>
-                <div className="mt-2">
-                  <EventVolunteerSignupPanel
-                    eventId={event.id}
-                    canVolunteer={isEventUpcoming(event.starts_at)}
-                    signup={event.current_member_volunteer_signup}
-                    onSignupChange={(signup) =>
-                      setEvent((current) =>
-                        current
-                          ? {
-                              ...current,
-                              current_member_volunteer_signup: signup,
-                            }
-                          : current,
-                      )
-                    }
-                  />
-                </div>
-              </details>
-            )}
-          </div>
-          <div className="mt-3">
-            <EventFeedbackPanel
-              eventId={event.id}
-              canSubmitFeedback={!isEventUpcoming(event.starts_at)}
-              feedback={event.current_member_feedback}
-              onFeedbackChange={(feedback) =>
-                setEvent((current) =>
-                  current
-                    ? { ...current, current_member_feedback: feedback }
-                    : current,
-                )
-              }
-            />
-          </div>
+            </div>
+          </details>
+        )}
+      </section>
+
+      <EventFeedbackPanel
+        eventId={event.id}
+        canSubmitFeedback={!isEventUpcoming(event.starts_at)}
+        feedback={event.current_member_feedback}
+        onFeedbackChange={(feedback) =>
+          setEvent((current) =>
+            current
+              ? { ...current, current_member_feedback: feedback }
+              : current,
+          )
+        }
+      />
+
+      {event.event_type === "meeting" && canViewBoard ? (
+        <div className="event-command-section">
+          <ArrowLink to={`/events/meetings/${event.id}`}>
+            View meeting record
+          </ArrowLink>
         </div>
-
-        {event.event_type === "meeting" && canViewBoard ? (
-          <div className="mt-4">
-            <ArrowLink to={`/events/meetings/${event.id}`}>
-              View meeting record
-            </ArrowLink>
-          </div>
-        ) : null}
-      </HomeCard>
-
-      {canViewBoard || event.current_member_volunteer_signup ? (
-        <DiscussionFeed
-          title="Discussion"
-          description={
-            canViewBoard
-              ? "Board members and volunteers for this event can post here."
-              : "Volunteers for this event can post here."
-          }
-          scope={{ type: "event", eventId: event.id }}
-        />
-      ) : null}
-
-      {canViewBoard ? (
-        <HomeCard>
-          <EventAttendeesPanel
-            eventName={event.name}
-            data={attendees}
-            loading={attendeesLoading}
-            error={attendeesError}
-          />
-        </HomeCard>
-      ) : null}
-
-      {canViewBoard && event.is_past && attendanceSummary ? (
-        <EventAttendanceSummaryPanel summary={attendanceSummary} />
       ) : null}
 
       <EventFinanceCloseoutBanner event={event} />
 
-      <HomeCard>
-        {showTasksExpanded ? (
+      {showTasksExpanded ? (
+        <section className="event-command-section" aria-label="Tasks">
           <EventTaskManager
             key={`${event.id}-${taskRefreshKey}`}
             eventId={event.id}
@@ -457,48 +430,78 @@ export function EventDetailPage() {
             }
             refreshKey={taskRefreshKey}
           />
-        ) : (
-          <details
-            className="rounded-lg border border-gray-200 bg-surface-muted/40 p-3"
-            open={hasMyTasksForEvent || undefined}
-          >
-            <summary className="cursor-pointer text-sm font-medium text-foreground">
-              {hasMyTasksForEvent ? "Your assigned tasks" : "Tasks & volunteer"}
-            </summary>
-            <div className="mt-3 space-y-3">
-              {hasMyTasksForEvent ? (
-                <p className="text-sm text-label">
-                  Update status here or on{" "}
-                  <Link
-                    to="/events/tasks"
-                    className="font-medium text-accent hover:underline"
-                  >
-                    My tasks
-                  </Link>{" "}
-                  for the full board view.
-                </p>
-              ) : null}
-              <EventTaskManager
-                key={`${event.id}-${taskRefreshKey}`}
-                eventId={event.id}
+        </section>
+      ) : (
+        <details className="event-page-disclosure event-command-section">
+          <summary>
+            {hasMyTasksForEvent ? "Your assigned tasks" : "Tasks"}
+          </summary>
+          <div className="event-page-disclosure-body">
+            {hasMyTasksForEvent ? (
+              <p className="event-command-stat">
+                Update status here or on{" "}
+                <Link to="/events/tasks" className="event-page-inline-link">
+                  My tasks
+                </Link>
+                .
+              </p>
+            ) : null}
+            <EventTaskManager
+              key={`${event.id}-${taskRefreshKey}`}
+              eventId={event.id}
+              eventName={event.name}
+              member={member}
+              canManageSimple={canManageTasks}
+              canCreateTasks={canCreateEventTasks(event)}
+              canAssignChecklist={canViewBoard}
+              assignableMembers={assignableMembers}
+              fallbackChecklistTasks={event.prep_tasks}
+              onFallbackTasksChange={(tasks) =>
+                setEvent((current) =>
+                  current ? { ...current, prep_tasks: tasks } : current,
+                )
+              }
+              refreshKey={taskRefreshKey}
+            />
+          </div>
+        </details>
+      )}
+        </div>
+
+      {canViewBoard || event.current_member_volunteer_signup ? (
+        <aside className="event-command-aside">
+          <section className="event-command-section is-flush" aria-label="Discussion">
+            <DiscussionFeed
+              title="Discussion"
+              description={
+                canViewBoard
+                  ? "Board members and volunteers for this event can post here."
+                  : "Volunteers for this event can post here."
+              }
+              scope={{ type: "event", eventId: event.id }}
+              className="event-page-discussion"
+            />
+          </section>
+
+          {canViewBoard ? (
+            <section className="event-command-section" aria-label="Attendees">
+              <EventAttendeesPanel
                 eventName={event.name}
-                member={member}
-                canManageSimple={canManageTasks}
-                canCreateTasks={canCreateEventTasks(event)}
-                canAssignChecklist={canViewBoard}
-                assignableMembers={assignableMembers}
-                fallbackChecklistTasks={event.prep_tasks}
-                onFallbackTasksChange={(tasks) =>
-                  setEvent((current) =>
-                    current ? { ...current, prep_tasks: tasks } : current,
-                  )
-                }
-                refreshKey={taskRefreshKey}
+                data={attendees}
+                loading={attendeesLoading}
+                error={attendeesError}
               />
-            </div>
-          </details>
-        )}
-      </HomeCard>
+            </section>
+          ) : null}
+
+          {canViewBoard && event.is_past && attendanceSummary ? (
+            <section className="event-command-section">
+              <EventAttendanceSummaryPanel summary={attendanceSummary} />
+            </section>
+          ) : null}
+        </aside>
+      ) : null}
+      </div>
     </div>
   );
 }

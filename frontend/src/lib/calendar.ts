@@ -90,8 +90,8 @@ export function getCalendarYearOptions(
   today: Date = new Date(),
 ): number[] {
   const currentYear = today.getFullYear();
-  const minYear = Math.min(currentYear - 2, viewedYear);
-  const maxYear = Math.max(currentYear + 3, viewedYear);
+  const minYear = Math.min(currentYear - 4, viewedYear);
+  const maxYear = Math.max(currentYear + 4, viewedYear);
   const years: number[] = [];
 
   for (let year = minYear; year <= maxYear; year += 1) {

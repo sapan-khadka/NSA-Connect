@@ -10,18 +10,13 @@ import {
   EventsCalendarPanel,
   type CalendarViewMode,
 } from "../components/EventsCalendarPanel";
-import { EventsStatsStrip } from "../components/EventsStatsStrip";
 import { UpcomingEventsStrip } from "../components/UpcomingEventsStrip";
 import { Modal } from "../components/ui/Modal";
 import { useAuth } from "../context/useAuth";
 import { Drawer } from "../design-system/components/feedback/Drawer";
-import { isSameDay, toLocalIsoDate, parseIsoDate } from "../lib/calendar";
+import { toLocalIsoDate, parseIsoDate } from "../lib/calendar";
 import { formatMonthQuery } from "../lib/calendar-events";
 import { applyRsvpStatus } from "../lib/event-rsvp";
-import {
-  fetchMyEventTasks,
-  type EventTaskResponse,
-} from "../lib/event-tasks-api";
 import {
   fetchEvent,
   fetchEvents,
@@ -31,62 +26,9 @@ import {
   type EventResponse,
   type RsvpStatus,
 } from "../lib/events-api";
-import { fetchPendingFinanceChangeRequests } from "../lib/finance-api";
-import { canManageTreasury, isRoleAtLeast } from "../lib/roles";
+import { isRoleAtLeast } from "../lib/roles";
 
 const UPCOMING_FETCH_LIMIT = 100;
-const UPCOMING_STATS_WINDOW_DAYS = 14;
-
-function countEventsWithinDays(
-  events: EventResponse[],
-  days: number,
-  now: Date = new Date(),
-): number {
-  const horizonMs = now.getTime() + days * 24 * 60 * 60 * 1000;
-  const nowMs = now.getTime();
-  return events.filter((event) => {
-    const startMs = Date.parse(event.starts_at);
-    if (Number.isNaN(startMs)) {
-      return false;
-    }
-    return startMs >= nowMs && startMs <= horizonMs;
-  }).length;
-}
-
-function countTasksDueOnDate(
-  tasks: EventTaskResponse[],
-  day: Date,
-): number {
-  return tasks.filter(
-    (task) =>
-      !task.is_complete &&
-      task.status !== "done" &&
-      task.due_date != null &&
-      isSameDay(new Date(task.due_date), day),
-  ).length;
-}
-
-function countMeetingsOnDate(
-  eventLists: EventResponse[][],
-  day: Date,
-): number {
-  const seen = new Set<number>();
-  let count = 0;
-  for (const list of eventLists) {
-    for (const event of list) {
-      if (
-        event.event_type !== "meeting" ||
-        seen.has(event.id) ||
-        !isSameDay(new Date(event.starts_at), day)
-      ) {
-        continue;
-      }
-      seen.add(event.id);
-      count += 1;
-    }
-  }
-  return count;
-}
 
 export function EventsPage() {
   const { member } = useAuth();
@@ -107,8 +49,6 @@ export function EventsPage() {
   const [searchPool, setSearchPool] = useState<EventResponse[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<EventResponse[]>([]);
   const [upcomingLoading, setUpcomingLoading] = useState(true);
-  const [tasksDueTodayCount, setTasksDueTodayCount] = useState(0);
-  const [financeApprovalCount, setFinanceApprovalCount] = useState(0);
   const [eventDetail, setEventDetail] = useState<EventDetailResponse | null>(
     null,
   );
@@ -121,29 +61,6 @@ export function EventsPage() {
   const [upcomingDrawerOpen, setUpcomingDrawerOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
-
-  const showFinancePending = member
-    ? canManageTreasury(member.role, member.position)
-    : false;
-
-  const upcomingEventsCount = useMemo(
-    () =>
-      countEventsWithinDays(
-        upcomingEvents,
-        UPCOMING_STATS_WINDOW_DAYS,
-        today,
-      ),
-    [upcomingEvents, today],
-  );
-
-  const meetingsTodayCount = useMemo(
-    () =>
-      countMeetingsOnDate(
-        [upcomingEvents, events, searchPool, yearEvents],
-        today,
-      ),
-    [upcomingEvents, events, searchPool, yearEvents, today],
-  );
 
   useEffect(() => {
     const dateParam = searchParams.get("date");
@@ -226,48 +143,6 @@ export function EventsPage() {
       cancelled = true;
     };
   }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadStatSources() {
-      try {
-        const tasksPromise = fetchMyEventTasks().catch(() => ({
-          tasks: [] as EventTaskResponse[],
-          total: 0,
-        }));
-        const financePromise = showFinancePending
-          ? fetchPendingFinanceChangeRequests().catch(() => ({
-              requests: [],
-              total: 0,
-            }))
-          : Promise.resolve({ requests: [], total: 0 });
-
-        const [tasksResult, financeResult] = await Promise.all([
-          tasksPromise,
-          financePromise,
-        ]);
-
-        if (cancelled) {
-          return;
-        }
-
-        setTasksDueTodayCount(countTasksDueOnDate(tasksResult.tasks, today));
-        setFinanceApprovalCount(financeResult.total);
-      } catch {
-        if (!cancelled) {
-          setTasksDueTodayCount(0);
-          setFinanceApprovalCount(0);
-        }
-      }
-    }
-
-    void loadStatSources();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [showFinancePending, today]);
 
   useEffect(() => {
     let cancelled = false;
@@ -627,19 +502,11 @@ export function EventsPage() {
   };
 
   return (
-    <div className="events-calendar-page">
+    <div className="events-calendar-page event-command">
       {error ? <p className="ds-field-error">{error}</p> : null}
 
       <div className="events-calendar-columns">
         <div className="events-calendar-column-main min-w-0">
-          <EventsStatsStrip
-            today={today}
-            upcomingEventsCount={upcomingEventsCount}
-            tasksDueTodayCount={tasksDueTodayCount}
-            financeApprovalCount={financeApprovalCount}
-            meetingsTodayCount={meetingsTodayCount}
-          />
-
           <EventsCalendarPanel
             viewMode={viewMode}
             onViewModeChange={setViewMode}

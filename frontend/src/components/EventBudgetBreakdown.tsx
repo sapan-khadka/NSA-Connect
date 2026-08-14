@@ -15,23 +15,7 @@ type EventBudgetBreakdownProps = {
   onEventClick?: (eventId: number) => void;
 };
 
-function percentPillClass(event: EventBudgetRow): string {
-  if (parseCurrencyAmount(event.planned_budget) <= 0) {
-    return "bg-gray-100 text-label";
-  }
-
-  if (event.over_budget) {
-    return "bg-overdue-surface text-overdue";
-  }
-
-  if (parseCurrencyAmount(event.actual_expense) === 0) {
-    return "bg-gray-100 text-label";
-  }
-
-  return "bg-mint/40 text-primary";
-}
-
-function percentPillLabel(event: EventBudgetRow): string {
+function percentLabel(event: EventBudgetRow): string {
   if (parseCurrencyAmount(event.planned_budget) <= 0) {
     return "—";
   }
@@ -47,8 +31,8 @@ export function EventBudgetBreakdown({
 }: EventBudgetBreakdownProps) {
   if (isLoading) {
     return (
-      <div className="rounded-card border border-gray-200 bg-surface-card p-10 text-center text-label shadow-card">
-        Loading event budget breakdown...
+      <div className="finance-chart-card">
+        <p className="finance-meter-empty">Loading event budgets…</p>
       </div>
     );
   }
@@ -63,84 +47,93 @@ export function EventBudgetBreakdown({
 
   return (
     <section className="finance-chart-card">
-      <h2 className="finance-chart-card-title">
-        Event budgets
-      </h2>
+      <h2 className="finance-chart-card-title">Event budgets</h2>
       {onEventClick ? (
-        <p className="finance-chart-card-hint">Open an event to view its Books.</p>
+        <p className="finance-chart-card-hint">Spent against planned budget</p>
       ) : null}
 
-      <div
-        data-testid="event-budget-list"
-        className="mt-6 space-y-6"
-      >
-        {events.map((event) => {
-          const usagePercent = budgetUsagePercent(
-            event.planned_budget,
-            event.actual_expense,
-          );
-          const interactive = Boolean(onEventClick);
+      {events.length === 0 ? (
+        <p className="finance-meter-empty">No events in this period.</p>
+      ) : (
+        <ul
+          data-testid="event-budget-list"
+          className="finance-meter-list finance-meter-list--scroll"
+        >
+          {events.map((event) => {
+            const usagePercent = budgetUsagePercent(
+              event.planned_budget,
+              event.actual_expense,
+            );
+            const interactive = Boolean(onEventClick);
+            const over = event.over_budget;
+            const unset = parseCurrencyAmount(event.planned_budget) <= 0;
 
-          return (
-            <div
-              key={event.event_id}
-              data-testid={`event-budget-row-${event.event_id}`}
-              className={[
-                "flex items-start gap-4 rounded-xl",
-                interactive
-                  ? "cursor-pointer p-2 -mx-2 transition-colors hover:bg-surface-muted"
-                  : "",
-              ].join(" ")}
-              role={interactive ? "button" : undefined}
-              tabIndex={interactive ? 0 : undefined}
-              onClick={
-                interactive ? () => onEventClick?.(event.event_id) : undefined
-              }
-              onKeyDown={
-                interactive
-                  ? (keyboardEvent) => {
-                      if (
-                        keyboardEvent.key === "Enter" ||
-                        keyboardEvent.key === " "
-                      ) {
-                        keyboardEvent.preventDefault();
-                        onEventClick?.(event.event_id);
-                      }
-                    }
-                  : undefined
-              }
-            >
-              <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-medium text-foreground">{event.event_name}</p>
-                <p className="mt-0.5 text-[11px] font-light text-label">
-                  {formatBudgetSpentLabel(
-                    event.actual_expense,
-                    event.planned_budget,
-                  )}
-                </p>
-                <div className="mt-3 h-2 rounded-full bg-gray-100">
-                  <div
-                    data-testid={`event-budget-bar-${event.event_id}`}
-                    className={`h-2 rounded-full ${budgetProgressBarClass(event)}`}
-                    style={{ width: `${usagePercent}%` }}
-                  />
+            return (
+              <li key={event.event_id}>
+                <div
+                  data-testid={`event-budget-row-${event.event_id}`}
+                  className={[
+                    "finance-meter-row",
+                    interactive ? "is-interactive" : "",
+                    over ? "is-over" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  role={interactive ? "button" : undefined}
+                  tabIndex={interactive ? 0 : undefined}
+                  onClick={
+                    interactive
+                      ? () => onEventClick?.(event.event_id)
+                      : undefined
+                  }
+                  onKeyDown={
+                    interactive
+                      ? (keyboardEvent) => {
+                          if (
+                            keyboardEvent.key === "Enter" ||
+                            keyboardEvent.key === " "
+                          ) {
+                            keyboardEvent.preventDefault();
+                            onEventClick?.(event.event_id);
+                          }
+                        }
+                      : undefined
+                  }
+                >
+                  <div className="finance-meter-meta">
+                    <span className="finance-meter-name">{event.event_name}</span>
+                    <span className="finance-meter-value">
+                      {formatBudgetSpentLabel(
+                        event.actual_expense,
+                        event.planned_budget,
+                      )}
+                    </span>
+                  </div>
+                  <div className="finance-meter-track-row">
+                    <div className="finance-meter-track" aria-hidden="true">
+                      <div
+                        data-testid={`event-budget-bar-${event.event_id}`}
+                        className={`finance-meter-fill ${budgetProgressBarClass(event)}`}
+                        style={{ width: unset ? "0%" : `${usagePercent}%` }}
+                      />
+                    </div>
+                    <span
+                      className={[
+                        "finance-meter-pct",
+                        over ? "is-over" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                    >
+                      {percentLabel(event)}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <span
-                className={`mt-0.5 inline-flex min-w-10 shrink-0 items-center justify-center rounded-pill px-2.5 py-1 text-[11px] font-medium ${percentPillClass(event)}`}
-              >
-                {percentPillLabel(event)}
-              </span>
-            </div>
-          );
-        })}
-
-        {events.length === 0 ? (
-          <p className="py-4 text-center text-sm text-label">
-            No events found for this period.
-          </p>
-        ) : null}
-      </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </section>
   );
 }

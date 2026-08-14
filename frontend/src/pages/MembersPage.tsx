@@ -520,7 +520,7 @@ export function MembersPage() {
             <div className="members-page-header-copy">
               <h1 className="members-page-title">Members</h1>
               <p className="members-page-subtitle">
-                Manage members, roles and dues.
+                Directory, roles, and dues.
               </p>
               {!isLoading && kpis ? (
                 <p
@@ -574,7 +574,6 @@ export function MembersPage() {
                     </span>
                   </Button>
                   <MembersManageMenu
-                    className="hidden md:block"
                     onImportClick={() => importInputRef.current?.click()}
                     importLoading={importLoading}
                     onExport={() => {
@@ -597,7 +596,6 @@ export function MembersPage() {
               onFocusChange={applyDirectoryFocus}
               canReviewMembers={canReviewMembers}
               canFetchDues={canFetchDues}
-              focusActiveCount={activeFocus !== "people" ? 1 : 0}
               onResetFocus={resetFocusForFilters}
             />
 
@@ -693,14 +691,15 @@ export function MembersPage() {
             aria-label="Needs attention"
             className="members-page-section space-y-4"
           >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm text-label">
+            <div className="members-attention-toolbar">
+              <p className="members-attention-copy">
                 Review pending signups and dues follow-ups.
               </p>
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
+                className="members-attention-back"
                 onClick={clearFocusKeepRole}
               >
                 Back to directory

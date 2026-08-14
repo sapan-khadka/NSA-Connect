@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useParams, useSearchParams } from "react-router";
+import { useLocation, useParams, useSearchParams } from "react-router";
 
 import { PageHeader } from "../components/PageHeader";
 import { EventPhotoGrid } from "../components/photo-archive/EventPhotoGrid";
@@ -8,6 +8,7 @@ import { PhotoLightbox } from "../components/photo-archive/PhotoLightbox";
 import { PhotoUploadPanel } from "../components/photo-archive/PhotoUploadPanel";
 import { ArrowLink } from "../components/ui/ArrowLink";
 import { EmptyState } from "../components/ui/EmptyState";
+import { PageBackLink } from "../components/ui/PageBackLink";
 import { getApiErrorMessage } from "../lib/api-error";
 import { photoArchivePath } from "../lib/event-links";
 import type { CalendarReturnState } from "../lib/event-manage-navigation";
@@ -141,19 +142,12 @@ export function EventPhotoAlbumPage() {
     <div className="space-y-6">
       <div>
         {calendarBackHref ? (
-          <Link
+          <PageBackLink
             to={calendarBackHref}
-            className="text-sm text-accent hover:text-accent-hover"
-          >
-            ← Back to {eventName.trim() || "calendar"}
-          </Link>
+            label={eventName.trim() || "calendar"}
+          />
         ) : (
-          <Link
-            to={photoArchivePath()}
-            className="text-sm text-accent hover:text-accent-hover"
-          >
-            ← Media
-          </Link>
+          <PageBackLink to={photoArchivePath()} label="Media" />
         )}
       </div>
 

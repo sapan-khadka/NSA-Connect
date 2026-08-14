@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router";
-import { Bell, Link2, Megaphone, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 import { getApiErrorMessage } from "../lib/api-error";
 import { draftAnnouncementEmail } from "../lib/ai-api";
@@ -13,18 +12,7 @@ import {
   type AnnouncementAudience,
   type AnnouncementRecipientPreview,
 } from "../lib/announcements-api";
-import {
-  eventDetailPath,
-  publicEventPath,
-} from "../lib/event-links";
-import {
-  EVENT_MANAGE_EYEBROW,
-  EVENT_MANAGE_PRIMARY_BTN,
-  EVENT_MANAGE_SECONDARY_BTN,
-  EVENT_MANAGE_SECTION_CARD_CLASS,
-  EVENT_MANAGE_SECTION_SUBTITLE,
-  EVENT_MANAGE_SECTION_TITLE,
-} from "../lib/event-manage-ui";
+import { EVENT_MANAGE_ACTION_LINK } from "../lib/event-manage-ui";
 import {
   fetchEventNotificationStatus,
   sendEventRemindersNow,
@@ -33,13 +21,11 @@ import {
 } from "../lib/events-api";
 import { AppIcon } from "./ui/AppIcon";
 import { Button } from "./ui/Button";
-import { HomeCard } from "./ui/HomeCard";
 import { Modal } from "./ui/Modal";
 import { inputFieldClassName } from "./ui/Input";
 
 type EventManageCommunicationsCardProps = {
   event: EventDetailResponse;
-  canSharePublicly: boolean;
 };
 
 const AUDIENCE_OPTIONS: AnnouncementAudience[] = [
@@ -64,24 +50,8 @@ function reminderLabel(state: EventNotificationStatus["reminder_state"]): string
   }
 }
 
-function nudgeLabel(state: EventNotificationStatus["nudge_state"]): string {
-  switch (state) {
-    case "sent":
-      return "Sent";
-    case "scheduled":
-      return "Scheduled (~48h before)";
-    case "due_soon":
-      return "Due in the automated window";
-    case "past":
-      return "Event has passed";
-    default:
-      return "Not applicable";
-  }
-}
-
 export function EventManageCommunicationsCard({
   event,
-  canSharePublicly,
 }: EventManageCommunicationsCardProps) {
   const [composeOpen, setComposeOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -91,7 +61,6 @@ export function EventManageCommunicationsCard({
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [shareCopied, setShareCopied] = useState(false);
   const [history, setHistory] = useState<Announcement[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [notifStatus, setNotifStatus] = useState<EventNotificationStatus | null>(
@@ -101,9 +70,6 @@ export function EventManageCommunicationsCard({
   const [preview, setPreview] = useState<AnnouncementRecipientPreview | null>(
     null,
   );
-
-  const publicPath = publicEventPath(event.id);
-  const memberPath = eventDetailPath(event.id);
 
   async function loadHistory() {
     setHistoryLoading(true);
@@ -233,17 +199,6 @@ export function EventManageCommunicationsCard({
     }
   }
 
-  async function handleCopyPublicLink() {
-    const url = `${window.location.origin}${publicPath}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setShareCopied(true);
-      window.setTimeout(() => setShareCopied(false), 2000);
-    } catch {
-      setShareCopied(false);
-    }
-  }
-
   async function handleSendReminderNow() {
     if (
       !window.confirm(
@@ -269,151 +224,74 @@ export function EventManageCommunicationsCard({
 
   return (
     <>
-      <HomeCard
-        padding="md"
-        className={EVENT_MANAGE_SECTION_CARD_CLASS}
-        aria-label="Event Communications"
-      >
-        <div>
-          <h2 className={EVENT_MANAGE_SECTION_TITLE}>Communications</h2>
-          <p className={EVENT_MANAGE_SECTION_SUBTITLE}>
-            Share the public page and send targeted member announcements.
-          </p>
+      <section aria-label="Event Communications">
+        <div className="event-command-section-head">
+          <h2 className="event-command-kicker">Communications</h2>
+          <button
+            type="button"
+            onClick={() => openComposer(true)}
+            className={EVENT_MANAGE_ACTION_LINK}
+          >
+            Compose update
+          </button>
         </div>
 
         {error && !composeOpen ? (
-          <p role="alert" className="mt-3 ds-field-error">
+          <p role="alert" className="ds-field-error">
             {error}
           </p>
         ) : null}
         {success && !composeOpen ? (
-          <p role="status" className="mt-3 text-sm text-emerald-700">
+          <p role="status" className="mt-1 text-sm text-emerald-700">
             {success}
           </p>
         ) : null}
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-gray-100 bg-white px-3.5 py-3">
-            <div className="flex items-start gap-2.5">
-              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-50 text-gray-500">
-                <AppIcon icon={Link2} size="sm" className="text-current" />
-              </span>
-              <div className="min-w-0">
-                <p className={EVENT_MANAGE_EYEBROW}>Public share link</p>
-                {canSharePublicly ? (
-                  <>
-                    <p className="mt-1 truncate text-sm font-medium text-foreground">
-                      {publicPath}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => void handleCopyPublicLink()}
-                      className={`mt-3 ${EVENT_MANAGE_SECONDARY_BTN}`}
-                    >
-                      {shareCopied ? "Link copied" : "Copy public link"}
-                    </button>
-                  </>
-                ) : (
-                  <p className="mt-1 text-sm text-gray-600">
-                    Closed board meetings are not publicly shareable. Use{" "}
-                    <Link to={memberPath} className="font-medium text-primary">
-                      the member event page
-                    </Link>
-                    .
-                  </p>
-                )}
-              </div>
-            </div>
+        <dl className="event-command-facts">
+          <div>
+            <dt>Reminders</dt>
+            <dd>
+              {notifStatus
+                ? reminderLabel(notifStatus.reminder_state)
+                : "—"}
+            </dd>
           </div>
-
-          <div className="rounded-xl border border-gray-100 bg-white px-3.5 py-3">
-            <div className="flex items-start gap-2.5">
-              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-50 text-gray-500">
-                <AppIcon icon={Bell} size="sm" className="text-current" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className={EVENT_MANAGE_EYEBROW}>Reminders</p>
-                {notifStatus ? (
-                  <ul className="mt-2 space-y-1.5 text-xs leading-relaxed text-gray-600">
-                    <li>
-                      RSVP nudge: {nudgeLabel(notifStatus.nudge_state)}
-                      {notifStatus.nudge_sent_count > 0
-                        ? ` (${notifStatus.nudge_sent_count} sent)`
-                        : ""}
-                    </li>
-                    <li>
-                      Event reminder: {reminderLabel(notifStatus.reminder_state)}
-                      {notifStatus.reminder_sent_count > 0
-                        ? ` (${notifStatus.reminder_sent_count} sent)`
-                        : ""}
-                    </li>
-                  </ul>
-                ) : (
-                  <p className="mt-2 text-xs text-gray-500">
-                    Automated RSVP nudge ~48h and reminder ~24h before start.
-                  </p>
-                )}
-                {!event.is_past ? (
-                  <button
-                    type="button"
-                    onClick={() => void handleSendReminderNow()}
-                    disabled={sendingReminder}
-                    className={`mt-3 ${EVENT_MANAGE_SECONDARY_BTN}`}
-                  >
-                    {sendingReminder ? "Sending…" : "Send reminder now"}
-                  </button>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-5 rounded-xl border border-gray-100 bg-white px-3.5 py-3">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex items-start gap-2.5">
-              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-50 text-gray-500">
-                <AppIcon icon={Megaphone} size="sm" className="text-current" />
-              </span>
-              <div>
-                <p className={EVENT_MANAGE_EYEBROW}>Targeted announcement</p>
-                <p className="mt-1 text-sm text-gray-600">
-                  Email and inbox notify Going, Maybe, no-RSVP, or everyone.
-                </p>
-              </div>
-            </div>
+        </dl>
+        {!event.is_past ? (
+          <div className="mt-2.5">
             <button
               type="button"
-              onClick={() => openComposer(true)}
-              className={EVENT_MANAGE_PRIMARY_BTN}
+              onClick={() => void handleSendReminderNow()}
+              disabled={sendingReminder}
+              className={EVENT_MANAGE_ACTION_LINK}
             >
-              Compose update
+              {sendingReminder ? "Sending…" : "Send reminder now"}
             </button>
           </div>
-        </div>
+        ) : null}
 
-        <div className="mt-5">
-          <p className={EVENT_MANAGE_EYEBROW}>Event announcement history</p>
+        <div className="mt-4">
+          <p className="event-command-kicker">Announcement history</p>
           {historyLoading ? (
-            <p className="mt-2 text-sm text-gray-500">Loading history…</p>
+            <p className="event-command-stat mt-2">Loading history…</p>
           ) : history.length === 0 ? (
-            <p className="mt-2 text-sm text-gray-500">
+            <p className="event-command-stat mt-2">
               No announcements linked to this event yet.
             </p>
           ) : (
-            <ul className="mt-2 divide-y divide-gray-100 rounded-xl border border-gray-100">
+            <ul className="event-command-activity mt-1">
               {history.slice(0, 5).map((item) => (
-                <li key={item.id} className="px-3 py-2.5">
-                  <p className="text-sm font-medium text-foreground">{item.title}</p>
-                  <p className="mt-0.5 text-xs text-gray-500">
-                    {ANNOUNCEMENT_AUDIENCE_LABELS[item.audience]} ·{" "}
-                    {new Date(item.created_at).toLocaleString()}
-                  </p>
+                <li key={item.id}>
+                  <span>{item.title}</span>
+                  <span className="shrink-0 text-xs tabular-nums text-gray-400">
+                    {ANNOUNCEMENT_AUDIENCE_LABELS[item.audience]}
+                  </span>
                 </li>
               ))}
             </ul>
           )}
         </div>
-      </HomeCard>
+      </section>
 
       <Modal
         open={composeOpen}

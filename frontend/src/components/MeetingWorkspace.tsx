@@ -28,14 +28,6 @@ type MeetingWorkspaceProps = {
   onDetailChange: (detail: MeetingDetailResponse) => void;
 };
 
-function tabButtonClassName(active: boolean): string {
-  return [
-    "rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors",
-    active
-      ? "bg-surface-card text-foreground shadow-sm"
-      : "text-label hover:text-foreground",
-  ].join(" ");
-}
 
 function OverviewStat({
   label,
@@ -172,7 +164,7 @@ export function MeetingWorkspace({
         <div
           role="tablist"
           aria-label="Meeting sections"
-          className="inline-flex max-w-full flex-wrap rounded-xl border border-gray-200 bg-surface-muted/40 p-1"
+          className="ds-seg is-fill is-wrap"
         >
           {MEETING_WORKSPACE_TABS.map((tab) => (
             <button
@@ -180,7 +172,7 @@ export function MeetingWorkspace({
               type="button"
               role="tab"
               aria-selected={activeTab === tab.id}
-              className={tabButtonClassName(activeTab === tab.id)}
+              className={activeTab === tab.id ? "is-active" : undefined}
               onClick={() => selectTab(tab.id)}
             >
               {tab.label}
@@ -313,7 +305,7 @@ export function MeetingWorkspace({
             </div>
             {detail.can_manage ? (
               <Link
-                to={`/events/${detail.event_id}/manage?tab=details`}
+                to={`/events/${detail.event_id}/manage?edit=1`}
                 className="ds-link text-sm"
               >
                 Edit in Manage →

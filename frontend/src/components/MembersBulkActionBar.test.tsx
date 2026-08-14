@@ -20,7 +20,7 @@ describe("MembersBulkActionBar", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("shows Selected count and coming-soon actions", () => {
+  it("shows Selected count and selection controls only", () => {
     render(
       <MembersBulkActionBar
         selectedCount={3}
@@ -36,17 +36,11 @@ describe("MembersBulkActionBar", () => {
     ).toBeInTheDocument();
 
     expect(
-      screen.getByRole("button", { name: /Assign Role \(Coming Soon\)/i }),
-    ).toBeDisabled();
+      screen.queryByRole("button", { name: /Assign Role/i }),
+    ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /Send Email \(Coming Soon\)/i }),
-    ).toBeDisabled();
-    expect(
-      screen.getByRole("button", { name: /Mark Paid \(Coming Soon\)/i }),
-    ).toBeDisabled();
-    expect(
-      screen.getByRole("button", { name: /Delete \(Coming Soon\)/i }),
-    ).toBeDisabled();
+      screen.queryByRole("button", { name: /Coming Soon/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("uses singular Member label for one selection", () => {

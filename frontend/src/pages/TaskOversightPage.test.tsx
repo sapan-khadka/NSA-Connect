@@ -166,7 +166,7 @@ describe("TaskOversightPage", () => {
     expect(within(workspace).queryByText("Holidays Flyer")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /New Task/i })).toHaveAttribute(
       "href",
-      "/events/10/manage",
+      "/events/10/manage?tab=operations&modal=tasks",
     );
 
     await user.selectOptions(eventSelect, "22");
@@ -179,7 +179,7 @@ describe("TaskOversightPage", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /New Task/i })).toHaveAttribute(
       "href",
-      "/events/22/manage",
+      "/events/22/manage?tab=operations&modal=tasks",
     );
   });
 
@@ -222,6 +222,12 @@ describe("TaskOversightPage", () => {
     expect(within(attention).getByText("Holidays Flyer")).toBeInTheDocument();
     expect(within(attention).getByText(/Needs Help/)).toBeInTheDocument();
     expect(within(attention).getByText(/overdue/i)).toBeInTheDocument();
-    expect(within(attention).getByText(/^High$/i)).toBeInTheDocument();
+    expect(within(attention).getByText(/High/i)).toBeInTheDocument();
+    expect(
+      within(attention).getByRole("link", { name: /Holidays Flyer/i }),
+    ).toHaveAttribute(
+      "href",
+      "/events/22/manage?tab=operations&modal=tasks",
+    );
   });
 });

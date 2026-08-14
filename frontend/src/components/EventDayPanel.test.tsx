@@ -176,7 +176,7 @@ describe("EventDayPanel", () => {
     );
 
     expect(screen.queryByRole("link", { name: /Manage Event/i })).not.toBeInTheDocument();
-    expect(screen.queryByText("Event health")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Event health")).not.toBeInTheDocument();
     expect(screen.queryByText("Needs Attention")).not.toBeInTheDocument();
   });
 
@@ -217,7 +217,7 @@ describe("EventDayPanel", () => {
     });
   });
 
-  it("keeps fixed content order including a zero-attendee row", async () => {
+  it("keeps fixed content order without a zero-attendee placeholder", async () => {
     renderPanel(
       <EventDayPanel
         selectedDate="2030-06-15"
@@ -244,12 +244,10 @@ describe("EventDayPanel", () => {
     const title = screen.getByRole("heading", { name: "Dashain Celebration" });
     const meta = screen.getByLabelText("Date, time, and location");
     const rsvp = screen.getByLabelText("Your RSVP");
-    const attendees = await screen.findByText("0 attending");
-    const health = await screen.findByText("Event health");
+    const attendees = screen.getByTestId("event-attendees-row");
+    const health = await screen.findByLabelText("Event health");
 
-    expect(screen.getByTestId("event-attendees-row")).toContainElement(
-      attendees,
-    );
+    expect(screen.queryByText("0 attending")).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /View attendees/i }),
     ).not.toBeInTheDocument();
@@ -259,8 +257,8 @@ describe("EventDayPanel", () => {
       title,
       meta,
       rsvp,
-      attendees.closest("[data-testid='event-attendees-row']") ?? attendees,
-      health.closest("details") ?? health,
+      attendees,
+      health,
     ];
 
     for (let index = 1; index < order.length; index += 1) {

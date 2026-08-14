@@ -1,7 +1,7 @@
 /**
- * Members directory toolbar filters — inline search + secondary Filter drawer.
- * Role / focus segmented controls stay on the page from md up; on mobile they
- * live inside this drawer so the list gets vertical space.
+ * Members directory toolbar — search + Filters panel.
+ * Roster chips / status stay on the page from `md` up; on small screens they
+ * also appear inside this panel.
  */
 
 import { Filter } from "lucide-react";
@@ -42,7 +42,7 @@ const MEMBER_STATUS_OPTIONS = [
 ];
 
 const ROLE_OPTIONS = [
-  { value: EMPTY, label: "All roster groups" },
+  { value: EMPTY, label: "All" },
   { value: "leadership", label: "Leadership" },
   { value: "board", label: "Board" },
   { value: "general", label: "Members" },
@@ -62,8 +62,6 @@ type MembersFiltersToolbarProps = {
   onFocusChange: (focus: MembersDirectoryFocus) => void;
   canReviewMembers?: boolean;
   canFetchDues?: boolean;
-  /** Extra active count from focus chips (active/idle/dues/pending). */
-  focusActiveCount?: number;
   /** Clears page-level focus chips when Reset is pressed. */
   onResetFocus?: () => void;
 };
@@ -75,14 +73,13 @@ export function MembersFiltersToolbar({
   onFocusChange,
   canReviewMembers = false,
   canFetchDues = false,
-  focusActiveCount = 0,
   onResetFocus,
 }: MembersFiltersToolbarProps) {
   const drawerTitleId = useId();
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const focusOptions = useMemo(() => {
-    const options = [{ value: "people", label: "All members" }];
+    const options = [{ value: "people", label: "All" }];
     if (canReviewMembers) {
       options.push(
         { value: "active", label: "Active" },
@@ -96,17 +93,14 @@ export function MembersFiltersToolbar({
     return options;
   }, [canFetchDues, canReviewMembers]);
 
-  const fieldFilterCount = useMemo(() => {
+  /** Badge counts only panel-only filters (not roster chips shown on-page). */
+  const advancedFilterCount = useMemo(() => {
     let count = 0;
-    if (values.role) count += 1;
     if (values.graduationYear) count += 1;
     if (values.paymentStatus) count += 1;
     if (values.memberStatus) count += 1;
-    if (focus !== "people") count += 1;
     return count;
-  }, [focus, values]);
-
-  const activeFilterCount = fieldFilterCount;
+  }, [values.graduationYear, values.memberStatus, values.paymentStatus]);
 
   const hasAnyFilter =
     values.search.trim().length > 0 ||
@@ -114,7 +108,7 @@ export function MembersFiltersToolbar({
     Boolean(values.graduationYear) ||
     Boolean(values.paymentStatus) ||
     Boolean(values.memberStatus) ||
-    focusActiveCount > 0;
+    focus !== "people";
 
   function updateField<K extends keyof MembersDirectoryFilters>(
     key: K,
@@ -148,21 +142,26 @@ export function MembersFiltersToolbar({
 
       <button
         type="button"
-        className="members-crm-filter-btn"
+        className={[
+          "members-crm-filter-btn",
+          advancedFilterCount > 0 || filtersOpen ? "is-active" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         aria-expanded={filtersOpen}
         aria-haspopup="dialog"
         aria-label={
-          activeFilterCount > 0
-            ? `Filters, ${activeFilterCount} active`
+          advancedFilterCount > 0
+            ? `Filters, ${advancedFilterCount} active`
             : "Filters"
         }
         onClick={() => setFiltersOpen(true)}
       >
         <AppIcon icon={Filter} size="xs" className="text-current" />
         <span className="members-crm-filter-btn-label">Filters</span>
-        {activeFilterCount > 0 ? (
+        {advancedFilterCount > 0 ? (
           <span className="members-crm-filter-count" aria-hidden="true">
-            {activeFilterCount}
+            {advancedFilterCount}
           </span>
         ) : null}
       </button>
@@ -170,9 +169,10 @@ export function MembersFiltersToolbar({
       <Drawer
         open={filtersOpen}
         onClose={() => setFiltersOpen(false)}
-        side="bottom"
-        title="Filter members"
-        description="Narrow by role, status, payment, or graduation year."
+        side="right"
+        size="sm"
+        title="Filters"
+        description="Status, payment, and graduation year."
         className="members-filters-drawer"
         footer={
           <div className="members-filters-drawer-footer">
@@ -184,7 +184,7 @@ export function MembersFiltersToolbar({
               onClick={resetFilters}
               aria-label="Reset Filters"
             >
-              Reset Filters
+              Reset
             </Button>
             <Button
               type="button"
@@ -205,29 +205,34 @@ export function MembersFiltersToolbar({
           <span id={drawerTitleId} className="sr-only">
             Member filters
           </span>
-          <Select
-            id="members-filter-role"
-            label="Roster"
-            name="role"
-            options={ROLE_OPTIONS}
-            value={values.role}
-            onChange={(event) => updateField("role", event.target.value)}
-            className="members-filters-control"
-          />
-          <Select
-            id="members-filter-focus"
-            label="Focus"
-            name="focus"
-            options={focusOptions}
-            value={focus}
-            onChange={(event) =>
-              onFocusChange(event.target.value as MembersDirectoryFocus)
-            }
-            className="members-filters-control"
-          />
+
+          {/* Mobile-only: roster + focus live in page chips on md+ */}
+          <div className="members-filters-drawer-mobile-block md:hidden">
+            <Select
+              id="members-filter-role"
+              label="Roster"
+              name="role"
+              options={ROLE_OPTIONS}
+              value={values.role}
+              onChange={(event) => updateField("role", event.target.value)}
+              className="members-filters-control"
+            />
+            <Select
+              id="members-filter-focus"
+              label="Status"
+              name="focus"
+              options={focusOptions}
+              value={focus}
+              onChange={(event) =>
+                onFocusChange(event.target.value as MembersDirectoryFocus)
+              }
+              className="members-filters-control"
+            />
+          </div>
+
           <Select
             id="members-filter-member-status"
-            label="Member Status"
+            label="Membership"
             name="memberStatus"
             options={MEMBER_STATUS_OPTIONS}
             value={values.memberStatus}
@@ -238,7 +243,7 @@ export function MembersFiltersToolbar({
           />
           <Select
             id="members-filter-payment-status"
-            label="Payment Status"
+            label="Payment"
             name="paymentStatus"
             options={PAYMENT_STATUS_OPTIONS}
             value={values.paymentStatus}
@@ -249,7 +254,7 @@ export function MembersFiltersToolbar({
           />
           <Select
             id="members-filter-graduation-year"
-            label="Graduation Year"
+            label="Graduation year"
             name="graduationYear"
             options={GRADUATION_YEAR_OPTIONS}
             value={values.graduationYear}

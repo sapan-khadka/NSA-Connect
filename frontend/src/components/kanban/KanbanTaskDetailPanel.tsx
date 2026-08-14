@@ -289,7 +289,6 @@ export function KanbanTaskDetailPanel({
                   `is-${urgency}`,
                 ].join(" ")}
               >
-                <span className="task-complete-priority__dot" aria-hidden="true" />
                 {URGENCY_LABEL[urgency]}
               </span>
             </p>

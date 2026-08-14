@@ -32,6 +32,8 @@ const inputClassName = `${inputFieldClassName} mt-1`;
 type EventManageDetailsCardProps = {
   event: EventDetailResponse;
   onUpdated: (event: EventDetailResponse) => void;
+  variant?: "page" | "drawer";
+  onSaved?: () => void;
 };
 
 function DetailsGroup({
@@ -52,6 +54,8 @@ function DetailsGroup({
 export function EventManageDetailsCard({
   event,
   onUpdated,
+  variant = "page",
+  onSaved,
 }: EventManageDetailsCardProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const initial = splitEventDateTime(event.starts_at);
@@ -202,6 +206,7 @@ export function EventManageDetailsCard({
         ends_at: nextEndsAt,
       });
       onUpdated({ ...event, ...updated });
+      onSaved?.();
     } catch (caught) {
       setDetailsError(getApiErrorMessage(caught));
     } finally {
@@ -266,31 +271,35 @@ export function EventManageDetailsCard({
     }
   }
 
-  return (
-    <HomeCard
-      padding="md"
-      className={EVENT_MANAGE_SECTION_CARD_CLASS}
-      aria-label="Event Details"
-    >
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className={EVENT_MANAGE_SECTION_TITLE}>Event Details</h2>
-          <p className={EVENT_MANAGE_SECTION_SUBTITLE}>
-            Edit the core information members see for this event.
-          </p>
+  const form = (
+    <>
+      {variant === "page" ? (
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className={EVENT_MANAGE_SECTION_TITLE}>Event Details</h2>
+            <p className={EVENT_MANAGE_SECTION_SUBTITLE}>
+              Edit the core information members see for this event.
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            disabled={!detailsDirty || detailsSaving}
+            loading={detailsSaving}
+            onClick={() => void handleSaveDetails()}
+          >
+            Save changes
+          </Button>
         </div>
-        <Button
-          type="button"
-          size="sm"
-          disabled={!detailsDirty || detailsSaving}
-          loading={detailsSaving}
-          onClick={() => void handleSaveDetails()}
-        >
-          Save changes
-        </Button>
-      </div>
+      ) : null}
 
-      <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(15rem,20rem)] lg:items-start">
+      <div
+        className={
+          variant === "drawer"
+            ? "space-y-6"
+            : "mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(15rem,20rem)] lg:items-start"
+        }
+      >
         <div className="min-w-0 space-y-8">
           <DetailsGroup title="General Information">
             <div>
@@ -618,6 +627,33 @@ export function EventManageDetailsCard({
           ) : null}
         </DetailsGroup>
       </div>
+      {variant === "drawer" ? (
+        <div className="mt-6 flex justify-end gap-2">
+          <Button
+            type="button"
+            size="sm"
+            disabled={!detailsDirty || detailsSaving}
+            loading={detailsSaving}
+            onClick={() => void handleSaveDetails()}
+          >
+            Save changes
+          </Button>
+        </div>
+      ) : null}
+    </>
+  );
+
+  if (variant === "drawer") {
+    return form;
+  }
+
+  return (
+    <HomeCard
+      padding="md"
+      className={EVENT_MANAGE_SECTION_CARD_CLASS}
+      aria-label="Event Details"
+    >
+      {form}
     </HomeCard>
   );
 }

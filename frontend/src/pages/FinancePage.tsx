@@ -441,15 +441,16 @@ export function FinancePage() {
             </section>
 
             <section className="finance-panel" aria-labelledby="finance-insights-heading">
-              <div className="finance-panel-head">
-                <h2 id="finance-insights-heading" className="finance-panel-title">
-                  Insights
-                </h2>
-                <p className="finance-panel-copy">
-                  Spend by category · Event budgets
-                </p>
-              </div>
+              <h2 id="finance-insights-heading" className="sr-only">
+                Insights
+              </h2>
               <div className="finance-insights-grid">
+                <EventBudgetBreakdown
+                  events={budgetEvents}
+                  isLoading={budgetLoading}
+                  errorMessage={budgetError}
+                  onEventClick={openBooksForEvent}
+                />
                 <ExpenseCategoryChart
                   categories={
                     expenseCategoryState.status === "ready"
@@ -467,12 +468,6 @@ export function FinancePage() {
                       ? expenseCategoryState.message
                       : null
                   }
-                />
-                <EventBudgetBreakdown
-                  events={budgetEvents}
-                  isLoading={budgetLoading}
-                  errorMessage={budgetError}
-                  onEventClick={openBooksForEvent}
                 />
               </div>
             </section>

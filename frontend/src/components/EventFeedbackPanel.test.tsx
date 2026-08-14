@@ -77,7 +77,8 @@ describe("EventFeedbackPanel", () => {
       rating: 4,
       comment: "Really enjoyed it.",
     }));
-    expect(await screen.findByText("Your feedback")).toBeInTheDocument();
+    expect(await screen.findByText("Really enjoyed it.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit feedback" })).toBeInTheDocument();
   });
 
   it("edits existing feedback", async () => {

@@ -8,7 +8,6 @@ import {
 } from "react";
 
 import { useAuth } from "../context/useAuth";
-import { useLogout } from "../context/useLogout";
 import { useNotificationSummary } from "../context/NotificationSummaryProvider";
 import { NotificationMenu } from "../design-system/components/navigation/NotificationMenu";
 import { isEventFinanceEditable } from "../lib/event-finance";
@@ -18,7 +17,6 @@ import {
   formatSemesterLabel,
   getCurrentSemesterSlug,
 } from "../lib/semester";
-import { AccountMenu } from "./AppNav";
 import { CreateMenu } from "./CreateMenu";
 import { GlobalSearch } from "./GlobalSearch";
 import { LogFinanceEntryForm } from "./LogFinanceEntryForm";
@@ -31,15 +29,14 @@ type AppTopBarProps = {
 };
 
 /**
- * Top header: search + Create + notifications + avatar.
- * Primary navigation lives in AppSidebar — not here.
+ * Top header: search + Create + notifications.
+ * Account menu lives in AppSidebar (bottom-left) only.
  */
 export function AppTopBar({
   onOpenSidebar,
   showMenuButton = false,
 }: AppTopBarProps) {
   const { member } = useAuth();
-  const logout = useLogout();
   const { menuItems, unreadCount, markRead, markAllRead } =
     useNotificationSummary();
   const [query, setQuery] = useState("");
@@ -196,7 +193,8 @@ export function AppTopBar({
           </button>
         </div>
 
-        <div className="flex shrink-0 items-center gap-1 sm:gap-2 md:ml-auto">
+        {/* z-index only needs to beat page content for open menus — keep menus portaled-ish high without covering the page body for clicks */}
+        <div className="ds-topbar-actions relative z-[45] flex shrink-0 items-center gap-1 sm:gap-2 md:ml-auto">
           <CreateMenu
             onLogTransaction={canLog ? () => setIsLogOpen(true) : undefined}
           />
@@ -217,16 +215,6 @@ export function AppTopBar({
               }
             }}
           />
-
-          {member ? (
-            <AccountMenu
-              memberId={member.id}
-              fullName={member.full_name}
-              avatarUrl={member.avatar_url}
-              onLogout={logout}
-              avatarOnly
-            />
-          ) : null}
         </div>
       </header>
 

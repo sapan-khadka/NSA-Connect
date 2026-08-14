@@ -29,7 +29,7 @@ type DayCellSurfaceOptions = {
 const DAY_CELL_BASE =
   "events-calendar-day-cell relative flex h-full min-h-0 flex-col items-center justify-center gap-0 rounded-none px-0.5 py-0.5 text-sm transition-colors duration-150 ease-out hover:bg-[#F7F7F5]";
 
-const DAY_CELL_TODAY = "is-today text-foreground hover:bg-[#EEF7F3]";
+const DAY_CELL_TODAY = "is-today text-foreground hover:bg-[#F4F4F3]";
 
 const DAY_CELL_SELECTED = "is-selected hover:bg-[color-mix(in_srgb,var(--color-primary,#111111)_7%,#fff)]";
 
@@ -56,11 +56,8 @@ export function getDayCellSurfaceClass({
 }
 
 export function getTodayDateNumberClass(isToday: boolean, isSelected: boolean): string {
-  if (isToday) {
-    return "text-sm font-semibold text-[#027C68] transition-colors duration-200";
-  }
-  if (isSelected) {
-    return "text-sm font-bold text-[#0F5C4C] transition-colors duration-200";
+  if (isToday || isSelected) {
+    return "text-sm font-semibold text-foreground transition-colors duration-200";
   }
   return "text-sm font-medium transition-colors duration-200";
 }
@@ -70,10 +67,10 @@ type YearMonthTileOptions = {
 };
 
 const YEAR_TILE_BASE =
-  "flex min-h-[4.25rem] flex-col items-center justify-center rounded-lg border border-[#E8E8E6] bg-white px-2.5 py-3 text-center transition-colors duration-150 ease-out hover:bg-[#F7F7F5]";
+  "flex min-h-[4.25rem] flex-col items-center justify-center rounded-none border border-[#ebebea] bg-transparent px-2.5 py-3 text-center transition-colors duration-150 ease-out hover:bg-[#fafafa]";
 
 const YEAR_TILE_CURRENT =
-  "border-[#B7D4C9] bg-[#EEF7F3] hover:bg-[#E7F2ED]";
+  "border-[#171717] bg-[#fafafa] hover:bg-[#f5f5f4]";
 
 export function getYearMonthTileClass({
   isCurrentMonth,
@@ -87,71 +84,99 @@ export function getYearMonthTileClass({
 
 export function getYearMonthLabelClass(isCurrentMonth: boolean): string {
   if (isCurrentMonth) {
-    return "text-sm font-semibold text-[#027C68]";
+    return "text-sm font-semibold text-[#171717]";
   }
 
   return "text-sm font-medium text-foreground";
 }
 
-type CategoryDot = {
+type CategoryMark = {
   key: string;
   className: string;
 };
 
-export function buildCategoryDots(
+export function buildCategoryMarks(
   eventTypes: EventType[],
   hasFestival: boolean,
-): CategoryDot[] {
-  const dots: CategoryDot[] = eventTypes.map((eventType) => ({
+): CategoryMark[] {
+  const marks: CategoryMark[] = eventTypes.map((eventType) => ({
     key: eventType,
     className: EVENT_TYPE_DOT_CLASS[eventType],
   }));
 
   if (hasFestival) {
-    dots.push({ key: "festival", className: FESTIVAL_DOT_CLASS });
+    marks.push({ key: "festival", className: FESTIVAL_DOT_CLASS });
   }
 
-  return dots;
+  return marks;
 }
 
-type CalendarCategoryDotsProps = {
+/** @deprecated Use buildCategoryMarks */
+export const buildCategoryDots = buildCategoryMarks;
+
+const PIN_PATH =
+  "M10 0C4.48 0 0 4.42 0 9.86c0 6.84 9.14 17.64 10 18.14.86-.5 10-11.3 10-18.14C20 4.42 15.52 0 10 0zm0 13.4A3.54 3.54 0 1 1 10 6.3a3.54 3.54 0 0 1 0 7.1z";
+
+function CalendarEventMark({
+  className,
+  size = "cell",
+  kind,
+}: {
+  className: string;
+  size?: "cell" | "legend" | "row";
+  kind?: string;
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      className={[
+        "calendar-event-mark",
+        `is-${size}`,
+        kind ? `is-kind-${kind}` : "",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <svg viewBox="0 0 20 28" focusable="false">
+        <path fill="currentColor" fillRule="evenodd" d={PIN_PATH} />
+      </svg>
+    </span>
+  );
+}
+
+type CalendarCategoryMarksProps = {
   eventTypes: EventType[];
   hasFestival: boolean;
 };
 
-export function CalendarCategoryDots({
+export function CalendarCategoryMarks({
   eventTypes,
   hasFestival,
-}: CalendarCategoryDotsProps) {
-  const dots = buildCategoryDots(eventTypes, hasFestival);
-  if (dots.length === 0) {
+}: CalendarCategoryMarksProps) {
+  const marks = buildCategoryMarks(eventTypes, hasFestival);
+  if (marks.length === 0) {
     return null;
   }
 
-  const visible = dots.slice(0, 4);
-  const overflow = dots.length - visible.length;
-
-  const stackVertically = visible.length > 1;
+  const visible = marks.slice(0, 3);
+  const overflow = marks.length - visible.length;
 
   return (
     <div
       aria-hidden="true"
-      className={[
-        "mt-0.5 flex items-center justify-center",
-        stackVertically ? "flex-col gap-[2px]" : "gap-[3px]",
-      ].join(" ")}
-      data-testid="calendar-category-dots"
+      className="calendar-event-marks"
+      data-testid="calendar-category-marks"
     >
-      {visible.map((dot) => (
-        <span
-          key={dot.key}
-          className={`h-[7px] w-[7px] rounded-full ${dot.className}`}
+      {visible.map((mark) => (
+        <CalendarEventMark
+          key={mark.key}
+          kind={mark.key}
+          className={mark.className}
         />
       ))}
       {overflow > 0 ? (
-        <span className="text-[9px] font-semibold leading-none text-label">
-          +{overflow}
-        </span>
+        <span className="calendar-event-marks__more">+{overflow}</span>
       ) : null}
     </div>
   );
@@ -162,20 +187,24 @@ export function CalendarLegendList({ className }: { className?: string }) {
     <ul aria-label="Event type legend" className={className}>
       {EVENT_TYPES.map((eventType) => (
         <li key={eventType} className="flex items-center gap-1.5">
-          <span
-            aria-hidden="true"
-            className={`h-[7px] w-[7px] rounded-full ${EVENT_TYPE_DOT_CLASS[eventType]}`}
+          <CalendarEventMark
+            className={EVENT_TYPE_DOT_CLASS[eventType]}
+            kind={eventType}
+            size="legend"
           />
           {EVENT_TYPE_LABELS[eventType]}
         </li>
       ))}
       <li className="flex items-center gap-1.5">
-        <span
-          aria-hidden="true"
-          className={`h-[7px] w-[7px] rounded-full ${FESTIVAL_DOT_CLASS}`}
+        <CalendarEventMark
+          className={FESTIVAL_DOT_CLASS}
+          kind="festival"
+          size="legend"
         />
         Nepali festival
       </li>
     </ul>
   );
 }
+
+export { CalendarEventMark };

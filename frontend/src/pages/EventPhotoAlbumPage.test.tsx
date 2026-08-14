@@ -68,7 +68,7 @@ describe("EventPhotoAlbumPage calendar return", () => {
     );
 
     expect(
-      await screen.findByRole("link", { name: /^← Media$/i }),
+      await screen.findByRole("link", { name: /Back to Media/i }),
     ).toHaveAttribute("href", "/events/media");
   });
 });
