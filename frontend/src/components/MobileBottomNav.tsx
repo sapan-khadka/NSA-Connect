@@ -1,5 +1,4 @@
 import {
-  Bell,
   CalendarDays,
   Home,
   MessageSquare,
@@ -25,13 +24,12 @@ type TabItem = {
 };
 
 /**
- * Mobile bottom chrome: Home · Events · Inbox · Notifications · Profile.
- * Inbox is a primary destination (full-screen /discussions), not a Home widget.
+ * Mobile bottom chrome: Home · Events · Inbox · Settings.
  */
 export function MobileBottomNav() {
   const { isAuthenticated, member } = useAuth();
   const isLgUp = useIsLgUp();
-  const { summary, unreadCount } = useNotificationSummary();
+  const { summary } = useNotificationSummary();
 
   if (!isAuthenticated || !member || isLgUp) {
     return null;
@@ -57,30 +55,21 @@ export function MobileBottomNav() {
       icon: MessageSquare,
       badgeCount: summary.discussions_unread,
     },
-    {
-      to: "/notifications",
-      label: "Alerts",
-      icon: Bell,
-      badgeCount: unreadCount,
-    },
-    { to: "/profile", label: "Profile", icon: UserRound },
+    { to: "/settings", label: "Settings", icon: UserRound },
   ];
 
   return (
-    <nav
-      aria-label="Mobile navigation"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 backdrop-blur-sm lg:hidden"
-      style={{ paddingBottom: "max(0.35rem, env(safe-area-inset-bottom))" }}
-    >
-      <ul className="mx-auto flex max-w-lg items-stretch justify-around px-1 pt-0.5">
+    <nav aria-label="Mobile navigation" className="ds-mobile-bottom-nav">
+      <ul className="mx-auto flex max-w-lg items-stretch justify-around">
         {tabs.map((tab) => (
           <li key={tab.to} className="flex-1">
             <NavLink
               to={tab.to}
               end={tab.end}
+              aria-label={tab.label}
               className={({ isActive }) =>
                 [
-                  "relative flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1 text-[10px] font-semibold transition-colors",
+                  "relative flex min-h-12 items-center justify-center rounded-xl text-current",
                   isActive
                     ? "text-primary"
                     : "text-label hover:text-foreground",
@@ -92,11 +81,10 @@ export function MobileBottomNav() {
                 {(tab.badgeCount ?? 0) > 0 ? (
                   <NavCountBadge
                     count={tab.badgeCount ?? 0}
-                    className="absolute -right-3 -top-1.5 h-4 min-w-4 px-1 text-[9px]"
+                    className="absolute -right-2.5 -top-1.5 h-4 min-w-4 px-1 text-[9px]"
                   />
                 ) : null}
               </span>
-              <span>{tab.label}</span>
             </NavLink>
           </li>
         ))}

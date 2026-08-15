@@ -48,7 +48,10 @@ export function AppLayout() {
     pathname === "/announcements" ||
     pathname.startsWith("/announcements/") ||
     pathname === "/assistant" ||
-    pathname.startsWith("/assistant/");
+    pathname.startsWith("/assistant/") ||
+    pathname === "/settings" ||
+    pathname.startsWith("/settings/") ||
+    pathname === "/profile";
   const eventsCalendarCanvas =
     pathname === "/events" || pathname === "/events/calendar";
   const hideMobileBottomNav = isDiscussionThreadPath(pathname);
@@ -93,6 +96,7 @@ export function AppLayout() {
           <div
             className={[
               "ds-app-shell",
+              "ds-app-shell--app",
               showInboxPane ? "ds-app-shell--with-inbox" : "",
             ]
               .filter(Boolean)
@@ -111,7 +115,7 @@ export function AppLayout() {
 
             <div
               className={[
-                "flex min-h-screen min-w-0 flex-col lg:pl-[var(--sidebar-width)]",
+                "ds-app-column min-w-0 flex-col lg:pl-[var(--sidebar-width)]",
                 isHome ? "ds-home-shell" : "",
               ]
                 .filter(Boolean)
@@ -137,7 +141,7 @@ export function AppLayout() {
                       ? "pb-0"
                       : hideMobileBottomNav
                         ? "pb-0 lg:pb-8"
-                        : "pb-24 lg:pb-8",
+                        : "pb-6 lg:pb-8",
                     fluidCanvas ? "ds-main-canvas--fluid" : "",
                     isHome ? "ds-main-canvas--home" : "",
                     eventsCalendarCanvas
