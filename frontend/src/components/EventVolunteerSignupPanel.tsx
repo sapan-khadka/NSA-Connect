@@ -14,6 +14,7 @@ type EventVolunteerSignupPanelProps = {
   canVolunteer: boolean;
   signup: EventVolunteerSignup | null;
   onSignupChange: (signup: EventVolunteerSignup | null) => void;
+  hideHeading?: boolean;
 };
 
 export function EventVolunteerSignupPanel({
@@ -21,6 +22,7 @@ export function EventVolunteerSignupPanel({
   canVolunteer,
   signup,
   onSignupChange,
+  hideHeading = false,
 }: EventVolunteerSignupPanelProps) {
   const [showForm, setShowForm] = useState(false);
   const [note, setNote] = useState("");
@@ -70,9 +72,11 @@ export function EventVolunteerSignupPanel({
 
   return (
     <div>
-      <div className="event-command-section-head">
-        <h2 className="event-command-kicker">Volunteer</h2>
-      </div>
+      {hideHeading ? null : (
+        <div className="event-command-section-head">
+          <h2 className="event-command-kicker">Volunteer</h2>
+        </div>
+      )}
 
       {!canVolunteer ? (
         <p className="event-command-stat">

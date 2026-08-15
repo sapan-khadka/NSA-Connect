@@ -160,6 +160,25 @@ describe("EventDayPanel", () => {
     expect(screen.getByText("No events on this day.")).toBeInTheDocument();
   });
 
+  it("shows the Lali Gurans bloom on a Nepali festival day", () => {
+    renderPanel(
+      <EventDayPanel
+        selectedDate="2030-03-20"
+        dayEvents={[]}
+        selectedEventId={null}
+        onSelectEvent={vi.fn()}
+        eventDetail={null}
+        detailLoading={false}
+        detailError={null}
+        {...panelProps}
+      />,
+    );
+
+    expect(screen.getByText("Holi")).toBeInTheDocument();
+    expect(screen.getByText("Nepali festival")).toBeInTheDocument();
+    expect(screen.getByText("No chapter events on this day.")).toBeInTheDocument();
+  });
+
   it("hides Manage for general members", () => {
     renderPanel(
       <EventDayPanel

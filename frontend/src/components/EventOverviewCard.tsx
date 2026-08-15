@@ -30,6 +30,7 @@ import {
   fetchEventBudgetForEvent,
   type FinanceEventBudgetSummary,
 } from "../lib/finance-api";
+import { getFestivalsOnDate } from "../lib/nepali-calendar";
 import { isRoleAtLeast } from "../lib/roles";
 import {
   DetailsActions,
@@ -301,6 +302,7 @@ export function EventOverviewCard({
     !showingDefaultUpcoming &&
     selectedDate != null &&
     dayEvents.length === 0;
+  const dayFestivals = selectedDate ? getFestivalsOnDate(selectedDate) : [];
 
   const metaItems = [
     heroDate
@@ -361,7 +363,17 @@ export function EventOverviewCard({
         />
       ) : null}
 
-      {showEmptyDay ? (
+      {showEmptyDay && dayFestivals.length > 0 ? (
+        <div className="calendar-festival-empty" role="status">
+          <p className="event-command-kicker">Nepali festival</p>
+          <h3 className="event-command-title">
+            {dayFestivals.map((festival) => festival.name).join(" · ")}
+          </h3>
+          <p className="event-command-stat">No chapter events on this day.</p>
+        </div>
+      ) : null}
+
+      {showEmptyDay && dayFestivals.length === 0 ? (
         <p className="details-panel-inline-empty px-4 pb-4">
           No events on this day.
         </p>

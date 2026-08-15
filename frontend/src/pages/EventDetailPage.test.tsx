@@ -21,6 +21,7 @@ vi.mock("../lib/events-api", async () => {
 
 vi.mock("../lib/event-tasks-api", () => ({
   fetchEventTasks: vi.fn().mockResolvedValue({ tasks: [], total: 0 }),
+  fetchMyEventTasks: vi.fn().mockResolvedValue({ tasks: [] }),
 }));
 
 import { fetchEvent, fetchEventAttendees } from "../lib/events-api";

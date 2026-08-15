@@ -79,16 +79,16 @@ export function getApiErrorMessage(
   const status = error.response.status;
   const message = detailFromBody(error.response.data as ApiErrorBody | undefined);
 
-  if (status >= 500) {
-    return message ?? fallback;
-  }
-
   if (status === 502) {
     return message ?? "Cannot reach the server. Make sure the backend is running on port 8000.";
   }
 
   if (status === 503) {
     return message ?? "This feature is temporarily unavailable. Try again later.";
+  }
+
+  if (status >= 500) {
+    return message ?? fallback;
   }
 
   if (status === 429) {

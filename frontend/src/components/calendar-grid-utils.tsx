@@ -114,9 +114,6 @@ export function buildCategoryMarks(
 /** @deprecated Use buildCategoryMarks */
 export const buildCategoryDots = buildCategoryMarks;
 
-const PIN_PATH =
-  "M10 0C4.48 0 0 4.42 0 9.86c0 6.84 9.14 17.64 10 18.14.86-.5 10-11.3 10-18.14C20 4.42 15.52 0 10 0zm0 13.4A3.54 3.54 0 1 1 10 6.3a3.54 3.54 0 0 1 0 7.1z";
-
 function CalendarEventMark({
   className,
   size = "cell",
@@ -137,11 +134,7 @@ function CalendarEventMark({
       ]
         .filter(Boolean)
         .join(" ")}
-    >
-      <svg viewBox="0 0 20 28" focusable="false">
-        <path fill="currentColor" fillRule="evenodd" d={PIN_PATH} />
-      </svg>
-    </span>
+    />
   );
 }
 
