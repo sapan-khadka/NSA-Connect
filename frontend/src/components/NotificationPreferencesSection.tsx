@@ -6,44 +6,71 @@ import {
   updateNotificationPreferences,
   type NotificationPreferences,
 } from "../lib/notifications-api";
-import { Card } from "./ui/Card";
 
 type PreferenceKey = keyof NotificationPreferences;
 
-const PREFERENCE_OPTIONS: {
+type PreferenceOption = {
   key: PreferenceKey;
   label: string;
   description: string;
-}[] = [
+};
+
+type PreferenceGroup = {
+  id: string;
+  label: string;
+  options: PreferenceOption[];
+};
+
+const PREFERENCE_GROUPS: PreferenceGroup[] = [
   {
-    key: "event_reminders",
-    label: "Event reminders",
-    description: "Upcoming events you may want to attend.",
+    id: "events",
+    label: "Events",
+    options: [
+      {
+        key: "event_reminders",
+        label: "Event reminders",
+        description: "Before events you may attend.",
+      },
+      {
+        key: "rsvp_nudges",
+        label: "RSVP updates",
+        description: "When an event you responded to changes.",
+      },
+    ],
   },
   {
-    key: "rsvp_nudges",
-    label: "RSVP nudges",
-    description: "Prompts to respond when you have not RSVP'd yet.",
+    id: "work",
+    label: "Tasks",
+    options: [
+      {
+        key: "task_reminders",
+        label: "Task reminders",
+        description: "Assignments and deadlines.",
+      },
+    ],
   },
   {
-    key: "task_reminders",
-    label: "Task assigned/due reminders",
-    description: "Alerts when tasks are assigned to you or coming due.",
-  },
-  {
-    key: "dues_reminders",
-    label: "Dues reminders",
-    description: "Friendly reminders when semester membership dues are outstanding.",
-  },
-  {
-    key: "announcements",
-    label: "Announcements",
-    description: "Board broadcasts and club-wide updates.",
+    id: "organization",
+    label: "Chapter",
+    options: [
+      {
+        key: "dues_reminders",
+        label: "Dues reminders",
+        description: "Outstanding membership dues.",
+      },
+      {
+        key: "announcements",
+        label: "Announcements",
+        description: "Board and chapter notices.",
+      },
+    ],
   },
 ];
 
 export function NotificationPreferencesSection() {
-  const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
+  const [preferences, setPreferences] = useState<NotificationPreferences | null>(
+    null,
+  );
   const [loadingKey, setLoadingKey] = useState<PreferenceKey | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -93,64 +120,57 @@ export function NotificationPreferencesSection() {
   }
 
   return (
-    <Card padding="none" className="p-4 sm:p-6">
-      <div className="border-b border-gray-200 pb-4">
-        <h2 className="text-lg font-light tracking-subhead text-foreground">
-          Notifications
-        </h2>
-        <p className="mt-1 text-sm text-label">
-          Choose which email notifications you want to receive. Changes save immediately.
-        </p>
-      </div>
-
+    <div>
       {errorMessage ? (
-        <p className="mt-4 text-sm text-overdue" role="alert">
+        <p className="settings-status is-error" role="alert">
           {errorMessage}
         </p>
       ) : null}
 
       {!preferences ? (
-        <p className="mt-6 text-sm text-label">Loading notification preferences…</p>
+        <p className="settings-muted">Loading notification preferences…</p>
       ) : (
-        <ul className="mt-6 space-y-4">
-          {PREFERENCE_OPTIONS.map((option) => {
-            const isOn = preferences[option.key];
-            const isSaving = loadingKey === option.key;
-
-            return (
-              <li
-                key={option.key}
-                className="flex items-start justify-between gap-4 rounded-lg border border-gray-200 bg-surface-card px-4 py-3"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-foreground">{option.label}</p>
-                  <p className="mt-1 text-sm text-label">{option.description}</p>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={isOn}
-                  aria-label={`${option.label} ${isOn ? "on" : "off"}`}
-                  disabled={isSaving}
-                  onClick={() => void handleToggle(option.key)}
-                  className={[
-                    "relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition-colors",
-                    isOn ? "bg-primary" : "bg-gray-200",
-                    isSaving ? "opacity-60" : "",
-                  ].join(" ")}
-                >
-                  <span
-                    className={[
-                      "inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform",
-                      isOn ? "translate-x-7" : "translate-x-1",
-                    ].join(" ")}
-                  />
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+        <>
+          {PREFERENCE_GROUPS.map((group, index) => (
+            <section
+              key={group.id}
+              className={
+                index === 0 ? "settings-block is-flush" : "settings-block"
+              }
+            >
+              <h2 className="event-command-kicker">{group.label}</h2>
+              {group.options.map((option) => {
+                const isOn = preferences[option.key];
+                const isSaving = loadingKey === option.key;
+                return (
+                  <div key={option.key} className="settings-row">
+                    <div>
+                      <p className="settings-row-title">{option.label}</p>
+                      <p className="settings-row-desc">{option.description}</p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={isOn}
+                      aria-label={`${option.label} ${isOn ? "on" : "off"}`}
+                      disabled={isSaving}
+                      onClick={() => void handleToggle(option.key)}
+                      className={[
+                        "settings-onoff",
+                        isOn ? "is-on" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                    >
+                      {isOn ? "On" : "Off"}
+                    </button>
+                  </div>
+                );
+              })}
+            </section>
+          ))}
+        </>
       )}
-    </Card>
+    </div>
   );
 }

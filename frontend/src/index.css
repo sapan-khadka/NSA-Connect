@@ -185,6 +185,51 @@
     background: #ffffff;
   }
 
+  .ds-app-column {
+    display: flex;
+    min-width: 0;
+    min-height: 100dvh;
+    flex-direction: column;
+  }
+
+  .ds-mobile-bottom-nav {
+    display: none;
+  }
+
+  @media (max-width: 1023px) {
+    .ds-app-shell--app {
+      height: 100dvh;
+      max-height: 100dvh;
+      overflow: hidden;
+    }
+
+    .ds-app-column {
+      height: 100%;
+      min-height: 0;
+      max-height: 100%;
+      overflow: hidden;
+    }
+
+    .ds-app-column > .ds-workspace-row {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .ds-mobile-bottom-nav {
+      display: block;
+      position: relative;
+      z-index: 45;
+      flex-shrink: 0;
+      border-top: 1px solid #e5e7eb;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(12px);
+      padding-top: 0.2rem;
+      padding-bottom: max(0.35rem, env(safe-area-inset-bottom, 0px));
+    }
+  }
+
   .ds-sidebar {
     @apply flex h-full w-[var(--sidebar-width)] flex-col border-r;
     /* Subtle cool off-white rails — lighter than first pass */
@@ -249,8 +294,9 @@
     content: none;
   }
 
-  /* Do not force z-index:1 on the topbar — it flattens Create/notification menus under the page. */
-  .ds-home-shell > *:not(.ds-topbar) {
+  /* Only the workspace needs stacking context. A `*` rule here would
+     override MobileBottomNav’s `position: fixed` and hide it off-screen. */
+  .ds-home-shell > .ds-workspace-row {
     position: relative;
     z-index: 1;
   }
@@ -527,6 +573,12 @@
     background: #ffffff;
   }
 
+  @media (max-width: 1023px) {
+    .ds-main-canvas--home {
+      min-height: 0;
+    }
+  }
+
   /* Events calendar: denser canvas that fills one viewport window */
   .ds-main-canvas--events-calendar {
     display: flex;
@@ -553,7 +605,7 @@
 
   @media (max-width: 1023px) {
     .ds-main-canvas--events-calendar {
-      min-height: calc(100dvh - 4rem - 4.5rem);
+      min-height: 100%;
       padding-bottom: 0.35rem;
     }
   }
@@ -7160,8 +7212,6 @@
     font-size: 0.75rem;
     font-weight: 450;
     color: #6b7280;
-    text-decoration: line-through;
-    text-decoration-color: #d1d5db;
   }
 
   .home-task-empty-title {
@@ -8444,9 +8494,7 @@
 
   .my-tasks-row.is-complete .my-tasks-row__title {
     font-weight: 500;
-    color: #737373;
-    text-decoration: line-through;
-    text-decoration-color: #d4d4d4;
+    color: #525252;
   }
 
   .my-tasks-row__due {
@@ -10857,7 +10905,7 @@
 
   @media (max-width: 1023px) {
     .reports-page,
-    .profile-page {
+    .settings-shell {
       padding-bottom: 0.5rem;
     }
   }
@@ -17791,6 +17839,7 @@
   .event-page {
     width: 100%;
     min-width: 0;
+    max-width: 64rem;
   }
 
   .event-page-nav {
@@ -17799,20 +17848,20 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem 1rem;
-    margin-bottom: 0.85rem;
+    margin-bottom: 0.75rem;
   }
 
   .event-page .event-page-hero.details-panel-hero--banner {
     width: 100%;
-    height: 11.5rem;
-    min-height: 11.5rem;
-    margin: 0 0 1.15rem;
+    height: 10rem;
+    min-height: 10rem;
+    margin: 0 0 1rem;
     border-radius: 0.5rem;
   }
 
   .event-page .event-command-header {
     margin-bottom: 0;
-    padding-bottom: 1.15rem;
+    padding-bottom: 1rem;
     border-bottom: 1px solid #ebebea;
   }
 
@@ -17821,22 +17870,26 @@
   }
 
   .event-page .event-command-title {
-    font-size: 1.75rem;
+    font-size: 1.625rem;
   }
 
-  .event-page-main,
-  .event-page .event-command-aside {
+  .event-page-body {
     min-width: 0;
   }
 
-  .event-page .event-command-layout {
-    align-items: start;
+  .event-page-actions {
+    margin-top: 0.15rem;
   }
 
-  .event-page .event-command-aside {
-    margin-top: 0.5rem;
-    padding-top: 1.15rem;
-    border-top: 1px solid #ebebea;
+  .event-page-actions > .event-command-section {
+    margin-top: 0;
+    padding-top: 1rem;
+    border-top: 0;
+  }
+
+  .event-page .event-command-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
   }
 
   .event-page-discussion.ds-card {
@@ -17844,31 +17897,9 @@
     border-color: #ebebea;
   }
 
-  @media (min-width: 960px) {
-    .event-page .event-page-hero.details-panel-hero--banner {
-      height: 14rem;
-      min-height: 14rem;
-    }
-
-    .event-page .event-command-layout {
-      grid-template-columns: minmax(0, 1fr) minmax(22rem, 32%);
-      column-gap: 0;
-      margin-top: 0;
-    }
-
-    .event-page .event-command-aside {
-      position: sticky;
-      top: 1rem;
-      margin-top: 0;
-      padding: 1.25rem 0 0 2rem;
-      border-top: 0;
-      border-left: 1px solid #ebebea;
-    }
-  }
-
   .event-page-description {
     max-width: 40rem;
-    margin: 0.85rem 0 0;
+    margin: 0.75rem 0 0;
     font-size: 0.875rem;
     font-weight: 400;
     line-height: 1.55;
@@ -17881,7 +17912,7 @@
   }
 
   .event-page .rsvp-segmented {
-    max-width: none;
+    max-width: 22rem;
   }
 
   .event-page-list {
@@ -18234,6 +18265,306 @@
   .event-command-stat strong {
     font-weight: 550;
     color: #171717;
+  }
+
+  .settings-shell {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+    width: 100%;
+    max-width: 52rem;
+  }
+
+  @media (min-width: 1024px) {
+    .settings-shell {
+      grid-template-columns: 10.5rem minmax(0, 1fr);
+      column-gap: 3rem;
+      align-items: start;
+      gap: 0;
+    }
+
+    .settings-nav {
+      position: sticky;
+      top: 1.25rem;
+    }
+  }
+
+  .settings-identity {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding-bottom: 1.15rem;
+    border-bottom: 1px solid #ebebea;
+  }
+
+  .settings-identity-name {
+    margin: 0;
+    font-size: 1.0625rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: #171717;
+  }
+
+  .settings-identity-meta {
+    margin: 0.15rem 0 0;
+    font-size: 0.8125rem;
+    color: #737373;
+  }
+
+  .settings-nav ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .settings-nav-group + .settings-nav-group {
+    margin-top: 1.15rem;
+  }
+
+  .settings-nav-group .event-command-kicker {
+    margin-bottom: 0.2rem;
+  }
+
+  .settings-nav-link {
+    position: relative;
+    display: block;
+    padding: 0.38rem 0;
+    color: #737373;
+    font-size: 0.875rem;
+    font-weight: 450;
+    letter-spacing: -0.01em;
+    text-decoration: none;
+  }
+
+  .settings-nav-link:hover {
+    color: #111111;
+  }
+
+  .settings-nav-link.is-active {
+    color: #111111;
+    font-weight: 550;
+  }
+
+  @media (min-width: 1024px) {
+    .settings-nav-link.is-active::before {
+      content: "";
+      position: absolute;
+      top: 0.42rem;
+      bottom: 0.42rem;
+      left: -0.85rem;
+      width: 2px;
+      border-radius: 1px;
+      background: #171717;
+    }
+  }
+
+  .settings-nav.is-menu .settings-nav-group + .settings-nav-group {
+    margin-top: 1.35rem;
+  }
+
+  .settings-nav.is-menu .settings-nav-link {
+    padding: 0.9rem 0;
+    border-bottom: 1px solid #f5f5f4;
+    color: #111111;
+    font-size: 0.9375rem;
+    font-weight: 500;
+  }
+
+  .settings-nav.is-menu .settings-nav-group li:last-child .settings-nav-link {
+    border-bottom: 0;
+  }
+
+  .settings-shell > .page-back-link {
+    margin-bottom: 0.15rem;
+  }
+
+  .settings-header {
+    margin-bottom: 0.35rem;
+  }
+
+  .settings-title {
+    margin: 0;
+    font-size: 1.375rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.25;
+    color: #171717;
+  }
+
+  .settings-lede,
+  .settings-muted {
+    margin: 0.25rem 0 0;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: #737373;
+  }
+
+  .settings-block {
+    margin-top: 1.15rem;
+    padding-top: 1.05rem;
+    border-top: 1px solid #ebebea;
+  }
+
+  .settings-block.is-flush {
+    margin-top: 0.85rem;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .settings-block .event-command-kicker {
+    margin-bottom: 0.45rem;
+  }
+
+  .settings-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.7rem 0 0.35rem;
+  }
+
+  .settings-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .settings-muted + .settings-actions {
+    margin-top: 0.75rem;
+  }
+
+  .settings-field > label,
+  .settings-field-label {
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 550;
+    color: #111111;
+  }
+
+  .settings-field-hint {
+    margin: 0;
+    font-size: 0.75rem;
+    color: #737373;
+  }
+
+  .settings-readonly {
+    margin: 0;
+    padding: 0.55rem 0;
+    font-size: 0.875rem;
+    color: #525252;
+  }
+
+  .settings-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f5f5f4;
+  }
+
+  .settings-row:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .settings-row-title {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 550;
+    color: #111111;
+  }
+
+  .settings-row-desc,
+  .settings-row-value {
+    margin: 0.2rem 0 0;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: #737373;
+  }
+
+  .settings-row-value {
+    margin: 0;
+    flex-shrink: 0;
+    font-weight: 550;
+    color: #171717;
+  }
+
+  .settings-onoff {
+    appearance: none;
+    flex-shrink: 0;
+    margin: 0.1rem 0 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #737373;
+    font-size: 0.8125rem;
+    font-weight: 550;
+    cursor: pointer;
+  }
+
+  .settings-onoff.is-on {
+    color: #111111;
+  }
+
+  .settings-onoff:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+
+  .settings-choice {
+    display: flex;
+    flex-shrink: 0;
+    gap: 0.7rem;
+  }
+
+  .settings-choice button {
+    appearance: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #a3a3a3;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .settings-choice button[aria-pressed="true"] {
+    color: #111111;
+    font-weight: 550;
+  }
+
+  .settings-choice button:disabled {
+    cursor: default;
+  }
+
+  .settings-photo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .settings-photo-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .settings-actions {
+    display: flex;
+    justify-content: flex-start;
+    margin-top: 1.15rem;
+  }
+
+  .settings-status {
+    margin: 0.75rem 0 0;
+    font-size: 0.8125rem;
+    color: #166534;
+  }
+
+  .settings-status.is-error {
+    color: #b91c1c;
   }
 
   .event-attention-list {
@@ -19807,61 +20138,38 @@
 
   .calendar-event-marks {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: 3px;
     margin-top: 3px;
-    min-height: 13px;
+    min-height: 6px;
   }
 
   .calendar-event-mark {
-    display: inline-flex;
-    flex-shrink: 0;
-    width: 9px;
-    height: 13px;
-    color: inherit;
-    background: none !important;
-  }
-
-  .calendar-event-mark svg {
     display: block;
-    width: 100%;
-    height: 100%;
-    overflow: visible;
+    flex-shrink: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
   }
 
-  .calendar-event-mark.is-kind-cultural {
-    color: #d85a30;
-  }
-
-  .calendar-event-mark.is-kind-meeting {
-    color: #378add;
-  }
-
-  .calendar-event-mark.is-kind-fundraiser {
-    color: #ef9f27;
-  }
-
-  .calendar-event-mark.is-kind-social {
-    color: #639922;
-  }
-
-  .calendar-event-mark.is-kind-service {
-    color: #1d9e75;
-  }
-
-  .calendar-event-mark.is-kind-festival {
-    color: #7f77dd;
-  }
-
-  .calendar-event-mark.is-legend {
-    width: 11px;
-    height: 16px;
-  }
-
+  .calendar-event-mark.is-legend,
   .calendar-event-mark.is-row {
-    width: 10px;
-    height: 14px;
+    width: 7px;
+    height: 7px;
+  }
+
+  .calendar-festival-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+    padding: 1rem 1.1rem 1.25rem;
+  }
+
+  .calendar-festival-empty .event-command-title {
+    margin: 0;
+    font-size: 1.05rem;
   }
 
   .calendar-event-marks__more {

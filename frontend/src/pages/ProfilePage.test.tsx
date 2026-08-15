@@ -1,11 +1,11 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { MockAuthProvider } from "../test/test-utils";
-
-import { ProfilePage } from "./ProfilePage";
+import { SettingsLayout } from "../layouts/SettingsLayout";
+import { SettingsProfilePage } from "./settings/SettingsProfilePage";
 
 vi.mock("../lib/members-api", () => ({
   fetchMyProfile: vi.fn(),
@@ -22,7 +22,6 @@ vi.mock("../lib/notifications-api", () => ({
   }),
   updateNotificationPreferences: vi.fn(),
   sendTestEmail: vi.fn(),
-  runNotificationCheck: vi.fn(),
 }));
 
 const mockMember = {
@@ -48,8 +47,12 @@ function renderProfilePage() {
         updateMember,
       }}
     >
-      <MemoryRouter>
-        <ProfilePage />
+      <MemoryRouter initialEntries={["/settings/profile"]}>
+        <Routes>
+          <Route path="/settings" element={<SettingsLayout />}>
+            <Route path="profile" element={<SettingsProfilePage />} />
+          </Route>
+        </Routes>
       </MemoryRouter>
     </MockAuthProvider>,
   );
@@ -57,7 +60,7 @@ function renderProfilePage() {
   return { updateMember };
 }
 
-describe("ProfilePage", () => {
+describe("SettingsProfilePage", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
@@ -73,6 +76,10 @@ describe("ProfilePage", () => {
     expect(screen.getByDisplayValue("test@semo.edu")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Computer Science")).toBeInTheDocument();
     expect(screen.getByText("12345678")).toBeInTheDocument();
+    expect(screen.queryByText("Talents")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Email visibility"),
+    ).not.toBeInTheDocument();
   });
 
   it("saves updated contact info", async () => {
@@ -80,14 +87,13 @@ describe("ProfilePage", () => {
     const { fetchMyProfile, updateMyProfile } = await import(
       "../lib/members-api"
     );
-    const { updateMember } = renderProfilePage();
-
     vi.mocked(fetchMyProfile).mockResolvedValue(mockMember);
     vi.mocked(updateMyProfile).mockResolvedValue({
       ...mockMember,
       full_name: "New Name",
       major: "Biology",
     });
+    const { updateMember } = renderProfilePage();
 
     await screen.findByDisplayValue("Test User");
 
@@ -108,7 +114,7 @@ describe("ProfilePage", () => {
     });
     expect(updateMember).toHaveBeenCalled();
     expect(
-      await screen.findByText("Profile updated successfully."),
+      await screen.findByText("Profile updated."),
     ).toBeInTheDocument();
   });
 });

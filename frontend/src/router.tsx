@@ -13,6 +13,7 @@ function LegacyPhotoAlbumRedirect() {
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppLayout } from "./layouts/AppLayout";
 import { EventsHubLayout } from "./layouts/EventsHubLayout";
+import { SettingsLayout } from "./layouts/SettingsLayout";
 import { BoardDiscussionPage } from "./pages/BoardDiscussionPage";
 import { BoardTasksPage } from "./pages/BoardTasksPage";
 import { AnnouncementsPage } from "./pages/AnnouncementsPage";
@@ -40,6 +41,11 @@ import { MeetingDetailPage } from "./pages/MeetingDetailPage";
 import { CustomMediaAlbumPage } from "./pages/CustomMediaAlbumPage";
 import { PhotoArchivePage } from "./pages/PhotoArchivePage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { SettingsEmailPage } from "./pages/settings/SettingsEmailPage";
+import { SettingsNotificationsPage } from "./pages/settings/SettingsNotificationsPage";
+import { SettingsPrivacyPage } from "./pages/settings/SettingsPrivacyPage";
+import { SettingsProfilePage } from "./pages/settings/SettingsProfilePage";
+import { SettingsSecurityPage } from "./pages/settings/SettingsSecurityPage";
 import { PublicEventPage } from "./pages/PublicEventPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
@@ -80,6 +86,22 @@ export const appRoutes: RouteObject[] = [
             <ProfilePage />
           </ProtectedRoute>
         ),
+      },
+      {
+        path: "settings",
+        element: (
+          <ProtectedRoute>
+            <SettingsLayout />
+          </ProtectedRoute>
+        ),
+        children: [
+          { index: true, element: null },
+          { path: "profile", element: <SettingsProfilePage /> },
+          { path: "notifications", element: <SettingsNotificationsPage /> },
+          { path: "security", element: <SettingsSecurityPage /> },
+          { path: "privacy", element: <SettingsPrivacyPage /> },
+          { path: "email", element: <SettingsEmailPage /> },
+        ],
       },
       {
         path: "assistant",

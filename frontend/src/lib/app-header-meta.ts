@@ -211,6 +211,11 @@ const ROUTES: RouteMeta[] = [
     crumbs: () => [DASHBOARD, leaf("assistant", "AI & Documents")],
   },
   {
+    pattern: /^\/settings(\/.*)?\/?$/,
+    title: "Settings",
+    crumbs: () => [DASHBOARD, leaf("settings", "Settings")],
+  },
+  {
     pattern: /^\/profile\/?$/,
     title: "Settings",
     crumbs: () => [DASHBOARD, leaf("settings", "Settings")],

@@ -4,8 +4,6 @@ import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/api-error";
 import { deleteMyAvatar, uploadMyAvatar } from "../lib/members-api";
 import { Avatar } from "../design-system/components/Avatar";
-import { Button } from "./ui/Button";
-import { Card } from "./ui/Card";
 
 type ProfilePhotoCardProps = {
   member: MemberResponse;
@@ -56,17 +54,9 @@ export function ProfilePhotoCard({
   }
 
   return (
-    <Card padding="md" className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold tracking-tight text-foreground">
-          Profile photo
-        </h2>
-        <p className="mt-1 text-sm text-label">
-          Shown across discussions, the member directory, and your account menu.
-        </p>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-4">
+    <section className="settings-block is-flush" aria-label="Profile photo">
+      <h2 className="event-command-kicker">Photo</h2>
+      <div className="settings-photo">
         <Avatar
           name={member.full_name}
           memberId={member.id}
@@ -74,7 +64,7 @@ export function ProfilePhotoCard({
           size="xl"
           alt={`${member.full_name} profile photo`}
         />
-        <div className="flex flex-wrap items-center gap-2">
+        <div>
           <input
             ref={inputRef}
             id={inputId}
@@ -83,34 +73,34 @@ export function ProfilePhotoCard({
             className="sr-only"
             onChange={(event) => void handleFileChange(event.target.files)}
           />
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            disabled={isUploading || isRemoving}
-            onClick={() => inputRef.current?.click()}
-          >
-            {isUploading ? "Uploading…" : "Upload photo"}
-          </Button>
-          {member.avatar_url ? (
-            <Button
+          <div className="settings-photo-actions">
+            <button
               type="button"
-              variant="ghost"
-              size="sm"
               disabled={isUploading || isRemoving}
-              onClick={() => void handleRemove()}
+              className="event-command-btn"
+              onClick={() => inputRef.current?.click()}
             >
-              {isRemoving ? "Removing…" : "Remove"}
-            </Button>
-          ) : null}
+              {isUploading ? "Uploading…" : "Change photo"}
+            </button>
+            {member.avatar_url ? (
+              <button
+                type="button"
+                disabled={isUploading || isRemoving}
+                className="event-command-btn"
+                onClick={() => void handleRemove()}
+              >
+                {isRemoving ? "Removing…" : "Remove"}
+              </button>
+            ) : null}
+          </div>
+          <p className="settings-field-hint">JPG, PNG, or HEIC</p>
         </div>
       </div>
-
       {error ? (
-        <p className="text-sm text-overdue" role="alert">
+        <p className="settings-status is-error" role="alert">
           {error}
         </p>
       ) : null}
-    </Card>
+    </section>
   );
 }

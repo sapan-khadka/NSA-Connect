@@ -1,15 +1,11 @@
 import { useState, type FormEvent } from "react";
 
 import { useAuth } from "../context/useAuth";
-import { Button } from "./ui/Button";
-import { Card } from "./ui/Card";
 import { Input } from "./ui/Input";
 import { getApiErrorMessage } from "../lib/api-error";
 import { changeMyPassword } from "../lib/members-api";
 import { getPasswordHint, validatePasswordStrength } from "../lib/password-validation";
-import {
-  validateLoginPassword,
-} from "../lib/validation";
+import { validateLoginPassword } from "../lib/validation";
 
 type PasswordFormErrors = {
   current_password?: string;
@@ -91,55 +87,42 @@ export function ChangePasswordForm({ email, fullName }: ChangePasswordFormProps)
   }
 
   return (
-    <Card
-      as="form"
+    <form
+      className="settings-block is-flush"
       onSubmit={(event) => void handleSubmit(event)}
-      padding="md"
     >
-      <h2 className="text-lg font-light tracking-subhead text-foreground">Change password</h2>
-      <p className="mt-1 text-sm text-label">
-        {getPasswordHint()} You will stay signed in on this device; other
-        sessions will be signed out.
-      </p>
-
       {serverError ? (
-        <div className="mt-4 ds-alert-banner">
+        <p className="settings-status is-error" role="alert">
           {serverError}
-        </div>
+        </p>
       ) : null}
 
       {successMessage ? (
-        <Card
-          as="div"
-          padding="none"
-          className="mt-4 px-4 py-3 text-sm text-primary"
-        >
+        <p className="settings-status" role="status">
           {successMessage}
-        </Card>
+        </p>
       ) : null}
 
-      <div className="mt-6 grid gap-6 md:grid-cols-2">
-        <div className="md:col-span-2">
-          <Input
-            id="current_password"
-            name="current_password"
-            label="Current password"
-            type="password"
-            autoComplete="current-password"
-            value={currentPassword}
-            onChange={(event) => {
-              setCurrentPassword(event.target.value);
-              setFieldErrors((current) => ({
-                ...current,
-                current_password: undefined,
-              }));
-              setServerError(null);
-              setSuccessMessage(null);
-            }}
-            error={fieldErrors.current_password}
-          />
-        </div>
-
+      <h2 className="event-command-kicker">Password</h2>
+      <div className="settings-stack">
+        <Input
+          id="current_password"
+          name="current_password"
+          label="Current password"
+          type="password"
+          autoComplete="current-password"
+          value={currentPassword}
+          onChange={(event) => {
+            setCurrentPassword(event.target.value);
+            setFieldErrors((current) => ({
+              ...current,
+              current_password: undefined,
+            }));
+            setServerError(null);
+            setSuccessMessage(null);
+          }}
+          error={fieldErrors.current_password}
+        />
         <Input
           id="new_password"
           name="new_password"
@@ -161,7 +144,6 @@ export function ChangePasswordForm({ email, fullName }: ChangePasswordFormProps)
             newPassword ? `${newPassword.length} characters` : getPasswordHint()
           }
         />
-
         <Input
           id="confirm_password"
           name="confirm_password"
@@ -182,15 +164,17 @@ export function ChangePasswordForm({ email, fullName }: ChangePasswordFormProps)
         />
       </div>
 
-      <div className="mt-8 flex justify-end">
-        <Button
+      <p className="settings-muted">Other sessions will be signed out.</p>
+
+      <div className="settings-actions">
+        <button
           type="submit"
           disabled={isSubmitting}
-          loading={isSubmitting}
+          className="event-command-btn event-command-btn--primary"
         >
-          Update password
-        </Button>
+          {isSubmitting ? "Updating…" : "Update password"}
+        </button>
       </div>
-    </Card>
+    </form>
   );
 }

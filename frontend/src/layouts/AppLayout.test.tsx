@@ -134,7 +134,7 @@ describe("AppLayout navigation", () => {
     ).not.toBeInTheDocument();
     expect(within(sidebar).getByRole("link", { name: "Settings" })).toHaveAttribute(
       "href",
-      "/profile",
+      "/settings",
     );
     expect(
       within(sidebar).queryByRole("link", { name: "Roles & Permissions" }),

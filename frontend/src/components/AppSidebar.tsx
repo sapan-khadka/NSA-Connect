@@ -189,7 +189,7 @@ function SidebarAccountMenu({
           className="absolute bottom-full left-0 z-50 mb-1.5 w-full overflow-hidden rounded-lg border border-gray-200 bg-surface-card py-1 shadow-card"
         >
           <NavLink
-            to="/profile"
+            to="/settings"
             role="menuitem"
             onClick={() => {
               setOpen(false);
@@ -202,7 +202,7 @@ function SidebarAccountMenu({
             ].join(" ")}
           >
             <AppIcon icon={Settings} size="sm" className="text-label" />
-            Account settings
+            Settings
           </NavLink>
           <div className="my-1 border-t border-gray-100" role="separator" />
           <button
@@ -379,7 +379,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
   const adminItems: SidebarLink[] = [
     {
-      to: "/profile",
+      to: "/settings",
       label: "Settings",
       icon: Settings,
     },

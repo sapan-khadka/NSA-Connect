@@ -215,7 +215,7 @@ export function AccountMenu({
             <p className="truncate text-sm text-foreground">{fullName}</p>
           </div>
           <NavLink
-            to="/profile"
+            to="/settings"
             role="menuitem"
             onClick={() => setOpen(false)}
             className={({ isActive }) =>
@@ -227,7 +227,7 @@ export function AccountMenu({
               ].join(" ")
             }
           >
-            Profile
+            Settings
           </NavLink>
           <button
             type="button"

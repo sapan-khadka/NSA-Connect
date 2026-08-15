@@ -24,6 +24,11 @@ describe("getAppHeaderMeta", () => {
     expect(getAppHeaderMeta("/profile").title).toBe("Settings");
   });
 
+  it("resolves nested settings pages", () => {
+    expect(getAppHeaderMeta("/settings/profile").title).toBe("Settings");
+    expect(getAppHeaderMeta("/settings/notifications").title).toBe("Settings");
+  });
+
   it("resolves custom discussion room paths", () => {
     expect(getAppHeaderMeta("/discussions/room/4").title).toBe("Discussions");
   });
