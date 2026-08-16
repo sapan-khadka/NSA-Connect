@@ -1,11 +1,11 @@
 from app.models.announcement import Announcement, AnnouncementCategory
 from app.models.base import Base
 from app.models.constitutional_chunk import ConstitutionalChunk
+from app.models.custom_board_position import CustomBoardPosition
 from app.models.discussion_message import DiscussionMessage
 from app.models.discussion_message_attachment import DiscussionMessageAttachment
 from app.models.discussion_message_reaction import DiscussionMessageReaction
 from app.models.discussion_read_state import DiscussionReadState
-from app.models.discussion_thread_pin import DiscussionThreadPin
 from app.models.discussion_room import (
     DiscussionRoom,
     DiscussionRoomMember,
@@ -17,13 +17,13 @@ from app.models.discussion_room_mute import DiscussionRoomMute
 from app.models.discussion_room_pin import DiscussionRoomPin
 from app.models.discussion_room_read import DiscussionRoomRead
 from app.models.discussion_room_user_archive import DiscussionRoomUserArchive
+from app.models.discussion_thread_pin import DiscussionThreadPin
 from app.models.event import Event, EventType, MeetingVisibility
 from app.models.event_checkin import EventCheckIn
 from app.models.event_feedback import EventFeedback
 from app.models.event_guest_checkin import EventGuestCheckIn, GuestAffiliationType
 from app.models.event_participant_invitation import EventParticipantInvitation
 from app.models.event_photo import EventPhoto
-from app.models.media_album import MediaAlbum, MediaAlbumItem
 from app.models.event_rsvp import EventRsvp, RsvpStatus
 from app.models.event_suggestion import EventSuggestion, EventSuggestionStatus
 from app.models.event_suggestion_comment import (
@@ -53,8 +53,9 @@ from app.models.finance_change_request import (
     FinanceChangeStatus,
 )
 from app.models.finance_entry import FinanceCategory, FinanceEntry, FinanceEntryType
+from app.models.inbox_notification import InboxNotification, InboxNotificationType
+from app.models.media_album import MediaAlbum, MediaAlbumItem
 from app.models.meeting import MeetingAttendance, MeetingRecord
-from app.models.custom_board_position import CustomBoardPosition
 from app.models.member import (
     Member,
     MemberPosition,
@@ -64,18 +65,17 @@ from app.models.member import (
     User,
 )
 from app.models.member_document import MemberDocument, MemberDocumentType
-from app.models.member_note import MemberNote
 from app.models.member_dues import (
     DuesPaymentMethod,
     DuesStatus,
     MemberDues,
     SemesterDuesSettings,
 )
+from app.models.member_note import MemberNote
 from app.models.notification_sent_log import NotificationSentLog, NotificationType
-from app.models.inbox_notification import InboxNotification, InboxNotificationType
+from app.models.org_document import OrgDocument, OrgDocumentChunk, OrgDocumentVisibility
 from app.models.organization import Organization, OrganizationStatus
 from app.models.organization_membership import OrganizationMembership
-from app.models.org_document import OrgDocument, OrgDocumentChunk, OrgDocumentVisibility
 from app.models.password_reset_token import PasswordResetToken
 from app.models.preptask import PrepTaskGroup, PrepTaskGroupItem
 from app.models.reminder import PrepTaskReminder, ReminderType
@@ -146,6 +146,7 @@ __all__ = [
     "InboxNotification",
     "InboxNotificationType",
     "Member",
+    "MemberNote",
     "MemberDocument",
     "MemberDocumentType",
     "MemberPosition",

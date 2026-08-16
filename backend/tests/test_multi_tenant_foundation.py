@@ -1,6 +1,11 @@
 """Smoke tests for Phase 1 multi-tenant foundation (single org: NSA)."""
 
 import pytest
+from conftest import (
+    auth_header,
+    create_board_member,
+    create_president_member,
+)
 from sqlalchemy import select
 
 from app.core.permissions import Permission, member_has
@@ -15,11 +20,6 @@ from app.services.organization_context import (
     get_default_organization_id,
     get_membership_for_user,
     resolve_organization_id,
-)
-from conftest import (
-    auth_header,
-    create_board_member,
-    create_president_member,
 )
 
 
@@ -143,6 +143,7 @@ def test_sync_membership_preserves_is_org_owner(db_session):
     assert membership.is_org_owner is True
 
 
+@pytest.mark.empty_org
 def test_empty_org_first_register_becomes_owner(client, db_session):
     response = client.post(
         "/api/v1/auth/register",

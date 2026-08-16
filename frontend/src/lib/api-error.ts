@@ -45,7 +45,7 @@ function detailFromBody(body: ApiErrorBody | undefined): string | null {
       .map((item) => item.message?.trim())
       .filter((message): message is string => Boolean(message));
     if (messages.length > 0) {
-      return body.detail?.trim() || messages.join(" ");
+      return messages.join(" ");
     }
   }
 

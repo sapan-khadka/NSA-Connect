@@ -179,7 +179,7 @@ describe("protected route redirects", () => {
     });
     expect(
       await screen.findByRole("link", {
-        name: /3 pending requests/i,
+        name: /3 pending approvals/i,
       }),
     ).toHaveAttribute("href", "/members?tab=pending");
   });
@@ -238,7 +238,7 @@ describe("protected route redirects", () => {
       expect(router.state.location.pathname).toBe("/events/tasks");
     });
     expect(
-      await screen.findByText("No tasks assigned to you yet"),
+      await screen.findByText(/No tasks assigned to you yet/),
     ).toBeInTheDocument();
   });
 
@@ -255,7 +255,7 @@ describe("protected route redirects", () => {
       expect(router.state.location.pathname).toBe("/events/tasks");
     });
     expect(
-      await screen.findByText("No tasks assigned to you yet"),
+      await screen.findByText(/No tasks assigned to you yet/),
     ).toBeInTheDocument();
   });
 
@@ -289,7 +289,7 @@ describe("protected route redirects", () => {
       expect(router.state.location.pathname).toBe("/events/tasks");
     });
     expect(
-      await screen.findByText("No tasks assigned to you yet"),
+      await screen.findByText(/No tasks assigned to you yet/),
     ).toBeInTheDocument();
   });
 
@@ -320,7 +320,7 @@ describe("protected route redirects", () => {
       expect(router.state.location.pathname).toBe("/events/tasks");
     });
     expect(
-      await screen.findByText("No tasks assigned to you yet"),
+      await screen.findByText(/No tasks assigned to you yet/),
     ).toBeInTheDocument();
   });
 });

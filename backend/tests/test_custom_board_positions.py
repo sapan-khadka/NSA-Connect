@@ -1,7 +1,4 @@
 import pytest
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
-
 from conftest import (
     auth_header,
     create_board_member,
@@ -9,6 +6,8 @@ from conftest import (
     register_member,
     set_member_approved,
 )
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 
 @pytest.fixture

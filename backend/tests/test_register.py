@@ -1,3 +1,4 @@
+import pytest
 from conftest import (
     VALID_GRADUATION_YEAR,
     VALID_MAJOR,
@@ -10,6 +11,7 @@ from app.core.security import verify_password
 from app.models.member import Member
 
 
+@pytest.mark.empty_org
 def test_register_creates_member(client):
     response = client.post("/api/v1/auth/register", json=register_payload())
 

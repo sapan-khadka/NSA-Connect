@@ -14,7 +14,6 @@ from app.models.member import Member, MemberRole
 from app.schemas.event_suggestion import EventSuggestionCommentCreateRequest
 from app.services.event_suggestion_service import (
     COMMUNITY_FEEDBACK_OPEN_STATUSES,
-    EventSuggestionNotFoundError,
     get_event_suggestion,
 )
 

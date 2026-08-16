@@ -332,7 +332,7 @@ export function EventsPage() {
     (status: { event_id: number; current_member_rsvp_status: RsvpStatus | null }) => {
       setEventDetail((current) =>
         current && current.id === status.event_id
-          ? applyRsvpStatus(current, status.current_member_rsvp_status)
+          ? applyRsvpStatus(current, status)
           : current,
       );
       setEvents((current) =>

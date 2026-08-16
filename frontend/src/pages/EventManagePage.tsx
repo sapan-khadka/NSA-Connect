@@ -220,10 +220,11 @@ export function EventManagePage() {
     );
   }
 
-  const calendarBackTo = calendarDeepLink(event);
+  const currentEvent = event;
+  const calendarBackTo = calendarDeepLink(currentEvent);
 
   function handleConvertVolunteerToTask(signup: EventVolunteerSignupMember) {
-    setTaskDraft(buildVolunteerTaskDraft(event.name, signup));
+    setTaskDraft(buildVolunteerTaskDraft(currentEvent.name, signup));
     setOpenTasksModalToken((current) => current + 1);
   }
 
@@ -238,7 +239,7 @@ export function EventManagePage() {
   return (
     <div className="event-manage-page mx-auto flex w-full max-w-[1280px] flex-col gap-4 px-0">
       <EventManageHero
-        event={event}
+        event={currentEvent}
         budget={budget}
         tasks={tasks}
         backTo={calendarBackTo}

@@ -1,5 +1,4 @@
 import type { EventResponse } from "./events-api";
-import type { MyTasksSummary } from "./home-tasks";
 
 function formatNextEventPhrase(event: EventResponse, now = new Date()): string {
   const start = new Date(event.starts_at);

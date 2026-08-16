@@ -65,7 +65,7 @@ export function useAppNotifications(enabled: boolean) {
   }, []);
 
   const markAllRead = useCallback(() => {
-    setReadIds((current) => {
+    setReadIds(() => {
       const ids = announcements.map((item) => `announcement-${item.id}`);
       return markNotificationsRead(ids);
     });

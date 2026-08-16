@@ -6,27 +6,27 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+import app.models.custom_board_position  # noqa: F401 — register table for create_all
 import app.models.discussion_message_reaction  # noqa: F401 — register table for create_all
 import app.models.discussion_read_state  # noqa: F401 — register table for create_all
 import app.models.discussion_room_pin  # noqa: F401 — register table for create_all
 import app.models.discussion_room_read  # noqa: F401 — register table for create_all
+import app.models.event_suggestion_comment  # noqa: F401 — register table for create_all
+import app.models.event_suggestion_interest  # noqa: F401 — register table for create_all
+import app.models.event_suggestion_poll  # noqa: F401 — register table for create_all
+import app.models.event_suggestion_view  # noqa: F401 — register table for create_all
 import app.models.member_document  # noqa: F401 — register table for create_all
-import app.models.org_document  # noqa: F401 — register table for create_all
-import app.models.custom_board_position  # noqa: F401 — register table for create_all
 import app.models.member_note  # noqa: F401 — register table for create_all
+import app.models.org_document  # noqa: F401 — register table for create_all
 import app.models.organization  # noqa: F401 — register table for create_all
 import app.models.organization_membership  # noqa: F401 — register table for create_all
-import app.models.event_suggestion_interest  # noqa: F401 — register table for create_all
-import app.models.event_suggestion_comment  # noqa: F401 — register table for create_all
-import app.models.event_suggestion_view  # noqa: F401 — register table for create_all
-import app.models.event_suggestion_poll  # noqa: F401 — register table for create_all
 import app.models.password_reset_token  # noqa: F401 — register table for create_all
 import app.models.university  # noqa: F401 — register table for create_all
 from app.core.config import settings
 from app.core.database import engine, get_db
 from app.main import app
 from app.models.base import Base
-from app.models.member import Member, MemberStatus
+from app.models.member import Member, MemberPosition, MemberRole, MemberStatus
 from app.services.organization_context import (
     ensure_default_university_and_org,
     ensure_membership_for_member,
@@ -95,6 +95,22 @@ def reset_settings_cache(monkeypatch, request):
     )
     monkeypatch.setattr(app, "debug", test_settings.DEBUG)
     yield
+
+
+@pytest.fixture(autouse=True)
+def disable_first_owner_bootstrap(monkeypatch, request):
+    """Keep register() from promoting the first test user to president.
+
+    Production still bootstraps an empty org. Tests that need that behavior
+    should mark `@pytest.mark.empty_org`.
+    """
+    if request.node.get_closest_marker("empty_org") is not None:
+        return
+
+    monkeypatch.setattr(
+        "app.services.organization_context.bootstrap_first_org_owner",
+        lambda db, member: False,
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -234,8 +250,16 @@ def register_member(
 
 
 def set_member_approved(db_session: Session, email=VALID_EMAIL):
+    """Approve a registered member as a general member.
+
+    First-user registration bootstraps an org owner/president. Tests that call
+    this helper want a regular approved member, so reset role/position after
+    approval.
+    """
     member = db_session.scalar(select(Member).where(Member.email == email))
     member.status = MemberStatus.APPROVED
+    member.role = MemberRole.GENERAL
+    member.position = MemberPosition.MEMBER
     sync_membership_from_member(db_session, member)
     db_session.commit()
 
@@ -244,6 +268,7 @@ def create_board_member(
     db_session: Session,
     email="board@semo.edu",
     password=VALID_PASSWORD,
+    student_id="87654321",
 ):
     from app.core.security import hash_password
     from app.models.member import MemberRole
@@ -251,7 +276,7 @@ def create_board_member(
     member = Member(
         full_name="Board Member",
         email=email,
-        student_id="87654321",
+        student_id=student_id,
         major="Administration",
         graduation_year=VALID_GRADUATION_YEAR,
         hashed_password=hash_password(password),

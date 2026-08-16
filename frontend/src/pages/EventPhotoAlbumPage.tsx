@@ -16,6 +16,7 @@ import {
   deleteEventPhoto,
   fetchEventPhotos,
   type EventPhoto,
+  type MediaItem,
   type MediaKind,
 } from "../lib/photo-archive-api";
 
@@ -98,11 +99,11 @@ export function EventPhotoAlbumPage() {
     return photos.filter((item) => item.media_kind === filter);
   }, [filter, photos]);
 
-  function handleUploaded(photo: EventPhoto) {
-    setPhotos((current) => [...current, photo]);
+  function handleUploaded(item: MediaItem) {
+    setPhotos((current) => [...current, { ...item, event_id: eventId }]);
   }
 
-  async function handleDeletePhoto(photo: EventPhoto) {
+  async function handleDeletePhoto(photo: MediaItem) {
     setDeletingPhotoId(photo.id);
     try {
       await deleteEventPhoto(eventId, photo.id);

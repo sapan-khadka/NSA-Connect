@@ -82,7 +82,7 @@ export function HomeQuickStats({
 
     if (canSeeMembers) {
       loads.push(
-        fetchMembers({ limit: 1 })
+        fetchMembers({ page_size: 1 })
           .then((response) => {
             if (!cancelled) {
               setMemberTotal(response.total);
@@ -183,7 +183,7 @@ export function HomeQuickStats({
 
     if (canSeeMembers || canSeeTreasury) {
       if (pendingTotal > 0) {
-        level = level === "critical" ? "critical" : "attention";
+        level = "attention";
         nextAttention.push({
           id: "pending",
           text: `${pendingTotal} pending request${

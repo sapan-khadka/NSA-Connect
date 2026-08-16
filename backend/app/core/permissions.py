@@ -10,8 +10,8 @@ membership is both org owner and president/board/etc.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from enum import StrEnum
-from typing import Iterable
 
 from app.models.member import Member, MemberPosition, MemberRole
 from app.models.organization_membership import OrganizationMembership

@@ -59,14 +59,11 @@ export function applyChecklistItemToggle(
     checklist_items.length > 0 &&
     checklist_items.every((item) => item.is_completed);
 
-  let status = task.status;
-  if (is_complete) {
-    status = "done";
-  } else if (checklist_items.some((item) => item.is_completed)) {
-    status = "in_progress";
-  } else {
-    status = "todo";
-  }
+  const status = is_complete
+    ? "done"
+    : checklist_items.some((item) => item.is_completed)
+      ? "in_progress"
+      : "todo";
 
   return {
     ...task,

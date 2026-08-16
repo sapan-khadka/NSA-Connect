@@ -248,6 +248,11 @@ def resolve_probe_path(path_template: str, ctx: ProbeContext) -> str:
         "{note_id}": "1",
         "{document_id}": "1",
         "{notification_id}": "1",
+        "{album_id}": "1",
+        "{room_id}": "1",
+        "{message_id}": "1",
+        "{comment_id}": "1",
+        "{poll_id}": "1",
     }
     if event_id is not None:
         replacements["{event_id}"] = str(event_id)

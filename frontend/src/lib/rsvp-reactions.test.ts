@@ -63,12 +63,13 @@ describe("rsvp-reactions", () => {
       anchor.parentElement?.querySelectorAll(".rsvp-reaction-cry-sink") ?? [],
     );
     expect(emojis).toHaveLength(3);
-    expect(emojis[0]?.style.getPropertyValue("--rsvp-x")).toBe("-20px");
-    expect(emojis[1]?.style.getPropertyValue("--rsvp-x")).toBe("0px");
-    expect(emojis[2]?.style.getPropertyValue("--rsvp-x")).toBe("20px");
-    expect(emojis[0]?.style.animationDelay).toBe("0ms");
-    expect(emojis[1]?.style.animationDelay).toBe("120ms");
-    expect(emojis[2]?.style.animationDelay).toBe("240ms");
+    const cryNodes = emojis as HTMLElement[];
+    expect(cryNodes[0]?.style.getPropertyValue("--rsvp-x")).toBe("-20px");
+    expect(cryNodes[1]?.style.getPropertyValue("--rsvp-x")).toBe("0px");
+    expect(cryNodes[2]?.style.getPropertyValue("--rsvp-x")).toBe("20px");
+    expect(cryNodes[0]?.style.animationDelay).toBe("0ms");
+    expect(cryNodes[1]?.style.animationDelay).toBe("120ms");
+    expect(cryNodes[2]?.style.animationDelay).toBe("240ms");
   });
 
   it("randomizes not-going cry count between two and three", () => {

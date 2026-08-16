@@ -1,11 +1,10 @@
-from sqlalchemy import select
-
 from conftest import (
     auth_header,
     create_board_member,
     register_member,
     set_member_approved,
 )
+from sqlalchemy import select
 
 from app.core.security import hash_password
 from app.models.event_suggestion import EventSuggestion, EventSuggestionStatus

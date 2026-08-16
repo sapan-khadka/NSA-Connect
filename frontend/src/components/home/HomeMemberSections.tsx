@@ -1,6 +1,5 @@
 import { Check } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router";
 
 import type { MemberResponse } from "../../lib/auth-api";
 import { avatarColorForPerson } from "../../lib/avatar-color";

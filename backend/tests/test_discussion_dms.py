@@ -61,7 +61,7 @@ def test_get_or_create_dm_is_idempotent(client, db_session):
 
 
 def test_dm_messaging_and_inbox_for_general_members(client, db_session):
-    alice_id = _approve_named(
+    _approve_named(
         client, db_session, email="alice@semo.edu", student_id="11110011"
     )
     bob_id = _approve_named(

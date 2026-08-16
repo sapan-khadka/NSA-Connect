@@ -8,7 +8,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.discussion_message import DiscussionMessage
-from app.models.discussion_room import DiscussionRoom, DiscussionRoomKind, DiscussionRoomMember
+from app.models.discussion_room import (
+    DiscussionRoom,
+    DiscussionRoomKind,
+    DiscussionRoomMember,
+)
 from app.models.discussion_room_mute import DiscussionRoomMute
 from app.models.event import Event
 from app.models.event_volunteer_signup import EventVolunteerSignup

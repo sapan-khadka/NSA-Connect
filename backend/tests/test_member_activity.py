@@ -73,6 +73,36 @@ def _create_event(client, headers, **overrides):
     return response.json()
 
 
+def _assign_task_to_member(
+    client,
+    *,
+    event_id: int,
+    member_id: int,
+    member_headers: dict,
+    manager_headers: dict,
+    title: str,
+):
+    signup = client.post(
+        f"/api/v1/events/{event_id}/volunteer-signup",
+        headers=member_headers,
+        json={"note": "Happy to help"},
+    )
+    assert signup.status_code == 201, signup.text
+    reviewed = client.patch(
+        f"/api/v1/events/{event_id}/volunteer-signups/{signup.json()['id']}",
+        headers=manager_headers,
+        json={"status": "approved"},
+    )
+    assert reviewed.status_code == 200, reviewed.text
+    task_response = client.post(
+        f"/api/v1/events/{event_id}/event-tasks",
+        json={"title": title, "assignee_id": member_id},
+        headers=manager_headers,
+    )
+    assert task_response.status_code == 201, task_response.text
+    return task_response.json()
+
+
 def test_self_activity_includes_task_dues_and_checkin_sorted(
     client,
     db_session,
@@ -81,13 +111,14 @@ def test_self_activity_includes_task_dues_and_checkin_sorted(
     general_headers,
 ):
     event = _create_event(client, president_headers)
-    task_response = client.post(
-        f"/api/v1/events/{event['id']}/event-tasks",
-        json={"title": "Book venue", "assignee_id": general_member.id},
-        headers=president_headers,
+    task = _assign_task_to_member(
+        client,
+        event_id=event["id"],
+        member_id=general_member.id,
+        member_headers=general_headers,
+        manager_headers=president_headers,
+        title="Book venue",
     )
-    assert task_response.status_code == 201
-    task = task_response.json()
 
     done = client.patch(
         f"/api/v1/event-tasks/{task['id']}",
@@ -134,11 +165,14 @@ def test_president_sees_tasks_for_another_member(
     general_headers,
 ):
     event = _create_event(client, president_headers)
-    task = client.post(
-        f"/api/v1/events/{event['id']}/event-tasks",
-        json={"title": "Print flyers", "assignee_id": general_member.id},
-        headers=president_headers,
-    ).json()
+    task = _assign_task_to_member(
+        client,
+        event_id=event["id"],
+        member_id=general_member.id,
+        member_headers=general_headers,
+        manager_headers=president_headers,
+        title="Print flyers",
+    )
     client.patch(
         f"/api/v1/event-tasks/{task['id']}",
         json={"status": "done"},
@@ -162,11 +196,14 @@ def test_board_without_oversight_does_not_see_others_tasks(
     general_headers,
 ):
     event = _create_event(client, president_headers)
-    task = client.post(
-        f"/api/v1/events/{event['id']}/event-tasks",
-        json={"title": "Secret task", "assignee_id": general_member.id},
-        headers=president_headers,
-    ).json()
+    task = _assign_task_to_member(
+        client,
+        event_id=event["id"],
+        member_id=general_member.id,
+        member_headers=general_headers,
+        manager_headers=president_headers,
+        title="Secret task",
+    )
     client.patch(
         f"/api/v1/event-tasks/{task['id']}",
         json={"status": "done"},
@@ -279,8 +316,9 @@ def test_self_activity_includes_meeting_notes(
     db_session,
     president_headers,
 ):
-    from app.models.member import Member
     from sqlalchemy import select
+
+    from app.models.member import Member
 
     president = db_session.scalar(
         select(Member).where(Member.email == "president@semo.edu"),

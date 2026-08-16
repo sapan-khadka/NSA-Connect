@@ -20,8 +20,8 @@ from app.models.event import Event
 from app.models.event_volunteer_signup import EventVolunteerSignup
 from app.models.member import Member, MemberRole
 from app.schemas.discussion import (
-    DiscussionArchiveResponse,
     DiscussionArchivedRoomResponse,
+    DiscussionArchiveResponse,
     DiscussionInboxResponse,
     DiscussionInboxRoomResponse,
     DiscussionMuteToggleResponse,

@@ -3,7 +3,6 @@ from datetime import UTC, datetime
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
-from app.models.member import Member, MemberRole, MemberStatus
 from app.models.event_suggestion import EventSuggestion, EventSuggestionStatus
 from app.models.event_suggestion_comment import (
     EventSuggestionComment,
@@ -16,6 +15,7 @@ from app.models.event_suggestion_poll import (
     EventSuggestionPollVote,
 )
 from app.models.event_suggestion_view import EventSuggestionView
+from app.models.member import Member, MemberRole, MemberStatus
 from app.schemas.event_suggestion import (
     EventSuggestionActivityItem,
     EventSuggestionMemberResponse,
@@ -26,7 +26,6 @@ from app.schemas.event_suggestion import (
     IdeaFeedbackPackageRequest,
 )
 from app.services.event_suggestion_service import (
-    EventSuggestionNotFoundError,
     get_event_suggestion,
     get_interest_counts_by_suggestion,
     member_can_view_suggestion,

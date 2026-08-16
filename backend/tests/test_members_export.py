@@ -3,13 +3,13 @@ from decimal import Decimal
 from io import StringIO
 
 import pytest
-from sqlalchemy import select
 from conftest import (
     auth_header,
     create_board_member,
     register_member,
     set_member_approved,
 )
+from sqlalchemy import select
 
 from app.lib.semester import get_current_semester_slug
 from app.models.member import Member

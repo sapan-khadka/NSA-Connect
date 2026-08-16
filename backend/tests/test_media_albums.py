@@ -15,6 +15,7 @@ from sqlalchemy import select
 from app.integrations.cloudinary_client import CloudinaryEventPhotoResult
 from app.models.event import Event, EventType
 from app.models.media_album import MediaAlbum, MediaAlbumItem
+
 MINIMAL_JPEG = (
     b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xff\xd9"
 )

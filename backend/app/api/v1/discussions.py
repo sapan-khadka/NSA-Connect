@@ -20,13 +20,9 @@ from app.core.dependencies import (
     require_task_oversight,
 )
 from app.core.rate_limit import limit
+from app.core.security import create_ws_ticket
 from app.integrations.cloudinary_client import CloudinaryUploadError
 from app.models.member import Member
-from app.core.security import create_ws_ticket
-from app.services.avatar_upload_service import (
-    AvatarUploadUnavailableError,
-    AvatarValidationError,
-)
 from app.schemas.discussion import (
     DiscussionArchiveResponse,
     DiscussionAttachmentUploadResponse,
@@ -51,6 +47,15 @@ from app.schemas.discussion_room import (
     DiscussionRoomListResponse,
     DiscussionRoomRejectRequest,
     DiscussionRoomResponse,
+)
+from app.services.avatar_upload_service import (
+    AvatarUploadUnavailableError,
+    AvatarValidationError,
+)
+from app.services.discussion_attachment_upload_service import (
+    DiscussionAttachmentUploadUnavailableError,
+    DiscussionAttachmentValidationError,
+    upload_discussion_attachment_file,
 )
 from app.services.discussion_inbox_service import (
     archive_inbox_room,
@@ -95,11 +100,6 @@ from app.services.discussion_service import (
     list_event_discussion_messages,
     messages_to_responses,
     soft_delete_discussion_message,
-)
-from app.services.discussion_attachment_upload_service import (
-    DiscussionAttachmentUploadUnavailableError,
-    DiscussionAttachmentValidationError,
-    upload_discussion_attachment_file,
 )
 from app.services.event_service import EventNotFoundError
 

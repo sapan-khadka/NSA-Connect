@@ -14,6 +14,7 @@ from app.schemas.event_photo import (
     PhotoAlbumListResponse,
     PhotoAlbumSummary,
 )
+from app.services.event_invitation_service import is_member_invited_to_event
 from app.services.event_photo_download_service import (
     EventPhotoAlbumEmptyError,
     iter_event_photo_album_zip,
@@ -31,7 +32,6 @@ from app.services.event_photo_upload_service import (
     EventPhotoValidationError,
     upload_event_photo_file,
 )
-from app.services.event_invitation_service import is_member_invited_to_event
 from app.services.event_service import EventNotFoundError, set_event_photo_url
 from app.services.rsvp_service import get_member_rsvp_status
 

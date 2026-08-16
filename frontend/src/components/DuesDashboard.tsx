@@ -22,7 +22,6 @@ import {
   upsertSemesterDuesSettings,
   type DuesDashboardResponse,
   type DuesPaymentMethod,
-  type DuesStatus,
   type MemberDuesRecord,
 } from "../lib/dues-api";
 import { formatCurrency } from "../lib/format-currency";

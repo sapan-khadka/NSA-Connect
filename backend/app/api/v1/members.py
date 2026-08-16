@@ -26,18 +26,6 @@ from app.integrations.cloudinary_client import CloudinaryUploadError
 from app.lib.member_talents import ALL_MEMBER_TALENTS, MEMBER_TALENT_LABELS
 from app.lib.semester import get_current_semester_slug
 from app.models.member import Member, MemberRole, MemberStatus
-from app.services.avatar_upload_service import (
-    AvatarUploadUnavailableError,
-    AvatarValidationError,
-)
-from app.services.member_avatar_service import (
-    clear_member_avatar,
-    set_member_avatar,
-)
-from app.services.member_engagement_service import (
-    DEFAULT_ENGAGEMENT_WINDOW_DAYS,
-    build_members_engagement,
-)
 from app.models.member_document import MemberDocumentType
 from app.schemas.auth import TokenResponse
 from app.schemas.custom_board_position import MemberPositionUpdateRequest
@@ -66,7 +54,20 @@ from app.schemas.member_note import (
     MemberNoteResponse,
     MemberNoteUpdateRequest,
 )
+from app.services.avatar_upload_service import (
+    AvatarUploadUnavailableError,
+    AvatarValidationError,
+)
+from app.services.custom_board_position_service import (
+    CustomBoardPositionConflictError,
+    CustomBoardPositionNotFoundError,
+    CustomBoardPositionValidationError,
+)
 from app.services.member_activity_service import get_member_activity
+from app.services.member_avatar_service import (
+    clear_member_avatar,
+    set_member_avatar,
+)
 from app.services.member_document_service import (
     MemberDocumentNotFoundError,
     MemberDocumentPermissionError,
@@ -75,6 +76,15 @@ from app.services.member_document_service import (
     list_member_documents,
     replace_member_document,
 )
+from app.services.member_engagement_service import (
+    DEFAULT_ENGAGEMENT_WINDOW_DAYS,
+    build_members_engagement,
+)
+from app.services.member_import_service import import_members_csv
+from app.services.member_meeting_streak_service import (
+    MemberMeetingStreakPermissionError,
+    get_member_consecutive_missed_meetings,
+)
 from app.services.member_note_service import (
     MemberNoteNotFoundError,
     MemberNotePermissionError,
@@ -82,16 +92,6 @@ from app.services.member_note_service import (
     delete_member_note,
     list_member_notes,
     update_member_note,
-)
-from app.services.member_meeting_streak_service import (
-    MemberMeetingStreakPermissionError,
-    get_member_consecutive_missed_meetings,
-)
-from app.services.member_import_service import import_members_csv
-from app.services.custom_board_position_service import (
-    CustomBoardPositionConflictError,
-    CustomBoardPositionNotFoundError,
-    CustomBoardPositionValidationError,
 )
 from app.services.member_service import (
     InvalidCurrentPasswordError,

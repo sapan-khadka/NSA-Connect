@@ -53,7 +53,7 @@ describe("MemberWorkspaceHeader", () => {
     );
 
     expect(
-      screen.getByRole("link", { name: /^Members$/i }),
+      screen.getByRole("link", { name: /Back to Members/i }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { level: 1, name: "Alex Member" }),

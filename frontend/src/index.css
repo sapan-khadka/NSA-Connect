@@ -20823,6 +20823,7 @@
       flex: 0 0 auto;
       min-height: 0;
       grid-auto-rows: minmax(4.5rem, auto);
+    }
 
     .events-calendar-column-main .events-upcoming-strip {
       flex-shrink: 0;

@@ -1,4 +1,4 @@
-import nsaCover from "../assets/nsa-cover.PNG";
+import nsaCover from "../assets/nsa-cover.png";
 import { Card } from "./ui/Card";
 
 type CoverBannerProps = {

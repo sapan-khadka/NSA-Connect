@@ -140,7 +140,7 @@ describe("EventsHubLayout", () => {
     const nav = await eventsNav();
     const tasksTab = nav.getByRole("link", { name: /^Tasks/ });
     expect(tasksTab).toHaveAttribute("href", "/events/tasks");
-    expect(tasksTab.className).toContain("border-accent");
+    expect(tasksTab.className).toContain("border-primary");
   });
 
   it("keeps Meetings, Ideas, and Media primary for board members", async () => {
@@ -207,7 +207,7 @@ describe("EventsHubLayout", () => {
     const nav = await eventsNav();
     const oversight = nav.getByRole("link", { name: /^Oversight/ });
     expect(oversight).toHaveAttribute("aria-current", "page");
-    expect(oversight.className).toContain("border-accent");
+    expect(oversight.className).toContain("border-primary");
   });
 
   it("shows Oversight as a primary tab for vice president", async () => {

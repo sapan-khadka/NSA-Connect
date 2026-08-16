@@ -33,7 +33,6 @@ describe("computeEventReadiness", () => {
       "pass",
     );
     expect(result.checks.find((c) => c.id === "capacity")?.status).toBe("pass");
-    expect(result.checks.find((c) => c.id === "reminder")).toBeUndefined();
   });
 
   it("suggests adding roles when no volunteer targets are set", () => {

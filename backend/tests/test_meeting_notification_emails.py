@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 from unittest.mock import patch
 
 import pytest
+from conftest import create_board_member
 
 from app.services.meeting_notification_service import (
     build_meeting_detail_url,
@@ -12,34 +13,16 @@ from app.tasks.email_tasks import send_meeting_record_notification_email_task
 
 @pytest.fixture
 def secretary_and_board(db_session):
-    from app.core.security import hash_password
-    from app.models.member import Member, MemberPosition, MemberRole, MemberStatus
+    from app.models.member import MemberPosition
 
-    board = Member(
-        full_name="Board Member",
-        email="board@semo.edu",
-        student_id="87654321",
-        major="Administration",
-        graduation_year=2028,
-        hashed_password=hash_password("securepass123"),
-        role=MemberRole.BOARD,
-        status=MemberStatus.APPROVED,
-        position=MemberPosition.MEMBER,
-    )
-    secretary = Member(
-        full_name="Board Secretary",
+    board = create_board_member(db_session)
+    secretary = create_board_member(
+        db_session,
         email="secretary@semo.edu",
         student_id="55443322",
-        major="Administration",
-        graduation_year=2028,
-        hashed_password=hash_password("securepass123"),
-        role=MemberRole.BOARD,
-        status=MemberStatus.APPROVED,
-        position=MemberPosition.SECRETARY,
     )
-    db_session.add_all([board, secretary])
+    secretary.position = MemberPosition.SECRETARY
     db_session.commit()
-    db_session.refresh(board)
     db_session.refresh(secretary)
     return board, secretary
 

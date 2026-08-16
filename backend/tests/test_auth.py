@@ -1,14 +1,17 @@
 """Auth edge-case tests — register, login, bad domain, wrong password."""
 
+import pytest
 from conftest import (
     BAD_DOMAIN_EMAIL,
     login_member,
     register_member,
+    set_member_approved,
 )
 
 from app.core.security import decode_access_token
 
 
+@pytest.mark.empty_org
 def test_register_bootstraps_first_member_when_org_empty(client):
     response = register_member(client)
 
@@ -22,7 +25,7 @@ def test_register_bootstraps_first_member_when_org_empty(client):
 
 def test_login_returns_jwt_for_approved_member(client, db_session):
     register_member(client)
-    # First registrant is already approved via empty-org bootstrap.
+    set_member_approved(db_session)
 
     response = login_member(client)
 

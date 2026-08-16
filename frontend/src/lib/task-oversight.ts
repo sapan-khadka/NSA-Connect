@@ -1,5 +1,5 @@
 import type { EventTaskResponse, TaskOverviewMember } from "./event-tasks-api";
-import { isMemberRole, isRoleAtLeast, type MemberRole } from "./roles";
+import { isMemberRole, isRoleAtLeast } from "./roles";
 
 export type ActiveAssignmentsSort =
   | "status"

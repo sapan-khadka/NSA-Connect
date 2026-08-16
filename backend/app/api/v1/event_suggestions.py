@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import get_current_member, require_board
 from app.models.event_suggestion import EventSuggestionStatus
+from app.models.event_suggestion_comment import EventSuggestionCommentChannel
 from app.models.event_suggestion_interest import EventSuggestionInterestVote
 from app.models.member import Member, MemberRole
 from app.schemas.event_suggestion import (
@@ -28,22 +29,6 @@ from app.schemas.event_suggestion import (
     EventSuggestionResponse,
     EventSuggestionStatusUpdateRequest,
 )
-from app.services.event_suggestion_insight_service import (
-    get_event_suggestion_community_insight,
-)
-from app.services.event_suggestion_polish_service import (
-    EventSuggestionPollError,
-    build_event_suggestion_activity,
-    close_event_suggestion_poll,
-    create_event_suggestion_poll,
-    get_event_suggestion_poll,
-    get_suggestion_engagement_stats,
-    list_event_suggestion_polls,
-    list_related_event_suggestions,
-    record_event_suggestion_view,
-    vote_event_suggestion_poll,
-)
-from app.models.event_suggestion_comment import EventSuggestionCommentChannel
 from app.services.event_suggestion_comment_service import (
     EventSuggestionCommentClosedError,
     EventSuggestionCommentEmptyError,
@@ -56,6 +41,20 @@ from app.services.event_suggestion_comment_service import (
     list_event_suggestion_comments,
     soft_delete_event_suggestion_comment,
 )
+from app.services.event_suggestion_insight_service import (
+    get_event_suggestion_community_insight,
+)
+from app.services.event_suggestion_polish_service import (
+    EventSuggestionPollError,
+    build_event_suggestion_activity,
+    close_event_suggestion_poll,
+    create_event_suggestion_poll,
+    get_suggestion_engagement_stats,
+    list_event_suggestion_polls,
+    list_related_event_suggestions,
+    record_event_suggestion_view,
+    vote_event_suggestion_poll,
+)
 from app.services.event_suggestion_service import (
     EventSuggestionInterestClosedError,
     EventSuggestionInvalidStatusError,
@@ -67,7 +66,6 @@ from app.services.event_suggestion_service import (
     convert_event_suggestion_to_event,
     create_event_suggestion,
     empty_interest_counts,
-    get_event_suggestion,
     get_interest_counts_by_suggestion,
     get_my_interest_by_suggestion,
     list_event_suggestions,

@@ -45,6 +45,7 @@ function makeEvent(overrides: Partial<EventResponse> = {}): EventResponse {
     event_type: "cultural",
     description: "",
     location: null,
+    capacity: null,
     budget: "0",
     created_by_id: 1,
     current_member_rsvp_status: "going",

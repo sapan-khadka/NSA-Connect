@@ -24,6 +24,7 @@ from app.services.organization_context import (
     resolve_organization_id,
 )
 
+
 class FinanceEntryNotFoundError(Exception):
     pass
 

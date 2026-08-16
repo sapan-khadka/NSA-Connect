@@ -294,7 +294,12 @@ export function LogFinanceEntryForm({
           customCategory={values.customCategory}
           categoryError={fieldErrors.category}
           customCategoryError={fieldErrors.customCategory}
-          onCategoryChange={(category) => updateField("category", category)}
+          onCategoryChange={(category) =>
+            updateField(
+              "category",
+              category as LogFinanceEntryFormValues["category"],
+            )
+          }
           onCustomCategoryChange={(customCategory) =>
             updateField("customCategory", customCategory)
           }

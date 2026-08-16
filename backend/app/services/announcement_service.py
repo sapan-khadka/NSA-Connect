@@ -15,11 +15,11 @@ from app.schemas.announcement import (
     AnnouncementUpdateRequest,
 )
 from app.services.announcement_notification_service import notify_announcement_broadcast
-from app.services.event_service import EventNotFoundError
 from app.services.organization_context import (
     get_default_organization_id,
     resolve_organization_id,
 )
+
 
 class AnnouncementNotFoundError(Exception):
     pass

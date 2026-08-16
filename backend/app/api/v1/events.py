@@ -7,6 +7,7 @@ from app.api.v1.event_photos import router as event_photos_router
 from app.core.database import get_db
 from app.core.dependencies import get_current_member, require_board
 from app.models.event import EventType
+from app.models.event_volunteer_signup import EventVolunteerSignupStatus
 from app.models.member import Member, MemberRole
 from app.schemas.event import (
     EventAttendeesResponse,
@@ -20,12 +21,19 @@ from app.schemas.event import (
     EventRsvpStatusResponse,
     EventRsvpUpdateRequest,
 )
+from app.schemas.event_activity import (
+    EventActivityItemResponse,
+    EventActivityListResponse,
+)
 from app.schemas.event_feedback import (
     EventFeedbackCreateRequest,
     EventFeedbackListResponse,
     EventFeedbackResponse,
 )
-from app.models.event_volunteer_signup import EventVolunteerSignupStatus
+from app.schemas.event_notification import (
+    EventNotificationStatusResponse,
+    EventReminderSendResponse,
+)
 from app.schemas.event_volunteer_signup import (
     EventVolunteerSignupCreateRequest,
     EventVolunteerSignupListResponse,
@@ -39,19 +47,12 @@ from app.schemas.member import (
     EventParticipantInvitationResponse,
 )
 from app.schemas.preptask import PrepTaskCreateRequest, PrepTaskResponse
-from app.schemas.event_activity import (
-    EventActivityItemResponse,
-    EventActivityListResponse,
-)
-from app.schemas.event_notification import (
-    EventNotificationStatusResponse,
-    EventReminderSendResponse,
-)
 from app.schemas.volunteer import (
     VolunteerSlotCreateRequest,
     VolunteerSlotListResponse,
     VolunteerSlotResponse,
 )
+from app.services.event_activity_service import list_event_activity
 from app.services.event_feedback_service import (
     EventNotPastError,
     get_member_event_feedback,
@@ -66,6 +67,11 @@ from app.services.event_invitation_service import (
     is_member_invited_to_event,
     list_event_participant_invitations,
     remove_event_participant_invitation,
+)
+from app.services.event_notification_service import (
+    EventReminderNotNeededError,
+    get_event_notification_status,
+    send_event_reminders_now,
 )
 from app.services.event_service import (
     EventNotFoundError,
@@ -106,12 +112,6 @@ from app.services.rsvp_service import (
     list_event_attendees,
     rsvp_to_event,
     set_event_rsvp_status,
-)
-from app.services.event_activity_service import list_event_activity
-from app.services.event_notification_service import (
-    EventReminderNotNeededError,
-    get_event_notification_status,
-    send_event_reminders_now,
 )
 from app.services.volunteer_service import (
     create_volunteer_slot_for_event,

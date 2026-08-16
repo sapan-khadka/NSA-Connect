@@ -1,6 +1,5 @@
 import { Pencil } from "lucide-react";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { Link } from "react-router";
 
 function homeStage(stage: number): CSSProperties {
   return { ["--home-stage" as string]: stage };

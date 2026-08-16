@@ -192,7 +192,7 @@ def notify_finance_change_pending(
         db,
         recipients=recipients,
         type=InboxNotificationType.FINANCE_CHANGE_PENDING,
-        title=f"Budget change needs review",
+        title="Budget change needs review",
         body=f"{requester.full_name} submitted a finance {action_label}.",
         href="/finance?tab=approvals",
         dedupe_key_for=lambda recipient: (

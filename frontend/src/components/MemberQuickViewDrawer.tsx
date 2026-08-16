@@ -326,13 +326,14 @@ export function MemberQuickViewDrawer({
     return null;
   }
 
-  const profilePath = `/members/${member.id}`;
+  const selectedMember = member;
+  const profilePath = `/members/${selectedMember.id}`;
   const dues = formatOutstandingDues(duesRecord);
-  const mailtoHref = memberMailtoHref(member.email);
-  const isSelf = currentMember?.id === member.id;
-  const roleLabel = getMemberDirectoryRoleLabel(member);
-  const memberStatus = statusLabel(member.status, engagement);
-  const seatLabels = seatResponsibilityLabels(member);
+  const mailtoHref = memberMailtoHref(selectedMember.email);
+  const isSelf = currentMember?.id === selectedMember.id;
+  const roleLabel = getMemberDirectoryRoleLabel(selectedMember);
+  const memberStatus = statusLabel(selectedMember.status, engagement);
+  const seatLabels = seatResponsibilityLabels(selectedMember);
   const responsibilityLines = [
     ...seatLabels,
     ...responsibilities.slice(0, 4).map((item) => item.title),
@@ -347,7 +348,7 @@ export function MemberQuickViewDrawer({
     setMoreOpen(false);
     try {
       onClose();
-      await openDirectMessage(navigate, member.id);
+      await openDirectMessage(navigate, selectedMember.id);
     } catch (error) {
       window.alert(getApiErrorMessage(error));
     } finally {

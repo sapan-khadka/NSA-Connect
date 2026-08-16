@@ -1,8 +1,9 @@
 target-version = "py313"
-line-length = 88
+line-length = 100
 
 [lint]
 select = ["E", "F", "I", "UP"]
+ignore = ["UP042"]
 
 [lint.per-file-ignores]
 "alembic/env.py" = ["E402"]

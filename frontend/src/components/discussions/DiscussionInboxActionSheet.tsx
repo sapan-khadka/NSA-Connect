@@ -109,14 +109,15 @@ export function DiscussionInboxActionSheet({
     return null;
   }
 
-  const isDm = room.event_type === "dm";
-  const archivedForMe = Boolean(room.archived_for_me);
-  const showMarkRead = room.unread_count > 0 && !archivedForMe;
+  const selectedRoom = room;
+  const isDm = selectedRoom.event_type === "dm";
+  const archivedForMe = Boolean(selectedRoom.archived_for_me);
+  const showMarkRead = selectedRoom.unread_count > 0 && !archivedForMe;
   // Chapter-wide archive: Pres/VP only, never DMs (backend rule).
   const showChapterArchive = canOrgArchive && !isDm && !archivedForMe;
 
   function run(action: DiscussionInboxActionId) {
-    onAction(action, room);
+    onAction(action, selectedRoom);
     onClose();
   }
 

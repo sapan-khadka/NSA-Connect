@@ -87,7 +87,7 @@ export function InviteMembersToEventModal({
       }
       return (
         member.full_name.toLowerCase().includes(normalized) ||
-        member.email.toLowerCase().includes(normalized)
+        (member.email ?? "").toLowerCase().includes(normalized)
       );
     });
   }, [invitedSet, members, query]);

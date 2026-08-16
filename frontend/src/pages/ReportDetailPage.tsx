@@ -115,7 +115,11 @@ export function ReportDetailPage({ reportId: reportIdProp }: ReportDetailPagePro
         </div>
       </div>
 
-      <ReportDocument report={report} />
+      <ReportDocument
+        data={report.data}
+        generatedByName={report.generated_by_name}
+        createdAt={report.created_at}
+      />
     </div>
   );
 }

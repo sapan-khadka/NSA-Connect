@@ -9,7 +9,7 @@ import {
   Users,
 } from "lucide-react";
 
-import nsaCover from "../../assets/nsa-cover.PNG";
+import nsaCover from "../../assets/nsa-cover.png";
 import nsaEmblem from "../../assets/nsa-emblem.png";
 import { useAuth } from "../../context/useAuth";
 import { isPendingApprovalError, loginMember } from "../../lib/auth-api";

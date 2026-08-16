@@ -11,7 +11,6 @@ from app.models.media_album import MediaAlbum, MediaAlbumItem
 from app.models.member import Member
 from app.services.local_event_photo_storage import resolve_event_photo_fetch_url
 from app.services.media_album_service import (
-    MediaAlbumNotFoundError,
     get_media_album,
 )
 

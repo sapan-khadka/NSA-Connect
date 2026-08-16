@@ -45,6 +45,8 @@ describe("PublicEventPage", () => {
       event_type: "cultural",
       description: "Food and performances.",
       location: "University Center",
+      capacity: null,
+      going_count: 0,
       event_photo_url: null,
       is_past: false,
     });

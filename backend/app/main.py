@@ -7,8 +7,8 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from sqlalchemy.exc import IntegrityError
 
-from app.api.v1.health import router as health_router
 from app.api.v1.discussion_ws import router as discussion_ws_router
+from app.api.v1.health import router as health_router
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.exception_handlers import (

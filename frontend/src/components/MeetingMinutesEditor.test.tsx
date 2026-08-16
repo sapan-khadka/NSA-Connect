@@ -1,6 +1,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi, type ComponentProps } from "vitest";
+import type { ComponentProps } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { MeetingMinutesEditor } from "./MeetingMinutesEditor";
 import { renderWithRouter } from "../test/test-utils";

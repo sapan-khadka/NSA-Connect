@@ -9,7 +9,7 @@ import {
 import { useEffect, useState, type CSSProperties } from "react";
 import { Link } from "react-router";
 
-const nsaCover = new URL("../../assets/nsa-cover.PNG", import.meta.url).href;
+const nsaCover = new URL("../../assets/nsa-cover.png", import.meta.url).href;
 import {
   EVENT_TYPE_COLOR,
   EVENT_TYPE_LABELS,

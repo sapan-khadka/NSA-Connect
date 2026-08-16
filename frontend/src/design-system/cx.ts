@@ -3,7 +3,13 @@
  * Avoids adding a dependency for a one-liner used by base UI.
  */
 export function cx(
-  ...parts: Array<string | false | null | undefined>
+  ...parts: Array<
+    | string
+    | false
+    | null
+    | undefined
+    | Array<string | false | null | undefined>
+  >
 ): string {
-  return parts.filter(Boolean).join(" ");
+  return parts.flat().filter(Boolean).join(" ");
 }

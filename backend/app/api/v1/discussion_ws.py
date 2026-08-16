@@ -22,6 +22,7 @@ from app.schemas.discussion import (
     DiscussionReactionRequest,
     DiscussionReadReceiptRequest,
 )
+from app.services.discussion_realtime_sync import touch_global_presence
 from app.services.discussion_room_service import DiscussionRoomNotFoundError
 from app.services.discussion_service import (
     DiscussionForbiddenError,
@@ -46,12 +47,6 @@ from app.services.discussion_service import (
     unpin_discussion_message,
     upsert_discussion_read_state,
 )
-from app.services.discussion_ws_rate_limit import (
-    allow_ws_chat,
-    allow_ws_reaction,
-    allow_ws_typing,
-)
-from app.services.discussion_realtime_sync import touch_global_presence
 from app.services.discussion_ws_manager import (
     BOARD_ROOM_KEY,
     PresenceUser,
@@ -59,6 +54,11 @@ from app.services.discussion_ws_manager import (
     discussion_connection_manager,
     event_room_key,
     new_fanout_id,
+)
+from app.services.discussion_ws_rate_limit import (
+    allow_ws_chat,
+    allow_ws_reaction,
+    allow_ws_typing,
 )
 from app.services.event_service import EventNotFoundError
 from app.services.user_notify_ws_manager import user_notify_connection_manager
@@ -820,7 +820,8 @@ async def event_discussion_websocket(
             before_id=before_id,
             limit=limit,
         ),
-        create_message=lambda db, member, content, reply_to_message_id=None, attachments=None: _create_event_message(
+        create_message=lambda db, member, content, reply_to_message_id=None,
+        attachments=None: _create_event_message(
             db,
             event_id=event_id,
             member=member,
@@ -847,7 +848,8 @@ async def board_discussion_websocket(
             before_id=before_id,
             limit=limit,
         ),
-        create_message=lambda db, member, content, reply_to_message_id=None, attachments=None: _create_board_message(
+        create_message=lambda db, member, content, reply_to_message_id=None,
+        attachments=None: _create_board_message(
             db,
             member=member,
             content=content,
@@ -869,14 +871,16 @@ async def custom_room_discussion_websocket(
         room_key=custom_room_key(room_id),
         room_event_id=None,
         custom_room_id=room_id,
-        load_history=lambda db, member, before_id=None, limit=WS_HISTORY_LIMIT: list_custom_room_discussion_messages(
+        load_history=lambda db, member, before_id=None,
+        limit=WS_HISTORY_LIMIT: list_custom_room_discussion_messages(
             db,
             room_id=room_id,
             member=member,
             before_id=before_id,
             limit=limit,
         ),
-        create_message=lambda db, member, content, reply_to_message_id=None, attachments=None: create_custom_room_discussion_message(
+        create_message=lambda db, member, content, reply_to_message_id=None,
+        attachments=None: create_custom_room_discussion_message(
             db,
             room_id=room_id,
             member=member,
