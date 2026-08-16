@@ -1,9 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router";
+import { GraduationCap, IdCard, Lock, Mail, User } from "lucide-react";
 
-import { Button } from "../components/ui/Button";
-import { Card } from "../components/ui/Card";
-import { Input, inputFieldClassName } from "../components/ui/Input";
+import { GuestField } from "../components/guest/GuestField";
 import { registerMember } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/api-error";
 import {
@@ -27,9 +26,14 @@ const initialValues: RegisterFormValues = {
   graduation_year: "",
 };
 
-const selectClassName = `${inputFieldClassName} mt-1`;
+const STEP_ONE_FIELDS: Array<keyof RegisterFormValues> = [
+  "full_name",
+  "email",
+  "student_id",
+];
 
 export function RegisterPage() {
+  const [step, setStep] = useState<1 | 2>(1);
   const [values, setValues] = useState<RegisterFormValues>(initialValues);
   const [fieldErrors, setFieldErrors] = useState<RegisterFormErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
@@ -54,6 +58,23 @@ export function RegisterPage() {
     }));
   }
 
+  function handleContinue(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const nextErrors: RegisterFormErrors = {};
+    for (const field of STEP_ONE_FIELDS) {
+      const error = validateRegisterField(field, values[field], values);
+      if (error) {
+        nextErrors[field] = error;
+      }
+    }
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      return;
+    }
+    setStep(2);
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -61,6 +82,9 @@ export function RegisterPage() {
     setFieldErrors(errors);
 
     if (Object.keys(errors).length > 0) {
+      if (STEP_ONE_FIELDS.some((field) => errors[field])) {
+        setStep(1);
+      }
       return;
     }
 
@@ -84,172 +108,229 @@ export function RegisterPage() {
     }
   }
 
-  if (isComplete) {
-    return (
-      <div className="mx-auto max-w-md text-center">
-        <h1 className="text-3xl font-light tracking-headline text-foreground">Registration submitted</h1>
-        <p className="mt-4 text-label">
-          Your account is pending board approval. You&apos;ll be able to sign in
-          once a board member approves your registration.
-        </p>
-        <Link
-          to="/login"
-          className="mt-6 inline-block font-medium text-accent"
-        >
-          Go to login
-        </Link>
-      </div>
-    );
-  }
+  const currentStep = isComplete ? 2 : step;
 
   return (
-    <div className="mx-auto max-w-md">
-      <div className="text-center">
-        <h1 className="text-3xl font-light tracking-headline text-foreground">Register</h1>
-        <p className="mt-2 text-label">
-          Join NSA Connect with your @{SEMO_EMAIL_DOMAIN} email
-        </p>
-      </div>
+    <div className="guest-auth-shell">
+      <div className="guest-auth-card">
+        <RegisterStepper
+          step={currentStep}
+          onBack={step === 2 && !isComplete ? () => setStep(1) : undefined}
+        />
 
-      <Card
-        as="form"
-        onSubmit={handleSubmit}
-        noValidate
-        padding="md"
-        className="mt-8 space-y-5"
-      >
-        {serverError && (
-          <p
-            role="alert"
-            className="ds-alert-banner"
-          >
-            {serverError}
-          </p>
+        {isComplete ? (
+          <>
+            <header className="guest-auth-header">
+              <p className="guest-card-kicker">Submitted</p>
+              <h1>Registration submitted</h1>
+              <p className="guest-auth-lede">
+                Your account is pending board approval. You&apos;ll be able to
+                sign in once a board member approves your registration.
+              </p>
+            </header>
+            <div className="guest-auth-actions">
+              <Link to="/login" className="guest-btn guest-btn-block">
+                Go to login
+              </Link>
+            </div>
+          </>
+        ) : step === 1 ? (
+          <form onSubmit={handleContinue} noValidate>
+            <header className="guest-auth-header">
+              <p className="guest-card-kicker">Step 1 of 2</p>
+              <h1>Create your account</h1>
+              <p className="guest-auth-lede">
+                Use your @{SEMO_EMAIL_DOMAIN} email. A board member approves new
+                accounts before you can sign in.
+              </p>
+            </header>
+
+            <div className="guest-auth-fields">
+              <GuestField
+                id="full_name"
+                name="full_name"
+                label="Full name"
+                icon={User}
+                type="text"
+                autoComplete="name"
+                value={values.full_name}
+                onChange={(event) => updateField("full_name", event.target.value)}
+                onBlur={() => validateField("full_name")}
+                error={fieldErrors.full_name}
+                placeholder="Sapan Khadka"
+              />
+              <GuestField
+                id="email"
+                name="email"
+                label="School email"
+                icon={Mail}
+                type="email"
+                autoComplete="email"
+                value={values.email}
+                onChange={(event) => updateField("email", event.target.value)}
+                onBlur={() => validateField("email")}
+                error={fieldErrors.email}
+                placeholder="you@semo.edu"
+              />
+              <GuestField
+                id="student_id"
+                name="student_id"
+                label="Student ID"
+                icon={IdCard}
+                type="text"
+                autoComplete="off"
+                value={values.student_id}
+                onChange={(event) => updateField("student_id", event.target.value)}
+                onBlur={() => validateField("student_id")}
+                error={fieldErrors.student_id}
+                placeholder="S12345678"
+              />
+            </div>
+
+            <div className="guest-auth-actions">
+              <button type="submit" className="guest-btn guest-btn-block">
+                Continue
+              </button>
+              <p className="guest-auth-footer">
+                Already have an account?{" "}
+                <Link to="/login" className="guest-link">
+                  Login
+                </Link>
+              </p>
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={handleSubmit} noValidate>
+            <header className="guest-auth-header">
+              <p className="guest-card-kicker">Step 2 of 2</p>
+              <h1>Tell us about yourself</h1>
+              <p className="guest-auth-lede">
+                This helps the chapter know who is joining.
+              </p>
+            </header>
+
+            {serverError ? (
+              <p role="alert" className="guest-alert">
+                {serverError}
+              </p>
+            ) : null}
+
+            <div className="guest-auth-fields">
+              <GuestField
+                id="major"
+                name="major"
+                label="Major"
+                icon={GraduationCap}
+                type="text"
+                autoComplete="organization-title"
+                value={values.major}
+                onChange={(event) => updateField("major", event.target.value)}
+                onBlur={() => validateField("major")}
+                error={fieldErrors.major}
+                placeholder="Computer Science"
+              />
+
+              <div className="guest-field">
+                <div className="guest-field-label-row">
+                  <label htmlFor="graduation_year">Graduation year</label>
+                </div>
+                <div
+                  className={[
+                    "guest-field-control",
+                    fieldErrors.graduation_year ? "is-error" : "",
+                  ].join(" ")}
+                >
+                  <select
+                    id="graduation_year"
+                    name="graduation_year"
+                    value={values.graduation_year}
+                    onChange={(event) =>
+                      updateField("graduation_year", event.target.value)
+                    }
+                    onBlur={() => validateField("graduation_year")}
+                    aria-invalid={fieldErrors.graduation_year ? true : undefined}
+                  >
+                    <option value="">Select year</option>
+                    {graduationYears.map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {fieldErrors.graduation_year ? (
+                  <p id="graduation_year-error" className="guest-field-error">
+                    {fieldErrors.graduation_year}
+                  </p>
+                ) : null}
+              </div>
+
+              <GuestField
+                id="password"
+                name="password"
+                label="Password"
+                icon={Lock}
+                type="password"
+                autoComplete="new-password"
+                value={values.password}
+                onChange={(event) => updateField("password", event.target.value)}
+                onBlur={() => validateField("password")}
+                error={fieldErrors.password}
+                hint={
+                  <>
+                    {getPasswordHint()}
+                    {values.password ? ` (${values.password.length} characters)` : ""}
+                  </>
+                }
+              />
+            </div>
+
+            <div className="guest-auth-actions">
+              <button
+                type="submit"
+                className="guest-btn guest-btn-block"
+                disabled={isSubmitting}
+                aria-busy={isSubmitting || undefined}
+              >
+                {isSubmitting ? "Creating account..." : "Create account"}
+              </button>
+              <p className="guest-auth-footer">
+                Already have an account?{" "}
+                <Link to="/login" className="guest-link">
+                  Login
+                </Link>
+              </p>
+            </div>
+          </form>
         )}
-
-        <Input
-          id="full_name"
-          name="full_name"
-          label="Full name"
-          type="text"
-          autoComplete="name"
-          value={values.full_name}
-          onChange={(event) => updateField("full_name", event.target.value)}
-          onBlur={() => validateField("full_name")}
-          error={fieldErrors.full_name}
-          placeholder="Sapan Khadka"
-        />
-
-        <Input
-          id="email"
-          name="email"
-          label="Email"
-          type="email"
-          autoComplete="email"
-          value={values.email}
-          onChange={(event) => updateField("email", event.target.value)}
-          onBlur={() => validateField("email")}
-          error={fieldErrors.email}
-          placeholder="you@semo.edu"
-        />
-
-        <Input
-          id="student_id"
-          name="student_id"
-          label="Student ID"
-          type="text"
-          autoComplete="off"
-          value={values.student_id}
-          onChange={(event) => updateField("student_id", event.target.value)}
-          onBlur={() => validateField("student_id")}
-          error={fieldErrors.student_id}
-          placeholder="S12345678"
-        />
-
-        <Input
-          id="major"
-          name="major"
-          label="Major"
-          type="text"
-          autoComplete="organization-title"
-          value={values.major}
-          onChange={(event) => updateField("major", event.target.value)}
-          onBlur={() => validateField("major")}
-          error={fieldErrors.major}
-          placeholder="Computer Science"
-        />
-
-        <div>
-          <label
-            htmlFor="graduation_year"
-            className="block text-sm font-medium text-foreground"
-          >
-            Graduation year
-          </label>
-          <select
-            id="graduation_year"
-            name="graduation_year"
-            value={values.graduation_year}
-            onChange={(event) => updateField("graduation_year", event.target.value)}
-            onBlur={() => validateField("graduation_year")}
-            aria-invalid={fieldErrors.graduation_year ? true : undefined}
-            aria-describedby={
-              fieldErrors.graduation_year ? "graduation_year-error" : undefined
-            }
-            className={selectClassName}
-          >
-            <option value="">Select year</option>
-            {graduationYears.map((year) => (
-              <option key={year} value={year}>
-                {year}
-              </option>
-            ))}
-          </select>
-          {fieldErrors.graduation_year && (
-            <p id="graduation_year-error" className="mt-1 ds-field-error">
-              {fieldErrors.graduation_year}
-            </p>
-          )}
-        </div>
-
-        <div>
-          <Input
-            id="password"
-            name="password"
-            label="Password"
-            type="password"
-            autoComplete="new-password"
-            value={values.password}
-            onChange={(event) => updateField("password", event.target.value)}
-            onBlur={() => validateField("password")}
-            error={fieldErrors.password}
-            hint={
-              <>
-                {getPasswordHint()}
-                {values.password
-                  ? ` (${values.password.length} characters)`
-                  : ""}
-              </>
-            }
-          />
-        </div>
-
-        <Button
-          type="submit"
-          disabled={isSubmitting}
-          loading={isSubmitting}
-          className="w-full"
-        >
-          Create account
-        </Button>
-      </Card>
-
-      <p className="mt-4 text-center text-sm text-label">
-        Already have an account?{" "}
-        <Link to="/login" className="font-medium text-accent">
-          Sign in
-        </Link>
-      </p>
+      </div>
     </div>
+  );
+}
+
+function RegisterStepper({
+  step,
+  onBack,
+}: {
+  step: 1 | 2;
+  onBack?: () => void;
+}) {
+  return (
+    <ol className="guest-stepper" aria-label="Registration steps">
+      <li className={step >= 1 ? (step === 1 ? "is-current" : "is-done") : ""}>
+        {step === 2 && onBack ? (
+          <button type="button" onClick={onBack}>
+            Account
+          </button>
+        ) : (
+          <span>Account</span>
+        )}
+        <span className="guest-step-track" />
+      </li>
+      <li className={step >= 2 ? "is-current" : ""}>
+        <span>Profile</span>
+        <span className="guest-step-track" />
+      </li>
+    </ol>
   );
 }

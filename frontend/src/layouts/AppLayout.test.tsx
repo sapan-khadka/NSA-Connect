@@ -102,7 +102,7 @@ describe("AppLayout navigation", () => {
     });
 
     expect(screen.getByRole("link", { name: "Login" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Register" })).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "Register" }).length).toBeGreaterThan(0);
     expect(
       screen.queryByRole("navigation", { name: "Primary" }),
     ).not.toBeInTheDocument();

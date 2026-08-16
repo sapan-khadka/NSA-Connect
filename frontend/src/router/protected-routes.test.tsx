@@ -113,7 +113,8 @@ describe("protected route redirects", () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/");
     });
-    expect(screen.getByRole("heading", { name: "NSA Connect" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "NSA Connect" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Your community/i })).toBeInTheDocument();
   });
 
   it("sends unauthenticated users from /events to /login", async () => {
@@ -125,7 +126,7 @@ describe("protected route redirects", () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/login");
     });
-    expect(screen.getByRole("heading", { name: "Login" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
   });
 
   it("redirects legacy /member URLs to home", async () => {

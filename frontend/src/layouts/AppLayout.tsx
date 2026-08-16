@@ -7,6 +7,7 @@ import { AppTopBar, MobileSidebarDrawer } from "../components/AppTopBar";
 import { MobileBottomNav } from "../components/MobileBottomNav";
 import { buildNavLinkClass } from "../components/AppNav";
 import { AppLogo } from "../components/AppLogo";
+import { GuestChrome, isGuestMarketingPath } from "./GuestMarketingLayout";
 import { ChatNotificationProvider } from "../context/ChatNotificationProvider";
 import { NotificationSummaryProvider } from "../context/NotificationSummaryProvider";
 import { ToastProvider } from "../context/ToastProvider";
@@ -59,6 +60,14 @@ export function AppLayout() {
     isAuthenticated && isLgUp && !isDiscussionsSection(pathname);
 
   if (!isAuthenticated) {
+    if (isGuestMarketingPath(pathname)) {
+      return (
+        <GuestChrome pathname={pathname}>
+          <Outlet />
+        </GuestChrome>
+      );
+    }
+
     return (
       <div className="ds-app-shell">
         <header className="ds-topbar justify-between">

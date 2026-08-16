@@ -6,8 +6,7 @@ function homeStage(stage: number): CSSProperties {
   return { ["--home-stage" as string]: stage };
 }
 
-import { CoverBanner } from "../components/CoverBanner";
-import { HomeHeroBrand } from "../components/AppLogo";
+import { GuestLanding } from "../components/guest/GuestLanding";
 import { HomeAdaptiveWorkspace } from "../components/home/HomeAdaptiveWorkspace";
 import { HomeBriefingLayout } from "../components/home/HomeBriefingLayout";
 import { HomeEditToolbar } from "../components/home/HomeEditToolbar";
@@ -42,33 +41,7 @@ import {
 } from "../lib/roles";
 
 function PublicHomeView() {
-  return (
-    <div className="mx-auto max-w-4xl space-y-6 px-4 sm:px-0">
-      <CoverBanner />
-      <HomeHeroBrand
-        eyebrow="Namaste — welcome to NSA Connect"
-        title="NSA Connect"
-        description="Log in or create an account with your @semo.edu email to access events, tasks, and member tools."
-        align="center"
-        actions={
-          <>
-            <Link
-              to="/login"
-              className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-hover"
-            >
-              Log in
-            </Link>
-            <Link
-              to="/register"
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-foreground transition hover:border-primary hover:bg-badge-teal-bg/40"
-            >
-              Create account
-            </Link>
-          </>
-        }
-      />
-    </div>
-  );
+  return <GuestLanding />;
 }
 
 type MemberHomeLayoutProps = {

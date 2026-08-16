@@ -1,17 +1,11 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router";
 
-import { Button } from "../components/ui/Button";
-import { Card } from "../components/ui/Card";
-import { Input } from "../components/ui/Input";
-import {
-  requestPasswordReset,
-} from "../lib/auth-api";
+import { GuestField } from "../components/guest/GuestField";
+import { Mail } from "lucide-react";
+import { requestPasswordReset } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/api-error";
-import {
-  SEMO_EMAIL_DOMAIN,
-  validateSemoEmail,
-} from "../lib/validation";
+import { SEMO_EMAIL_DOMAIN, validateSemoEmail } from "../lib/validation";
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -46,75 +40,66 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md">
-      <div className="text-center">
-        <h1 className="text-3xl font-light tracking-headline text-foreground">
-          Forgot password
-        </h1>
-        <p className="mt-2 text-label">
-          Enter your @{SEMO_EMAIL_DOMAIN} email and we&apos;ll send a reset link
-          if an account exists.
-        </p>
-      </div>
+    <div className="guest-auth-shell">
+      <form className="guest-auth-card" onSubmit={handleSubmit} noValidate>
+        <header className="guest-auth-header">
+          <p className="guest-card-kicker">Account</p>
+          <h1>Forgot password</h1>
+          <p className="guest-auth-lede">
+            Enter your @{SEMO_EMAIL_DOMAIN} email and we&apos;ll send a reset
+            link if an account exists.
+          </p>
+        </header>
 
-      <Card
-        as="form"
-        onSubmit={handleSubmit}
-        noValidate
-        padding="md"
-        className="mt-8 space-y-5"
-      >
-        {successMessage && (
-          <Card
-            as="p"
-            nested
-            padding="none"
-            role="status"
-            className="px-4 py-3 text-sm text-foreground"
-          >
+        {successMessage ? (
+          <p role="status" className="guest-notice">
             {successMessage}
-          </Card>
-        )}
+          </p>
+        ) : null}
 
-        {serverError && (
-          <p role="alert" className="ds-alert-banner">
+        {serverError ? (
+          <p role="alert" className="guest-alert">
             {serverError}
           </p>
-        )}
+        ) : null}
 
-        <Input
-          id="email"
-          name="email"
-          label="Email"
-          type="email"
-          autoComplete="email"
-          value={email}
-          onChange={(event) => {
-            setEmail(event.target.value);
-            setFieldError(undefined);
-            setServerError(null);
-          }}
-          onBlur={() => setFieldError(validateSemoEmail(email) ?? undefined)}
-          error={fieldError}
-          placeholder="you@semo.edu"
-        />
+        <div className="guest-auth-fields">
+          <GuestField
+            id="email"
+            name="email"
+            label="Email"
+            icon={Mail}
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(event) => {
+              setEmail(event.target.value);
+              setFieldError(undefined);
+              setServerError(null);
+            }}
+            onBlur={() => setFieldError(validateSemoEmail(email) ?? undefined)}
+            error={fieldError}
+            placeholder="you@semo.edu"
+          />
+        </div>
 
-        <Button
-          type="submit"
-          disabled={isSubmitting}
-          loading={isSubmitting}
-          className="w-full"
-        >
-          Send reset link
-        </Button>
-      </Card>
-
-      <p className="mt-4 text-center text-sm text-label">
-        Remember your password?{" "}
-        <Link to="/login" className="font-medium text-accent">
-          Back to login
-        </Link>
-      </p>
+        <div className="guest-auth-actions">
+          <button
+            type="submit"
+            className="guest-btn guest-btn-block"
+            disabled={isSubmitting}
+            aria-busy={isSubmitting || undefined}
+          >
+            {isSubmitting ? "Sending..." : "Send reset link"}
+          </button>
+          <p className="guest-auth-footer">
+            Remember your password?{" "}
+            <Link to="/login" className="guest-link">
+              Back to login
+            </Link>
+          </p>
+        </div>
+      </form>
     </div>
   );
 }

@@ -710,9 +710,6 @@ describe("HomePage", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("link", { name: /Log in/i })).toHaveAttribute(
-      "href",
-      "/login",
-    );
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
   });
 });

@@ -1,17 +1,11 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
-import { Button } from "../components/ui/Button";
-import { Card } from "../components/ui/Card";
-import { Input } from "../components/ui/Input";
-import {
-  confirmPasswordReset,
-} from "../lib/auth-api";
+import { GuestField } from "../components/guest/GuestField";
+import { Lock } from "lucide-react";
+import { confirmPasswordReset } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/api-error";
-import {
-  getPasswordHint,
-  validateRegisterPassword,
-} from "../lib/validation";
+import { getPasswordHint, validateRegisterPassword } from "../lib/validation";
 
 export function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -65,108 +59,112 @@ export function ResetPasswordPage() {
     }
   }
 
-  if (!token) {
-    return (
-      <div className="mx-auto max-w-md text-center">
-        <h1 className="text-3xl font-light tracking-headline text-foreground">
-          Reset password
-        </h1>
-        <p className="mt-4 text-sm text-label">
-          This reset link is invalid or has expired.
-        </p>
-        <p className="mt-4">
-          <Link to="/forgot-password" className="font-medium text-accent">
-            Request a new password reset
-          </Link>
-        </p>
-      </div>
-    );
-  }
+  const showResetLink =
+    serverError != null &&
+    (serverError.toLowerCase().includes("invalid") ||
+      serverError.toLowerCase().includes("expired"));
 
   return (
-    <div className="mx-auto max-w-md">
-      <div className="text-center">
-        <h1 className="text-3xl font-light tracking-headline text-foreground">
-          Reset password
-        </h1>
-        <p className="mt-2 text-label">Choose a new password for your account.</p>
-      </div>
-
-      <Card
-        as="form"
-        onSubmit={handleSubmit}
-        noValidate
-        padding="md"
-        className="mt-8 space-y-5"
-      >
-        {serverError && (
-          <div role="alert" className="ds-alert-banner">
-            <p>{serverError}</p>
-            {serverError.toLowerCase().includes("invalid") ||
-            serverError.toLowerCase().includes("expired") ? (
-              <p className="mt-2">
-                <Link to="/forgot-password" className="font-medium text-accent">
-                  Request a new password reset
-                </Link>
-              </p>
-            ) : null}
+    <div className="guest-auth-shell">
+      {!token ? (
+        <div className="guest-auth-card">
+          <header className="guest-auth-header">
+            <p className="guest-card-kicker">Account</p>
+            <h1>Reset password</h1>
+            <p className="guest-auth-lede">
+              This reset link is invalid or has expired.
+            </p>
+          </header>
+          <div className="guest-auth-actions">
+            <Link to="/forgot-password" className="guest-btn guest-btn-block">
+              Request a new password reset
+            </Link>
           </div>
-        )}
+        </div>
+      ) : (
+        <form className="guest-auth-card" onSubmit={handleSubmit} noValidate>
+          <header className="guest-auth-header">
+            <p className="guest-card-kicker">Account</p>
+            <h1>Reset password</h1>
+            <p className="guest-auth-lede">
+              Choose a new password for your account.
+            </p>
+          </header>
 
-        <Input
-          id="password"
-          name="password"
-          label="New password"
-          type="password"
-          autoComplete="new-password"
-          value={password}
-          onChange={(event) => {
-            setPassword(event.target.value);
-            setPasswordError(undefined);
-            setServerError(null);
-          }}
-          onBlur={() =>
-            setPasswordError(validateRegisterPassword(password) ?? undefined)
-          }
-          error={passwordError}
-          hint={getPasswordHint()}
-        />
+          {serverError ? (
+            <div role="alert" className="guest-alert">
+              <p>{serverError}</p>
+              {showResetLink ? (
+                <p>
+                  <Link to="/forgot-password" className="guest-link">
+                    Request a new password reset
+                  </Link>
+                </p>
+              ) : null}
+            </div>
+          ) : null}
 
-        <Input
-          id="confirm-password"
-          name="confirm-password"
-          label="Confirm new password"
-          type="password"
-          autoComplete="new-password"
-          value={confirmPassword}
-          onChange={(event) => {
-            setConfirmPassword(event.target.value);
-            setConfirmError(undefined);
-            setServerError(null);
-          }}
-          onBlur={() =>
-            setConfirmError(
-              password !== confirmPassword ? "Passwords do not match" : undefined,
-            )
-          }
-          error={confirmError}
-        />
+          <div className="guest-auth-fields">
+            <GuestField
+              id="password"
+              name="password"
+              label="New password"
+              icon={Lock}
+              type="password"
+              autoComplete="new-password"
+              value={password}
+              onChange={(event) => {
+                setPassword(event.target.value);
+                setPasswordError(undefined);
+                setServerError(null);
+              }}
+              onBlur={() =>
+                setPasswordError(validateRegisterPassword(password) ?? undefined)
+              }
+              error={passwordError}
+              hint={getPasswordHint()}
+            />
+            <GuestField
+              id="confirm-password"
+              name="confirm-password"
+              label="Confirm new password"
+              icon={Lock}
+              type="password"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(event) => {
+                setConfirmPassword(event.target.value);
+                setConfirmError(undefined);
+                setServerError(null);
+              }}
+              onBlur={() =>
+                setConfirmError(
+                  password !== confirmPassword
+                    ? "Passwords do not match"
+                    : undefined,
+                )
+              }
+              error={confirmError}
+            />
+          </div>
 
-        <Button
-          type="submit"
-          disabled={isSubmitting}
-          loading={isSubmitting}
-          className="w-full"
-        >
-          Update password
-        </Button>
-      </Card>
-
-      <p className="mt-4 text-center text-sm text-label">
-        <Link to="/login" className="font-medium text-accent">
-          Back to login
-        </Link>
-      </p>
+          <div className="guest-auth-actions">
+            <button
+              type="submit"
+              className="guest-btn guest-btn-block"
+              disabled={isSubmitting}
+              aria-busy={isSubmitting || undefined}
+            >
+              {isSubmitting ? "Updating..." : "Update password"}
+            </button>
+            <p className="guest-auth-footer">
+              <Link to="/login" className="guest-link">
+                Back to login
+              </Link>
+            </p>
+          </div>
+        </form>
+      )}
     </div>
   );
 }
