@@ -21,7 +21,7 @@ PASSWORD_RESET_REQUEST_MESSAGE = (
     "If an account exists for this email, a reset link has been sent."
 )
 PASSWORD_RESET_RATE_LIMIT_MESSAGE = (
-    "Too many password reset requests — please try again later."
+    "Too many password reset requests. Please try again later."
 )
 PASSWORD_RESET_INVALID_TOKEN_MESSAGE = (
     "This reset link is invalid or has expired. Please request a new password reset."

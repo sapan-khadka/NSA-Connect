@@ -184,7 +184,7 @@ export function BoardMeetingsPage() {
         <div>
           <h1 className="board-meetings-title">Meetings</h1>
           <p className="board-meetings-subtitle">
-            Official record of NSA board meetings — agenda, attendance, and
+            Official record of NSA board meetings: agenda, attendance, and
             minutes.
           </p>
         </div>

@@ -92,7 +92,7 @@ export function getApiErrorMessage(
   }
 
   if (status === 429) {
-    return message ?? "Too many requests — please try again in a few minutes.";
+    return message ?? "Too many requests. Please try again in a few minutes.";
   }
 
   if (message) {

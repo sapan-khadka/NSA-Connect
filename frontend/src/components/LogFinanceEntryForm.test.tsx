@@ -153,7 +153,7 @@ describe("LogFinanceEntryForm", () => {
       purchase_date: "2026-03-15",
       purchase_time: "14:32",
       amount: "24.67",
-      description: "Walmart — Milk, bread, eggs (purchased 2026-03-15)",
+      description: "Walmart: Milk, bread, eggs (purchased 2026-03-15)",
       category: "food_beverage",
       confidence: "high",
     });
@@ -177,7 +177,7 @@ describe("LogFinanceEntryForm", () => {
       expect(screen.getByLabelText("Amount")).toHaveValue("24.67");
     });
     expect(screen.getByLabelText("Description")).toHaveValue(
-      "Walmart — Milk, bread, eggs (purchased 2026-03-15)",
+      "Walmart: Milk, bread, eggs (purchased 2026-03-15)",
     );
     expect(screen.getByLabelText("Category")).toHaveValue("food_beverage");
     expect(

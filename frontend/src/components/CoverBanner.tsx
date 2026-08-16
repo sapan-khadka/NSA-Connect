@@ -7,7 +7,7 @@ type CoverBannerProps = {
 };
 
 export function CoverBanner({
-  alt = "Nepalese Students Association at SEMO — community events, cultural celebrations, and student life",
+  alt = "Nepalese Students Association at SEMO community events, cultural celebrations, and student life",
   className = "",
 }: CoverBannerProps) {
   return (

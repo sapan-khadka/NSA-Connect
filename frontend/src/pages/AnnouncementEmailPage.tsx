@@ -120,7 +120,7 @@ export function AnnouncementEmailPage() {
               <div>
                 <h2 className="text-sm font-semibold text-foreground">Event details</h2>
                 <p className="mt-1 text-sm text-label">
-                  Optional — improves date, location, and tone in the draft.
+                  Optional. Improves date, location, and tone in the draft.
                 </p>
               </div>
               <button

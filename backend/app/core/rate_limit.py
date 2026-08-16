@@ -17,22 +17,22 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-RATE_LIMIT_LOGIN_MESSAGE = "Too many login attempts — please try again in a few minutes"
-RATE_LIMIT_REGISTER_MESSAGE = "Too many registration attempts — please try again later"
+RATE_LIMIT_LOGIN_MESSAGE = "Too many login attempts. Please try again in a few minutes"
+RATE_LIMIT_REGISTER_MESSAGE = "Too many registration attempts. Please try again later"
 RATE_LIMIT_CHANGE_PASSWORD_MESSAGE = (
-    "Too many password change attempts — please try again in a few minutes"
+    "Too many password change attempts. Please try again in a few minutes"
 )
 RATE_LIMIT_GUEST_CHECKIN_MESSAGE = (
-    "Too many guest check-ins from this device — please try again later"
+    "Too many guest check-ins from this device. Please try again later"
 )
 RATE_LIMIT_PASSWORD_RESET_MESSAGE = (
-    "Too many password reset requests — please try again later"
+    "Too many password reset requests. Please try again later"
 )
 RATE_LIMIT_RECEIPT_SCAN_MESSAGE = (
-    "Too many receipt scans — please try again later"
+    "Too many receipt scans. Please try again later"
 )
 RATE_LIMIT_GLOBAL_MESSAGE = (
-    "Too many requests — please slow down and try again in a moment"
+    "Too many requests. Please slow down and try again in a moment"
 )
 
 

@@ -185,7 +185,7 @@ export function DiscussionInboxActionSheet({
           description={
             archivedForMe
               ? "Return this chat to your active list"
-              : "Hide from your inbox only — others are unaffected"
+              : "Hide from your inbox only. Others are unaffected."
           }
           onClick={() => run("archiveForMe")}
         />

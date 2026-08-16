@@ -159,7 +159,7 @@ function MarkPaidModal({
   }
 
   return (
-    <Modal open={true} title={`Mark paid — ${record.member_name}`} onClose={onClose}>
+    <Modal open={true} title={`Mark paid: ${record.member_name}`} onClose={onClose}>
       <form className="space-y-4" onSubmit={handleSubmit}>
         <p className="text-sm text-label">
           Amount owed: {formatCurrency(record.amount_owed)}
@@ -255,7 +255,7 @@ function EditAmountModal({
   }
 
   return (
-    <Modal open={true} title={`Edit amount — ${record.member_name}`} onClose={onClose}>
+    <Modal open={true} title={`Edit amount: ${record.member_name}`} onClose={onClose}>
       <form className="space-y-4" onSubmit={handleSubmit}>
         <p className="text-sm text-label">
           Set to $0.00 to mark a member exempt for this semester.
@@ -567,7 +567,7 @@ export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboard
           ) : null}
 
           <p className="text-xs text-label">
-            Marking dues paid automatically logs a membership-dues income entry in Books — do not log the same payment again.
+            Marking dues paid automatically logs a membership-dues income entry in Books. Do not log the same payment again.
           </p>
         </div>
       </details>

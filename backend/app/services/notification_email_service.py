@@ -67,7 +67,7 @@ def send_event_reminder_email(
         f"When: {format_event_datetime(event_starts_at)}\n"
         f"Your RSVP: {_rsvp_label(rsvp_status)}\n\n"
         f"View event: {build_event_url(event_id)}\n\n"
-        "— NSA Connect"
+        "NSA Connect"
     )
     return send_resend_email(
         to_email=to_email,
@@ -89,7 +89,7 @@ def send_rsvp_nudge_email(
         f"{event_title} is in two days and we haven't received your RSVP yet.\n\n"
         f"When: {format_event_datetime(event_starts_at)}\n\n"
         f"Please RSVP: {build_event_url(event_id)}\n\n"
-        "— NSA Connect"
+        "NSA Connect"
     )
     return send_resend_email(
         to_email=to_email,
@@ -119,7 +119,7 @@ def send_task_assigned_email(
         f"{event_line}"
         f"{due_line}\n"
         f"View tasks: {build_tasks_url()}\n\n"
-        "— NSA Connect"
+        "NSA Connect"
     )
     return send_resend_email(
         to_email=to_email,
@@ -144,7 +144,7 @@ def send_task_due_reminder_email(
         f"{event_line}"
         f"Due: {format_due_date(due_date)}\n\n"
         f"View tasks: {build_tasks_url()}\n\n"
-        "— NSA Connect"
+        "NSA Connect"
     )
     return send_resend_email(
         to_email=to_email,
@@ -168,10 +168,10 @@ def send_dues_reminder_email(
         f"Hi {full_name},\n\n"
         f"Friendly reminder: you have {amount_label} in membership dues "
         f"outstanding for {semester_label}.\n\n"
-        "When you're ready to pay, contact the NSA treasurer — Venmo and cash "
+        "When you're ready to pay, contact the NSA treasurer. Venmo and cash "
         "are both accepted.\n\n"
         f"View your profile: {build_profile_url()}\n\n"
-        "— NSA Connect"
+        "NSA Connect"
     )
     return send_resend_email(
         to_email=to_email,
@@ -194,7 +194,7 @@ def send_announcement_email(
         f"{announcement_title}\n\n"
         f"{announcement_body}\n\n"
         f"View all announcements: {build_announcements_url()}\n\n"
-        "— NSA Connect"
+        "NSA Connect"
     )
     return send_resend_email(
         to_email=to_email,

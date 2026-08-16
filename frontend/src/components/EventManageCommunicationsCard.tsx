@@ -124,7 +124,7 @@ export function EventManageCommunicationsCard({
     setError(null);
     setSuccess(null);
     if (prefill && !title && !body) {
-      setTitle(`${event.name} — event update`);
+      setTitle(`${event.name}: event update`);
       setBody(
         [
           `Hi NSA members,`,

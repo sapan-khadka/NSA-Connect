@@ -34,8 +34,8 @@ export function AiAssistantPage() {
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-label">
           Ask about membership, dues, events, finances, constitution, and
-          chapter documents. Answers use live NSA Connect data and indexed PDFs
-          — your access still follows board and treasury permissions.
+          chapter documents. Answers use live NSA Connect data and indexed PDFs.
+          Your access still follows board and treasury permissions.
         </p>
       </header>
 

@@ -140,7 +140,7 @@ def _build_description(
 ) -> str | None:
     parts: list[str] = []
     if vendor and description and vendor.lower() not in description.lower():
-        parts.append(f"{vendor} — {description}")
+        parts.append(f"{vendor}: {description}")
     elif description:
         parts.append(description)
     elif vendor:

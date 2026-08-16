@@ -3,7 +3,7 @@ import { isAxiosError } from "axios";
 import { getApiErrorMessage } from "./api-error";
 
 export const MEMBERSHIP_ADMIN_ERROR_MESSAGE =
-  "Couldn't update role or position — please try again.";
+  "Couldn't update role or position. Please try again.";
 
 export function getMembershipAdminErrorMessage(error: unknown): string {
   if (isAxiosError(error)) {

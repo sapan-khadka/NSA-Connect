@@ -222,7 +222,7 @@ def validate_password_strength(
 
     if _has_low_character_variety(password):
         raise WeakPasswordError(
-            "Password is too repetitive — use a mix of different characters"
+            "Password is too repetitive. Use a mix of different characters"
         )
 
     if _contains_trivial_sequence(password):
@@ -232,7 +232,7 @@ def validate_password_strength(
 
     if lowered in COMMON_PASSWORDS:
         raise WeakPasswordError(
-            "This password is too common — choose something more unique"
+            "This password is too common. Choose something more unique"
         )
 
     local_part = _email_local_part(email)

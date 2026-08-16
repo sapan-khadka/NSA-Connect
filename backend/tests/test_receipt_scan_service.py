@@ -20,7 +20,7 @@ def test_to_scan_response_builds_description_with_vendor_and_date():
     assert result.readable is True
     assert result.amount == Decimal("18.50")
     assert result.category == "supplies"
-    assert result.description == "Target — Napkins and cups (purchased 2026-04-01)"
+    assert result.description == "Target: Napkins and cups (purchased 2026-04-01)"
 
 
 def test_to_scan_response_drops_unknown_category_and_low_confidence_without_amount():

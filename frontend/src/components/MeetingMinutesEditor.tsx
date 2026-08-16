@@ -78,7 +78,7 @@ export function MeetingMinutesEditor({
     try {
       const updated = await onSaveNotes(notes);
       setSavedMinutes(updated);
-      setSaveSuccess("Draft saved — board members will be notified.");
+      setSaveSuccess("Draft saved. Board members will be notified.");
     } catch (error) {
       setServerError(getApiErrorMessage(error));
     } finally {
@@ -102,7 +102,7 @@ export function MeetingMinutesEditor({
       const updated = await onSummarize(trimmedNotes);
       setSavedMinutes(updated);
       setNotes(trimmedNotes);
-      setSaveSuccess("Official minutes published — board members will be notified.");
+      setSaveSuccess("Official minutes published. Board members will be notified.");
     } catch (error) {
       setServerError(getApiErrorMessage(error));
     } finally {

@@ -248,7 +248,7 @@ export function buildMemberHealthSuggestions(input: {
   if (input.band === "excellent" && suggestions.length === 0) {
     suggestions.push({
       id: "strong-health",
-      text: "Engagement looks strong — keep momentum going.",
+      text: "Engagement looks strong. Keep momentum going.",
       tone: "positive",
     });
   }
@@ -282,7 +282,7 @@ export function buildMemberHealthSuggestions(input: {
   if (suggestions.length === 0) {
     suggestions.push({
       id: "steady",
-      text: "Health looks steady — no urgent follow-ups right now.",
+      text: "Health looks steady. No urgent follow-ups right now.",
       tone: "positive",
     });
   }

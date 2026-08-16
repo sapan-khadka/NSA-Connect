@@ -272,7 +272,7 @@ describe("EventTaskManager", () => {
       screen.queryByRole("button", { name: "New task" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByText("This event has ended — new tasks can't be added."),
+      screen.getByText("This event has ended. New tasks can't be added."),
     ).toBeInTheDocument();
   });
 });

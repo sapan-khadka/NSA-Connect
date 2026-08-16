@@ -196,7 +196,7 @@ export function buildEventActivityTimeline(input: {
     id: "reminder-sent",
     kind: "reminder",
     title: "Reminder email sent",
-    detail: "Preview activity — reminder delivery is not tracked yet.",
+    detail: "Preview activity. Reminder delivery is not tracked yet.",
     occurredAt: yesterday.toISOString(),
     isPlaceholder: true,
   });

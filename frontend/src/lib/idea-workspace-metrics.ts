@@ -139,7 +139,7 @@ export function buildWorkflowStepDetails(
     ],
     decision: [
       idea.community_feedback_closed_at
-        ? "Feedback closed — ready to decide"
+        ? "Feedback closed. Ready to decide"
         : "Waiting for feedback to close",
       `${responses} community ${responses === 1 ? "response" : "responses"}`,
     ],
@@ -185,13 +185,13 @@ export function ideaTimelineNowLabel(idea: EventSuggestion): string {
     case "submitted":
       return "Waiting on board review";
     case "internal_review":
-      return "In review — not yet published";
+      return "In review. Not yet published";
     case "published":
       return idea.community_feedback_closed_at
         ? "Waiting on board decision"
         : "Collecting community feedback";
     case "approved":
-      return "Approved — ready to schedule";
+      return "Approved. Ready to schedule";
     case "converted":
       return "Scheduled as an event";
     case "rejected":
@@ -417,7 +417,7 @@ export function getDecisionReadiness(idea: EventSuggestion): DecisionReadiness {
       reasonsLabel: "Reason",
       recommendationLabel: "Recommendation",
       recommendation: feedbackClosed
-        ? "Proceed to Board Decision — approve or reject this idea."
+        ? "Proceed to Board Decision. Approve or reject this idea."
         : "Close feedback and move to Board Decision.",
     };
   }

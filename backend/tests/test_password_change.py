@@ -40,7 +40,7 @@ def test_register_rejects_common_password(client):
 
     assert response.status_code == 400
     assert response.json()["detail"] == (
-        "This password is too common — choose something more unique"
+        "This password is too common. Choose something more unique"
     )
 
 
@@ -112,7 +112,7 @@ def test_change_password_rejects_common_password(client, db_session):
 
     assert response.status_code == 400
     assert response.json()["detail"] == (
-        "This password is too common — choose something more unique"
+        "This password is too common. Choose something more unique"
     )
 
 

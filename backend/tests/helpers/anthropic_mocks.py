@@ -57,7 +57,7 @@ SAMPLE_ANNOUNCEMENT_PAYLOAD = {
     "subject": "You're invited: Dashain Celebration",
     "body": (
         "Hi NSA members,\n\n"
-        "Join us for Dashain Celebration — an evening of food, music, "
+        "Join us for Dashain Celebration, an evening of food, music, "
         "and community.\n\n"
         "When: [Date] at [Time]\n"
         "Where: [Location]\n\n"

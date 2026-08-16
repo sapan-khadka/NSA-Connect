@@ -326,7 +326,7 @@ export function EventDetailPage() {
             {invitedToVolunteer || event.current_member_is_invited_participant ? (
               <p className="event-command-stat event-page-invite">
                 {invitedToVolunteer
-                  ? "You've been invited to volunteer — claim a role below."
+                  ? "You've been invited to volunteer. Claim a role below."
                   : "You've been invited to participate."}
               </p>
             ) : null}

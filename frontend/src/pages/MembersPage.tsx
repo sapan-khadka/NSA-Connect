@@ -789,7 +789,7 @@ export function MembersPage() {
             emailSent: result.setup_email_sent,
             message: result.setup_email_sent
               ? "Member added. Setup email sent."
-              : "Member added, but we couldn't send the setup email — ask them to use Forgot Password.",
+              : "Member added, but we couldn't send the setup email. Ask them to use Forgot Password.",
           });
         }}
       />
@@ -838,7 +838,7 @@ export function MembersPage() {
                       key={`${row.row_number}-${row.email ?? "none"}-${row.reason}`}
                     >
                       Row {row.row_number}
-                      {row.email ? ` — ${row.email}` : ""}
+                      {row.email ? ` · ${row.email}` : ""}
                       <span className="block text-foreground">{row.reason}</span>
                     </li>
                   ))}

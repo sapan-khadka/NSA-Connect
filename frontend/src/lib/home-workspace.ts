@@ -120,7 +120,7 @@ export const HOME_WIDGET_CATALOG: HomeWidgetMeta[] = [
   {
     id: "actions",
     label: "Quick Actions",
-    description: "Optional — create entry points already live in + Create",
+    description: "Optional. Create entry points already live in + Create",
     category: "Work",
     requiresBoard: true,
     defaultW: HOME_CANVAS_DESIGN_WIDTH,
@@ -158,7 +158,7 @@ export const HOME_WIDGET_CATALOG: HomeWidgetMeta[] = [
   {
     id: "inbox",
     label: "Inbox",
-    description: "Global chrome — not a dashboard widget",
+    description: "Global chrome, not a dashboard widget",
     category: "Communication",
     requiresBoard: true,
     defaultW: 352,

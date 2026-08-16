@@ -89,7 +89,7 @@ def _sync_finance_entry(
             record.finance_entry_id = None
         return
 
-    description = f"Membership dues — {record.member.full_name} ({record.semester})"
+    description = f"Membership dues: {record.member.full_name} ({record.semester})"
     timestamp = paid_at or record.paid_at or datetime.now(UTC)
 
     if record.finance_entry_id is not None:

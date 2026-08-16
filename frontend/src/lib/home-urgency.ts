@@ -49,5 +49,5 @@ export function buildHomeUrgencyLine({
   if (nextEvent) {
     return formatNextEventPhrase(nextEvent);
   }
-  return "You're clear — nothing urgent right now.";
+  return "You're clear. Nothing urgent right now.";
 }

@@ -160,7 +160,7 @@ export function ReportDocument({
       <section className="report-section mt-8">
         <h2 className="report-section-title">Feedback</h2>
         <p className="mt-2 text-sm text-label">
-          Aggregate ratings only — individual comments remain board-only.
+          Aggregate ratings only. Individual comments remain board-only.
         </p>
         <dl className="mt-4 grid gap-4 sm:grid-cols-3">
           <Metric label="Average rating" value={feedbackRating} />

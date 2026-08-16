@@ -315,7 +315,7 @@ describe("MembersPage", () => {
     expect(within(dialog).getByText("1")).toBeInTheDocument();
     expect(within(dialog).getByText(/rows skipped/i)).toBeInTheDocument();
     expect(
-      within(dialog).getByText(/Row 3 — dup@semo.edu/),
+      within(dialog).getByText(/Row 3 · dup@semo.edu/),
     ).toBeInTheDocument();
     expect(
       within(dialog).getByText("Email already registered"),
@@ -652,7 +652,7 @@ describe("MembersPage", () => {
 
     expect(
       await screen.findByText(
-        "Member added, but we couldn't send the setup email — ask them to use Forgot Password.",
+        "Member added, but we couldn't send the setup email. Ask them to use Forgot Password.",
       ),
     ).toBeInTheDocument();
   });

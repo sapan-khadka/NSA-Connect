@@ -446,7 +446,7 @@ export function DiscussionRoomMembersDrawer({
               {sections.map((section) => (
                 <section key={section.key}>
                   <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-400">
-                    {section.key} — {section.entries.length}
+                    {section.key} · {section.entries.length}
                   </h3>
                   <ul className="space-y-0.5" aria-label={`${section.key} members`}>
                     {section.entries.map((entry) => {

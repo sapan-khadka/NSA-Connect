@@ -316,7 +316,7 @@ export function EventSuggestionsPage() {
       setPreferredTiming("");
       setCustomTiming("");
       setShowForm(false);
-      setSubmitSuccess("Thanks — your idea was submitted.");
+      setSubmitSuccess("Thanks. Your idea was submitted.");
     } catch (error) {
       setSubmitError(getApiErrorMessage(error));
     } finally {
@@ -330,7 +330,7 @@ export function EventSuggestionsPage() {
         <div>
           <h1 className="ideas-title">Ideas</h1>
           <p className="ideas-subtitle">
-            Member ideas for future NSA events — discuss, gauge interest, then
+            Member ideas for future NSA events. Discuss, gauge interest, then
             plan.
           </p>
         </div>

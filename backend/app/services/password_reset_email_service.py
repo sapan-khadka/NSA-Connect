@@ -17,7 +17,7 @@ def send_password_reset_email(
         f"Reset your password: {reset_url}\n\n"
         f"This link expires in {expires_minutes} minutes.\n\n"
         "If you didn't request this, you can ignore this email.\n\n"
-        "— NSA Connect"
+        "NSA Connect"
     )
     return send_resend_email(
         to_email=to_email,
@@ -39,7 +39,7 @@ def send_password_setup_email(
         f"Set up your password: {setup_url}\n\n"
         f"This link expires in {expires_minutes} minutes.\n\n"
         "If you weren’t expecting this invitation, you can ignore this email.\n\n"
-        "— NSA Connect"
+        "NSA Connect"
     )
     return send_resend_email(
         to_email=to_email,

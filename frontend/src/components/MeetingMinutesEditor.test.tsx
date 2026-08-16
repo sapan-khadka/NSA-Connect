@@ -92,7 +92,7 @@ describe("MeetingMinutesEditor", () => {
     });
 
     expect(
-      await screen.findByText("Draft saved — board members will be notified."),
+      await screen.findByText("Draft saved. Board members will be notified."),
     ).toBeInTheDocument();
     expect(screen.getByText("Draft saved")).toBeInTheDocument();
   });
@@ -114,7 +114,7 @@ describe("MeetingMinutesEditor", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Published")).toBeInTheDocument();
     expect(
-      screen.getByText("Official minutes published — board members will be notified."),
+      screen.getByText("Official minutes published. Board members will be notified."),
     ).toBeInTheDocument();
   });
 

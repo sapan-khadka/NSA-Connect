@@ -81,7 +81,7 @@ export function HomeWidgetDrawer({
           <div>
             <h2 className="home-widget-drawer__title">Widgets</h2>
             <p className="home-widget-drawer__subtitle">
-              Toggle panels — they stack in Home order (event, focus, work,
+              Toggle panels. They stack in Home order (event, focus, work,
               then extras).
             </p>
           </div>

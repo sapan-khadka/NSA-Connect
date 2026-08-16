@@ -660,7 +660,7 @@ export function useDiscussion(
     (messageId: number, emoji: string) => {
       const socket = socketRef.current;
       if (!socket || socket.readyState !== WebSocket.OPEN) {
-        setError("Reconnect to react — chat is not live yet.");
+        setError("Reconnect to react. Chat is not live yet.");
         return;
       }
       const viewerId = viewerUserIdRef.current;

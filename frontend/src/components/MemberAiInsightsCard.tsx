@@ -119,7 +119,7 @@ export function MemberAiInsightsCard({
         </div>
         {selectedActionId ? (
           <p className="member-ai-action-note" role="status">
-            Action noted for review — AI suggestions are preview-only for now.
+            Action noted for review. AI suggestions are preview-only for now.
           </p>
         ) : null}
       </div>

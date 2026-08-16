@@ -218,7 +218,7 @@ export function validatePasswordStrength(
   }
 
   if (hasLowCharacterVariety(password)) {
-    return "Password is too repetitive — use a mix of different characters";
+    return "Password is too repetitive. Use a mix of different characters";
   }
 
   if (containsTrivialSequence(password)) {
@@ -226,7 +226,7 @@ export function validatePasswordStrength(
   }
 
   if (COMMON_PASSWORDS.has(lowered)) {
-    return "This password is too common — choose something more unique";
+    return "This password is too common. Choose something more unique";
   }
 
   const localPart = context.email ? emailLocalPart(context.email) : "";

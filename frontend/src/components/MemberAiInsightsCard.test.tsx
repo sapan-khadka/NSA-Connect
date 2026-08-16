@@ -40,7 +40,7 @@ describe("MemberAiInsightsCard", () => {
 
     expect(
       screen.getByText(
-        "Action noted for review — AI suggestions are preview-only for now.",
+        "Action noted for review. AI suggestions are preview-only for now.",
       ),
     ).toBeInTheDocument();
   });

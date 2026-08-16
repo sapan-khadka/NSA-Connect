@@ -55,6 +55,6 @@ describe("buildHomeUrgencyLine", () => {
         pendingReviewCount: 0,
         nextEvent: null,
       }),
-    ).toBe("You're clear — nothing urgent right now.");
+    ).toBe("You're clear. Nothing urgent right now.");
   });
 });

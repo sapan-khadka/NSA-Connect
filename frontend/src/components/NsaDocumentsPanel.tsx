@@ -144,8 +144,8 @@ export function NsaDocumentsPanel() {
                 }
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-foreground"
               >
-                <option value="public">Public — all members</option>
-                <option value="board">Private — board only</option>
+                <option value="public">Public (all members)</option>
+                <option value="board">Private (board only)</option>
               </select>
             </label>
           </div>
