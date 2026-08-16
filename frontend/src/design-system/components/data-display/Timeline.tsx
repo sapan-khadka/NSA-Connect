@@ -63,7 +63,7 @@ export function Timeline({
                   {item.icon ?? (
                     <span
                       aria-hidden="true"
-                      className="mt-1.5 h-2.5 w-2.5 rounded-full bg-primary"
+                      className="mt-1.5 h-2.5 w-2.5 rounded-full bg-foreground"
                     />
                   )}
                   {!isLast ? (

@@ -203,7 +203,7 @@ export function InviteMembersToEventModal({
                       type="checkbox"
                       checked={checked}
                       onChange={() => toggleMember(member.id)}
-                      className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent"
+                      className="h-4 w-4 rounded border-gray-300 text-foreground focus:ring-accent"
                     />
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-medium text-foreground">

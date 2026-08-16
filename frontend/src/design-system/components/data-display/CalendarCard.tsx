@@ -89,9 +89,9 @@ export function CalendarCard({
               const cellClass = cx(
                 "relative flex h-10 items-center justify-center rounded-lg text-sm transition duration-200",
                 day.isOutsideMonth ? "text-label/50" : "text-foreground",
-                day.isToday ? "font-bold text-primary" : "",
+                day.isToday ? "font-bold text-foreground" : "",
                 day.isSelected
-                  ? "bg-primary text-white hover:bg-primary-hover"
+                  ? "bg-brand-soft text-foreground hover:bg-brand-muted"
                   : "hover:bg-surface-muted",
                 day.disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer",
               );
@@ -112,10 +112,7 @@ export function CalendarCard({
                   {day.hasEvents ? (
                     <span
                       aria-hidden="true"
-                      className={cx(
-                        "absolute bottom-1 h-1 w-1 rounded-full",
-                        day.isSelected ? "bg-white" : "bg-primary",
-                      )}
+                      className="absolute bottom-1 h-1 w-1 rounded-full bg-foreground"
                     />
                   ) : null}
                 </button>

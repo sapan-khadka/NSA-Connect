@@ -90,7 +90,7 @@ function ArchivedRoomRow({
       <button
         type="button"
         onClick={() => onOpen(room.room_id)}
-        className="block w-full truncate text-left text-[13px] font-medium text-foreground hover:text-primary"
+        className="block w-full truncate text-left text-[13px] font-medium text-foreground"
       >
         {room.label}
       </button>

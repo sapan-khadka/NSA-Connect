@@ -67,7 +67,7 @@ describe("EventRsvpButton", () => {
       status: "going" as const,
       label: "Going",
       message: "Yayyy! Can't wait to see you there.",
-      className: "text-primary/80",
+      className: "text-foreground",
       emojiClass: "rsvp-reaction-burst",
     },
     {
@@ -113,7 +113,7 @@ describe("EventRsvpButton", () => {
     {
       status: "going" as const,
       message: "Yayyy! Can't wait to see you there.",
-      className: "text-primary/80",
+      className: "text-foreground",
     },
     {
       status: "maybe" as const,

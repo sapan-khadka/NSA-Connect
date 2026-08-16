@@ -2,6 +2,17 @@
 @import "./design-system/tokens.css";
 @config "../tailwind.config.ts";
 
+@theme {
+  --color-brand: #c8102e;
+  --color-brand-hover: #a80d27;
+  --color-brand-soft: #fff1f3;
+  --color-brand-muted: #ffe3e7;
+  --color-primary: #c8102e;
+  --color-primary-hover: #a80d27;
+  --color-accent: #c8102e;
+  --color-accent-hover: #a80d27;
+}
+
 @layer base {
   :root {
     /* Legacy aliases kept for existing CSS that references --badge-* / --ds-* */
@@ -252,12 +263,12 @@
   }
 
   .ds-sidebar-link--active {
-    @apply bg-badge-teal-bg text-primary shadow-none;
+    @apply bg-brand-soft text-brand shadow-none;
     font-weight: 600;
   }
 
   .ds-sidebar-link--active:hover {
-    @apply bg-badge-teal-bg text-primary;
+    @apply bg-brand-soft text-brand;
   }
 
   .ds-topbar {
@@ -341,8 +352,8 @@
       --inbox-ink: #111111;
       --inbox-muted: #6b6b6b;
       --inbox-line: #ebebea;
-      --inbox-accent: #111111;
-      --inbox-accent-soft: #ebebea;
+      --inbox-accent: #c8102e;
+      --inbox-accent-soft: #fff1f3;
       --inbox-wash: #f5f5f4;
 
       display: flex;
@@ -379,7 +390,7 @@
       border: 1px solid var(--inbox-line);
       border-radius: 0.55rem;
       background: color-mix(in srgb, #fff 55%, var(--inbox-wash));
-      color: var(--inbox-accent);
+      color: var(--inbox-ink);
       box-shadow: none;
       cursor: pointer;
       transition:
@@ -497,7 +508,7 @@
       padding: 0.28rem 0.45rem;
       border-radius: 0.35rem;
       background: transparent;
-      color: var(--inbox-accent);
+      color: var(--inbox-ink);
       font-size: 0.75rem;
       font-weight: 600;
       letter-spacing: -0.015em;
@@ -667,7 +678,7 @@
     left: 0.75rem;
     height: 2px;
     border-radius: 1px;
-    background-color: #027c68;
+    background-color: #c8102e;
   }
 
   .ds-nav-divider {
@@ -792,8 +803,8 @@
     --home-card-pad-x: 0.85rem;
     --home-card-border: #e5e5e5;
     --home-card-shadow: none;
-    --home-accent: #111111;
-    --home-accent-soft: #f4f4f4;
+    --home-accent: #c8102e;
+    --home-accent-soft: #fff1f3;
     --home-line: #e8e8e8;
 
     font-family: var(--font-sans);
@@ -1328,9 +1339,9 @@
   }
 
   .home-workspace-toolbar__btn.is-active {
-    border-color: #111111;
-    background: #111111;
-    color: #fff;
+    border-color: #ffe3e7;
+    background: #fff1f3;
+    color: #111111;
     box-shadow: none;
   }
 
@@ -6087,7 +6098,7 @@
     align-items: center;
     justify-content: center;
     border-radius: 999px;
-    background: #111111;
+    background: #c8102e;
     padding: 0.06rem 0.32rem;
     font-size: 0.6rem;
     font-weight: 600;
@@ -6188,7 +6199,7 @@
     line-height: 1.15;
     font-variant-numeric: tabular-nums;
     color: #fff;
-    background: #111111;
+    background: #c8102e;
   }
 
   .home-discussion-empty {
@@ -6523,7 +6534,7 @@
   }
 
   .home-meeting-focus-cta:hover {
-    background: #262626;
+    background: #2a2a2a;
   }
 
   .home-main-grid {
@@ -11277,7 +11288,7 @@
     align-items: center;
     justify-content: center;
     border-radius: 999px;
-    background: #111111;
+    background: #c8102e;
     color: #fff;
     font-size: 0.625rem;
     font-weight: 650;
@@ -17816,8 +17827,8 @@
   }
 
   .event-command-btn--primary:hover {
-    border-color: #111111;
-    background: #262626;
+    border-color: #2a2a2a;
+    background: #2a2a2a;
   }
 
   .event-command-btn.is-copied {
@@ -18987,8 +18998,8 @@
   }
 
   .announcements-page-new:hover {
-    background: #262626;
-    border-color: #262626;
+    background: #2a2a2a;
+    border-color: #2a2a2a;
     color: #fff;
   }
 
@@ -19417,7 +19428,7 @@
     height: 0.4rem;
     margin-top: 0.45rem;
     border-radius: 999px;
-    background: #111111;
+    background: #c8102e;
   }
 
   .notifications-feed-dot-spacer {
@@ -19732,7 +19743,7 @@
   }
 
   .announcements-page-empty-action:hover {
-    background: #262626;
+    background: #2a2a2a;
     color: #fff;
   }
 
@@ -19900,12 +19911,12 @@
   }
 
   .ds-stat-value {
-    @apply mt-2 text-3xl font-light tracking-headline text-accent;
+    @apply mt-2 text-3xl font-light tracking-headline text-foreground;
     font-weight: 300;
   }
 
   .ds-stat-value-emphasis {
-    @apply mt-2 text-3xl tracking-headline text-accent;
+    @apply mt-2 text-3xl tracking-headline text-foreground;
     font-weight: 400;
   }
 
@@ -20096,7 +20107,7 @@
     display: grid;
     flex: 1 1 auto;
     grid-template-columns: repeat(7, minmax(0, 1fr));
-    grid-auto-rows: minmax(2.45rem, 1fr);
+    grid-auto-rows: minmax(4.25rem, 1fr);
     min-height: 0;
     border: 1px solid #ebebea;
     background: transparent;
@@ -20133,30 +20144,60 @@
 
   .events-calendar-day-cell.is-selected {
     background-color: #f5f5f4 !important;
-    box-shadow: none;
+    box-shadow: inset 2px 0 0 #171717;
   }
 
-  .calendar-event-marks {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    margin-top: 3px;
-    min-height: 6px;
-  }
-
-  .calendar-event-mark {
+  .events-calendar-day-num {
     display: block;
-    flex-shrink: 0;
-    width: 6px;
-    height: 6px;
-    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.2;
+    color: inherit;
   }
 
-  .calendar-event-mark.is-legend,
-  .calendar-event-mark.is-row {
-    width: 7px;
-    height: 7px;
+  .events-calendar-day-num.is-emphasis {
+    font-weight: 650;
+    color: #111111;
+  }
+
+  .events-calendar-day-events {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+    margin-top: 0.2rem;
+  }
+
+  .events-calendar-day-event,
+  .events-calendar-day-festival,
+  .events-calendar-day-more {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.625rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+    color: #171717;
+  }
+
+  .events-calendar-day-cell.is-outside .events-calendar-day-event,
+  .events-calendar-day-more {
+    color: #a3a3a3;
+  }
+
+  .events-calendar-day-festival {
+    font-weight: 450;
+    color: #737373;
+  }
+
+  .events-calendar-day-cell.has-events::after,
+  .events-calendar-day-cell.has-festival::after {
+    display: none;
   }
 
   .calendar-festival-empty {
@@ -20172,13 +20213,6 @@
     font-size: 1.05rem;
   }
 
-  .calendar-event-marks__more {
-    font-size: 8px;
-    font-weight: 650;
-    line-height: 1;
-    color: #9ca3af;
-  }
-
   .events-calendar-day-cell:focus {
     outline: none;
   }
@@ -20188,22 +20222,92 @@
     z-index: 1;
   }
 
-  .events-calendar-day-cell > span:first-child {
-    font-size: 0.8125rem;
-    line-height: 1.1;
+  .events-calendar-day-cell.is-selected:focus-visible {
+    box-shadow:
+      inset 2px 0 0 #171717,
+      inset 0 0 0 2px color-mix(in srgb, var(--color-primary) 55%, transparent);
   }
 
-  .events-calendar-legend {
+  .calendar-command-header {
     display: flex;
-    flex-wrap: wrap;
-    flex-shrink: 0;
-    gap: 0.3rem 0.7rem;
-    margin-top: 0.4rem;
-    padding-top: 0.4rem;
-    border-top: 1px solid #ebebea;
-    font-size: 0.625rem;
-    color: var(--color-label, #6b7280);
-    opacity: 0.7;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 1rem;
+  }
+
+  .calendar-command-header .event-command-title {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+
+  .calendar-command-header .event-command-meta {
+    margin: 0;
+  }
+
+  .calendar-command-header .event-command-kicker {
+    margin-top: 0.15rem;
+  }
+
+  .calendar-day-switch {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0.75rem 1.1rem 0;
+    list-style: none;
+    border-bottom: 1px solid #ebebea;
+  }
+
+  .calendar-day-switch-btn {
+    appearance: none;
+    width: 100%;
+    margin: 0;
+    padding: 0.45rem 0;
+    border: 0;
+    border-bottom: 1px solid #f5f5f4;
+    background: transparent;
+    color: #737373;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .calendar-day-switch li:last-child .calendar-day-switch-btn {
+    border-bottom: 0;
+  }
+
+  .calendar-day-switch-btn.is-active {
+    color: #111111;
+    font-weight: 550;
+  }
+
+  @media (max-width: 1023px) {
+    .events-calendar-grid__days {
+      grid-auto-rows: minmax(2.6rem, 1fr);
+    }
+
+    .events-calendar-day-events {
+      display: none;
+    }
+
+    .events-calendar-day-cell.has-events::after,
+    .events-calendar-day-cell.has-festival::after {
+      content: "";
+      display: block;
+      width: 0.7rem;
+      height: 2px;
+      margin-top: 0.25rem;
+      background: #171717;
+    }
+
+    .events-calendar-day-cell.has-festival:not(.has-events)::after {
+      background: #a3a3a3;
+    }
+
+    .events-calendar-day-cell.is-outside.has-events::after,
+    .events-calendar-day-cell.is-outside.has-festival::after {
+      background: #d4d4d4;
+    }
   }
 
   .events-calendar-page {
@@ -20657,6 +20761,12 @@
     }
   }
 
+  @media (min-width: 1024px) and (max-width: 1279px) {
+    .events-calendar-column-main .events-calendar-grid__days {
+      grid-auto-rows: minmax(4.25rem, auto);
+    }
+  }
+
   @media (min-width: 1280px) {
     /* Calendar column (stats + grid + upcoming) | full-height event details. */
     .events-calendar-page {
@@ -20712,17 +20822,7 @@
     .events-calendar-column-main .events-calendar-grid__days {
       flex: 0 0 auto;
       min-height: 0;
-      grid-auto-rows: minmax(2.75rem, auto);
-    }
-
-    .events-calendar-column-main .events-calendar-bs-date {
-      display: none;
-    }
-
-    .events-calendar-column-main .events-calendar-legend {
-      margin-top: 0.3rem;
-      padding-top: 0.3rem;
-    }
+      grid-auto-rows: minmax(4.5rem, auto);
 
     .events-calendar-column-main .events-upcoming-strip {
       flex-shrink: 0;
@@ -21024,7 +21124,7 @@
   }
 
   .details-panel-chip.is-active {
-    @apply bg-badge-teal-bg text-primary;
+    @apply bg-badge-teal-bg text-foreground;
   }
 
   .details-panel-content {
@@ -21457,7 +21557,7 @@
   }
 
   .details-panel-btn--primary {
-    @apply bg-primary text-white hover:bg-primary/90;
+    @apply bg-foreground text-white hover:bg-foreground/90;
   }
 
   .details-panel-btn--secondary {
@@ -21721,6 +21821,13 @@
     padding-bottom: 0.12em;
   }
 
+  .rsvp-segmented-count {
+    font-variant-numeric: tabular-nums;
+    font-weight: 550;
+    color: inherit;
+    opacity: 0.72;
+  }
+
   .rsvp-segmented-btn:focus {
     outline: none;
   }
@@ -21806,8 +21913,7 @@
     font-weight: 600;
   }
 
-  .events-upcoming-strip-dot,
-  .events-upcoming-strip-row .calendar-event-mark {
+  .events-upcoming-strip-dot {
     flex-shrink: 0;
   }
 
@@ -21939,7 +22045,7 @@
   }
 
   .ds-link {
-    @apply inline-flex min-h-11 items-center gap-1 text-sm text-accent transition-colors hover:text-accent-hover;
+    @apply inline-flex min-h-11 items-center gap-1 text-sm text-label transition-colors hover:text-foreground;
     font-weight: 400;
   }
 
@@ -21999,7 +22105,7 @@
   }
 
   .ds-tag {
-    @apply inline-flex items-center rounded-pill bg-mint px-2.5 py-0.5 text-xs text-primary;
+    @apply inline-flex items-center rounded-pill bg-mint px-2.5 py-0.5 text-xs text-foreground;
     font-weight: 400;
   }
 

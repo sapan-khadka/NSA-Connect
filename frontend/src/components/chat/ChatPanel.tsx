@@ -49,7 +49,7 @@ export function ChatPanel({
       id: createMessageId(),
       role: "assistant",
       content:
-        "Hi! I can look up live NSA Connect data — members, dues, events, tasks, finance — and search the constitution plus chapter documents the board uploads.",
+        "Hi! I can look up live NSA Connect data: members, dues, events, tasks, and finance. I can also search the constitution and chapter documents the board uploads.",
     },
   ]);
   const [draft, setDraft] = useState(initialQuery);

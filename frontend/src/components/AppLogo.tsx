@@ -14,32 +14,12 @@ type AppLogoProps = {
   asLink?: boolean;
 };
 
-function NavMountainMark() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="h-6 w-6 shrink-0 text-primary"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M3.5 18.5L9.25 9.5L12.75 14L16.25 8L20.5 18.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 const SIZE_STYLES: Record<
   AppLogoSize,
   { image: string; title: string; tagline: string; gap: string }
 > = {
   nav: {
-    image: "",
+    image: "h-10 w-auto shrink-0 object-contain",
     title: "ds-nav-brand-wordmark",
     tagline: "text-[10px] leading-tight",
     gap: "gap-2.5",
@@ -82,15 +62,11 @@ export function AppLogo({
         className,
       ].join(" ")}
     >
-      {isNavBrand ? (
-        <NavMountainMark />
-      ) : (
-        <img
-          src={nsaLogo}
-          alt="Nepalese Students Association at SEMO"
-          className={styles.image}
-        />
-      )}
+      <img
+        src={nsaLogo}
+        alt="Nepalese Students Association at SEMO"
+        className={styles.image}
+      />
       {showWordmark || isNavBrand ? (
         <div className="min-w-0 text-left">
           <p className={isNavBrand ? [styles.title, "font-semibold"].join(" ") : ["font-semibold tracking-headline text-foreground", styles.title].join(" ")}>

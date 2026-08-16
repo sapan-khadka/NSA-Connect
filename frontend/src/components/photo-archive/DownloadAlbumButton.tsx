@@ -66,11 +66,11 @@ export function DownloadAlbumButton({
     } catch (caught) {
       if (axios.isAxiosError(caught) && caught.code === "ECONNABORTED") {
         setError(
-          "Download timed out. Large albums can take a while — try again or download fewer photos at a time.",
+          "Download timed out. Large albums can take a while. Try again or download fewer photos at a time.",
         );
       } else if (controller.signal.aborted) {
         setError(
-          "Download timed out. Large albums can take a while — try again in a moment.",
+          "Download timed out. Large albums can take a while. Try again in a moment.",
         );
       } else {
         setError(getApiErrorMessage(caught));
@@ -87,7 +87,7 @@ export function DownloadAlbumButton({
         type="button"
         onClick={() => void handleDownload()}
         disabled={isDownloading || photoCount === 0}
-        className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-3 py-1.5 text-sm font-medium text-foreground transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-3 py-1.5 text-sm font-medium text-foreground transition hover:border-gray-300 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
       >
         <AppIcon icon={Download} size="sm" className="text-current" />
         {isDownloading ? "Preparing download…" : "Download album"}

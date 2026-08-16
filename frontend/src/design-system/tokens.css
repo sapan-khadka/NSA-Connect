@@ -2,18 +2,22 @@
  * NSA Connect CSS custom properties.
  * Keep values in sync with `tokens.ts` — that file is the TypeScript source of truth.
  *
- * Brand chrome: monochrome primary / surfaces.
+ * Brand: NSA red for actions / selected states. Near-black is for type only.
  * Semantic hue: badges, roles, success / warning (and data encoding outside tokens).
  */
 
 :root {
   /* ——— Color: semantic ——— */
   --color-foreground: #111111;
-  --color-label: #6b6b6b;
-  --color-primary: #111111;
-  --color-primary-hover: #000000;
-  --color-accent: #111111;
-  --color-accent-hover: #000000;
+  --color-label: #5f6368;
+  --color-brand: #c8102e;
+  --color-brand-hover: #a80d27;
+  --color-brand-soft: #fff1f3;
+  --color-brand-muted: #ffe3e7;
+  --color-primary: #c8102e;
+  --color-primary-hover: #a80d27;
+  --color-accent: #c8102e;
+  --color-accent-hover: #a80d27;
   --color-mint: #99f6e4;
   --color-urgent: #ffff66;
 
@@ -24,12 +28,12 @@
   --color-success: #16a34a;
   --color-success-surface: #f0fdf4;
 
-  --color-border: #e5e5e5;
-  --color-border-muted: #f0f0f0;
+  --color-border: #e7e7e8;
+  --color-border-muted: #eeeeef;
 
   --color-surface: #fafafa;
   --color-surface-card: #ffffff;
-  --color-surface-muted: #f4f4f4;
+  --color-surface-muted: #f7f7f8;
 
   --color-kanban-header: #fafafa;
   --color-kanban-border: #e5e5e5;

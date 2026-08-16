@@ -47,8 +47,8 @@ function TaskList({
           className={[
             "rounded-full px-3 py-1 text-sm font-semibold",
             tone === "done"
-              ? "bg-mint text-primary"
-              : "bg-accent/10 text-accent",
+              ? "bg-mint text-foreground"
+              : "bg-surface-muted text-foreground",
           ].join(" ")}
         >
           {signups.length}
@@ -78,7 +78,7 @@ function TaskList({
                   className={[
                     "rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide",
                     signup.is_done
-                      ? "bg-mint text-primary"
+                      ? "bg-mint text-foreground"
                       : "bg-surface-muted text-label",
                   ].join(" ")}
                 >
@@ -175,7 +175,7 @@ export function MyTasksPage() {
           </p>
           <Link
             to="/events/calendar"
-            className="mt-6 inline-flex rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+            className="mt-6 inline-flex rounded-full bg-foreground px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-foreground/90"
           >
             Browse events
           </Link>

@@ -81,7 +81,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               toast.href ? (
                 <button
                   type="button"
-                  className="text-sm font-medium text-primary underline-offset-2 hover:underline"
+                  className="text-sm font-medium text-label underline-offset-2 hover:text-foreground hover:underline"
                   onClick={() => {
                     dismissToast(toast.id);
                     void navigate(toast.href!);

@@ -137,14 +137,16 @@ describe("EventOverviewCard", () => {
     );
 
     expect(screen.getByText("Spring Festival")).toBeInTheDocument();
-    expect(screen.getByText("Union Hall")).toBeInTheDocument();
+    expect(screen.getByLabelText("Date, time, and location")).toHaveTextContent(
+      "Union Hall",
+    );
     expect(screen.queryByText(/organizer/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/committee/i)).not.toBeInTheDocument();
 
-    expect(await screen.findByLabelText("Event health")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Event status")).toBeInTheDocument();
     expect(screen.queryByText("Prep")).not.toBeInTheDocument();
     expect(screen.queryByText("67%")).not.toBeInTheDocument();
-    expect(screen.getByText("$100")).toBeInTheDocument();
+    expect(screen.getByText("$300")).toBeInTheDocument();
     expect(screen.getByText("2/3")).toBeInTheDocument();
     expect(screen.getByText("Budget")).toBeInTheDocument();
     expect(screen.getByText("Volunteers")).toBeInTheDocument();
@@ -155,11 +157,11 @@ describe("EventOverviewCard", () => {
       "/events/7/manage?tab=operations",
     );
 
-    expect(screen.getByRole("link", { name: "Open Event" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Open event" })).toHaveAttribute(
       "href",
       "/events/7",
     );
-    expect(screen.getByRole("link", { name: "Manage Event" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Manage" })).toHaveAttribute(
       "href",
       "/events/7/manage",
     );
@@ -193,21 +195,14 @@ describe("EventOverviewCard", () => {
       </MockAuthProvider>,
     );
 
-    const banner = await screen.findByText("Cultural");
-    const title = screen.getByRole("heading", { name: "Spring Festival" });
+    const title = await screen.findByRole("heading", { name: "Spring Festival" });
     const meta = screen.getByLabelText("Date, time, and location");
+    const category = screen.getByText("Cultural");
     const rsvp = screen.getByLabelText("Your RSVP");
+    const health = await screen.findByLabelText("Event status");
     const attendees = screen.getByTestId("event-attendees-row");
-    const health = await screen.findByLabelText("Event health");
 
-    const order = [
-      banner.closest(".event-banner") ?? banner,
-      title,
-      meta,
-      rsvp,
-      attendees,
-      health,
-    ];
+    const order = [title, meta, category, rsvp, health, attendees];
 
     for (let index = 1; index < order.length; index += 1) {
       expect(

@@ -226,7 +226,7 @@ export function ReportsPage() {
                   className="group block min-h-11 rounded-md transition-colors hover:bg-accent/5"
                 >
                   <div className="px-2 py-2.5">
-                    <p className="text-base font-medium text-foreground group-hover:text-accent">
+                    <p className="text-base font-medium text-foreground group-hover:text-foreground">
                       {report.title}
                     </p>
                     <p className="mt-1 text-sm text-label">

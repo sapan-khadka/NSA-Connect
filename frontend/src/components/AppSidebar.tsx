@@ -53,13 +53,9 @@ const navItemBaseClass = [
   focusRingClass,
 ].join(" ");
 
-const navItemIdleClass =
-  "text-[#737373] hover:bg-[#ebebea] hover:text-[#111111]";
+const navItemIdleClass = "app-nav-item--idle";
 
-const navItemActiveClass = [
-  "bg-[#e8e8e6] font-semibold text-[#111111]",
-  "before:absolute before:inset-y-1.5 before:left-0 before:w-[2px] before:rounded-full before:bg-[#171717]",
-].join(" ");
+const navItemActiveClass = "app-nav-item--active";
 
 function getInitials(fullName: string): string {
   return fullName
@@ -244,6 +240,9 @@ function SidebarNavLink({
           " ",
         )
       }
+      style={({ isActive }) =>
+        isActive ? { backgroundColor: "#f4f4f5", color: "#111111" } : undefined
+      }
     >
       {({ isActive }) => (
         <>
@@ -252,7 +251,7 @@ function SidebarNavLink({
             size="md"
             className={
               isActive
-                ? "text-foreground"
+                ? "text-current"
                 : "text-label transition-colors group-hover:text-foreground"
             }
           />

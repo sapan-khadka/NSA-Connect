@@ -25,7 +25,7 @@ export function getEventFinanceStatusClass(event: EventResponse): string {
   if (event.is_finance_grace_period) {
     return "bg-urgent/30 text-foreground";
   }
-  return "bg-mint text-primary";
+  return "bg-surface-muted text-foreground";
 }
 
 export function isEventFinanceEditable(event: Pick<EventResponse, "is_finance_locked">): boolean {

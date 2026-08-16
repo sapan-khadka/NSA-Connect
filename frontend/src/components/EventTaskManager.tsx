@@ -55,8 +55,8 @@ type EventTaskManagerProps = {
 
 const STATUS_BADGE_STYLES: Record<EventTaskStatus, string> = {
   todo: "bg-surface-muted text-foreground",
-  in_progress: "bg-accent/10 text-accent",
-  done: "bg-mint text-primary",
+  in_progress: "bg-warning-surface text-warning",
+  done: "bg-mint text-foreground",
 };
 
 const STATUS_ORDER: EventTaskStatus[] = ["todo", "in_progress", "done"];
@@ -177,7 +177,7 @@ function TaskStatusPill({
               className={[
                 "block w-full px-3 py-2 text-left text-xs transition-colors",
                 option === status
-                  ? "bg-accent/5 font-medium text-accent"
+                  ? "bg-brand-soft font-medium text-foreground"
                   : "text-foreground hover:bg-surface-muted",
               ].join(" ")}
             >
@@ -655,7 +655,7 @@ export function EventTaskManager({
 
       {canManageSimple && !canCreateTasks ? (
         <p className="mt-2 text-sm text-label">
-          This event has ended — new tasks can&apos;t be added.
+          This event has ended. New tasks can&apos;t be added.
         </p>
       ) : null}
 

@@ -36,7 +36,7 @@ export function EmptyState({
       {icon ? (
         <div
           aria-hidden="true"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-badge-teal-bg text-primary"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-badge-teal-bg text-foreground"
         >
           {icon}
         </div>

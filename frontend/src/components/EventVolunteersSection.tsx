@@ -133,7 +133,7 @@ export function EventVolunteersSection({
                   <div className="flex flex-wrap items-center gap-2">
                     <Link
                       to={`/members/${signup.member_id}`}
-                      className="text-sm font-medium text-foreground hover:text-accent"
+                      className="text-sm font-medium text-foreground hover:text-foreground"
                     >
                       {signup.full_name}
                     </Link>
@@ -141,7 +141,7 @@ export function EventVolunteersSection({
                       className={[
                         "rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
                         signup.status === "approved"
-                          ? "bg-badge-teal-bg text-primary"
+                          ? "bg-badge-teal-bg text-foreground"
                           : signup.status === "rejected"
                             ? "bg-red-50 text-red-700"
                             : "bg-amber-50 text-amber-800",
@@ -181,7 +181,7 @@ export function EventVolunteersSection({
                     <button
                       type="button"
                       onClick={() => onConvertToTask(signup)}
-                      className="rounded-full border border-gray-200 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-accent hover:text-accent"
+                      className="rounded-full border border-gray-200 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-gray-300 hover:text-foreground"
                     >
                       Assign as task
                     </button>

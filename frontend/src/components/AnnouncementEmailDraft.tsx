@@ -42,7 +42,7 @@ export function AnnouncementEmailDraft({
         <button
           type="button"
           onClick={onClear}
-          className="text-sm font-medium text-label underline-offset-2 hover:text-accent hover:underline"
+          className="text-sm font-medium text-label underline-offset-2 hover:text-foreground hover:underline"
         >
           Clear draft
         </button>
@@ -89,7 +89,7 @@ export function AnnouncementEmailDraft({
                 onClick={() => {
                   void handleCopy("full", fullEmail);
                 }}
-                className="rounded-md border border-accent bg-accent px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
+                className="rounded-md border border-foreground bg-foreground px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-foreground/90"
               >
                 {copiedTarget === "full" ? "Copied!" : "Copy full email"}
               </button>

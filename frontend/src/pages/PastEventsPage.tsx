@@ -137,7 +137,7 @@ export function PastEventsPage() {
                       <h2 className="text-xl font-semibold text-foreground">
                         <Link
                           to={eventDetailPath(event.id)}
-                          className="hover:text-accent"
+                          className="hover:text-foreground"
                         >
                           {event.name}
                         </Link>

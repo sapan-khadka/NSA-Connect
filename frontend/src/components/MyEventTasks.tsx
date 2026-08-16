@@ -166,7 +166,7 @@ function MySimpleTaskCard({ task, onUpdated }: MySimpleTaskCardProps) {
           accept="image/png,image/jpeg,image/webp"
           disabled={busy}
           onChange={(event) => void handlePhotoChange(event)}
-          className="mt-1 block w-full text-sm text-label file:mr-3 file:rounded-md file:border-0 file:bg-accent/10 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-accent hover:file:bg-accent/20 disabled:opacity-60"
+          className="mt-1 block w-full text-sm text-label file:mr-3 file:rounded-md file:border-0 file:bg-surface-muted file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground hover:file:bg-gray-200 disabled:opacity-60"
         />
       </div>
 
@@ -256,7 +256,7 @@ export function MyEventTasks() {
             Assigned checklist and action items. Update progress as you work.
           </p>
         </div>
-        <span className="rounded-full bg-accent/10 px-3 py-1 text-sm font-semibold text-accent">
+        <span className="rounded-full bg-surface-muted px-3 py-1 text-sm font-semibold text-foreground">
           {tasks.length}
         </span>
       </div>

@@ -32,7 +32,7 @@ export function GeneralDashboardPage() {
             <h2 className="text-lg font-light tracking-subhead text-foreground">Your profile</h2>
             <Link
               to="/profile"
-              className="text-sm font-medium text-accent"
+              className="text-sm font-medium text-label"
             >
               Edit profile
             </Link>
@@ -67,12 +67,12 @@ export function GeneralDashboardPage() {
           <h2 className="text-lg font-light tracking-subhead text-foreground">Quick links</h2>
           <ul className="mt-4 space-y-3 text-sm">
             <li>
-              <Link to="/events" className="font-medium text-accent">
+              <Link to="/events" className="font-medium text-label hover:text-foreground">
                 Browse events and RSVP
               </Link>
             </li>
             <li>
-              <Link to="/events/tasks" className="font-medium text-accent">
+              <Link to="/events/tasks" className="font-medium text-label hover:text-foreground">
                 My assigned tasks
               </Link>
             </li>

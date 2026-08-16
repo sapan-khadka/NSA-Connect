@@ -156,7 +156,7 @@ export function CreateDiscussionRoomModal({
             onChange={(event) =>
               setPhotoFile(event.target.files?.[0] ?? null)
             }
-            className="block w-full text-sm text-gray-600 file:mr-3 file:rounded-md file:border-0 file:bg-badge-teal-bg file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-primary"
+            className="block w-full text-sm text-gray-600 file:mr-3 file:rounded-md file:border-0 file:bg-badge-teal-bg file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground"
           />
           {photoFile ? (
             <span className="text-xs text-gray-500">{photoFile.name}</span>
@@ -184,7 +184,7 @@ export function CreateDiscussionRoomModal({
                       type="checkbox"
                       checked={checked}
                       onChange={() => toggleMember(member.id)}
-                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      className="h-4 w-4 rounded border-gray-300 text-foreground focus:ring-primary"
                     />
                     <span className="min-w-0 truncate text-sm text-foreground">
                       {member.full_name}

@@ -76,7 +76,7 @@ describe("PrepTaskChecklist", () => {
     expect(screen.getByRole("article")).toHaveClass("border-gray-200");
     expect(
       screen.getByRole("progressbar", { name: "Task progress" }).firstChild,
-    ).toHaveClass("bg-accent");
+    ).toHaveClass("bg-foreground");
   });
 
   it("shows assignee dropdown for board members", async () => {

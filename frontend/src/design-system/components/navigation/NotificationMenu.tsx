@@ -149,7 +149,7 @@ export function NotificationMenu({
               <button
                 type="button"
                 disabled={!hasUnread}
-                className="text-xs font-semibold text-primary transition enabled:hover:text-primary-hover disabled:cursor-default disabled:text-label/50"
+                className="text-xs font-semibold text-label transition enabled:hover:text-foreground disabled:cursor-default disabled:text-label/50"
                 onClick={() => {
                   onMarkAllRead();
                 }}

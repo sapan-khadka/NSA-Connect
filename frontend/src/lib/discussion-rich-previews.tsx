@@ -210,7 +210,7 @@ export function DiscussionRichPreviews({ content }: { content: string }) {
               <AppIcon
                 icon={CheckSquare}
                 size="xs"
-                className="mt-0.5 text-primary"
+                className="mt-0.5 text-label"
               />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[13px] font-semibold text-[#202020]">
@@ -223,7 +223,7 @@ export function DiscussionRichPreviews({ content }: { content: string }) {
                   {due ? ` · ${due}` : ""}
                 </p>
               </div>
-              <span className="shrink-0 text-[11px] font-medium text-primary">
+              <span className="shrink-0 text-[11px] font-medium text-label">
                 Open →
               </span>
             </div>
@@ -240,7 +240,7 @@ export function DiscussionRichPreviews({ content }: { content: string }) {
             <AppIcon
               icon={CalendarDays}
               size="xs"
-              className="mt-0.5 text-primary"
+              className="mt-0.5 text-label"
             />
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-semibold text-[#202020]">
@@ -254,7 +254,7 @@ export function DiscussionRichPreviews({ content }: { content: string }) {
                 {event.location ? ` · ${event.location}` : ""}
               </p>
             </div>
-            <span className="shrink-0 text-[11px] font-medium text-primary">
+            <span className="shrink-0 text-[11px] font-medium text-label">
               Open →
             </span>
           </div>
@@ -270,7 +270,7 @@ export function DiscussionRichPreviews({ content }: { content: string }) {
             <AppIcon
               icon={CircleDollarSign}
               size="xs"
-              className="mt-0.5 text-primary"
+              className="mt-0.5 text-label"
             />
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-semibold text-[#202020]">
@@ -281,7 +281,7 @@ export function DiscussionRichPreviews({ content }: { content: string }) {
                 {budget.overBudget ? " · Over budget" : ""}
               </p>
             </div>
-            <span className="shrink-0 text-[11px] font-medium text-primary">
+            <span className="shrink-0 text-[11px] font-medium text-label">
               View →
             </span>
           </div>
@@ -292,7 +292,7 @@ export function DiscussionRichPreviews({ content }: { content: string }) {
           key={`m-${member.id}`}
           className="flex items-center gap-2.5 rounded-xl border border-[#E5E5E3] bg-white px-3 py-2.5 shadow-sm"
         >
-          <AppIcon icon={User} size="xs" className="text-primary" />
+          <AppIcon icon={User} size="xs" className="text-label" />
           <div className="min-w-0">
             <p className="truncate text-[13px] font-semibold text-[#202020]">
               {member.full_name}

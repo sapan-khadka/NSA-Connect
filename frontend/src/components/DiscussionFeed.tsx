@@ -175,7 +175,7 @@ function VoiceAttachment({
       <button
         type="button"
         aria-label={playing ? `Pause ${fileName}` : `Play ${fileName}`}
-        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-white transition hover:bg-primary/90"
+        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-foreground text-white transition hover:bg-foreground/90"
         onClick={() => {
           const audio = audioRef.current;
           if (!audio) {
@@ -288,7 +288,7 @@ function MessageAttachments({
                 : "bg-[#F4F7F6] hover:bg-[#EAF1EE]",
             ].join(" ")}
           >
-            <span className="inline-flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg bg-white text-primary shadow-sm">
+            <span className="inline-flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg bg-white text-foreground shadow-sm">
               <AppIcon icon={FileText} size="sm" />
               <span className="text-[8px] font-semibold tracking-wide text-gray-400">
                 {ext.slice(0, 4)}
@@ -588,7 +588,7 @@ function MessageReactions({
             "discussion-reaction-pill inline-flex items-center gap-0.5 rounded-full border bg-white font-medium transition duration-150",
             bounceKeys[emoji] ? "discussion-reaction-pill-bounce" : "",
             summary.reacted_by_me
-              ? "border-[#D7E8E3] text-primary"
+              ? "border-[#D7E8E3] text-foreground"
               : "border-[#E8E8E6] text-gray-700 hover:bg-[#F7F7F6]",
             disabled ? "cursor-not-allowed opacity-60" : "",
           ].join(" ")}
@@ -698,7 +698,7 @@ function MessageActionButton({
         danger
           ? "text-gray-500 hover:bg-[#F5F5F4] hover:text-[var(--status-danger-text)]"
           : active
-            ? "text-primary hover:bg-[#F5F5F4]"
+            ? "text-foreground hover:bg-[#F5F5F4]"
             : "text-gray-500 hover:bg-[#F5F5F4] hover:text-foreground",
       ].join(" ")}
     >
@@ -1037,7 +1037,7 @@ function EventContextStrip({ eventId }: { eventId: number }) {
             ) : null}
           </div>
         </div>
-        <span className="inline-flex shrink-0 items-center gap-0.5 text-[11px] font-medium text-primary">
+        <span className="inline-flex shrink-0 items-center gap-0.5 text-[11px] font-medium text-foreground">
           Open
           <AppIcon icon={ChevronRight} size="xs" className="text-current" />
         </span>
@@ -1308,7 +1308,7 @@ function MessageGroup({
                       </time>
                       {isOwn ? (
                         <span
-                          className="inline-flex text-primary/70"
+                          className="inline-flex text-foreground/70"
                           title={isSeen ? "Seen" : "Sent"}
                           aria-label={isSeen ? "Seen" : "Sent"}
                         >
@@ -2041,15 +2041,15 @@ function Composer({
         </p>
       ) : null}
       {forwardingHint && !isEditing && replyTo == null ? (
-        <p className="mb-2 text-[12px] font-medium text-primary" role="status">
+        <p className="mb-2 text-[12px] font-medium text-foreground" role="status">
           Forwarding…
         </p>
       ) : null}
       {isEditing ? (
         <div className="mb-2 flex items-start gap-2 rounded-lg border border-[#EBEBEA] bg-[#F7F7F6] px-2.5 py-2">
-          <AppIcon icon={Pencil} size="xs" className="mt-0.5 text-primary" />
+          <AppIcon icon={Pencil} size="xs" className="mt-0.5 text-foreground" />
           <div className="min-w-0 flex-1">
-            <p className="text-[12px] font-semibold text-primary">Edit message</p>
+            <p className="text-[12px] font-semibold text-foreground">Edit message</p>
             <p className="truncate text-[12px] text-gray-500">
               {snippetText(editingMessage.content)}
             </p>
@@ -2065,9 +2065,9 @@ function Composer({
         </div>
       ) : replyTo != null ? (
         <div className="mb-2 flex items-start gap-2 rounded-lg border border-[#EBEBEA] bg-[#F7F7F6] px-2.5 py-2">
-          <AppIcon icon={Reply} size="xs" className="mt-0.5 text-primary" />
+          <AppIcon icon={Reply} size="xs" className="mt-0.5 text-foreground" />
           <div className="min-w-0 flex-1 border-l-2 border-primary/40 pl-2">
-            <p className="truncate text-[12px] font-semibold text-primary">
+            <p className="truncate text-[12px] font-semibold text-foreground">
               {replyTo.author.full_name}
             </p>
             <p className="truncate text-[12px] text-gray-500">
@@ -2152,7 +2152,7 @@ function Composer({
             type="button"
             aria-label="Stop and send recording"
             onClick={stopVoiceRecording}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-3 text-[13px] font-medium text-white transition hover:bg-primary/90"
+            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-foreground px-3 text-[13px] font-medium text-white transition hover:bg-foreground/90"
           >
             <AppIcon icon={Square} size="xs" className="fill-current" />
             Stop
@@ -2396,7 +2396,7 @@ function Composer({
             <button
               type="submit"
               aria-label={isEditing ? "Save edit" : "Send message"}
-              className="mb-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-white transition hover:bg-primary/90"
+              className="mb-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-foreground text-white transition hover:bg-foreground/90"
             >
               <AppIcon icon={isEditing ? Check : Send} size="sm" />
             </button>
@@ -2450,11 +2450,11 @@ function PinnedMessageBar({
           onClick={onJump}
           className="flex min-w-0 flex-1 items-center gap-2 py-0.5 text-left transition hover:opacity-80"
         >
-          <AppIcon icon={Pin} size="xs" className="shrink-0 text-primary" />
+          <AppIcon icon={Pin} size="xs" className="shrink-0 text-foreground" />
           <span className="min-w-0 flex-1 truncate text-[12px] text-gray-600">
             <span className="font-medium text-[#202020]">{preview}</span>
           </span>
-          <span className="shrink-0 text-[11px] font-medium text-primary">
+          <span className="shrink-0 text-[11px] font-medium text-foreground">
             View
           </span>
         </button>

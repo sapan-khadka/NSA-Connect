@@ -12,7 +12,7 @@ export function PrepProgressBar({
   variant = "default",
 }: PrepProgressBarProps) {
   const fillClass =
-    variant === "danger" ? "bg-overdue" : "bg-accent";
+    variant === "danger" ? "bg-overdue" : "bg-foreground";
 
   return (
     <div>

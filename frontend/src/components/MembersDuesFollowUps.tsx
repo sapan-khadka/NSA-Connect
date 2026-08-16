@@ -81,7 +81,7 @@ export function MembersDuesFollowUps({
             semester.
           </p>
         </div>
-        <span className="inline-flex h-7 shrink-0 items-center gap-1 rounded-full bg-badge-teal-bg px-2.5 text-xs font-semibold tabular-nums text-primary">
+        <span className="inline-flex h-7 shrink-0 items-center gap-1 rounded-full bg-badge-teal-bg px-2.5 text-xs font-semibold tabular-nums text-foreground">
           <AppIcon icon={BadgeDollarSign} size="xs" className="text-current" />
           {totalOutstanding}
         </span>

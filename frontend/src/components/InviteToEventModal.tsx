@@ -92,7 +92,7 @@ export function InviteToEventModal({
         {isLoading ? <p className="text-sm text-label">Loading events…</p> : null}
         {error ? <p className="ds-field-error">{error}</p> : null}
         {successMessage ? (
-          <p className="rounded-lg bg-mint/30 px-3 py-2 text-sm text-primary">
+          <p className="rounded-lg bg-mint/30 px-3 py-2 text-sm text-foreground">
             {successMessage}
           </p>
         ) : null}

@@ -128,7 +128,7 @@ export function EventCheckInPage() {
           <div
             className={[
               "flex justify-center",
-              isSuccess ? "text-accent" : "text-label",
+              isSuccess ? "text-success" : "text-label",
             ].join(" ")}
             aria-hidden
           >
@@ -165,7 +165,7 @@ export function EventCheckInPage() {
     return (
       <div className={pageShellClass}>
         <Card padding="none" className="p-5 sm:p-8 text-center">
-          <div className="flex justify-center text-accent" aria-hidden>
+          <div className="flex justify-center text-success" aria-hidden>
             <AppIcon icon={CheckCircle2} size="xl" className="text-current" />
           </div>
           <h1 className="mt-4 text-2xl font-light tracking-headline text-foreground">
@@ -265,7 +265,7 @@ export function EventCheckInPage() {
                 }}
                 className={`${inputFieldClassName} mt-1`}
               >
-                <option value="">Skip — no affiliation</option>
+                <option value="">Skip (no affiliation)</option>
                 <option value="guest_of_member">Guest of a member</option>
                 <option value="faculty_staff">Faculty/Staff</option>
               </select>

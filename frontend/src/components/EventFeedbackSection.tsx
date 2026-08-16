@@ -100,7 +100,7 @@ export function EventFeedbackSection({
                 <div>
                   <Link
                     to={`/members/${entry.member_id}`}
-                    className="font-medium text-foreground hover:text-accent"
+                    className="font-medium text-foreground hover:text-foreground"
                   >
                     {entry.full_name}
                   </Link>

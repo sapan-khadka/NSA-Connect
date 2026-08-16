@@ -53,7 +53,7 @@ function initialValuesForEvent(lockedEventId?: number): LogFinanceEntryFormValue
 const RECEIPT_IMAGE_ACCEPT = "image/jpeg,image/png,image/webp";
 const RECEIPT_FILE_ACCEPT = `${RECEIPT_IMAGE_ACCEPT},application/pdf`;
 const SCAN_FALLBACK_MESSAGE =
-  "Couldn't read that receipt clearly — please fill in the details manually";
+  "Couldn't read that receipt clearly. Please fill in the details manually";
 
 const labelClassName = "block text-sm font-light text-label";
 const inputClassName = `${inputFieldClassName} mt-1`;
@@ -158,7 +158,7 @@ export function LogFinanceEntryForm({
       setValues((current) => applyScanToFormValues(current, scan));
       setFieldErrors({});
       setScanNotice(
-        "Receipt details filled in — review and edit anything before saving.",
+        "Receipt details filled in. Review and edit anything before saving.",
       );
     } catch {
       setScanNotice(SCAN_FALLBACK_MESSAGE);
@@ -256,7 +256,7 @@ export function LogFinanceEntryForm({
       ) : null}
 
       {successMessage ? (
-        <div className="rounded-lg bg-mint/20 px-4 py-3 text-sm font-light text-primary">
+        <div className="rounded-lg bg-mint/20 px-4 py-3 text-sm font-light text-foreground">
           {successMessage}
         </div>
       ) : null}

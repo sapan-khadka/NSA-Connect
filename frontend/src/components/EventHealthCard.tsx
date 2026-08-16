@@ -95,10 +95,10 @@ export function EventHealthCard({
   return (
     <section
       className={["event-health-summary", className].filter(Boolean).join(" ")}
-      aria-label="Event health"
+      aria-label="Event status"
     >
       <div className="event-command-section-head">
-        <h3 className="event-command-kicker">Health</h3>
+        <h3 className="event-command-kicker">Event status</h3>
         <p
           className={`event-command-status event-health-status is-${health.level.replaceAll("_", "-")}`}
         >
@@ -108,7 +108,7 @@ export function EventHealthCard({
 
       <div className="event-command-metrics">
         <MetricCell
-          value={hasBudget ? formatCurrencyCompact(budgetSpent) : EMPTY}
+          value={hasBudget ? formatCurrencyCompact(budgetCap) : EMPTY}
           label="Budget"
           empty={!hasBudget}
           tone={budgetOverspent ? "risk" : undefined}

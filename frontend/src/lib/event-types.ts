@@ -109,9 +109,9 @@ export function getCalendarDayCellClass(
 }
 
 export const EVENT_TYPE_BADGE_CLASS: Record<EventType, string> = {
-  cultural: "bg-mint text-primary",
-  meeting: "bg-mint text-primary",
-  fundraiser: "bg-mint text-primary",
-  social: "bg-mint text-primary",
-  service: "bg-mint text-primary",
+  cultural: "bg-brand-soft text-brand",
+  meeting: "bg-brand-soft text-brand",
+  fundraiser: "bg-brand-soft text-brand",
+  social: "bg-brand-soft text-brand",
+  service: "bg-brand-soft text-brand",
 };

@@ -11,13 +11,19 @@ export default {
       colors: {
         foreground: "var(--color-foreground)",
         label: "var(--color-label)",
+        brand: {
+          DEFAULT: "#C8102E",
+          hover: "#A80D27",
+          soft: "#FFF1F3",
+          muted: "#FFE3E7",
+        },
         primary: {
-          DEFAULT: "var(--color-primary)",
-          hover: "var(--color-primary-hover)",
+          DEFAULT: "#C8102E",
+          hover: "#A80D27",
         },
         accent: {
-          DEFAULT: "var(--color-accent)",
-          hover: "var(--color-accent-hover)",
+          DEFAULT: "#C8102E",
+          hover: "#A80D27",
         },
         mint: {
           DEFAULT: "var(--color-mint)",

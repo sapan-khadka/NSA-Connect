@@ -2,7 +2,7 @@ export function HeaderAccentLine() {
   return (
     <div
       aria-hidden="true"
-      className="h-px w-full bg-primary"
+      className="h-px w-full bg-border"
       data-testid="header-accent-line"
     />
   );

@@ -25,7 +25,7 @@ export function DraftPrepChecklist({
         <button
           type="button"
           onClick={onClear}
-          className="text-sm font-medium text-label underline-offset-2 hover:text-accent hover:underline"
+          className="text-sm font-medium text-label underline-offset-2 hover:text-foreground hover:underline"
         >
           Clear
         </button>
@@ -41,7 +41,7 @@ export function DraftPrepChecklist({
             <ul className="mt-2 space-y-1 text-sm text-foreground">
               {category.tasks.map((task) => (
                 <li key={task} className="flex gap-2">
-                  <span aria-hidden="true" className="text-accent">
+                  <span aria-hidden="true" className="text-label">
                     •
                   </span>
                   <span>{task}</span>

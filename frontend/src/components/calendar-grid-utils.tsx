@@ -1,11 +1,3 @@
-import {
-  EVENT_TYPE_DOT_CLASS,
-  EVENT_TYPE_LABELS,
-  EVENT_TYPES,
-  FESTIVAL_DOT_CLASS,
-  type EventType,
-} from "../lib/event-types";
-
 export type MonthEnterDirection = "prev" | "next" | null;
 
 export function getMonthEnterAnimationClass(
@@ -24,19 +16,24 @@ type DayCellSurfaceOptions = {
   isCurrentMonth: boolean;
   isSelected: boolean;
   isToday: boolean;
+  hasEvents?: boolean;
+  hasFestival?: boolean;
 };
 
 const DAY_CELL_BASE =
-  "events-calendar-day-cell relative flex h-full min-h-0 flex-col items-center justify-center gap-0 rounded-none px-0.5 py-0.5 text-sm transition-colors duration-150 ease-out hover:bg-[#F7F7F5]";
+  "events-calendar-day-cell relative flex h-full min-h-0 flex-col items-stretch justify-start gap-0 rounded-none px-1 py-1 text-left text-sm transition-colors duration-150 ease-out hover:bg-[#F7F7F5]";
 
 const DAY_CELL_TODAY = "is-today text-foreground hover:bg-[#F4F4F3]";
 
-const DAY_CELL_SELECTED = "is-selected hover:bg-[color-mix(in_srgb,var(--color-primary,#111111)_7%,#fff)]";
+const DAY_CELL_SELECTED =
+  "is-selected hover:bg-[color-mix(in_srgb,var(--color-primary,#c8102e)_7%,#fff)]";
 
 export function getDayCellSurfaceClass({
   isCurrentMonth,
   isSelected,
   isToday,
+  hasEvents = false,
+  hasFestival = false,
 }: DayCellSurfaceOptions): string {
   const classes = [DAY_CELL_BASE];
 
@@ -52,14 +49,20 @@ export function getDayCellSurfaceClass({
     classes.push(DAY_CELL_TODAY);
   }
 
+  if (hasEvents) {
+    classes.push("has-events");
+  } else if (hasFestival) {
+    classes.push("has-festival");
+  }
+
   return classes.join(" ");
 }
 
 export function getTodayDateNumberClass(isToday: boolean, isSelected: boolean): string {
   if (isToday || isSelected) {
-    return "text-sm font-semibold text-foreground transition-colors duration-200";
+    return "events-calendar-day-num is-emphasis";
   }
-  return "text-sm font-medium transition-colors duration-200";
+  return "events-calendar-day-num";
 }
 
 type YearMonthTileOptions = {
@@ -89,115 +92,3 @@ export function getYearMonthLabelClass(isCurrentMonth: boolean): string {
 
   return "text-sm font-medium text-foreground";
 }
-
-type CategoryMark = {
-  key: string;
-  className: string;
-};
-
-export function buildCategoryMarks(
-  eventTypes: EventType[],
-  hasFestival: boolean,
-): CategoryMark[] {
-  const marks: CategoryMark[] = eventTypes.map((eventType) => ({
-    key: eventType,
-    className: EVENT_TYPE_DOT_CLASS[eventType],
-  }));
-
-  if (hasFestival) {
-    marks.push({ key: "festival", className: FESTIVAL_DOT_CLASS });
-  }
-
-  return marks;
-}
-
-/** @deprecated Use buildCategoryMarks */
-export const buildCategoryDots = buildCategoryMarks;
-
-function CalendarEventMark({
-  className,
-  size = "cell",
-  kind,
-}: {
-  className: string;
-  size?: "cell" | "legend" | "row";
-  kind?: string;
-}) {
-  return (
-    <span
-      aria-hidden="true"
-      className={[
-        "calendar-event-mark",
-        `is-${size}`,
-        kind ? `is-kind-${kind}` : "",
-        className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
-    />
-  );
-}
-
-type CalendarCategoryMarksProps = {
-  eventTypes: EventType[];
-  hasFestival: boolean;
-};
-
-export function CalendarCategoryMarks({
-  eventTypes,
-  hasFestival,
-}: CalendarCategoryMarksProps) {
-  const marks = buildCategoryMarks(eventTypes, hasFestival);
-  if (marks.length === 0) {
-    return null;
-  }
-
-  const visible = marks.slice(0, 3);
-  const overflow = marks.length - visible.length;
-
-  return (
-    <div
-      aria-hidden="true"
-      className="calendar-event-marks"
-      data-testid="calendar-category-marks"
-    >
-      {visible.map((mark) => (
-        <CalendarEventMark
-          key={mark.key}
-          kind={mark.key}
-          className={mark.className}
-        />
-      ))}
-      {overflow > 0 ? (
-        <span className="calendar-event-marks__more">+{overflow}</span>
-      ) : null}
-    </div>
-  );
-}
-
-export function CalendarLegendList({ className }: { className?: string }) {
-  return (
-    <ul aria-label="Event type legend" className={className}>
-      {EVENT_TYPES.map((eventType) => (
-        <li key={eventType} className="flex items-center gap-1.5">
-          <CalendarEventMark
-            className={EVENT_TYPE_DOT_CLASS[eventType]}
-            kind={eventType}
-            size="legend"
-          />
-          {EVENT_TYPE_LABELS[eventType]}
-        </li>
-      ))}
-      <li className="flex items-center gap-1.5">
-        <CalendarEventMark
-          className={FESTIVAL_DOT_CLASS}
-          kind="festival"
-          size="legend"
-        />
-        Nepali festival
-      </li>
-    </ul>
-  );
-}
-
-export { CalendarEventMark };

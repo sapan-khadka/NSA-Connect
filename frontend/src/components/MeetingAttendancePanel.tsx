@@ -25,10 +25,10 @@ function segmentClass(
   }
 
   if (value === "present") {
-    return "bg-accent text-white shadow-sm";
+    return "bg-foreground text-white shadow-sm";
   }
   if (value === "absent") {
-    return "bg-primary text-white shadow-sm";
+    return "bg-surface-muted text-foreground shadow-sm";
   }
   return "bg-surface-card text-foreground shadow-sm ring-1 ring-gray-200";
 }
@@ -100,10 +100,10 @@ export function MeetingAttendancePanel({
           Board attendance
         </h2>
         <dl className="flex flex-wrap gap-2 text-xs">
-          <div className="rounded-full bg-mint/40 px-2.5 py-1 text-primary">
+          <div className="rounded-full bg-mint/40 px-2.5 py-1 text-foreground">
             <span className="font-medium">{presentCount}</span> P
           </div>
-          <div className="rounded-full bg-primary/10 px-2.5 py-1 text-primary">
+          <div className="rounded-full bg-surface-muted px-2.5 py-1 text-foreground">
             <span className="font-medium">{absentCount}</span> A
           </div>
           <div className="rounded-full bg-surface-muted px-2.5 py-1 text-label">

@@ -41,7 +41,7 @@ export function ActivityCard({
         <Link
           to={to}
           onClick={onClick}
-          className="shrink-0 text-sm font-medium text-primary hover:underline"
+          className="shrink-0 text-sm font-medium text-label hover:text-foreground hover:underline"
         >
           {actionLabel}
         </Link>
@@ -49,7 +49,7 @@ export function ActivityCard({
         <a
           href={href}
           onClick={onClick}
-          className="shrink-0 text-sm font-medium text-primary hover:underline"
+          className="shrink-0 text-sm font-medium text-label hover:text-foreground hover:underline"
         >
           {actionLabel}
         </a>
@@ -57,7 +57,7 @@ export function ActivityCard({
         <button
           type="button"
           onClick={onClick}
-          className="shrink-0 text-sm font-medium text-primary hover:underline"
+          className="shrink-0 text-sm font-medium text-label hover:text-foreground hover:underline"
         >
           {actionLabel}
         </button>

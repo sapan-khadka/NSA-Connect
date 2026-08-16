@@ -61,7 +61,7 @@ export function linkifyText(text: string): ReactNode[] {
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="font-medium text-primary underline underline-offset-2 break-all"
+          className="font-medium text-foreground underline underline-offset-2 break-all"
         >
           {cleaned}
         </a>,

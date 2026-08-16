@@ -347,7 +347,7 @@ export function EditMemberDrawer({
                       className={[
                         "ds-chip",
                         selected
-                          ? "bg-primary text-white"
+                          ? "bg-foreground text-white"
                           : "border border-gray-200 bg-white text-label hover:text-foreground",
                       ].join(" ")}
                     >

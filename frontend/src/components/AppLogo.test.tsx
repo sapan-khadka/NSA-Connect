@@ -34,14 +34,18 @@ describe("AppLogo", () => {
     expect(screen.getByRole("link")).toHaveAttribute("href", "/");
   });
 
-  it("renders the editorial nav brand with mountain mark and wordmark", () => {
+  it("renders the original NSA logo and wordmark in the nav brand", () => {
     render(
       <MemoryRouter>
         <AppLogo asLink size="nav" />
       </MemoryRouter>,
     );
 
+    expect(
+      screen.getByRole("img", {
+        name: "Nepalese Students Association at SEMO",
+      }),
+    ).toBeInTheDocument();
     expect(screen.getByText("NSA Connect")).toHaveClass("ds-nav-brand-wordmark");
-    expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
 });

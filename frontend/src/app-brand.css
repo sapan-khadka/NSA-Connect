@@ -1,0 +1,30 @@
+/* Loaded after Tailwind so brand chrome cannot be dropped or overridden. */
+
+.app-create-btn {
+  background: #c8102e;
+  color: #ffffff;
+}
+
+.app-create-btn:hover {
+  background: #a80d27;
+  color: #ffffff;
+}
+
+.app-nav-item--idle {
+  color: #8a8f98;
+}
+
+.app-nav-item--idle:hover {
+  background: #f4f4f5;
+  color: #111111;
+}
+
+.app-nav-item--active {
+  background: #f4f4f5;
+  color: #111111;
+  font-weight: 600;
+}
+
+.app-nav-item--active svg {
+  color: #111111;
+}

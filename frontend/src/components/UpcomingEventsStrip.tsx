@@ -10,8 +10,6 @@ import {
   groupUpcomingEvents,
 } from "../lib/calendar-upcoming";
 import type { EventResponse } from "../lib/events-api";
-import { EVENT_TYPE_DOT_CLASS } from "../lib/event-types";
-import { CalendarEventMark } from "./calendar-grid-utils";
 
 function formatStripDate(startsAt: string): string {
   return new Intl.DateTimeFormat("en-US", {
@@ -85,11 +83,6 @@ export function UpcomingEventsStrip({
                     .join(" ")}
                   aria-pressed={isSelected}
                 >
-                  <CalendarEventMark
-                    className={EVENT_TYPE_DOT_CLASS[event.event_type]}
-                    kind={event.event_type}
-                    size="row"
-                  />
                   <span className="events-upcoming-strip-name">{event.name}</span>
                   <time
                     className="events-upcoming-strip-when"

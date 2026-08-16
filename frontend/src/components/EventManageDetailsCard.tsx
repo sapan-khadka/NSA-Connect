@@ -608,7 +608,7 @@ export function EventManageDetailsCard({
               onChange={(changeEvent) =>
                 void handleArchiveToggle(changeEvent.target.checked)
               }
-              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent"
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-foreground focus:ring-accent"
             />
             <span>
               <span className="block text-sm font-medium text-foreground">

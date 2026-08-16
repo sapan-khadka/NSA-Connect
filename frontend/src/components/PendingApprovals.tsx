@@ -128,7 +128,7 @@ export function PendingApprovals({
             {isLoading
               ? "Loading pending members…"
               : pendingMembers.length === 0
-                ? "All caught up — no signups waiting for review."
+                ? "All caught up. No signups waiting for review."
                 : `${pendingMembers.length} signup${pendingMembers.length === 1 ? "" : "s"} waiting for approval.`}
           </p>
         </div>
@@ -150,7 +150,7 @@ export function PendingApprovals({
         </ul>
       ) : pendingMembers.length === 0 ? (
         <div className="flex flex-col items-center px-6 py-12 text-center">
-          <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-badge-teal-bg text-primary">
+          <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-badge-teal-bg text-foreground">
             <AppIcon icon={Users} size="sm" className="text-current" />
           </span>
           <p className="mt-3 text-sm font-medium text-foreground">
@@ -184,7 +184,7 @@ export function PendingApprovals({
                       <div className="flex flex-wrap items-center gap-2">
                         <Link
                           to={`/members/${member.id}`}
-                          className="truncate text-sm font-semibold text-foreground hover:text-primary"
+                          className="truncate text-sm font-semibold text-foreground"
                         >
                           {member.full_name}
                         </Link>
@@ -196,7 +196,7 @@ export function PendingApprovals({
                         {member.email}
                       </p>
                       <p className="mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] text-label">
-                        <span>{member.major || "Major —"}</span>
+                        <span>{member.major || "—"}</span>
                         <span aria-hidden="true" className="text-label/40">
                           ·
                         </span>

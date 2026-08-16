@@ -75,7 +75,7 @@ describe("EventsCalendarPanel", () => {
     expect(onMonthChange).toHaveBeenCalledWith(2027, 7);
   });
 
-  it("renders category marks on event days and legend", () => {
+  it("renders event names on event days without a category legend", () => {
     render(
       <EventsCalendarPanel
         {...defaultProps}
@@ -83,26 +83,28 @@ describe("EventsCalendarPanel", () => {
           {
             starts_at: "2030-06-15T18:00:00+00:00",
             event_type: "cultural",
+            name: "Cultural Night",
           },
           {
             starts_at: "2030-06-15T20:00:00+00:00",
             event_type: "meeting",
+            name: "Board Meeting",
           },
         ]}
       />,
     );
 
-    expect(screen.getByLabelText("Event type legend")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Event type legend")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "2030-06-15, Cultural, Meeting" }),
+      screen.getByRole("button", {
+        name: "2030-06-15, Cultural Night, Board Meeting",
+      }),
     ).toBeInTheDocument();
-
-    const dayCell = screen.getByRole("button", {
-      name: "2030-06-15, Cultural, Meeting",
-    });
-    const marks = dayCell.querySelector('[data-testid="calendar-category-marks"]');
-    expect(marks?.querySelector(".bg-\\[\\#D85A30\\]")).toBeTruthy();
-    expect(marks?.querySelector(".bg-\\[\\#378ADD\\]")).toBeTruthy();
+    expect(screen.getByText("Cultural Night")).toBeInTheDocument();
+    expect(screen.getByText("Board Meeting")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("calendar-category-marks"),
+    ).not.toBeInTheDocument();
   });
 
   it("renders the Gregorian day number in each cell", () => {
@@ -116,9 +118,11 @@ describe("EventsCalendarPanel", () => {
     render(<EventsCalendarPanel {...defaultProps} month={2} year={2030} />);
 
     const holiCell = screen.getByRole("button", { name: /2030-03-20, Holi/ });
-    const marks = holiCell.querySelector('[data-testid="calendar-category-marks"]');
-    expect(marks?.querySelector(".bg-\\[\\#7F77DD\\]")).toBeTruthy();
-    expect(screen.getAllByText("Nepali festival").length).toBeGreaterThan(0);
+    expect(holiCell).toHaveTextContent("Holi");
+    expect(
+      holiCell.querySelector('[data-testid="calendar-category-marks"]'),
+    ).toBeNull();
+    expect(screen.queryByLabelText("Event type legend")).not.toBeInTheDocument();
   });
 
   it("selects a date when clicked", async () => {
@@ -164,7 +168,7 @@ describe("EventsCalendarPanel", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "August" }));
+    await user.click(screen.getByRole("button", { name: /August/ }));
     expect(onMonthChange).toHaveBeenCalledWith(2030, 7);
     expect(onViewModeChange).toHaveBeenCalledWith("month");
   });

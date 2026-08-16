@@ -61,14 +61,14 @@ export function Breadcrumb({
               ) : item.to ? (
                 <Link
                   to={item.to}
-                  className="truncate text-label transition-colors hover:text-primary"
+                  className="truncate text-label transition-colors hover:text-foreground"
                 >
                   {item.label}
                 </Link>
               ) : (
                 <a
                   href={item.href}
-                  className="truncate text-label transition-colors hover:text-primary"
+                  className="truncate text-label transition-colors hover:text-foreground"
                 >
                   {item.label}
                 </a>

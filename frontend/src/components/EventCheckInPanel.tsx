@@ -123,7 +123,7 @@ export function EventCheckInPanel({ eventId, eventName }: EventCheckInPanelProps
             type="button"
             onClick={() => void handleRegenerate()}
             disabled={regenerating}
-            className="rounded-full border border-gray-200 px-4 py-2 text-sm text-label hover:border-accent hover:text-accent disabled:opacity-60"
+            className="rounded-full border border-gray-200 px-4 py-2 text-sm text-label hover:border-gray-300 hover:text-foreground disabled:opacity-60"
           >
             {regenerating ? "Regenerating…" : "Regenerate QR"}
           </button>
@@ -152,7 +152,7 @@ export function EventCheckInPanel({ eventId, eventName }: EventCheckInPanelProps
             type="button"
             onClick={() => void loadCheckins()}
             disabled={loadingCheckins}
-            className="text-sm text-accent hover:underline disabled:opacity-60"
+            className="text-sm text-label hover:text-foreground hover:underline disabled:opacity-60"
           >
             Refresh
           </button>

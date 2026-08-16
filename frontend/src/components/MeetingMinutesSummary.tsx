@@ -37,7 +37,7 @@ export function MeetingMinutesSummary({
           <button
             type="button"
             onClick={onClear}
-            className="text-sm font-medium text-label underline-offset-2 hover:text-accent hover:underline"
+            className="text-sm font-medium text-label underline-offset-2 hover:text-foreground hover:underline"
           >
             Clear results
           </button>
@@ -64,7 +64,7 @@ export function MeetingMinutesSummary({
             <ul className="mt-3 space-y-2 text-sm text-foreground">
               {result.key_decisions.map((decision) => (
                 <li key={decision} className="flex gap-2">
-                  <span aria-hidden="true" className="text-accent">
+                  <span aria-hidden="true" className="text-foreground">
                     •
                   </span>
                   <span>{decision}</span>

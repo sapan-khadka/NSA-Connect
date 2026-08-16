@@ -1,15 +1,12 @@
 import { getMonthLabel } from "../lib/calendar";
 import {
-  buildCategoryMarks,
-  CalendarEventMark,
   getYearMonthLabelClass,
   getYearMonthTileClass,
 } from "./calendar-grid-utils";
-import type { EventType } from "../lib/event-types";
 
 type YearCalendarGridProps = {
   year: number;
-  eventTypesByMonth: Map<number, EventType[]>;
+  eventCountByMonth: Map<number, number>;
   currentMonth: number;
   currentYear: number;
   onSelectMonth: (month: number) => void;
@@ -17,7 +14,7 @@ type YearCalendarGridProps = {
 
 export function YearCalendarGrid({
   year,
-  eventTypesByMonth,
+  eventCountByMonth,
   currentMonth,
   currentYear,
   onSelectMonth,
@@ -28,34 +25,34 @@ export function YearCalendarGrid({
       data-testid="calendar-year-grid"
     >
       {Array.from({ length: 12 }, (_, month) => {
-        const eventTypes = eventTypesByMonth.get(month) ?? [];
+        const count = eventCountByMonth.get(month) ?? 0;
         const isCurrentMonth = year === currentYear && month === currentMonth;
-        const marks = buildCategoryMarks(eventTypes, false);
 
         return (
           <button
             key={month}
             type="button"
             onClick={() => onSelectMonth(month)}
+            aria-label={
+              count === 0
+                ? `${getMonthLabel(month)}, no events`
+                : `${getMonthLabel(month)}, ${count} ${count === 1 ? "event" : "events"}`
+            }
             className={getYearMonthTileClass({ isCurrentMonth })}
           >
             <span className={getYearMonthLabelClass(isCurrentMonth)}>
               {getMonthLabel(month)}
             </span>
-            <div className="mt-2 flex min-h-[14px] items-end justify-center gap-[4px]">
-              {marks.length === 0 ? (
-                <span className="text-[11px] text-[#C8C8C4]">No events</span>
-              ) : (
-                marks.slice(0, 5).map((mark) => (
-                  <CalendarEventMark
-                    key={mark.key}
-                    kind={mark.key}
-                    className={mark.className}
-                    size="cell"
-                  />
-                ))
-              )}
-            </div>
+            <span
+              className={[
+                "mt-2 text-[11px] font-medium",
+                count === 0 ? "text-[#a3a3a3]" : "text-[#737373]",
+              ].join(" ")}
+            >
+              {count === 0
+                ? "No events"
+                : `${count} ${count === 1 ? "event" : "events"}`}
+            </span>
           </button>
         );
       })}

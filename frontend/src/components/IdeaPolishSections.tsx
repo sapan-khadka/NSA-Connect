@@ -295,7 +295,7 @@ export function IdeaActivitySection({
         {hasMore ? (
           <button
             type="button"
-            className="mt-3 text-sm font-medium text-accent hover:underline"
+            className="mt-3 text-sm font-medium text-label hover:text-foreground hover:underline"
             onClick={() => setExpanded((value) => !value)}
           >
             {expanded
@@ -430,7 +430,7 @@ function PollBlock({
           {canManage && poll.is_open ? (
             <button
               type="button"
-              className="text-sm font-medium text-accent hover:underline disabled:opacity-60"
+              className="text-sm font-medium text-label hover:text-foreground hover:underline disabled:opacity-60"
               disabled={saving}
               onClick={() => {
                 onSaving(true);
@@ -534,7 +534,7 @@ export function IdeaPollSection({
         {canManage && !creating ? (
           <button
             type="button"
-            className="text-sm font-medium text-accent hover:underline"
+            className="text-sm font-medium text-label hover:text-foreground hover:underline"
             onClick={() => setCreating(true)}
           >
             + Add poll

@@ -38,8 +38,8 @@ export function StarRatingInput({
               className={[
                 "ds-icon-btn min-h-11 min-w-11 rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-60",
                 selected
-                  ? "text-accent"
-                  : "text-gray-300 hover:text-accent/70",
+                  ? "text-warning"
+                  : "text-gray-300 hover:text-warning/70",
               ].join(" ")}
             >
               <AppIcon
@@ -73,7 +73,7 @@ export function StarRatingDisplay({
           key={star}
           icon={Star}
           size="sm"
-          className={star <= rating ? "text-accent" : "text-gray-300"}
+          className={star <= rating ? "text-warning" : "text-gray-300"}
           fill={star <= rating ? "currentColor" : "none"}
         />
       ))}

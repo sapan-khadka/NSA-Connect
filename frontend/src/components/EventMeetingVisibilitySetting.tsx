@@ -86,7 +86,7 @@ export function EventMeetingVisibilitySetting({
               value={option.value}
               checked={current === option.value}
               onChange={() => void handleChange(option.value)}
-              className="mt-0.5 h-4 w-4 border-gray-300 text-accent focus:ring-accent"
+              className="mt-0.5 h-4 w-4 border-gray-300 text-foreground focus:ring-accent"
             />
             <span>
               <span

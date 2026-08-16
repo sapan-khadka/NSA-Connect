@@ -78,7 +78,7 @@ export function EventCard({
     <Link
       to={to}
       onClick={onClick}
-      className="mt-2 text-lg font-semibold tracking-tight text-foreground hover:text-primary"
+      className="mt-2 text-lg font-semibold tracking-tight text-foreground"
     >
       {title}
     </Link>
@@ -86,7 +86,7 @@ export function EventCard({
     <a
       href={href}
       onClick={onClick}
-      className="mt-2 text-lg font-semibold tracking-tight text-foreground hover:text-primary"
+      className="mt-2 text-lg font-semibold tracking-tight text-foreground"
     >
       {title}
     </a>

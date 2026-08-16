@@ -78,7 +78,7 @@ export function UpcomingEventsPage() {
           </p>
           <Link
             to="/events"
-            className="mt-6 inline-flex rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-hover"
+            className="mt-6 inline-flex rounded-full bg-foreground px-4 py-2 text-sm font-medium text-white transition hover:bg-foreground/90"
           >
             Open calendar
           </Link>
@@ -111,7 +111,7 @@ export function UpcomingEventsPage() {
                 <p className="mt-3 line-clamp-2 text-sm text-label">
                   {event.description}
                 </p>
-                <p className="mt-4 ds-icon-label text-sm font-medium text-accent">
+                <p className="mt-4 ds-icon-label text-sm font-medium text-label">
                   View event
                   <AppIcon icon={ChevronRight} size="sm" className="text-current" />
                 </p>

@@ -71,7 +71,7 @@ export function MobileBottomNav() {
                 [
                   "relative flex min-h-12 items-center justify-center rounded-xl text-current",
                   isActive
-                    ? "text-primary"
+                    ? "text-foreground"
                     : "text-label hover:text-foreground",
                 ].join(" ")
               }

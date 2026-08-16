@@ -12,6 +12,6 @@ describe("CalendarCoverHeader", () => {
     render(<CalendarCoverHeader />);
 
     expect(screen.getByTestId("calendar-accent-stripe")).toBeInTheDocument();
-    expect(screen.getByTestId("calendar-accent-stripe")).toHaveClass("bg-accent/50");
+    expect(screen.getByTestId("calendar-accent-stripe")).toHaveClass("bg-foreground/15");
   });
 });

@@ -19,7 +19,7 @@ export type NotificationVisual = {
 const DEFAULT_VISUAL: NotificationVisual = {
   label: "Update",
   icon: Sparkles,
-  iconClass: "text-primary",
+  iconClass: "text-label",
   chipClass: "bg-badge-teal-bg",
 };
 
@@ -27,14 +27,14 @@ const BY_TYPE: Record<string, NotificationVisual> = {
   announcement: {
     label: "Announcement",
     icon: Megaphone,
-    iconClass: "text-primary",
+    iconClass: "text-label",
     chipClass: "bg-badge-teal-bg",
   },
   task_assigned: {
     label: "Task",
     icon: ClipboardList,
-    iconClass: "text-accent",
-    chipClass: "bg-accent/10",
+    iconClass: "text-label",
+    chipClass: "bg-surface-muted",
   },
   task_due_reminder: {
     label: "Task due",
@@ -45,43 +45,43 @@ const BY_TYPE: Record<string, NotificationVisual> = {
   finance_change_pending: {
     label: "Budget",
     icon: Wallet,
-    iconClass: "text-primary",
+    iconClass: "text-label",
     chipClass: "bg-badge-teal-bg",
   },
   finance_change_resolved: {
     label: "Budget",
     icon: Wallet,
-    iconClass: "text-primary",
+    iconClass: "text-label",
     chipClass: "bg-badge-teal-bg",
   },
   member_pending: {
     label: "Members",
     icon: UserPlus,
-    iconClass: "text-primary",
+    iconClass: "text-label",
     chipClass: "bg-badge-teal-bg",
   },
   member_approved: {
     label: "Welcome",
     icon: CheckCircle2,
-    iconClass: "text-primary",
+    iconClass: "text-label",
     chipClass: "bg-badge-teal-bg",
   },
   suggestion_submitted: {
     label: "Idea",
     icon: Sparkles,
-    iconClass: "text-accent",
-    chipClass: "bg-accent/10",
+    iconClass: "text-label",
+    chipClass: "bg-surface-muted",
   },
   suggestion_noted: {
     label: "Idea",
     icon: CheckCircle2,
-    iconClass: "text-primary",
+    iconClass: "text-label",
     chipClass: "bg-badge-teal-bg",
   },
   discussion_message: {
     label: "Message",
     icon: MessageCircle,
-    iconClass: "text-primary",
+    iconClass: "text-label",
     chipClass: "bg-badge-teal-bg",
   },
 };

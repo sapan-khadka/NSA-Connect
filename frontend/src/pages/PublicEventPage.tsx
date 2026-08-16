@@ -17,7 +17,7 @@ import {
 const primaryCtaClass =
   "inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-hover";
 const secondaryCtaClass =
-  "inline-flex min-h-11 items-center justify-center rounded-full bg-badge-teal-bg px-4 py-2 text-sm font-medium text-primary transition hover:bg-badge-teal-bg/80";
+  "inline-flex min-h-11 items-center justify-center rounded-full bg-badge-teal-bg px-4 py-2 text-sm font-medium text-foreground transition hover:bg-badge-teal-bg/80";
 
 export function PublicEventPage() {
   const { eventId } = useParams();
@@ -82,7 +82,7 @@ export function PublicEventPage() {
           </p>
           <Link
             to="/"
-            className="inline-flex text-sm font-medium text-primary hover:text-primary/80"
+            className="inline-flex text-sm font-medium text-label hover:text-foreground"
           >
             Back to NSA Connect
           </Link>

@@ -347,7 +347,7 @@ export function CreateEventForm({
                       onChange={() =>
                         updateField("meeting_visibility", "board_only")
                       }
-                      className="mt-0.5 h-4 w-4 border-gray-300 text-accent focus:ring-accent"
+                      className="mt-0.5 h-4 w-4 border-gray-300 text-foreground focus:ring-accent"
                     />
                     <span>
                       Closed (board only)
@@ -363,7 +363,7 @@ export function CreateEventForm({
                       value="public"
                       checked={values.meeting_visibility === "public"}
                       onChange={() => updateField("meeting_visibility", "public")}
-                      className="mt-0.5 h-4 w-4 border-gray-300 text-accent focus:ring-accent"
+                      className="mt-0.5 h-4 w-4 border-gray-300 text-foreground focus:ring-accent"
                     />
                     <span>
                       Open (all members)
@@ -452,7 +452,7 @@ export function CreateEventForm({
               <span className="font-normal text-label">(optional)</span>
             </label>
             <p className="mt-1 text-sm text-label">
-              A photo from this event (or a past celebration of the same kind) —
+              A photo from this event (or a past celebration of the same kind),
               not a generic stock image. JPEG, PNG, or HEIC up to 15 MB.
             </p>
             <input
@@ -463,7 +463,7 @@ export function CreateEventForm({
                 setEventPhotoFile(changeEvent.target.files?.[0] ?? null);
                 setServerError(null);
               }}
-              className={`${inputClassName} cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white`}
+              className={`${inputClassName} cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-foreground file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white`}
             />
             {eventPhotoFile ? (
               <p className="mt-1 text-sm text-label">
@@ -486,7 +486,7 @@ export function CreateEventForm({
                   void handleGenerateChecklist();
                 }}
                 disabled={!canGenerateChecklist || isGeneratingChecklist || isSubmitting}
-                className="rounded-md border border-accent bg-white px-3 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accent/5 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isGeneratingChecklist ? "Generating…" : "Generate Checklist"}
               </button>

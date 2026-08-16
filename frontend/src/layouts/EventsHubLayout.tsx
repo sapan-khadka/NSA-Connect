@@ -139,8 +139,8 @@ function EventsMoreMenu({ items }: { items: EventsTab[] }) {
         className={[
           "events-hub-tab inline-flex shrink-0 items-center gap-1 whitespace-nowrap border-b-2 px-2.5 py-2 text-[13px] font-medium transition-colors",
           isActive
-            ? "border-accent text-accent"
-            : "border-transparent text-label hover:text-accent",
+            ? "border-primary text-foreground"
+            : "border-transparent text-label hover:text-foreground",
         ].join(" ")}
       >
         <span>{activeItem ? activeItem.label : "More"}</span>
@@ -168,7 +168,7 @@ function EventsMoreMenu({ items }: { items: EventsTab[] }) {
                 className={[
                   "flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-[13px] transition-colors",
                   active
-                    ? "bg-badge-teal-bg font-medium text-accent"
+                    ? "bg-brand-soft font-medium text-foreground"
                     : "text-foreground hover:bg-surface-muted",
                 ].join(" ")}
                 onClick={() => {
@@ -285,8 +285,8 @@ function EventsHubTabBar({
                   [
                     "events-hub-tab inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-2.5 py-2 text-[13px] font-medium transition-colors",
                     isActive
-                      ? "border-accent text-accent"
-                      : "border-transparent text-label hover:text-accent",
+                      ? "border-primary text-foreground"
+                      : "border-transparent text-label hover:text-foreground",
                   ].join(" ")
                 }
               >

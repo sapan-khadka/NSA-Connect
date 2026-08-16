@@ -333,7 +333,7 @@ function InterestPanel({
 
       <button
         type="button"
-        className="mt-2 text-xs font-medium text-accent hover:underline"
+        className="mt-2 text-xs font-medium text-label hover:text-foreground hover:underline"
         onClick={() => setDetailsOpen((value) => !value)}
       >
         {detailsOpen ? "▲ Hide details" : "▼ Show details"}
@@ -358,7 +358,7 @@ function InterestPanel({
                   className={[
                     "rounded-md border px-2.5 py-1 text-xs transition",
                     selected
-                      ? "border-primary bg-primary/5 font-medium text-primary"
+                      ? "border-primary bg-brand-soft font-medium text-foreground"
                       : "border-gray-200 bg-surface-card text-foreground hover:border-gray-300",
                     saving ? "opacity-60" : "",
                   ]
@@ -518,7 +518,7 @@ export function IdeaWorkspacePage() {
             <p className="text-sm">
               <Link
                 to={`/events/${idea.converted_event_id}/manage`}
-                className="font-medium text-accent hover:underline"
+                className="font-medium text-label hover:text-foreground hover:underline"
               >
                 View event →
               </Link>
@@ -591,7 +591,7 @@ export function IdeaWorkspacePage() {
                   <p className="mt-2 text-sm">
                     <Link
                       to={`/events/${idea.converted_event_id}/manage`}
-                      className="font-medium text-accent hover:underline"
+                      className="font-medium text-label hover:text-foreground hover:underline"
                     >
                       View event →
                     </Link>

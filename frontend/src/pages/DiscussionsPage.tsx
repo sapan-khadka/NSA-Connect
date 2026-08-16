@@ -543,7 +543,7 @@ export function DiscussionsPage() {
           : "Group"
         : "Discussion");
   const feedDescriptionLines = selectedArchived
-    ? ["Archived — messaging is closed until restored"]
+    ? ["Archived. Messaging is closed until restored."]
     : [
         scope?.type === "board"
           ? boardMemberCount != null && boardMemberCount > 0
@@ -652,7 +652,7 @@ export function DiscussionsPage() {
                       className={[
                         "relative inline-flex h-9 items-center gap-1.5 rounded-full px-2.5 transition",
                         membersOpen
-                          ? "text-primary after:absolute after:inset-x-2 after:bottom-0.5 after:h-0.5 after:rounded-full after:bg-primary"
+                          ? "text-foreground after:absolute after:inset-x-2 after:bottom-0.5 after:h-0.5 after:rounded-full after:bg-primary"
                           : "text-gray-500 hover:bg-[#F5F5F4] hover:text-foreground",
                       ].join(" ")}
                     >

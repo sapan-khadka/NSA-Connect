@@ -60,7 +60,7 @@ export function AdminNotificationCheckButton() {
       </div>
 
       {message ? (
-        <p className="mt-3 text-sm text-primary" role="status">
+        <p className="mt-3 text-sm text-label" role="status">
           {message}
         </p>
       ) : null}

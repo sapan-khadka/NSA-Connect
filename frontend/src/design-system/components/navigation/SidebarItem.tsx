@@ -51,7 +51,7 @@ export function SidebarItem({
   const content = (
     <>
       {icon ? (
-        <span className="shrink-0 text-label transition-colors duration-200 group-hover:text-primary group-aria-[current=page]:text-primary">
+        <span className="shrink-0 text-label transition-colors duration-200 group-hover:text-foreground group-aria-[current=page]:text-foreground">
           {icon}
         </span>
       ) : null}
@@ -159,7 +159,7 @@ export function SidebarSubItem({
           cx(
             "block rounded-lg px-3 py-2 text-sm transition-all duration-200 ease-out",
             isActive
-              ? "bg-primary/10 font-semibold text-primary"
+              ? "bg-brand-soft font-semibold text-foreground"
               : "text-label hover:translate-x-0.5 hover:bg-surface-muted hover:text-foreground",
             className,
           )

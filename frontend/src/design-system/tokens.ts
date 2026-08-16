@@ -1,20 +1,26 @@
 /**
  * NSA Connect design tokens.
- * App chrome stays monochrome (primary / surfaces). Semantic badges, roles,
- * success/warning, and other data-encoding colors keep distinct hues.
+ * Brand red is for actions and selected states. Near-black is for type only.
+ * Semantic badges, roles, and status hues stay distinct from brand.
  * Keep values in sync with tokens.css.
  */
 
 export const colors = {
   foreground: "#111111",
-  label: "#6B6B6B",
+  label: "#5F6368",
+  brand: {
+    DEFAULT: "#C8102E",
+    hover: "#A80D27",
+    soft: "#FFF1F3",
+    muted: "#FFE3E7",
+  },
   primary: {
-    DEFAULT: "#111111",
-    hover: "#000000",
+    DEFAULT: "#C8102E",
+    hover: "#A80D27",
   },
   accent: {
-    DEFAULT: "#111111",
-    hover: "#000000",
+    DEFAULT: "#C8102E",
+    hover: "#A80D27",
   },
   mint: "#99F6E4",
   urgent: "#FFFF66",
@@ -30,12 +36,12 @@ export const colors = {
     DEFAULT: "#16A34A",
     surface: "#F0FDF4",
   },
-  border: "#E5E5E5",
-  borderMuted: "#F0F0F0",
+  border: "#E7E7E8",
+  borderMuted: "#EEEEEF",
   surface: {
     DEFAULT: "#FAFAFA",
     card: "#FFFFFF",
-    muted: "#F4F4F4",
+    muted: "#F7F7F8",
   },
   kanban: {
     header: "#FAFAFA",

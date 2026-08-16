@@ -28,7 +28,7 @@ export function MemberDirectoryRow({ member, to }: MemberDirectoryRowProps) {
           {getMemberInitials(member.full_name)}
         </div>
         <div className="min-w-0">
-          <p className="truncate font-semibold text-foreground group-hover:text-primary">
+          <p className="truncate font-semibold text-foreground">
             {member.full_name}
           </p>
           <p className="truncate text-sm text-gray-500 sm:hidden">{majorYear}</p>

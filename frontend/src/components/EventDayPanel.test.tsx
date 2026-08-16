@@ -195,7 +195,7 @@ describe("EventDayPanel", () => {
     );
 
     expect(screen.queryByRole("link", { name: /Manage Event/i })).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Event health")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Event status")).not.toBeInTheDocument();
     expect(screen.queryByText("Needs Attention")).not.toBeInTheDocument();
   });
 
@@ -259,26 +259,19 @@ describe("EventDayPanel", () => {
       "board",
     );
 
-    const banner = await screen.findByText("Cultural");
     const title = screen.getByRole("heading", { name: "Dashain Celebration" });
     const meta = screen.getByLabelText("Date, time, and location");
+    const category = screen.getByText("Cultural");
     const rsvp = screen.getByLabelText("Your RSVP");
     const attendees = screen.getByTestId("event-attendees-row");
-    const health = await screen.findByLabelText("Event health");
+    const health = await screen.findByLabelText("Event status");
 
     expect(screen.queryByText("0 attending")).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /View attendees/i }),
     ).not.toBeInTheDocument();
 
-    const order = [
-      banner.closest(".event-banner") ?? banner,
-      title,
-      meta,
-      rsvp,
-      attendees,
-      health,
-    ];
+    const order = [title, meta, category, rsvp, health, attendees];
 
     for (let index = 1; index < order.length; index += 1) {
       expect(

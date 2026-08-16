@@ -36,7 +36,7 @@ export function AnnouncementCard({
   if (variant === "row") {
     const row = (
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-foreground group-hover:text-primary">
+        <p className="truncate text-sm font-medium text-foreground">
           {title}
         </p>
         {(category || date) && (
@@ -95,7 +95,7 @@ export function AnnouncementCard({
         </div>
       ) : null}
       <div className="flex flex-1 flex-col p-4">
-        <p className="line-clamp-2 text-lg font-semibold text-foreground group-hover:text-primary">
+        <p className="line-clamp-2 text-lg font-semibold text-foreground">
           {title}
         </p>
         {(category || date) && (

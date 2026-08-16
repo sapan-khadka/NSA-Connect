@@ -51,7 +51,7 @@ export function HeroBanner({
       ) : (
         <div
           aria-hidden="true"
-          className="absolute inset-0 bg-primary"
+          className="absolute inset-0 bg-foreground"
         />
       )}
       <div

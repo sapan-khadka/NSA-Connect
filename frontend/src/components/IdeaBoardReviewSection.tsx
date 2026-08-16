@@ -497,7 +497,7 @@ export function IdeaBoardReviewSection({
           <p className="text-sm">
             <Link
               to={`/events/${idea.converted_event_id}/manage`}
-              className="font-medium text-accent hover:underline"
+              className="font-medium text-label hover:text-foreground hover:underline"
             >
               View event →
             </Link>
@@ -596,8 +596,8 @@ export function IdeaBoardReviewSection({
         open={publishOpen}
         title={
           publishStep === 1
-            ? "Open for Community Review — Feedback"
-            : "Open for Community Review — Visibility"
+            ? "Open for Community Review: Feedback"
+            : "Open for Community Review: Visibility"
         }
         onClose={() => {
           if (!busy) setPublishOpen(false);

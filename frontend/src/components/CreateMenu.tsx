@@ -99,7 +99,8 @@ export function CreateMenu({ onLogTransaction, className = "" }: CreateMenuProps
         aria-haspopup="menu"
         aria-controls={menuId}
         onClick={() => setOpen((current) => !current)}
-        className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-medium text-white transition hover:bg-primary-hover md:h-auto md:w-auto md:gap-1.5 md:px-3.5 md:py-2"
+        className="app-create-btn inline-flex h-10 w-10 items-center justify-center rounded-[10px] text-sm font-medium transition md:h-auto md:w-auto md:gap-1.5 md:px-3.5 md:py-2"
+        style={{ backgroundColor: "#c8102e", color: "#ffffff" }}
       >
         <AppIcon icon={Plus} size="sm" className="text-current" />
         <span className="hidden md:inline">Create</span>
@@ -119,7 +120,7 @@ export function CreateMenu({ onLogTransaction, className = "" }: CreateMenuProps
               key={item.id}
               type="button"
               role="menuitem"
-              className="block w-full px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-surface-muted hover:text-primary"
+              className="block w-full px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-surface-muted"
               onClick={() => {
                 setOpen(false);
                 if (item.onSelect) {

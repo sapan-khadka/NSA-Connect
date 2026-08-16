@@ -54,7 +54,7 @@ export function getTodayTimelineItems(
 }
 
 const DOT_TONES = [
-  "bg-primary",
+  "bg-foreground",
   "bg-amber-500",
   "bg-sky-500",
   "bg-teal-600",

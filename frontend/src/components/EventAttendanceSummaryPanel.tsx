@@ -19,7 +19,7 @@ function CategoryBlock({
     <section className="rounded-lg border border-gray-200 bg-surface-card p-4">
       <div className="flex items-baseline justify-between gap-3">
         <h3 className="text-sm font-medium text-foreground">{title}</h3>
-        <span className="rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-semibold text-accent">
+        <span className="rounded-full bg-surface-muted px-2.5 py-0.5 text-xs font-semibold text-foreground">
           {category.count}
         </span>
       </div>

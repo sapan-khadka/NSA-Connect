@@ -7,7 +7,7 @@ export function NotFoundPage() {
       <p className="mt-4 text-label">Page not found.</p>
       <Link
         to="/"
-        className="mt-6 inline-block text-accent"
+        className="mt-6 inline-block text-foreground"
       >
         Back to home
       </Link>

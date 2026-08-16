@@ -1,21 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  buildCategoryMarks,
   getDayCellSurfaceClass,
   getYearMonthTileClass,
 } from "./calendar-grid-utils";
 
 describe("calendar-grid-utils", () => {
-  it("builds category marks with festival and overflow", () => {
-    const marks = buildCategoryMarks(
-      ["cultural", "meeting", "fundraiser", "social"],
-      true,
-    );
-    expect(marks).toHaveLength(5);
-    expect(marks[4]?.key).toBe("festival");
-  });
-
   it("styles selected day as a flat grid cell", () => {
     const className = getDayCellSurfaceClass({
       isCurrentMonth: true,
@@ -27,6 +17,18 @@ describe("calendar-grid-utils", () => {
     expect(className).not.toContain("bg-transparent");
     expect(className).not.toContain("shadow-[");
     expect(className).not.toContain("translate-y");
+  });
+
+  it("marks event days without category color classes", () => {
+    const className = getDayCellSurfaceClass({
+      isCurrentMonth: true,
+      isSelected: false,
+      isToday: false,
+      hasEvents: true,
+    });
+    expect(className).toContain("has-events");
+    expect(className).not.toContain("bg-[#D85A30]");
+    expect(className).not.toContain("bg-[#378ADD]");
   });
 
   it("styles today as a flat grid cell", () => {

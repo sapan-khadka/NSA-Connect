@@ -24,6 +24,11 @@ export type EventRsvpSegmentedProps = {
   canRsvp: boolean;
   loading: boolean;
   onStatusChange: (status: RsvpStatus) => void;
+  counts?: {
+    going?: number;
+    maybe?: number;
+    not_going?: number;
+  };
 };
 
 function playReaction(status: RsvpStatus, anchor: HTMLElement): void {
@@ -51,6 +56,7 @@ export function EventRsvpSegmented({
   canRsvp,
   loading,
   onStatusChange,
+  counts,
 }: EventRsvpSegmentedProps) {
   const buttonRefs = useRef<Partial<Record<RsvpStatus, HTMLButtonElement>>>({});
   const [displayStatus, setDisplayStatus] = useState<RsvpStatus | null>(
@@ -99,6 +105,7 @@ export function EventRsvpSegmented({
                   buttonRefs.current[option.value] = element ?? undefined;
                 }}
                 type="button"
+                aria-label={option.label}
                 aria-pressed={isSelected}
                 disabled={loading}
                 onClick={() => handleOptionClick(option.value)}
@@ -107,6 +114,11 @@ export function EventRsvpSegmented({
                 <span>
                   {loading && isSelected ? "Updating…" : option.label}
                 </span>
+                {counts && option.value !== "waitlisted" ? (
+                  <span className="rsvp-segmented-count">
+                    {counts[option.value] ?? 0}
+                  </span>
+                ) : null}
               </button>
             </div>
           );

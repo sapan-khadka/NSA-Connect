@@ -27,7 +27,7 @@ const RSVP_CONFIRMATIONS: Record<
 > = {
   going: {
     message: "Yayyy! Can't wait to see you there.",
-    className: "text-primary/80",
+    className: "text-foreground",
   },
   maybe: {
     message: "Still deciding? We'd love to see you there.",
@@ -73,7 +73,7 @@ function defaultButtonClass(isSelected: boolean): string {
     return `${base} bg-primary text-white`;
   }
 
-  return `${base} border border-gray-200 bg-white text-foreground transition duration-200 hover:border-primary/40 hover:bg-badge-teal-bg`;
+    return `${base} border border-gray-200 bg-white text-foreground transition duration-200 hover:border-primary/40 hover:bg-brand-soft`;
 }
 
 function segmentedButtonClass(isSelected: boolean): string {
@@ -230,7 +230,7 @@ export function EventRsvpButton({
           role="status"
           className="mt-2 rounded-md border border-urgent/30 bg-urgent/5 px-3 py-2 text-sm text-foreground"
         >
-          You haven&apos;t RSVP&apos;d yet — let us know if you plan to attend.
+          You haven&apos;t RSVP&apos;d yet. Let us know if you plan to attend.
         </p>
       ) : null}
 

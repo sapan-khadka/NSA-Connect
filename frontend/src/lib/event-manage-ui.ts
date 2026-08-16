@@ -18,7 +18,7 @@ export const EVENT_MANAGE_EMPTY = "event-manage-empty";
 export const EVENT_MANAGE_LOADING = "event-manage-loading";
 
 export const EVENT_MANAGE_PRIMARY_BTN =
-  "inline-flex h-9 items-center justify-center rounded-full bg-primary px-3.5 text-sm font-medium text-white transition duration-150 ease-out hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex h-9 items-center justify-center rounded-full bg-foreground px-3.5 text-sm font-medium text-white transition duration-150 ease-out hover:bg-foreground/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
 export const EVENT_MANAGE_SECONDARY_BTN =
   "inline-flex h-9 items-center justify-center rounded-full border border-gray-200 bg-white px-3.5 text-sm font-medium text-foreground transition duration-150 ease-out hover:border-gray-300 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";

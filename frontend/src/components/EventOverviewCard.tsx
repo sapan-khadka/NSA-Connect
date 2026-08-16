@@ -3,17 +3,12 @@
  * Presentation only; RSVP / manage handlers unchanged.
  */
 
-import {
-  Calendar,
-  Clock,
-  MapPin,
-} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 
 import { Avatar } from "../design-system/components/Avatar";
 import { useAuth } from "../context/useAuth";
-import type { EventType } from "../lib/event-types";
+import { EVENT_TYPE_LABELS, type EventType } from "../lib/event-types";
 import { eventDetailPath } from "../lib/event-links";
 import { isEventUpcoming } from "../lib/event-rsvp";
 import { summarizeVolunteerSlots } from "../lib/event-volunteer-summary";
@@ -35,14 +30,11 @@ import { isRoleAtLeast } from "../lib/roles";
 import {
   DetailsActions,
   DetailsEmptyState,
-  DetailsHeader,
-  DetailsMetadata,
   DetailsPanel,
   DetailsSection,
   DetailsSkeleton,
 } from "./details-panel";
 import { EventAttendeeStack } from "./EventAttendeeStack";
-import { EventBanner } from "./EventBanner";
 import { EventHealthCard } from "./EventHealthCard";
 import { EventRsvpSegmented } from "./EventRsvpSegmented";
 
@@ -88,23 +80,16 @@ function formatClockRange(startsAt: string, endsAt: string | null): string {
   return `${startLabel} – ${endLabel}`;
 }
 
-/** Compact nav date — e.g. "Tue, Jul 28" from YYYY-MM-DD or ISO datetime. */
-function formatCompactNavDate(value: string): string {
-  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  const date = dateOnly
-    ? new Date(
-        Number(dateOnly[1]),
-        Number(dateOnly[2]) - 1,
-        Number(dateOnly[3]),
-      )
-    : new Date(value);
+/** Full panel date — e.g. "September 4, 2026" from ISO datetime. */
+function formatPanelDate(value: string): string {
+  const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return value;
   }
   return new Intl.DateTimeFormat(undefined, {
-    weekday: "short",
-    month: "short",
+    month: "long",
     day: "numeric",
+    year: "numeric",
   }).format(date);
 }
 
@@ -145,6 +130,8 @@ export function EventOverviewCard({
 
   const [attendees, setAttendees] = useState<EventRsvpAttendee[]>([]);
   const [goingCount, setGoingCount] = useState<number | null>(null);
+  const [maybeCount, setMaybeCount] = useState(0);
+  const [notGoingCount, setNotGoingCount] = useState(0);
   const [attendeesExpanded, setAttendeesExpanded] = useState(false);
   const [taskStats, setTaskStats] = useState<{
     done: number;
@@ -164,6 +151,8 @@ export function EventOverviewCard({
     if (!previewEvent) {
       setAttendees([]);
       setGoingCount(null);
+      setMaybeCount(0);
+      setNotGoingCount(0);
       setTaskStats(null);
       setBudget(null);
       setVolunteersFilled(0);
@@ -181,6 +170,8 @@ export function EventOverviewCard({
           return;
         }
         setGoingCount(response.going_count);
+        setMaybeCount(response.maybe_count);
+        setNotGoingCount(response.not_going_count);
         setAttendees(
           response.attendees.filter((row) => row.rsvp_status === "going"),
         );
@@ -189,6 +180,8 @@ export function EventOverviewCard({
         if (!cancelled) {
           setAttendees([]);
           setGoingCount(null);
+          setMaybeCount(0);
+          setNotGoingCount(0);
         }
       });
 
@@ -257,12 +250,13 @@ export function EventOverviewCard({
     };
   }, [previewEvent?.id, canManage]);
 
-  const countdown = previewEvent
-    ? formatEventCountdown(previewEvent.starts_at)
-    : null;
   const eventType = (previewEvent?.event_type ?? "social") as EventType;
-  const coverUrl = previewEvent?.event_photo_url?.trim() || null;
-
+  const whenLine = previewEvent
+    ? [formatPanelDate(previewEvent.starts_at), formatClockRange(previewEvent.starts_at, previewEvent.ends_at)]
+        .filter(Boolean)
+        .join(" · ")
+    : null;
+  const locationLine = previewEvent?.location?.trim() || null;
   const preparationPct =
     taskStats && taskStats.total > 0
       ? Math.round((taskStats.done / taskStats.total) * 100)
@@ -270,10 +264,8 @@ export function EventOverviewCard({
   const checklistDone = taskStats?.done ?? 0;
   const checklistTotal = taskStats?.total ?? 0;
   const overdueTasks = taskStats?.overdue ?? 0;
-
   const plannedBudget = budget ? Number(budget.planned_budget) || 0 : 0;
   const spentBudget = budget ? Number(budget.actual_expense) || 0 : 0;
-
   const stackAttendees = useMemo(
     () =>
       attendees.map((attendee) => ({
@@ -282,14 +274,6 @@ export function EventOverviewCard({
       })),
     [attendees],
   );
-
-  const heroDate = previewEvent
-    ? formatCompactNavDate(previewEvent.starts_at)
-    : null;
-  const heroTime = previewEvent
-    ? formatClockRange(previewEvent.starts_at, previewEvent.ends_at)
-    : null;
-  const heroLocation = previewEvent?.location?.trim() || null;
   const showEmptySelect =
     !detailLoading &&
     !previewEvent &&
@@ -303,21 +287,6 @@ export function EventOverviewCard({
     selectedDate != null &&
     dayEvents.length === 0;
   const dayFestivals = selectedDate ? getFestivalsOnDate(selectedDate) : [];
-
-  const metaItems = [
-    heroDate
-      ? { key: "date", icon: Calendar, value: heroDate }
-      : null,
-    heroTime ? { key: "time", icon: Clock, value: heroTime } : null,
-    heroLocation
-      ? { key: "location", icon: MapPin, value: heroLocation }
-      : null,
-  ].filter(Boolean) as Array<{
-    key: string;
-    icon: typeof Calendar;
-    value: string;
-  }>;
-
   const attendeeTotal = goingCount ?? 0;
 
   return (
@@ -335,32 +304,25 @@ export function EventOverviewCard({
       ) : null}
 
       {dayEvents.length > 1 ? (
-        <DetailsHeader
-          label={
-            <ul className="details-panel-chips details-panel-chips--in-header">
-              {dayEvents.map((event) => {
-                const isActive = event.id === selectedEventId;
-                return (
-                  <li key={event.id}>
-                    <button
-                      type="button"
-                      aria-pressed={isActive}
-                      onClick={() => onSelectEvent(event.id)}
-                      className={[
-                        "details-panel-chip",
-                        isActive ? "is-active" : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                    >
-                      {event.name}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          }
-        />
+        <ul className="calendar-day-switch" aria-label="Events on this day">
+          {dayEvents.map((event) => {
+            const isActive = event.id === selectedEventId;
+            return (
+              <li key={event.id}>
+                <button
+                  type="button"
+                  aria-pressed={isActive}
+                  onClick={() => onSelectEvent(event.id)}
+                  className={["calendar-day-switch-btn", isActive ? "is-active" : ""]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  {event.name}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       ) : null}
 
       {showEmptyDay && dayFestivals.length > 0 ? (
@@ -397,20 +359,20 @@ export function EventOverviewCard({
 
       {previewEvent ? (
         <div key={previewEvent.id} className="details-panel-content">
-          <EventBanner
-            eventType={eventType}
-            imageUrl={coverUrl}
-            countdown={countdown}
-          />
-
           <div className="details-panel-body details-panel-body--dense">
-            <h3 className="details-panel-event-title">{previewEvent.name}</h3>
-
-            <DetailsMetadata
-              aria-label="Date, time, and location"
-              className="details-panel-meta--dense"
-              items={metaItems}
-            />
+            <header className="calendar-command-header">
+              <h3 className="event-command-title">{previewEvent.name}</h3>
+              <p className="event-command-meta" aria-label="Date, time, and location">
+                {whenLine}
+                {locationLine ? (
+                  <>
+                    <br />
+                    {locationLine}
+                  </>
+                ) : null}
+              </p>
+              <p className="event-command-kicker">{EVENT_TYPE_LABELS[eventType]}</p>
+            </header>
 
             <DetailsSection
               label="RSVP"
@@ -426,12 +388,37 @@ export function EventOverviewCard({
                 )}
                 loading={rsvpLoading || !eventDetail}
                 onStatusChange={onRsvpStatusChange}
+                counts={{
+                  going: goingCount ?? 0,
+                  maybe: maybeCount,
+                  not_going: notGoingCount,
+                }}
               />
             </DetailsSection>
+
+            {canManage ? (
+              <EventHealthCard
+                preparationPct={preparationPct}
+                checklistDone={checklistDone}
+                checklistTotal={checklistTotal}
+                overdueTasks={overdueTasks}
+                budgetSpent={spentBudget}
+                budgetCap={plannedBudget}
+                volunteersFilled={volunteersFilled}
+                volunteersNeeded={volunteersNeeded}
+                volunteersTargetSet={volunteersTargetSet}
+                manageEventId={manageEventId}
+              />
+            ) : null}
 
             <div className="mt-3.5 space-y-2" data-testid="event-attendees-row">
               {attendeeTotal > 0 ? (
                 <>
+                  <div className="event-command-section-head">
+                    <h3 className="event-command-kicker">
+                      {attendeeTotal} {attendeeTotal === 1 ? "attendee" : "attendees"}
+                    </h3>
+                  </div>
                   <EventAttendeeStack
                     attendees={stackAttendees}
                     totalCount={attendeeTotal}
@@ -461,34 +448,19 @@ export function EventOverviewCard({
               ) : null}
             </div>
 
-            {canManage ? (
-              <EventHealthCard
-                preparationPct={preparationPct}
-                checklistDone={checklistDone}
-                checklistTotal={checklistTotal}
-                overdueTasks={overdueTasks}
-                budgetSpent={spentBudget}
-                budgetCap={plannedBudget}
-                volunteersFilled={volunteersFilled}
-                volunteersNeeded={volunteersNeeded}
-                volunteersTargetSet={volunteersTargetSet}
-                manageEventId={manageEventId}
-              />
-            ) : null}
-
             <DetailsActions className="details-panel-actions--dense">
               <Link
                 to={eventDetailPath(previewEvent.id)}
                 className="event-command-btn event-command-btn--primary w-full"
               >
-                Open Event
+                Open event
               </Link>
               {canManage && manageEventId != null ? (
                 <Link
                   to={`/events/${manageEventId}/manage`}
                   className="event-command-btn w-full"
                 >
-                  Manage Event
+                  Manage
                 </Link>
               ) : null}
             </DetailsActions>

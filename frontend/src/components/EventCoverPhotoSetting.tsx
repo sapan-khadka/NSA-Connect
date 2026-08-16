@@ -190,7 +190,7 @@ export function EventCoverPhotoSetting({
             onChange={(changeEvent) =>
               void handleArchiveToggle(changeEvent.target.checked)
             }
-            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent"
+            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-foreground focus:ring-accent"
           />
           <span className="text-xs font-medium text-foreground">
             Show in Media

@@ -10,19 +10,16 @@ import {
   buildMonthGrid,
   getMonthLabel,
   isToday,
-  toLocalIsoDate,
 } from "../lib/calendar";
 import type { CalendarEventInput } from "../lib/calendar-events";
-import { groupEventTypesByDate, groupEventTypesByMonth } from "../lib/calendar-events";
 import {
-  EVENT_TYPE_LABELS,
-} from "../lib/event-types";
+  groupEventCountsByMonth,
+  groupEventsByDate,
+} from "../lib/calendar-events";
 import { getFestivalsOnDate } from "../lib/nepali-calendar";
 import { YearCalendarGrid } from "./YearCalendarGrid";
 import { CalendarMonthYearPicker } from "./CalendarMonthYearPicker";
 import {
-  CalendarCategoryMarks,
-  CalendarLegendList,
   getDayCellSurfaceClass,
   getMonthEnterAnimationClass,
   getTodayDateNumberClass,
@@ -48,6 +45,8 @@ const CALENDAR_VIEW_OPTIONS = [
   { id: "month", label: "Month" },
   { id: "year", label: "Year" },
 ] as const;
+
+const CELL_EVENT_LIMIT = 2;
 
 function CalendarViewToggle({
   viewMode,
@@ -82,12 +81,12 @@ export function EventsCalendarPanel({
     useState<MonthEnterDirection>(null);
 
   const cells = useMemo(() => buildMonthGrid(year, month), [year, month]);
-  const eventTypesByDate = useMemo(
-    () => groupEventTypesByDate(monthEvents),
+  const eventsByDate = useMemo(
+    () => groupEventsByDate(monthEvents),
     [monthEvents],
   );
-  const eventTypesByMonth = useMemo(
-    () => groupEventTypesByMonth(yearEvents, year),
+  const eventCountByMonth = useMemo(
+    () => groupEventCountsByMonth(yearEvents, year),
     [yearEvents, year],
   );
   const today = new Date();
@@ -185,61 +184,75 @@ export function EventsCalendarPanel({
           </div>
 
           <div className="events-calendar-grid__days">
-          {cells.map((cell) => {
-            const isSelected = selectedDate === cell.isoDate;
-            const dayEventTypes = eventTypesByDate.get(cell.isoDate) ?? [];
-            const festivals = getFestivalsOnDate(cell.isoDate);
-            const cellIsToday = isToday(cell.date);
-            const eventSummary =
-              dayEventTypes.length > 0
-                ? `, ${dayEventTypes.map((type) => EVENT_TYPE_LABELS[type]).join(", ")}`
-                : "";
-            const festivalSummary =
-              festivals.length > 0
-                ? `, ${festivals.map((festival) => festival.name).join(", ")}`
-                : "";
+            {cells.map((cell) => {
+              const isSelected = selectedDate === cell.isoDate;
+              const dayEvents = eventsByDate.get(cell.isoDate) ?? [];
+              const festivals = getFestivalsOnDate(cell.isoDate);
+              const cellIsToday = isToday(cell.date);
+              const visibleEvents = dayEvents.slice(0, CELL_EVENT_LIMIT);
+              const overflow = dayEvents.length - visibleEvents.length;
+              const eventSummary =
+                dayEvents.length > 0
+                  ? `, ${dayEvents.map((event) => event.name).join(", ")}`
+                  : "";
+              const festivalSummary =
+                festivals.length > 0
+                  ? `, ${festivals.map((festival) => festival.name).join(", ")}`
+                  : "";
 
-            return (
-              <button
-                key={cell.isoDate}
-                type="button"
-                data-testid="calendar-day-cell"
-                aria-label={`${cell.isoDate}${eventSummary}${festivalSummary}`}
-                aria-pressed={isSelected}
-                onClick={() => onSelectDate(cell.isoDate)}
-                className={getDayCellSurfaceClass({
-                  isCurrentMonth: cell.isCurrentMonth,
-                  isSelected,
-                  isToday: cellIsToday,
-                })}
-              >
-                <span className={getTodayDateNumberClass(cellIsToday, isSelected)}>
-                  {cell.day}
-                </span>
-                <CalendarCategoryMarks
-                  eventTypes={dayEventTypes}
-                  hasFestival={festivals.length > 0}
-                />
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={cell.isoDate}
+                  type="button"
+                  data-testid="calendar-day-cell"
+                  aria-label={`${cell.isoDate}${eventSummary}${festivalSummary}`}
+                  aria-pressed={isSelected}
+                  onClick={() => onSelectDate(cell.isoDate)}
+                  className={getDayCellSurfaceClass({
+                    isCurrentMonth: cell.isCurrentMonth,
+                    isSelected,
+                    isToday: cellIsToday,
+                    hasEvents: dayEvents.length > 0,
+                    hasFestival: festivals.length > 0,
+                  })}
+                >
+                  <span className={getTodayDateNumberClass(cellIsToday, isSelected)}>
+                    {cell.day}
+                  </span>
+                  {dayEvents.length > 0 ? (
+                    <span className="events-calendar-day-events">
+                      {visibleEvents.map((event) => (
+                        <span key={event.id} className="events-calendar-day-event">
+                          {event.name}
+                        </span>
+                      ))}
+                      {overflow > 0 ? (
+                        <span className="events-calendar-day-more">+{overflow}</span>
+                      ) : null}
+                    </span>
+                  ) : festivals.length > 0 ? (
+                    <span className="events-calendar-day-events">
+                      <span className="events-calendar-day-festival">
+                        {festivals[0]?.name}
+                      </span>
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
           </div>
         </div>
       ) : (
         <div className="mt-3">
           <YearCalendarGrid
             year={year}
-            eventTypesByMonth={eventTypesByMonth}
+            eventCountByMonth={eventCountByMonth}
             currentMonth={today.getMonth()}
             currentYear={today.getFullYear()}
             onSelectMonth={handleSelectMonth}
           />
         </div>
       )}
-
-      {viewMode === "month" ? (
-        <CalendarLegendList className="events-calendar-legend" />
-      ) : null}
     </section>
   );
 }

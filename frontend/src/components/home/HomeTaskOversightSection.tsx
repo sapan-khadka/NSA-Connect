@@ -49,7 +49,7 @@ function OversightRow({ event }: { event: OversightEventOption }) {
         <span className="mt-1.5 flex items-center gap-2">
           <span className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-gray-100">
             <span
-              className="block h-full rounded-full bg-primary"
+              className="block h-full rounded-full bg-foreground"
               style={{ width: `${completionPercent}%` }}
             />
           </span>

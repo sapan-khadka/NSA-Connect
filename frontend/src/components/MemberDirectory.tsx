@@ -38,7 +38,7 @@ function filterChipClass(active: boolean): string {
   return [
     FILTER_CHIP_BASE,
     active
-      ? "border-primary bg-primary text-white"
+      ? "border-transparent bg-brand-soft text-foreground"
       : "border-gray-200 bg-white text-label hover:text-foreground",
   ].join(" ");
 }
@@ -228,7 +228,7 @@ export function MemberDirectory() {
                 className={[
                   "inline-flex min-h-11 items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition",
                   activeFilterCount > 0 || filtersOpen
-                    ? "border-primary/40 bg-badge-teal-bg text-primary"
+                    ? "border-brand/40 bg-brand-soft text-foreground"
                     : "border-gray-300 bg-white text-foreground hover:bg-gray-50",
                 ].join(" ")}
               >
@@ -253,7 +253,7 @@ export function MemberDirectory() {
                       <button
                         type="button"
                         onClick={clearAllFilters}
-                        className="text-xs font-medium text-accent hover:underline"
+                        className="text-xs font-medium text-label hover:text-foreground hover:underline"
                       >
                         Clear all
                       </button>

@@ -131,7 +131,7 @@ export function MeetingFilesPanel({ eventId }: MeetingFilesPanelProps) {
                   href={file.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline"
+                  className="inline-flex items-center gap-1 text-sm font-medium text-label hover:text-foreground hover:underline"
                   download={file.file_name}
                 >
                   <AppIcon icon={Download} size="xs" />

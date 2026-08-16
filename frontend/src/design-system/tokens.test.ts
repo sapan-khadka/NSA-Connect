@@ -9,13 +9,14 @@ import {
 } from "./tokens";
 
 describe("NSA Connect design tokens", () => {
-  it("uses monochrome brand chrome with colorful semantic tones", () => {
+  it("uses NSA red for brand chrome with colorful semantic tones", () => {
     expect(colors.surface.DEFAULT).toBe("#FAFAFA");
     expect(colors.surface.card).toBe("#FFFFFF");
-    expect(colors.border).toBe("#E5E5E5");
-    expect(colors.primary.DEFAULT).toBe("#111111");
-    expect(colors.primary.hover).toBe("#000000");
-    expect(colors.accent.DEFAULT).toBe("#111111");
+    expect(colors.border).toBe("#E7E7E8");
+    expect(colors.brand.DEFAULT).toBe("#C8102E");
+    expect(colors.primary.DEFAULT).toBe("#C8102E");
+    expect(colors.primary.hover).toBe("#A80D27");
+    expect(colors.accent.DEFAULT).toBe("#C8102E");
     expect(colors.badge.teal.fg).toBe("#0F766E");
     expect(colors.success.DEFAULT).toBe("#16A34A");
     expect(colors.warning.DEFAULT).toBe("#EA580C");

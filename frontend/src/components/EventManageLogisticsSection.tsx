@@ -55,7 +55,7 @@ export function EventManageTaskProgressCard({
         Task completion
       </h2>
       <div className="mt-4 flex flex-wrap items-center gap-4">
-        <span className="rounded-full bg-accent/10 px-3 py-1 text-sm font-semibold text-accent">
+        <span className="rounded-full bg-surface-muted px-3 py-1 text-sm font-semibold text-foreground">
           {completed}/{total} done ({percent}%)
         </span>
         <span className="text-sm text-label">{inProgress} in progress</span>

@@ -77,13 +77,13 @@ function ResultRow({
       className={[
         "flex w-full items-start gap-3 rounded-card px-3 py-2.5 text-left transition duration-150",
         "outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30",
-        active ? "bg-badge-teal-bg text-primary" : "hover:bg-surface-muted",
+        active ? "bg-brand-soft text-foreground" : "hover:bg-surface-muted",
       ].join(" ")}
     >
       <span
         className={[
           "mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-          active ? "bg-white text-primary" : "bg-surface-muted text-label",
+          active ? "bg-white text-foreground" : "bg-surface-muted text-label",
         ].join(" ")}
         aria-hidden="true"
       >

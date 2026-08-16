@@ -9,9 +9,7 @@ import {
   UPCOMING_GROUP_ORDER,
   groupUpcomingEvents,
 } from "../lib/calendar-upcoming";
-import { EVENT_TYPE_DOT_CLASS } from "../lib/event-types";
 import type { EventDetailResponse, EventResponse, RsvpStatus } from "../lib/events-api";
-import { CalendarEventMark } from "./calendar-grid-utils";
 import { AppIcon } from "./ui/AppIcon";
 import { Clock } from "lucide-react";
 
@@ -93,11 +91,6 @@ export function UpcomingEventsList({
                     onClick={() => onSelectEvent?.(event)}
                     className="events-upcoming-event-card text-sm"
                   >
-                    <CalendarEventMark
-                      className={EVENT_TYPE_DOT_CLASS[event.event_type]}
-                      kind={event.event_type}
-                      size="row"
-                    />
                     <span className="min-w-0 flex-1 truncate text-foreground">
                       {event.name}
                     </span>

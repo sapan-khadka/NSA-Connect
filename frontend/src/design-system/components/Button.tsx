@@ -22,7 +22,7 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const VARIANT_CLASS: Record<ButtonVariant, string> = {
   primary:
-    "bg-primary text-white hover:bg-primary-hover focus-visible:ring-primary/30",
+    "bg-foreground text-white hover:bg-foreground/90 focus-visible:ring-primary/30",
   secondary:
     "bg-surface-muted text-foreground hover:bg-border focus-visible:ring-primary/20",
   outline:
@@ -67,7 +67,7 @@ export function Button({
       aria-busy={loading || undefined}
       aria-disabled={isDisabled || undefined}
       className={cx(
-        "inline-flex items-center justify-center rounded-full font-medium transition duration-200 ease-out",
+        "inline-flex items-center justify-center rounded-[10px] font-medium transition duration-200 ease-out",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
         "disabled:cursor-not-allowed disabled:opacity-60",
         VARIANT_CLASS[variant],

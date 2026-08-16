@@ -48,7 +48,7 @@ export function MemberDuesStatus({ className = "" }: MemberDuesStatusProps) {
       className={`rounded-lg border px-3 py-2 text-sm ${
         isOutstanding
           ? "border-overdue/30 bg-overdue-surface text-overdue"
-          : "border-accent/20 bg-mint/20 text-accent"
+          : "border-success/20 bg-success-surface text-success"
       } ${className}`}
     >
       {label}

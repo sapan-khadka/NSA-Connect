@@ -129,10 +129,10 @@ export function ChecklistTaskCard({
                   className={[
                     "mt-0.5 ds-icon-btn h-4 w-4 shrink-0 rounded border transition-colors",
                     item.is_completed
-                      ? "border-accent bg-accent text-white"
+                      ? "border-foreground bg-foreground text-white"
                       : "border-gray-300 bg-white text-transparent",
                     canToggle && !isPending
-                      ? "cursor-pointer hover:border-accent/70"
+                      ? "cursor-pointer hover:border-foreground/70"
                       : "cursor-default",
                     isPending ? "opacity-60" : "",
                   ]
@@ -147,7 +147,7 @@ export function ChecklistTaskCard({
                   className={
                     item.is_completed
                       ? "text-label line-through"
-                      : "text-primary"
+                      : "text-foreground"
                   }
                 >
                   {item.label}

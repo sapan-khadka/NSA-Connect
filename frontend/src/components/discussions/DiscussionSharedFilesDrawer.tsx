@@ -140,7 +140,7 @@ export function DiscussionSharedFilesDrawer({
                 className={[
                   "rounded-full px-2.5 py-1 text-[12px] font-medium transition",
                   active
-                    ? "bg-primary text-white"
+                    ? "bg-foreground text-white"
                     : "bg-[#F3F3F2] text-gray-600 hover:bg-[#EBEBEA]",
                 ].join(" ")}
               >
@@ -182,7 +182,7 @@ export function DiscussionSharedFilesDrawer({
                       />
                     </a>
                   ) : (
-                    <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#F3F3F2] text-primary">
+                    <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#F3F3F2] text-label">
                       <AppIcon icon={Icon} size="sm" />
                     </span>
                   )}

@@ -445,7 +445,7 @@ export function FinanceEntryList({
                             href={entry.receipt_url}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-accent hover:underline"
+                            className="text-label hover:text-foreground hover:underline"
                           >
                             View
                           </a>
@@ -656,7 +656,7 @@ export function FinanceEntryList({
                           href={entry.receipt_url}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-accent hover:underline"
+                          className="text-label hover:text-foreground hover:underline"
                         >
                           View
                         </a>
