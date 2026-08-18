@@ -28,7 +28,7 @@ import {
 import {
   canManageEventTasks,
   canManageTreasury,
-  isRoleAtLeast,
+  memberSatisfiesMinRole,
 } from "../lib/roles";
 
 export function EventManagePage() {
@@ -62,7 +62,7 @@ export function EventManagePage() {
   );
   const hasLoadedOnceRef = useRef(false);
 
-  const canViewBoard = member ? isRoleAtLeast(member.role, "board") : false;
+  const canViewBoard = member ? memberSatisfiesMinRole(member, "board") : false;
   const canViewTreasury = member
     ? canManageTreasury(member.role, member.position)
     : false;

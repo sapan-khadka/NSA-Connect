@@ -9,7 +9,8 @@ export function isGuestMarketingPath(pathname: string): boolean {
     pathname === "/login" ||
     pathname === "/register" ||
     pathname === "/forgot-password" ||
-    pathname === "/reset-password"
+    pathname === "/reset-password" ||
+    pathname === "/verify-email"
   );
 }
 
@@ -32,9 +33,6 @@ export function GuestChrome({ pathname, children }: GuestChromeProps) {
           <span>NSA Connect</span>
         </Link>
         <nav className="guest-nav" aria-label="Account">
-          <span className="guest-nav-link guest-nav-label">Explore Events</span>
-          <span className="guest-nav-link guest-nav-label">About NSA</span>
-          <span className="guest-nav-divider" aria-hidden="true" />
           <NavLink
             to="/login"
             className={() =>
@@ -56,10 +54,6 @@ export function GuestChrome({ pathname, children }: GuestChromeProps) {
       <main className="guest-main">{children}</main>
       <footer className="guest-footer">
         <p>© 2026 NSA Connect. All rights reserved.</p>
-        <p className="guest-footer-links">
-          <span>Privacy Policy</span>
-          <span>Terms of Service</span>
-        </p>
       </footer>
     </div>
   );

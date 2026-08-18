@@ -9,6 +9,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.config import settings
+from app.core.permissions import member_has_role_at_least
 from app.models.member import Member, MemberRole
 from app.models.org_document import (
     OrgDocument,
@@ -59,7 +60,7 @@ def _visibility_value(raw: str) -> str:
 def member_can_view_document(member: Member, visibility: str) -> bool:
     if visibility == OrgDocumentVisibility.PUBLIC.value:
         return True
-    return member.has_role_at_least(MemberRole.BOARD)
+    return member_has_role_at_least(member, MemberRole.BOARD)
 
 
 def _to_response(doc: OrgDocument) -> OrgDocumentResponse:
@@ -172,7 +173,7 @@ def create_org_document(
     content_type: str | None,
     filename: str | None,
 ) -> OrgDocumentResponse:
-    if not actor.has_role_at_least(MemberRole.BOARD):
+    if not member_has_role_at_least(actor, MemberRole.BOARD):
         raise OrgDocumentForbiddenError
 
     vis = _visibility_value(visibility)
@@ -244,7 +245,7 @@ def update_org_document(
     description: str | None = None,
     visibility: str | None = None,
 ) -> OrgDocumentResponse:
-    if not actor.has_role_at_least(MemberRole.BOARD):
+    if not member_has_role_at_least(actor, MemberRole.BOARD):
         raise OrgDocumentForbiddenError
 
     doc = db.get(OrgDocument, document_id)
@@ -275,7 +276,7 @@ def update_org_document(
 
 
 def delete_org_document(db: Session, *, actor: Member, document_id: int) -> None:
-    if not actor.has_role_at_least(MemberRole.BOARD):
+    if not member_has_role_at_least(actor, MemberRole.BOARD):
         raise OrgDocumentForbiddenError
     doc = db.get(OrgDocument, document_id)
     if doc is None:
@@ -309,7 +310,7 @@ def search_org_document_chunks(
     result_limit = max(1, min(limit, 20))
     query_embedding = generate_embeddings([query.strip()])[0]
     org_id = get_default_organization_id(db)
-    is_board = member.has_role_at_least(MemberRole.BOARD)
+    is_board = member_has_role_at_least(member, MemberRole.BOARD)
 
     visibility_filter = [OrgDocumentVisibility.PUBLIC.value]
     if is_board:

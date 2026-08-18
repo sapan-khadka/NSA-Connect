@@ -10,8 +10,7 @@ import type { MemberResponse } from "../../lib/auth-api";
 import { FINANCE_BOOKS_PATH } from "../../lib/finance-routes";
 import {
   canManageTreasury,
-  canViewMemberDirectory,
-  isRoleAtLeast,
+  memberSatisfiesMinRole,
 } from "../../lib/roles";
 import { AppIcon } from "../ui/AppIcon";
 import { HomeCard } from "../ui/HomeCard";
@@ -30,37 +29,33 @@ type QuickAction = {
 export function HomeQuickActions({ member }: { member: MemberResponse }) {
   const actions: QuickAction[] = [];
 
-  if (isRoleAtLeast(member.role, "board")) {
-    actions.push({
-      id: "create-event",
-      label: "Event",
-      ariaLabel: "Create Event",
-      to: "/events/calendar?create=1",
-      icon: CalendarDays,
-      tone: "teal",
-    });
-  }
-
-  if (canViewMemberDirectory(member.role)) {
-    actions.push({
-      id: "add-member",
-      label: "Member",
-      ariaLabel: "Add Member",
-      to: "/members?tab=pending",
-      icon: UserPlus,
-      tone: "cyan",
-    });
-  }
-
-  if (isRoleAtLeast(member.role, "board")) {
-    actions.push({
-      id: "announcement",
-      label: "Announce",
-      ariaLabel: "Post Announcement",
-      to: "/announcements?create=1",
-      icon: Megaphone,
-      tone: "amber",
-    });
+  if (memberSatisfiesMinRole(member, "board")) {
+    actions.push(
+      {
+        id: "create-event",
+        label: "Event",
+        ariaLabel: "Create Event",
+        to: "/events/calendar?create=1",
+        icon: CalendarDays,
+        tone: "teal",
+      },
+      {
+        id: "add-member",
+        label: "Member",
+        ariaLabel: "Add Member",
+        to: "/members?tab=pending",
+        icon: UserPlus,
+        tone: "cyan",
+      },
+      {
+        id: "announcement",
+        label: "Announce",
+        ariaLabel: "Post Announcement",
+        to: "/announcements?create=1",
+        icon: Megaphone,
+        tone: "amber",
+      },
+    );
   }
 
   if (canManageTreasury(member.role, member.position)) {

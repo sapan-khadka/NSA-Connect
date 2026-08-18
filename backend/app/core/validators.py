@@ -31,15 +31,33 @@ def validate_semo_email(value: str) -> str:
     return email
 
 
-def validate_university_email(db: Session, value: str) -> str:
-    """Validate email against a known university email_domain (case-insensitive).
+def is_org_owner_email(email: str) -> bool:
+    """True when email is in ORG_OWNER_EMAILS allowlist."""
+    from app.core.config import settings
 
-    Falls back to the default university domain when only one university exists
-    or when no domain row matches yet (single-tenant SEMO runtime).
+    normalized = email.lower().strip()
+    return normalized in settings.org_owner_email_set
+
+
+def org_owner_emails_configured() -> bool:
+    from app.core.config import settings
+
+    return bool(settings.org_owner_email_set)
+
+
+def validate_university_email(db: Session, value: str) -> str:
+    """Validate email for registration/login identity.
+
+    Allowlisted org-owner emails may use any domain (e.g. Gmail).
+    Everyone else must match a known university email_domain (SEMO).
     """
     email = value.lower().strip()
     if "@" not in email:
         raise ValueError("Invalid email address")
+
+    if is_org_owner_email(email):
+        return email
+
     domain = email.rsplit("@", 1)[-1]
 
     match = db.scalar(
@@ -60,6 +78,11 @@ def validate_university_email(db: Session, value: str) -> str:
 
 
 def university_for_email(db: Session, email: str) -> University | None:
+    if is_org_owner_email(email):
+        from app.services.organization_context import get_default_university
+
+        return get_default_university(db)
+
     domain = email.lower().strip().rsplit("@", 1)[-1]
     match = db.scalar(
         select(University).where(

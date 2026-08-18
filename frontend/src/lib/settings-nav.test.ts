@@ -42,4 +42,11 @@ describe("settings-nav", () => {
       { id: "chapter", items: ["email"] },
     ]);
   });
+
+  it("adds chapter email for org owners without a board seat", () => {
+    expect(canAccessEmailIntegration("general", true)).toBe(true);
+    expect(
+      getSettingsNavItems("general", true).map((item) => item.id),
+    ).toContain("email");
+  });
 });

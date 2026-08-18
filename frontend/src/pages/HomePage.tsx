@@ -36,7 +36,7 @@ import {
 } from "../lib/home-tasks";
 import {
   canViewTaskOversight,
-  isRoleAtLeast,
+  memberSatisfiesMinRole,
 } from "../lib/roles";
 
 function PublicHomeView() {
@@ -232,7 +232,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const showAssistant = isRoleAtLeast(member.role, "board");
+  const showAssistant = memberSatisfiesMinRole(member, "board");
   const showTaskOversight = canViewTaskOversight(member.role, member.position);
   const tasksPath = getMyTasksPath(member.role);
   const tasksSummary = useMemo(() => summarizeMyTasks(myTasks), [myTasks]);

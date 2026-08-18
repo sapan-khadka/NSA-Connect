@@ -16,6 +16,10 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     logger.info("Starting %s [%s]", settings.APP_NAME, settings.ENVIRONMENT)
 
+    from app.core.production_checks import log_production_config_warnings
+
+    log_production_config_warnings(settings)
+
     with engine.connect() as connection:
         connection.execute(text("SELECT 1"))
 

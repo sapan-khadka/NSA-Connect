@@ -77,6 +77,7 @@ from app.models.org_document import OrgDocument, OrgDocumentChunk, OrgDocumentVi
 from app.models.organization import Organization, OrganizationStatus
 from app.models.organization_membership import OrganizationMembership
 from app.models.password_reset_token import PasswordResetToken
+from app.models.email_verification_token import EmailVerificationToken
 from app.models.preptask import PrepTaskGroup, PrepTaskGroupItem
 from app.models.reminder import PrepTaskReminder, ReminderType
 from app.models.semester_report import ReportRangeType, SemesterReport
@@ -159,6 +160,7 @@ __all__ = [
     "OrgDocumentChunk",
     "OrgDocumentVisibility",
     "PasswordResetToken",
+    "EmailVerificationToken",
     "PlatformRole",
     "MeetingAttendance",
     "MeetingRecord",

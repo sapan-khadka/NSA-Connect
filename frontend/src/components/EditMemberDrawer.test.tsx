@@ -118,6 +118,32 @@ describe("EditMemberDrawer", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows role and position controls for org owners", () => {
+    renderEdit({
+      id: 1,
+      full_name: "Owner Viewer",
+      email: "owner@gmail.com",
+      student_id: null,
+      major: "Operations",
+      graduation_year: 2027,
+      role: "general",
+      status: "approved",
+      position: "member",
+      is_org_owner: true,
+    });
+
+    const dialog = screen.getByRole("dialog", { name: /Edit Member/i });
+    expect(
+      within(dialog).getByLabelText("Role and position"),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByLabelText(/Change role for Alex Member/),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByLabelText(/Change position for Alex Member/),
+    ).toBeInTheDocument();
+  });
+
   it("saves profile fields via updateMemberProfile", async () => {
     const user = userEvent.setup();
     const { updateMemberProfile } = await import("../lib/members-api");

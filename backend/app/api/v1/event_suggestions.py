@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_member, require_board
+from app.core.permissions import member_has_role_at_least
 from app.models.event_suggestion import EventSuggestionStatus
 from app.models.event_suggestion_comment import EventSuggestionCommentChannel
 from app.models.event_suggestion_interest import EventSuggestionInterestVote
@@ -84,7 +85,7 @@ def _to_response(
     my_interest: EventSuggestionInterestVote | None = None,
     engagement: dict | None = None,
 ) -> EventSuggestionResponse:
-    can_board_review = member.has_role_at_least(MemberRole.BOARD)
+    can_board_review = member_has_role_at_least(member, MemberRole.BOARD)
     stats = engagement or {}
     return EventSuggestionResponse(
         id=suggestion.id,
@@ -155,7 +156,7 @@ def _responses_for(
         suggestion_ids=ids,
         member_id=member.id,
     )
-    include_board = member.has_role_at_least(MemberRole.BOARD)
+    include_board = member_has_role_at_least(member, MemberRole.BOARD)
     return [
         _to_response(
             row,
@@ -330,7 +331,7 @@ def _comment_to_response(
 ) -> EventSuggestionCommentResponse:
     can_delete = comment.deleted_at is None and (
         comment.author_id == member.id
-        or member.has_role_at_least(MemberRole.BOARD)
+        or member_has_role_at_least(member, MemberRole.BOARD)
     )
     return EventSuggestionCommentResponse(
         id=comment.id,

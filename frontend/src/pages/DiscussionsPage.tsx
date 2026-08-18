@@ -37,7 +37,7 @@ import {
 } from "../lib/discussion-paths";
 import { openDirectMessage } from "../lib/open-direct-message";
 import { fetchAssignableMembers } from "../lib/members-api";
-import { canViewTaskOversight, isRoleAtLeast } from "../lib/roles";
+import { canViewTaskOversight, memberSatisfiesMinRole } from "../lib/roles";
 
 const INBOX_POLL_MS = 12_000;
 
@@ -76,10 +76,11 @@ export function DiscussionsPage() {
   const scope = discussionScopeFromPath(location.pathname);
 
   const canCreateGroup = member
-    ? isRoleAtLeast(member.role, "board")
+    ? memberSatisfiesMinRole(member, "board")
     : false;
   const canReviewGroups = member
-    ? canViewTaskOversight(member.role, member.position)
+    ? canViewTaskOversight(member.role, member.position) ||
+      Boolean(member.is_org_owner)
     : false;
   const canManageArchive = canReviewGroups;
 
@@ -773,21 +774,49 @@ export function DiscussionsPage() {
               }
             />
           ) : (
-            <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-              <p className="text-sm font-medium text-foreground">
-                Select a conversation
-              </p>
-              <p className="max-w-xs text-xs text-gray-500">
-                Pick a chat from the left, or start a new private message.
-              </p>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => setNewMessageOpen(true)}
-              >
-                New message
-              </Button>
+            <div className="flex h-full flex-col items-center justify-center px-8 text-center">
+              {rooms.length === 0 && !loading ? (
+                <div className="max-w-[22rem]">
+                  <p className="text-[15px] font-semibold tracking-tight text-foreground">
+                    Start a conversation
+                  </p>
+                  <p className="mt-2 text-[13px] leading-relaxed text-gray-500">
+                    Message a member privately
+                    {canCreateGroup
+                      ? ", or create a group for your board."
+                      : ". Conversations stay here for the chapter."}
+                  </p>
+                  <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      onClick={() => setNewMessageOpen(true)}
+                    >
+                      New message
+                    </Button>
+                    {canCreateGroup ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setCreateOpen(true)}
+                      >
+                        New group
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              ) : (
+                <div className="max-w-[18rem]">
+                  <p className="text-[15px] font-semibold tracking-tight text-foreground">
+                    Select a conversation
+                  </p>
+                  <p className="mt-2 text-[13px] leading-relaxed text-gray-500">
+                    Choose a chat from the list to continue.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>

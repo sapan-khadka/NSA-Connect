@@ -22,7 +22,7 @@ import {
   type EventSuggestion,
   type EventSuggestionStatus,
 } from "../lib/event-suggestions-api";
-import { isRoleAtLeast } from "../lib/roles";
+import { memberSatisfiesMinRole } from "../lib/roles";
 
 const TIMING_SUGGESTIONS = [
   "This semester",
@@ -198,7 +198,7 @@ export function EventSuggestionsPage() {
   const [sort, setSort] = useState<SortOption>("newest");
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
 
-  const canManage = member ? isRoleAtLeast(member.role, "board") : false;
+  const canManage = member ? memberSatisfiesMinRole(member, "board") : false;
   const moreFiltersActive = semesterFilter !== "all";
 
   useEffect(() => {

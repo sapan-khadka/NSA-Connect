@@ -29,7 +29,7 @@ import type { EventTaskDraft } from "../lib/event-task-draft";
 import { fetchAssignableMembers } from "../lib/members-api";
 import { TASK_STATUS_LABELS } from "../lib/member-workspace-responsibilities";
 import { prepTaskToEventTask, eventTaskToPrepTask } from "../lib/task-adapters";
-import { isRoleAtLeast } from "../lib/roles";
+import { isRoleAtLeast, memberSatisfiesMinRole } from "../lib/roles";
 import {
   applyChecklistItemToggle,
   calcEventTasksProgress,
@@ -301,7 +301,7 @@ export function EventTaskManager({
     MemberResponse[]
   >([]);
 
-  const canFetchAll = member ? isRoleAtLeast(member.role, "board") : false;
+  const canFetchAll = member ? memberSatisfiesMinRole(member, "board") : false;
 
   useEffect(() => {
     if (!canFetchAll || !canCreateTasks) {
@@ -472,7 +472,7 @@ export function EventTaskManager({
       return false;
     }
     return (
-      isRoleAtLeast(member.role, "board") || task.assignee_id === member.id
+      memberSatisfiesMinRole(member, "board") || task.assignee_id === member.id
     );
   }
 

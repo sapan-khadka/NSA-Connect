@@ -4,7 +4,7 @@ import { Navigate, useLocation } from "react-router";
 import { useAuth } from "../context/useAuth";
 import {
   getDashboardPath,
-  isRoleAtLeast,
+  memberSatisfiesMinRole,
   type MemberRole,
 } from "../lib/roles";
 
@@ -41,7 +41,7 @@ export function ProtectedRoute({
     return <Navigate to={getDashboardPath(member.role)} replace />;
   }
 
-  if (minRole && !isRoleAtLeast(member.role, minRole)) {
+  if (minRole && !memberSatisfiesMinRole(member, minRole)) {
     return <Navigate to={getDashboardPath(member.role)} replace />;
   }
 

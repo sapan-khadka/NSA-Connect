@@ -10,7 +10,7 @@ import {
   type OrgDocumentVisibility,
   uploadOrgDocument,
 } from "../lib/org-documents-api";
-import { isRoleAtLeast } from "../lib/roles";
+import { memberSatisfiesMinRole } from "../lib/roles";
 import { AppIcon } from "./ui/AppIcon";
 import { Button } from "./ui/Button";
 
@@ -20,7 +20,7 @@ function visibilityLabel(visibility: OrgDocumentVisibility): string {
 
 export function NsaDocumentsPanel() {
   const { member } = useAuth();
-  const isBoard = member ? isRoleAtLeast(member.role, "board") : false;
+  const isBoard = member ? memberSatisfiesMinRole(member, "board") : false;
   const [documents, setDocuments] = useState<OrgDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -57,9 +57,9 @@ import {
   canManageEventTasks,
   canAccessMemberDocuments,
   canManageTreasury,
-  canViewMemberDirectory,
   canViewTaskOversight,
   isMemberRole,
+  viewerCanManageMembers,
 } from "../lib/roles";
 import { getCurrentSemesterSlug } from "../lib/semester";
 
@@ -172,9 +172,7 @@ export function MemberProfilePage() {
     currentMember &&
       canManageEventTasks(currentMember.role, currentMember.position),
   );
-  const viewerIsBoard = Boolean(
-    currentMember && canViewMemberDirectory(currentMember.role),
-  );
+  const viewerIsBoard = viewerCanManageMembers(currentMember);
 
   const responsibilityItems = useMemo(
     () =>
@@ -421,6 +419,7 @@ export function MemberProfilePage() {
                 currentMember.role,
                 currentMember.id,
                 profile.id,
+                Boolean(currentMember.is_org_owner),
               ),
           )}
         />

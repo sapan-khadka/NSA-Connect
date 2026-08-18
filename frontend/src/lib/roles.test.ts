@@ -9,6 +9,8 @@ import {
   getDashboardPath,
   getMemberDisplayRole,
   isRoleAtLeast,
+  memberSatisfiesMinRole,
+  viewerCanManageMembers,
 } from "./roles";
 
 describe("role access helpers", () => {
@@ -40,6 +42,17 @@ describe("role access helpers", () => {
     expect(canManageTreasury("board", "vice_president")).toBe(true);
     expect(canManageTreasury("board")).toBe(false);
     expect(canManageTreasury("board", "secretary")).toBe(false);
+    expect(canManageTreasury("general")).toBe(false);
+  });
+
+  it("lets org owners open board surfaces without treasurer write", () => {
+    const owner = { role: "general" as const, is_org_owner: true };
+    expect(canAccessFinance("general", true)).toBe(true);
+    expect(canViewMemberDirectory("general", true)).toBe(true);
+    expect(viewerCanManageMembers(owner)).toBe(true);
+    expect(memberSatisfiesMinRole(owner, "board")).toBe(true);
+    expect(memberSatisfiesMinRole(owner, "president")).toBe(true);
+    expect(memberSatisfiesMinRole(owner, "treasurer")).toBe(false);
     expect(canManageTreasury("general")).toBe(false);
   });
 

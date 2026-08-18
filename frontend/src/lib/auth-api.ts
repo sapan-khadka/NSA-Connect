@@ -65,6 +65,9 @@ export type MemberResponse = {
   social_handle_visibility?: ProfileFieldVisibility;
   avatar_url?: string | null;
   organization?: { id: number; slug: string; name: string } | null;
+  /** System org owner — distinct from chapter president. */
+  is_org_owner?: boolean;
+  email_verified?: boolean;
 };
 
 export async function fetchCurrentMember(): Promise<MemberResponse> {
@@ -114,7 +117,32 @@ export async function registerMember(data: RegisterRequest): Promise<MemberRespo
   return response.data;
 }
 
+export type EmailVerificationResponse = {
+  message: string;
+};
+
+export async function confirmEmailVerification(
+  token: string,
+): Promise<EmailVerificationResponse> {
+  const response = await api.post<EmailVerificationResponse>(
+    "/v1/auth/verify-email",
+    { token },
+  );
+  return response.data;
+}
+
+export async function resendEmailVerification(
+  email: string,
+): Promise<EmailVerificationResponse> {
+  const response = await api.post<EmailVerificationResponse>(
+    "/v1/auth/verify-email/resend",
+    { email: normalizeSemoEmail(email) },
+  );
+  return response.data;
+}
+
 const PENDING_APPROVAL_DETAIL = "Member account is not approved";
+const EMAIL_NOT_VERIFIED_DETAIL = "Verify your email before signing in";
 
 export function isPendingApprovalError(error: unknown): boolean {
   if (!isAxiosError(error)) {
@@ -124,5 +152,16 @@ export function isPendingApprovalError(error: unknown): boolean {
   return (
     error.response?.status === 403 &&
     error.response?.data?.detail === PENDING_APPROVAL_DETAIL
+  );
+}
+
+export function isEmailNotVerifiedError(error: unknown): boolean {
+  if (!isAxiosError(error)) {
+    return false;
+  }
+
+  return (
+    error.response?.status === 403 &&
+    error.response?.data?.detail === EMAIL_NOT_VERIFIED_DETAIL
   );
 }

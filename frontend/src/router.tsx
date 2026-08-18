@@ -49,6 +49,7 @@ import { SettingsSecurityPage } from "./pages/settings/SettingsSecurityPage";
 import { PublicEventPage } from "./pages/PublicEventPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
+import { VerifyEmailPage } from "./pages/VerifyEmailPage";
 import { ReportDetailPage } from "./pages/ReportDetailPage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { TaskOversightPage } from "./pages/TaskOversightPage";
@@ -62,6 +63,7 @@ export const appRoutes: RouteObject[] = [
       { path: "login", element: <LoginPage /> },
       { path: "forgot-password", element: <ForgotPasswordPage /> },
       { path: "reset-password", element: <ResetPasswordPage /> },
+      { path: "verify-email", element: <VerifyEmailPage /> },
       { path: "register", element: <RegisterPage /> },
       {
         path: "announcements",
@@ -206,7 +208,7 @@ export const appRoutes: RouteObject[] = [
       {
         path: "reports",
         element: (
-          <ProtectedRoute>
+          <ProtectedRoute minRole="board">
             <ReportsPage />
           </ProtectedRoute>
         ),
@@ -214,7 +216,7 @@ export const appRoutes: RouteObject[] = [
       {
         path: "reports/:reportId",
         element: (
-          <ProtectedRoute>
+          <ProtectedRoute minRole="board">
             <ReportDetailPage />
           </ProtectedRoute>
         ),

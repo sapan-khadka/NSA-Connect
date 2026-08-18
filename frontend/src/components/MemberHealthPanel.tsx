@@ -104,7 +104,8 @@ export function MemberHealthPanel({
         <div className="member-health-header">
           <h3 className="member-health-title">Member Health</h3>
           <p className="member-health-subtitle">
-            Engagement score from attendance, tasks, dues, and activity.
+            Engagement score from attendance, tasks, dues, and activity when
+            those records exist — otherwise factors are labeled as estimates.
           </p>
         </div>
       ) : null}
@@ -136,8 +137,8 @@ export function MemberHealthPanel({
         <SuggestionList suggestions={snapshot.suggestions} />
         {snapshot.usingPlaceholders ? (
           <p className="members-demo-note" role="note">
-            Some factors use placeholders until attendance, dues, tasks, and
-            activity are recorded.
+            Some factors are estimates until attendance, dues, tasks, and
+            activity are recorded. They are not live AI scores.
           </p>
         ) : null}
       </div>

@@ -38,14 +38,6 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
     # Root & health
     EndpointAuthRule("GET", "/", "API root message", "public", "none"),
     EndpointAuthRule("GET", "/health", "Liveness check", "public", "none"),
-    EndpointAuthRule(
-        "GET",
-        "/health/frontend-url-debug",
-        "Debug FRONTEND_URL resolution",
-        "board",
-        "require_board",
-        object_rules="Strip before production",
-    ),
     # Auth
     EndpointAuthRule(
         "POST", "/api/v1/auth/register", "Register pending member", "public", "none"
@@ -78,6 +70,20 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
         "Confirm password reset",
         "public",
         "none; valid reset token",
+    ),
+    EndpointAuthRule(
+        "POST",
+        "/api/v1/auth/verify-email",
+        "Confirm email verification token",
+        "public",
+        "none; valid verification token",
+    ),
+    EndpointAuthRule(
+        "POST",
+        "/api/v1/auth/verify-email/resend",
+        "Resend email verification link",
+        "public",
+        "none; identical response for unknown email",
     ),
     # Members
     EndpointAuthRule(

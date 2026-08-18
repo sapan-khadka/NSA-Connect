@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.permissions import member_has_role_at_least
 from app.models.event import Event, EventType
 from app.models.meeting import MeetingAttendance, MeetingAttendanceStatus
 from app.models.member import Member, MemberRole, MemberStatus
@@ -25,7 +26,7 @@ def can_view_member_meeting_streak(viewer: Member, member_id: int) -> bool:
     """Self or board+ — same visibility tier as check-in activity."""
     if viewer.id == member_id:
         return True
-    return viewer.has_role_at_least(MemberRole.BOARD)
+    return member_has_role_at_least(viewer, MemberRole.BOARD)
 
 
 def get_member_consecutive_missed_meetings(
@@ -42,8 +43,8 @@ def get_member_consecutive_missed_meetings(
     except MemberNotFoundError:
         raise
 
-    if subject.status != MemberStatus.APPROVED and not viewer.has_role_at_least(
-        MemberRole.BOARD,
+    if subject.status != MemberStatus.APPROVED and not member_has_role_at_least(
+        viewer, MemberRole.BOARD
     ):
         raise MemberNotFoundError
 

@@ -15,7 +15,7 @@ import {
 import { buildHomeUrgencyLine } from "../../lib/home-urgency";
 import {
   canManageTreasury,
-  canViewMemberDirectory,
+  viewerCanManageMembers,
 } from "../../lib/roles";
 import { AppIcon } from "../ui/AppIcon";
 import { ArrowLink } from "../ui/ArrowLink";
@@ -439,7 +439,7 @@ export function buildWelcomeUrgency({
   nextEvent: EventResponse | null;
   member: MemberResponse;
 }): string {
-  const canReviewMembers = canViewMemberDirectory(member.role);
+  const canReviewMembers = viewerCanManageMembers(member);
   const canReviewFinance = canManageTreasury(member.role, member.position);
   const pendingReviewCount =
     (canReviewMembers ? pendingMemberApprovals : 0) +
@@ -462,7 +462,7 @@ export function getPendingReviewCount({
   pendingMemberApprovals: number;
   financePendingCount: number;
 }): number {
-  const members = canViewMemberDirectory(member.role)
+  const members = viewerCanManageMembers(member)
     ? pendingMemberApprovals
     : 0;
   const finance = canManageTreasury(member.role, member.position)
@@ -473,7 +473,7 @@ export function getPendingReviewCount({
 
 export function canShowNeedsReview(member: MemberResponse): boolean {
   return (
-    canViewMemberDirectory(member.role) ||
+    viewerCanManageMembers(member) ||
     canManageTreasury(member.role, member.position)
   );
 }
@@ -487,7 +487,7 @@ export function getNeedsReviewPath({
   pendingMemberApprovals: number;
   financePendingCount: number;
 }): string {
-  const canReviewMembers = canViewMemberDirectory(member.role);
+  const canReviewMembers = viewerCanManageMembers(member);
   const canReviewFinance = canManageTreasury(member.role, member.position);
   if (canReviewMembers && pendingMemberApprovals > 0) {
     return "/members?tab=pending";

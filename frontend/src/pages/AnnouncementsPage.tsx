@@ -37,7 +37,7 @@ import {
   type AnnouncementCategory,
 } from "../lib/announcements-api";
 import { formatEventDateTime } from "../lib/format-datetime";
-import { isRoleAtLeast } from "../lib/roles";
+import { memberSatisfiesMinRole } from "../lib/roles";
 import { AppIcon } from "../components/ui/AppIcon";
 import { Button } from "../components/ui/Button";
 import { inputFieldClassName } from "../components/ui/Input";
@@ -598,7 +598,7 @@ export function AnnouncementsPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FeedFilter>("all");
 
-  const canManage = member ? isRoleAtLeast(member.role, "board") : false;
+  const canManage = member ? memberSatisfiesMinRole(member, "board") : false;
 
   useEffect(() => {
     let cancelled = false;

@@ -121,17 +121,24 @@ export function RegisterPage() {
         {isComplete ? (
           <>
             <header className="guest-auth-header">
-              <p className="guest-card-kicker">Submitted</p>
-              <h1>Registration submitted</h1>
+              <p className="guest-card-kicker">Check your email</p>
+              <h1>Verify your school email</h1>
               <p className="guest-auth-lede">
-                Your account is pending board approval. You&apos;ll be able to
-                sign in once a board member approves your registration.
+                We sent a verification link to{" "}
+                <strong>{values.email.trim().toLowerCase()}</strong>. Open that
+                link to prove you own the inbox. After verification, a board
+                member still needs to approve student accounts before you can
+                sign in.
               </p>
             </header>
             <div className="guest-auth-actions">
               <Link to="/login" className="guest-btn guest-btn-block">
                 Go to login
               </Link>
+              <p className="guest-auth-footer">
+                Didn&apos;t get it? Check spam, then use Resend on the login
+                page after trying to sign in.
+              </p>
             </div>
           </>
         ) : step === 1 ? (
@@ -140,8 +147,9 @@ export function RegisterPage() {
               <p className="guest-card-kicker">Step 1 of 2</p>
               <h1>Create your account</h1>
               <p className="guest-auth-lede">
-                Use your @{SEMO_EMAIL_DOMAIN} email. A board member approves new
-                accounts before you can sign in.
+                Use your @{SEMO_EMAIL_DOMAIN} email (chapter owner accounts use
+                the address your board configured). You must verify that inbox
+                before a board member can approve your account.
               </p>
             </header>
 

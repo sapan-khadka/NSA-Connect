@@ -53,7 +53,7 @@ import {
 import { fetchMembers } from "../lib/members-api";
 import {
   buildPositionHolders,
-  canViewMemberDirectory,
+  viewerCanManageMembers,
 } from "../lib/roles";
 import { EditMemberDrawer } from "./EditMemberDrawer";
 import { MembersBulkActionBar } from "./MembersBulkActionBar";
@@ -621,9 +621,7 @@ export function MembersTable({
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
-  const canEditMembers = Boolean(
-    currentMember && canViewMemberDirectory(currentMember.role),
-  );
+  const canEditMembers = viewerCanManageMembers(currentMember);
   /** Multi-select is desktop-table only — mobile keeps a clean dense list. */
   const bulkSelectionEnabled = enableBulkSelection && !isMobile;
   const isControlled = controlledMembers !== undefined;

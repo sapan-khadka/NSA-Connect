@@ -10,6 +10,7 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.permissions import member_has_role_at_least
 from app.models.discussion_message import DiscussionMessage
 from app.models.discussion_room_archive import DiscussionRoomArchive
 from app.models.discussion_room_mute import DiscussionRoomMute
@@ -80,7 +81,7 @@ def assert_can_access_room(
 ) -> tuple[str, int | None]:
     kind, ref_id = parse_discussion_room_id(room_id)
     if kind == "board":
-        if not member.has_role_at_least(MemberRole.BOARD):
+        if not member_has_role_at_least(member, MemberRole.BOARD):
             raise DiscussionForbiddenError
         return kind, ref_id
 
@@ -719,7 +720,7 @@ def list_discussion_inbox(
     archived_ids = _archived_system_room_ids(db)
     peer_ids_for_presence: list[int] = []
 
-    if member.has_role_at_least(MemberRole.BOARD):
+    if member_has_role_at_least(member, MemberRole.BOARD):
         latest = _latest_message(db, event_id=None)
         if latest is not None and BOARD_ROOM_KEY not in archived_ids:
             room_id = BOARD_ROOM_KEY
@@ -772,7 +773,7 @@ def list_discussion_inbox(
     )
 
     accessible_event_ids: set[int] = set()
-    if member.has_role_at_least(MemberRole.BOARD):
+    if member_has_role_at_least(member, MemberRole.BOARD):
         accessible_event_ids = {int(eid) for eid in event_ids_with_messages if eid}
     else:
         volunteer_event_ids = set(
@@ -852,7 +853,7 @@ def list_discussion_inbox(
     from app.models.discussion_room import DiscussionRoomKind
     from app.services.discussion_room_service import list_live_rooms_for_member
 
-    is_board = member.has_role_at_least(MemberRole.BOARD)
+    is_board = member_has_role_at_least(member, MemberRole.BOARD)
     dm_peer_by_room: dict[str, int] = {}
     for custom in list_live_rooms_for_member(db, member=member):
         is_dm = custom.kind == DiscussionRoomKind.DM

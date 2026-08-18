@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from conftest import (
     auth_header,
     create_board_member,
@@ -23,6 +25,7 @@ def _add_pending_member(db_session) -> Member:
         graduation_year=2028,
         hashed_password=hash_password("Password1!"),
         status=MemberStatus.PENDING,
+        email_verified_at=datetime.now(UTC),
     )
     db_session.add(pending)
     db_session.commit()
@@ -99,6 +102,19 @@ def test_board_summary_includes_pending_members_and_suggestions(client, db_sessi
     assert body["suggestions_pending"] == 1
     assert body["finance_pending"] == 0
     assert body["attention_total"] >= 2
+
+
+def test_unverified_pending_signup_is_not_in_summary(client, db_session):
+    create_board_member(db_session)
+    register_member(client, email="ghost@semo.edu", student_id="33333333")
+
+    response = client.get(
+        "/api/v1/notifications/summary",
+        headers=auth_header(client, email="board@semo.edu"),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["members_pending"] == 0
 
 
 def test_summary_requires_auth(client):

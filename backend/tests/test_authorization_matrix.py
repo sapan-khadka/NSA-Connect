@@ -172,7 +172,13 @@ def auth_matrix_client(auth_matrix_db: Session):
 
 
 def _create_approved_general_member(db_session: Session) -> Member:
+    from datetime import UTC, datetime
+
     from app.core.security import hash_password
+    from app.services.organization_context import (
+        ensure_membership_for_member,
+        get_default_university_id,
+    )
 
     member = Member(
         full_name="Sapan Khadka",
@@ -183,10 +189,13 @@ def _create_approved_general_member(db_session: Session) -> Member:
         hashed_password=hash_password(VALID_PASSWORD),
         role=MemberRole.GENERAL,
         status=MemberStatus.APPROVED,
+        email_verified_at=datetime.now(UTC),
+        university_id=get_default_university_id(db_session),
     )
     db_session.add(member)
     db_session.commit()
     db_session.refresh(member)
+    ensure_membership_for_member(db_session, member)
     return member
 
 
@@ -274,7 +283,7 @@ def test_no_restricted_endpoints_marked_skip_probe():
 
 
 def test_all_restricted_endpoints_have_probe_definitions():
-    assert len(RESTRICTED_ENDPOINT_RULES) == 115
+    assert len(RESTRICTED_ENDPOINT_RULES) == 114
 
 
 @pytest.mark.parametrize(

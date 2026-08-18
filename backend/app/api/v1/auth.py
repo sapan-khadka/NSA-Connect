@@ -22,6 +22,9 @@ from app.core.security import (
 from app.models.member import Member
 from app.models.organization import Organization
 from app.schemas.auth import (
+    EmailVerificationConfirmRequest,
+    EmailVerificationRequest,
+    EmailVerificationResponse,
     PasswordResetConfirmRequest,
     PasswordResetRequest,
     PasswordResetRequestResponse,
@@ -31,13 +34,24 @@ from app.schemas.auth import (
 from app.schemas.member import MemberCreateRequest, MemberLoginRequest, MemberResponse
 from app.services.member_service import (
     InvalidCredentialsError,
+    InvalidRegistrationEmailError,
     MemberAlreadyExistsError,
+    MemberEmailNotVerifiedError,
     MemberNotApprovedError,
     StudentIdAlreadyExistsError,
+    StudentIdRequiredError,
     authenticate_member,
     create_member,
 )
 from app.services.organization_context import get_default_organization
+from app.services.email_verification_service import (
+    EMAIL_VERIFICATION_INVALID_TOKEN_MESSAGE,
+    EMAIL_VERIFICATION_REQUEST_MESSAGE,
+    EMAIL_VERIFICATION_SUCCESS_MESSAGE,
+    InvalidEmailVerificationTokenError,
+    request_email_verification,
+    verify_email_with_token,
+)
 from app.services.password_reset_service import (
     PASSWORD_RESET_INVALID_TOKEN_MESSAGE,
     PASSWORD_RESET_REQUEST_MESSAGE,
@@ -72,6 +86,16 @@ def register(
             status_code=status.HTTP_409_CONFLICT,
             detail="Student ID already registered",
         ) from None
+    except StudentIdRequiredError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Student ID is required",
+        ) from None
+    except InvalidRegistrationEmailError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=exc.message,
+        ) from None
     except WeakPasswordError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -104,6 +128,11 @@ def login(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
+        ) from None
+    except MemberEmailNotVerifiedError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Verify your email before signing in",
         ) from None
     except MemberNotApprovedError:
         raise HTTPException(
@@ -210,6 +239,43 @@ def me(
         viewer=current_member,
         organization=current_organization,
     )
+
+
+@router.post("/verify-email", response_model=EmailVerificationResponse)
+def verify_email(
+    data: EmailVerificationConfirmRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        verify_email_with_token(db, data.token)
+    except InvalidEmailVerificationTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=EMAIL_VERIFICATION_INVALID_TOKEN_MESSAGE,
+        ) from None
+    return EmailVerificationResponse(message=EMAIL_VERIFICATION_SUCCESS_MESSAGE)
+
+
+@router.post(
+    "/verify-email/resend",
+    response_model=EmailVerificationResponse,
+)
+@limit(f"{settings.RATE_LIMIT_PASSWORD_RESET_IP_MAX}/hour")
+def resend_verification_email(
+    request: Request,
+    data: EmailVerificationRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        check_password_reset_email_limit(data.email)
+    except AppRateLimitExceeded as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=exc.detail,
+        ) from None
+
+    request_email_verification(db, data.email)
+    return EmailVerificationResponse(message=EMAIL_VERIFICATION_REQUEST_MESSAGE)
 
 
 @router.post("/password-reset/request", response_model=PasswordResetRequestResponse)

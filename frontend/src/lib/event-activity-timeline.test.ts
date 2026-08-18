@@ -22,10 +22,11 @@ describe("event-activity-timeline", () => {
     ).toBe("2 minutes ago");
   });
 
-  it("groups items by day newest first", () => {
+  it("groups real signal items by day newest first", () => {
     const items = buildEventActivityTimeline({
       event: createMockEventDetailResponse({
         event_photo_url: "https://example.com/p.jpg",
+        starts_at: "2030-06-15T18:00:00",
       }),
       volunteerCount: 2,
       hasBudget: true,
@@ -34,8 +35,27 @@ describe("event-activity-timeline", () => {
     const groups = groupEventActivityByDay(items, now);
 
     expect(groups[0]?.label).toBe("Today");
-    expect(items.some((item) => item.title === "Budget updated")).toBe(true);
-    expect(items.some((item) => item.title === "Volunteer assigned")).toBe(true);
-    expect(items.some((item) => item.isPlaceholder)).toBe(true);
+    expect(items.some((item) => item.title === "Budget assigned")).toBe(true);
+    expect(items.some((item) => item.title === "Volunteers signed up")).toBe(
+      true,
+    );
+    expect(items.some((item) => item.isPlaceholder)).toBe(false);
+    expect(items.some((item) => item.title === "Reminder email sent")).toBe(
+      false,
+    );
+  });
+
+  it("omits invented rows when signals are missing", () => {
+    const items = buildEventActivityTimeline({
+      event: createMockEventDetailResponse({
+        event_photo_url: null,
+        starts_at: "2030-06-20T18:00:00",
+      }),
+      volunteerCount: 0,
+      hasBudget: false,
+      now,
+    });
+    expect(items).toHaveLength(1);
+    expect(items[0]?.kind).toBe("schedule");
   });
 });

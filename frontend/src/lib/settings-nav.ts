@@ -1,4 +1,4 @@
-import { isRoleAtLeast, type MemberRole } from "./roles";
+import { memberSatisfiesMinRole, type MemberRole } from "./roles";
 
 export type SettingsNavGroupId = "account" | "chapter";
 
@@ -15,8 +15,11 @@ export type SettingsNavGroup = {
   items: SettingsNavItem[];
 };
 
-export function canAccessEmailIntegration(role: MemberRole): boolean {
-  return isRoleAtLeast(role, "board");
+export function canAccessEmailIntegration(
+  role: MemberRole,
+  isOrgOwner = false,
+): boolean {
+  return memberSatisfiesMinRole({ role, is_org_owner: isOrgOwner }, "board");
 }
 
 const SETTINGS_NAV_GROUPS: { id: SettingsNavGroupId; label: string }[] = [
@@ -37,14 +40,21 @@ const SETTINGS_NAV: SettingsNavItem[] = [
   { id: "email", label: "Email", to: "/settings/email", group: "chapter" },
 ];
 
-export function getSettingsNavItems(role: MemberRole): SettingsNavItem[] {
+export function getSettingsNavItems(
+  role: MemberRole,
+  isOrgOwner = false,
+): SettingsNavItem[] {
   return SETTINGS_NAV.filter(
-    (item) => item.group !== "chapter" || canAccessEmailIntegration(role),
+    (item) =>
+      item.group !== "chapter" || canAccessEmailIntegration(role, isOrgOwner),
   );
 }
 
-export function getSettingsNavGroups(role: MemberRole): SettingsNavGroup[] {
-  const items = getSettingsNavItems(role);
+export function getSettingsNavGroups(
+  role: MemberRole,
+  isOrgOwner = false,
+): SettingsNavGroup[] {
+  const items = getSettingsNavItems(role, isOrgOwner);
   return SETTINGS_NAV_GROUPS.map((group) => ({
     ...group,
     items: items.filter((item) => item.group === group.id),

@@ -140,8 +140,9 @@ Platform → University (SEMO) → Organization (NSA) → members, events, tasks
 
 - **Auth authority:** `OrganizationMembership` (role / status / position / `is_org_owner`) is the source of truth for org capabilities; `users.*` is dual-written during the transition.
 - **Default path:** Login → SEMO user (email domain from `University.email_domain`) → NSA membership → dashboard. No org/university switcher.
-- **Org owner:** System flag on membership (`is_org_owner`), distinct from President. Seeded for NSA (migration + `python -m scripts.ensure_org_owner`). Owner∪president permissions are unioned when the same person holds both.
-- **Empty-org bootstrap:** If the default org has **zero approved members**, the first successful registration becomes approved president + org owner so the chapter is never stuck pending forever. If any approved member already exists (normal SEMO/NSA), new signups stay pending for board approval — existing members and data are never deleted.
+- **Org owner allowlist:** Set `ORG_OWNER_EMAILS` (comma-separated, e.g. `nsa.connect@gmail.com`) so that address can register/login outside `@semo.edu` and become `is_org_owner`. The owner is **not** the chapter president — they approve members and appoint a president. All other accounts must use the university domain and stay pending until a board/owner approves them.
+- **Org owner:** System flag on membership (`is_org_owner`), distinct from President. Seeded for NSA (migration + `python -m scripts.ensure_org_owner`). Owner∪president permissions are unioned only when the same person holds both.
+- **Empty-org bootstrap:** When `ORG_OWNER_EMAILS` is set, only those emails are auto-approved as org owner (general role, no president seat). When unset (dev/legacy), the first registrant on an org with **zero approved members** becomes org owner the same way. Existing members and data are never deleted.
 - **Do not build yet:** custom RBAC UI, org/uni switchers, multi-org membership UX, university admin dashboards, public org claim flows.
 
 Services must resolve the active org via `get_current_organization` / `resolve_organization_id` / `get_default_organization_id` — never hardcode org id `1` or the `"nsa"` slug outside seed helpers.
@@ -319,6 +320,23 @@ python -m scripts.seed_demo_data
 ```
 
 Creates sample events and finance entries (skips if entries already exist).
+
+### Seed chapter org owner (production pilot)
+
+```bash
+cd backend
+export ORG_OWNER_EMAILS=nsa.connect@gmail.com
+export ORG_OWNER_PASSWORD='…strong password…'
+python -m scripts.seed_chapter_owner
+```
+
+See [PRODUCTION.md](PRODUCTION.md) and [BOARD_RUNBOOK.md](BOARD_RUNBOOK.md).
+
+---
+
+## Production
+
+Deploy checklist: [PRODUCTION.md](PRODUCTION.md). Backups: [BACKUPS.md](BACKUPS.md). Board ops: [BOARD_RUNBOOK.md](BOARD_RUNBOOK.md).
 
 ---
 

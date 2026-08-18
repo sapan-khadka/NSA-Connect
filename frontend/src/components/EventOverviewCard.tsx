@@ -26,7 +26,7 @@ import {
   type FinanceEventBudgetSummary,
 } from "../lib/finance-api";
 import { getFestivalsOnDate } from "../lib/nepali-calendar";
-import { isRoleAtLeast } from "../lib/roles";
+import { memberSatisfiesMinRole } from "../lib/roles";
 import {
   DetailsActions,
   DetailsEmptyState,
@@ -120,7 +120,7 @@ export function EventOverviewCard({
   showingDefaultUpcoming = false,
 }: EventOverviewCardProps) {
   const { member } = useAuth();
-  const canManage = member ? isRoleAtLeast(member.role, "board") : false;
+  const canManage = member ? memberSatisfiesMinRole(member, "board") : false;
   const previewEvent =
     eventDetail ??
     dayEvents.find((event) => event.id === selectedEventId) ??

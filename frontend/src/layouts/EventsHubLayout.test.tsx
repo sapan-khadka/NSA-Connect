@@ -242,6 +242,23 @@ describe("EventsHubLayout", () => {
     expect(nav.getByRole("link", { name: /^Ideas/ })).toBeInTheDocument();
   });
 
+  it("shows Meetings for org owners with a general role", async () => {
+    renderWithRouter(undefined, {
+      initialEntries: ["/events/calendar"],
+      auth: {
+        member: createMockMember("general", { is_org_owner: true }),
+        isAuthenticated: true,
+      },
+    });
+
+    const nav = await eventsNav();
+    expect(nav.getByRole("link", { name: /Meetings/ })).toHaveAttribute(
+      "href",
+      "/events/meetings",
+    );
+    expect(nav.queryByRole("link", { name: /Oversight/ })).not.toBeInTheDocument();
+  });
+
   it("hides the tab bar on event manage pages", async () => {
     renderWithRouter(undefined, {
       initialEntries: ["/events/1/manage"],

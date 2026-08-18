@@ -23,9 +23,9 @@ import { getApiErrorMessage } from "../../lib/api-error";
 import { memberMailtoHref } from "../../lib/member-mailto";
 import { openDirectMessage } from "../../lib/open-direct-message";
 import {
-  canViewMemberDirectory,
   formatRoleLabel,
   isMemberRole,
+  viewerCanManageMembers,
 } from "../../lib/roles";
 import { EditMemberDrawer } from "../EditMemberDrawer";
 import { AppIcon } from "../ui/AppIcon";
@@ -115,9 +115,7 @@ export function MemberWorkspaceHeader({
     ? String(member.graduation_year)
     : null;
   const mailtoHref = memberMailtoHref(member.email);
-  const canEdit = Boolean(
-    currentMember && canViewMemberDirectory(currentMember.role),
-  );
+  const canEdit = viewerCanManageMembers(currentMember);
   const isSelf = currentMember?.id === member.id;
   const roleLabel = isMemberRole(member.role)
     ? formatRoleLabel(member.role)

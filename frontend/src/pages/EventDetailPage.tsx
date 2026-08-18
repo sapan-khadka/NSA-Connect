@@ -37,7 +37,7 @@ import { fetchAssignableMembers } from "../lib/members-api";
 import type { MemberResponse } from "../lib/auth-api";
 import {
   canManageEventTasks,
-  isRoleAtLeast,
+  memberSatisfiesMinRole,
 } from "../lib/roles";
 
 import { fetchMyEventTasks } from "../lib/event-tasks-api";
@@ -67,7 +67,7 @@ export function EventDetailPage() {
     useState<EventAttendanceSummary | null>(null);
   const [hasMyTasksForEvent, setHasMyTasksForEvent] = useState(false);
 
-  const canViewBoard = member ? isRoleAtLeast(member.role, "board") : false;
+  const canViewBoard = member ? memberSatisfiesMinRole(member, "board") : false;
   const canManageTasks = member
     ? canManageEventTasks(member.role, member.position)
     : false;

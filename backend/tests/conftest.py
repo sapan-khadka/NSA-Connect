@@ -51,6 +51,9 @@ def _test_settings(base_settings):
             "CLOUDINARY_API_SECRET": "test-secret",
             "AI_ENABLED": False,
             "OPENAI_API_KEY": "test-openai-key",
+            # Do not inherit developer .env allowlist into suite defaults.
+            "ORG_OWNER_EMAILS": "",
+            "SKIP_EMAIL_VERIFICATION": False,
         }
     )
 
@@ -256,12 +259,27 @@ def set_member_approved(db_session: Session, email=VALID_EMAIL):
     this helper want a regular approved member, so reset role/position after
     approval.
     """
+    from datetime import UTC, datetime
+
     member = db_session.scalar(select(Member).where(Member.email == email))
     member.status = MemberStatus.APPROVED
     member.role = MemberRole.GENERAL
     member.position = MemberPosition.MEMBER
+    if member.email_verified_at is None:
+        member.email_verified_at = datetime.now(UTC)
     sync_membership_from_member(db_session, member)
     db_session.commit()
+
+
+def mark_email_verified(db_session: Session, email=VALID_EMAIL):
+    """Mark a registered member's email as verified (test helper)."""
+    from datetime import UTC, datetime
+
+    member = db_session.scalar(select(Member).where(Member.email == email))
+    assert member is not None
+    if member.email_verified_at is None:
+        member.email_verified_at = datetime.now(UTC)
+        db_session.commit()
 
 
 def create_board_member(
@@ -270,6 +288,8 @@ def create_board_member(
     password=VALID_PASSWORD,
     student_id="87654321",
 ):
+    from datetime import UTC, datetime
+
     from app.core.security import hash_password
     from app.models.member import MemberRole
 
@@ -282,6 +302,7 @@ def create_board_member(
         hashed_password=hash_password(password),
         role=MemberRole.BOARD,
         status=MemberStatus.APPROVED,
+        email_verified_at=datetime.now(UTC),
         university_id=get_default_university_id(db_session),
     )
     db_session.add(member)
@@ -297,6 +318,8 @@ def create_vice_president_member(
     password=VALID_PASSWORD,
     student_id="76543210",
 ):
+    from datetime import UTC, datetime
+
     from app.core.security import hash_password
     from app.models.member import MemberPosition, MemberRole
 
@@ -310,6 +333,7 @@ def create_vice_president_member(
         role=MemberRole.BOARD,
         position=MemberPosition.VICE_PRESIDENT,
         status=MemberStatus.APPROVED,
+        email_verified_at=datetime.now(UTC),
         university_id=get_default_university_id(db_session),
     )
     db_session.add(member)
@@ -325,6 +349,8 @@ def create_president_member(
     password=VALID_PASSWORD,
     student_id="99887766",
 ):
+    from datetime import UTC, datetime
+
     from app.core.security import hash_password
     from app.models.member import MemberRole
     from app.services.organization_context import ensure_nsa_org_owner
@@ -338,6 +364,7 @@ def create_president_member(
         hashed_password=hash_password(password),
         role=MemberRole.PRESIDENT,
         status=MemberStatus.APPROVED,
+        email_verified_at=datetime.now(UTC),
         university_id=get_default_university_id(db_session),
     )
     db_session.add(member)
@@ -354,6 +381,8 @@ def create_treasurer_member(
     password=VALID_PASSWORD,
     student_id="55443322",
 ):
+    from datetime import UTC, datetime
+
     from app.core.security import hash_password
     from app.models.member import MemberRole
 
@@ -366,6 +395,7 @@ def create_treasurer_member(
         hashed_password=hash_password(password),
         role=MemberRole.TREASURER,
         status=MemberStatus.APPROVED,
+        email_verified_at=datetime.now(UTC),
         university_id=get_default_university_id(db_session),
     )
     db_session.add(member)

@@ -51,11 +51,11 @@ import {
 import { openDirectMessage } from "../lib/open-direct-message";
 import {
   canManageEventTasks,
-  canViewMemberDirectory,
   canViewTaskOversight,
   formatMemberPositionLabel,
   isMemberRole,
   memberHoldsBoardSeat,
+  viewerCanManageMembers,
 } from "../lib/roles";
 import { AppIcon } from "./ui/AppIcon";
 
@@ -232,9 +232,7 @@ export function MemberQuickViewDrawer({
       currentMember &&
         canManageEventTasks(currentMember.role, currentMember.position),
     );
-    const viewerIsBoard = Boolean(
-      currentMember && canViewMemberDirectory(currentMember.role),
-    );
+    const viewerIsBoard = viewerCanManageMembers(currentMember);
     const memberRole = isMemberRole(member.role) ? member.role : "general";
 
     void (async () => {

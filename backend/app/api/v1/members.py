@@ -20,6 +20,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.dependencies import get_current_member, require_board, require_president
 from app.core.password_validation import WeakPasswordError
+from app.core.permissions import member_has_role_at_least
 from app.core.rate_limit import change_password_key, limit
 from app.core.security import create_token_pair
 from app.integrations.cloudinary_client import CloudinaryUploadError
@@ -108,8 +109,8 @@ from app.services.member_service import (
     get_member_by_id,
     list_assignable_approved_members,
     list_assignable_board_members,
-    list_members_by_status,
     list_members_paginated,
+    list_pending_members_for_approval,
     reject_member,
     update_member_board_role,
     update_member_profile,
@@ -147,15 +148,17 @@ def list_members(
     current_member: Member = Depends(get_current_member),
     db: Session = Depends(get_db),
 ):
-    if status is not None and not current_member.has_role_at_least(MemberRole.BOARD):
+    if status is not None and not member_has_role_at_least(
+        current_member, MemberRole.BOARD
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only board members can filter by status",
         )
 
     effective_status = status
-    if effective_status is None and not current_member.has_role_at_least(
-        MemberRole.BOARD
+    if effective_status is None and not member_has_role_at_least(
+        current_member, MemberRole.BOARD
     ):
         effective_status = MemberStatus.APPROVED
 
@@ -315,7 +318,7 @@ def list_pending_members(
     current_member: Member = Depends(require_board),
     db: Session = Depends(get_db),
 ):
-    members = list_members_by_status(db, MemberStatus.PENDING)
+    members = list_pending_members_for_approval(db)
     return MemberListResponse(
         members=[
             MemberResponse.from_member(member, viewer=current_member)
@@ -573,8 +576,8 @@ def get_member_activity_endpoint(
             detail="Member not found",
         ) from None
 
-    if subject.status != MemberStatus.APPROVED and not current_member.has_role_at_least(
-        MemberRole.BOARD,
+    if subject.status != MemberStatus.APPROVED and not member_has_role_at_least(
+        current_member, MemberRole.BOARD
     ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -949,8 +952,8 @@ def get_member_endpoint(
             detail="Member not found",
         ) from None
 
-    if member.status != MemberStatus.APPROVED and not current_member.has_role_at_least(
-        MemberRole.BOARD,
+    if member.status != MemberStatus.APPROVED and not member_has_role_at_least(
+        current_member, MemberRole.BOARD
     ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

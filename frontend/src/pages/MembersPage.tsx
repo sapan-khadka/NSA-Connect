@@ -52,8 +52,9 @@ import {
 } from "../lib/members-api";
 import {
   canManageTreasury,
-  canViewMemberDirectory,
   memberHoldsBoardSeat,
+  memberSatisfiesMinRole,
+  viewerCanManageMembers,
 } from "../lib/roles";
 import { getCurrentSemesterSlug } from "../lib/semester";
 
@@ -154,7 +155,7 @@ function MembersManageMenu({
                 onManagePositions();
               }}
             >
-              Board positions
+              Custom titles
             </button>
           ) : null}
           <button
@@ -210,9 +211,7 @@ export function MembersPage() {
   const userChoseSegment = useRef(false);
   const autoFocusedPending = useRef(false);
 
-  const canReviewMembers = Boolean(
-    currentMember && canViewMemberDirectory(currentMember.role),
-  );
+  const canReviewMembers = viewerCanManageMembers(currentMember);
   const [segment, setSegment] = useState<MembersSegment>(() =>
     searchParams.get("tab") === "pending" && canReviewMembers
       ? "attention"
@@ -236,7 +235,9 @@ export function MembersPage() {
     currentMember &&
       canManageTreasury(currentMember.role, currentMember.position),
   );
-  const canManagePositions = currentMember?.role === "president";
+  const canManagePositions = Boolean(
+    currentMember && memberSatisfiesMinRole(currentMember, "president"),
+  );
   const canManageDirectory = canReviewMembers;
 
   useEffect(() => {

@@ -16,7 +16,7 @@ import {
 } from "../context/NotificationSummaryProvider";
 import { useAuth } from "../context/useAuth";
 import {
-  canViewMemberDirectory,
+  memberSatisfiesMinRole,
   canViewTaskOversight,
 } from "../lib/roles";
 
@@ -51,7 +51,7 @@ function buildEventsTabs(
 
   const more: EventsTab[] = [];
 
-  if (canViewMemberDirectory(member.role)) {
+  if (memberSatisfiesMinRole(member, "board")) {
     primary.push({ label: "Meetings", to: "/events/meetings" });
   }
 
@@ -72,7 +72,7 @@ function buildEventsTabs(
     badgeCount: counts.suggestions,
   });
 
-  if (canViewMemberDirectory(member.role)) {
+  if (memberSatisfiesMinRole(member, "board")) {
     more.push({ label: "Past events", to: "/events/past" });
   }
 
@@ -335,7 +335,7 @@ export function EventsHubLayout() {
 
   const myTasksCount = summary.tasks_overdue + summary.tasks_due_today;
   const suggestionsCount = member
-    ? canViewMemberDirectory(member.role)
+    ? memberSatisfiesMinRole(member, "board")
       ? summary.suggestions_pending
       : 0
     : 0;

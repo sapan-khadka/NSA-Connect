@@ -26,7 +26,7 @@ import {
   type EventResponse,
   type RsvpStatus,
 } from "../lib/events-api";
-import { isRoleAtLeast } from "../lib/roles";
+import { memberSatisfiesMinRole } from "../lib/roles";
 
 const UPCOMING_FETCH_LIMIT = 100;
 
@@ -86,7 +86,7 @@ export function EventsPage() {
       }
     }
 
-    if (createParam === "1" && member && isRoleAtLeast(member.role, "board")) {
+    if (createParam === "1" && member && memberSatisfiesMinRole(member, "board")) {
       setCreateModalOpen(true);
       navigate("/events/calendar", { replace: true });
     }

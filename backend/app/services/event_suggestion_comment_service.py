@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.permissions import member_has_role_at_least
 from app.models.event_suggestion import EventSuggestionStatus
 from app.models.event_suggestion_comment import (
     DELETED_IDEA_COMMENT_PLACEHOLDER,
@@ -62,8 +63,8 @@ def _assert_channel_access(
     member: Member,
     channel: EventSuggestionCommentChannel,
 ) -> None:
-    if channel == EventSuggestionCommentChannel.BOARD and not member.has_role_at_least(
-        MemberRole.BOARD
+    if channel == EventSuggestionCommentChannel.BOARD and not member_has_role_at_least(
+        member, MemberRole.BOARD
     ):
         raise EventSuggestionCommentForbiddenError
 
@@ -173,8 +174,8 @@ def soft_delete_event_suggestion_comment(
 
     _assert_channel_access(member=member, channel=comment.channel)
 
-    can_delete = comment.author_id == member.id or member.has_role_at_least(
-        MemberRole.BOARD
+    can_delete = comment.author_id == member.id or member_has_role_at_least(
+        member, MemberRole.BOARD
     )
     if not can_delete:
         raise EventSuggestionCommentForbiddenError

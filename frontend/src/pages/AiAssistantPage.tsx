@@ -4,7 +4,7 @@ import { ChatPanel } from "../components/chat/ChatPanel";
 import { NsaDocumentsPanel } from "../components/NsaDocumentsPanel";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { useAuth } from "../context/useAuth";
-import { isRoleAtLeast } from "../lib/roles";
+import { memberSatisfiesMinRole } from "../lib/roles";
 
 const STARTERS = [
   "Is Apsana an approved member?",
@@ -22,7 +22,7 @@ const ASSISTANT_TABS = [
 
 export function AiAssistantPage() {
   const { member } = useAuth();
-  const isBoard = member ? isRoleAtLeast(member.role, "board") : false;
+  const isBoard = member ? memberSatisfiesMinRole(member, "board") : false;
   const [tab, setTab] = useState<"chat" | "documents">("chat");
   const [starterQuery, setStarterQuery] = useState<string | null>(null);
 

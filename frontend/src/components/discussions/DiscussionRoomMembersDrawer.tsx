@@ -22,7 +22,7 @@ import { fetchAssignableMembers } from "../../lib/members-api";
 import { openDirectMessage } from "../../lib/open-direct-message";
 import {
   formatMemberPositionLabel,
-  isRoleAtLeast,
+  memberSatisfiesMinRole,
   type MemberPosition,
   type MemberRole,
 } from "../../lib/roles";
@@ -196,7 +196,7 @@ export function DiscussionRoomMembersDrawer({
   }, [open, roomId, isBoardMode, onLoaded]);
 
   const isBoard = Boolean(
-    currentMember && isRoleAtLeast(currentMember.role, "board"),
+    currentMember && memberSatisfiesMinRole(currentMember, "board"),
   );
   const isOwner = Boolean(
     currentMember &&

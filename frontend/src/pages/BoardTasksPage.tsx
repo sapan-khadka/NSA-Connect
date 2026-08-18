@@ -44,7 +44,7 @@ import {
   type KanbanColumnId,
   type KanbanTask,
 } from "../lib/kanban-status";
-import { isRoleAtLeast } from "../lib/roles";
+import { canManageEventTasks } from "../lib/roles";
 
 type LoadState =
   | { status: "loading" }
@@ -551,7 +551,9 @@ export function BoardTasksPage() {
   const [composeError, setComposeError] = useState<string | null>(null);
   const [composeEventsLoading, setComposeEventsLoading] = useState(false);
 
-  const canCreateTask = Boolean(member && isRoleAtLeast(member.role, "board"));
+  const canCreateTask = Boolean(
+    member && canManageEventTasks(member.role, member.position),
+  );
 
   const loadTasks = useCallback(async () => {
     setLoadState({ status: "loading" });

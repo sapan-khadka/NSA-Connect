@@ -95,6 +95,25 @@ describe("ProtectedRoute", () => {
     expect(screen.queryByText("Board dashboard content")).not.toBeInTheDocument();
   });
 
+  it("lets org owners open board-gated routes without a board role", () => {
+    render(
+      <MemoryRouter initialEntries={["/finance"]}>
+        <MockAuthProvider
+          value={{
+            member: createMockMember("general", { is_org_owner: true }),
+            isAuthenticated: true,
+          }}
+        >
+          <ProtectedRoute minRole="board">
+            <div>Treasury content</div>
+          </ProtectedRoute>
+        </MockAuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Treasury content")).toBeInTheDocument();
+  });
+
   it("redirects board members away from general-only routes to home", async () => {
     render(
       <MemoryRouter initialEntries={["/member"]}>

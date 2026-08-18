@@ -177,8 +177,21 @@ def member_has_any(member: Member, permissions: Iterable[Permission]) -> bool:
 
 
 def member_has_role_at_least(member: Member, minimum: MemberRole) -> bool:
-    """Membership-aware replacement for Member.has_role_at_least."""
-    return effective_role(member).is_at_least(minimum)
+    """Membership-aware replacement for Member.has_role_at_least.
+
+    Org owners satisfy general/board/president admin gates so they can approve
+    members and appoint a chapter president without holding the president seat.
+    They do not automatically satisfy treasurer write gates.
+    """
+    if effective_role(member).is_at_least(minimum):
+        return True
+    if not effective_is_org_owner(member):
+        return False
+    return minimum in {
+        MemberRole.GENERAL,
+        MemberRole.BOARD,
+        MemberRole.PRESIDENT,
+    }
 
 
 def can_manage_treasury(member: Member) -> bool:

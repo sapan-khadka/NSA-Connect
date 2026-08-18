@@ -22,9 +22,10 @@ def test_register_creates_member(client):
     assert data["student_id"] == VALID_STUDENT_ID
     assert data["major"] == VALID_MAJOR
     assert data["graduation_year"] == VALID_GRADUATION_YEAR
-    # Empty org: first registrant is auto-bootstrapped as owner/president.
-    assert data["role"] == "president"
+    # Empty org: first registrant is auto-bootstrapped as org owner (not president).
+    assert data["role"] == "general"
     assert data["status"] == "approved"
+    assert data.get("is_org_owner") is True
     assert "password" not in data
     assert "hashed_password" not in data
 

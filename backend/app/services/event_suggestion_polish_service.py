@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
+from app.core.permissions import member_has_role_at_least
 from app.models.event_suggestion import EventSuggestion, EventSuggestionStatus
 from app.models.event_suggestion_comment import (
     EventSuggestionComment,
@@ -557,7 +558,7 @@ def create_event_suggestion_poll(
     board_member: Member,
     data: EventSuggestionPollCreateRequest,
 ) -> EventSuggestionPollResponse:
-    if not board_member.has_role_at_least(MemberRole.BOARD):
+    if not member_has_role_at_least(board_member, MemberRole.BOARD):
         raise EventSuggestionPollError
     suggestion = get_event_suggestion(
         db, suggestion_id=suggestion_id, member=board_member
@@ -592,7 +593,7 @@ def apply_idea_feedback_package(
     commit: bool = True,
 ) -> list[EventSuggestionPollResponse]:
     """Create preset polls for a published idea. Attendance is always available."""
-    if not board_member.has_role_at_least(MemberRole.BOARD):
+    if not member_has_role_at_least(board_member, MemberRole.BOARD):
         raise EventSuggestionPollError
     suggestion = get_event_suggestion(
         db, suggestion_id=suggestion_id, member=board_member
@@ -705,7 +706,7 @@ def close_event_suggestion_poll(
     board_member: Member,
     poll_id: int | None = None,
 ) -> EventSuggestionPollResponse:
-    if not board_member.has_role_at_least(MemberRole.BOARD):
+    if not member_has_role_at_least(board_member, MemberRole.BOARD):
         raise EventSuggestionPollError
     get_event_suggestion(db, suggestion_id=suggestion_id, member=board_member)
     poll = _load_poll(db, suggestion_id=suggestion_id, poll_id=poll_id)

@@ -10,7 +10,7 @@ import type { MyTasksSummary } from "../../lib/home-tasks";
 import { fetchMembers } from "../../lib/members-api";
 import {
   canManageTreasury,
-  canViewMemberDirectory,
+  viewerCanManageMembers,
 } from "../../lib/roles";
 import { AppIcon } from "../ui/AppIcon";
 
@@ -69,7 +69,7 @@ export function HomeQuickStats({
   isLoadingEvents: boolean;
   density?: "xs" | "sm" | "md" | "lg" | "xl";
 }) {
-  const canSeeMembers = canViewMemberDirectory(member.role);
+  const canSeeMembers = viewerCanManageMembers(member);
   const canSeeTreasury = canManageTreasury(member.role, member.position);
   const [memberTotal, setMemberTotal] = useState<number | null>(null);
   const [treasuryBalance, setTreasuryBalance] = useState<string | null>(null);

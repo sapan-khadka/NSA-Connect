@@ -458,40 +458,14 @@ export function DiscussionRoomSidebar({
             !hasSearch &&
             rooms.length === 0 &&
             reviewQueue.length === 0 ? (
-              <div className="px-6 py-10 text-center">
-                <div className="mx-auto mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-surface-muted text-foreground">
-                  <AppIcon icon={MessageSquare} size="sm" />
-                </div>
-                <p className="text-sm font-medium text-foreground">
+              <div className="px-4 py-8">
+                <p className="text-[13px] font-medium text-foreground">
                   No conversations yet
                 </p>
-                <p className="mt-1 text-xs text-gray-500">
-                  Message a member or start a group to begin.
+                <p className="mt-1 text-[12px] leading-relaxed text-gray-500">
+                  Start a message from the compose button above. Chats you open
+                  will show up here.
                 </p>
-                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                  {onNewMessage ? (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={onNewMessage}
-                    >
-                      <AppIcon icon={MessageSquare} size="xs" />
-                      New message
-                    </Button>
-                  ) : null}
-                  {canCreateGroup && onCreateGroup ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={onCreateGroup}
-                    >
-                      <AppIcon icon={Plus} size="xs" />
-                      New group
-                    </Button>
-                  ) : null}
-                </div>
               </div>
             ) : null}
 

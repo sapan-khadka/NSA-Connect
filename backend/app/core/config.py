@@ -74,12 +74,25 @@ class Settings(BaseSettings):
     RATE_LIMIT_DISCUSSION_DM_WINDOW_SECONDS: int = 60
 
     PASSWORD_RESET_EXPIRE_MINUTES: int = 45
+    EMAIL_VERIFICATION_EXPIRE_MINUTES: int = Field(
+        default=60,
+        description="How long email verification links remain valid",
+    )
 
     DEFAULT_UNIVERSITY_SLUG: str = "semo"
     DEFAULT_UNIVERSITY_NAME: str = "Southeast Missouri State University"
     DEFAULT_UNIVERSITY_EMAIL_DOMAIN: str = "semo.edu"
     DEFAULT_ORGANIZATION_SLUG: str = "nsa"
     DEFAULT_ORGANIZATION_NAME: str = "Nepalese Student Association"
+
+    ORG_OWNER_EMAILS: str = Field(
+        default="",
+        description=(
+            "Comma-separated emails allowed to register/login as the chapter "
+            "org owner (e.g. nsa.connect@gmail.com). When set, empty-org "
+            "bootstrap only promotes these emails — SEMO students stay pending."
+        ),
+    )
 
     EMAIL_ENABLED: bool = False
     EMAIL_FROM: str = "NSA Connect <noreply@semo.edu>"
@@ -105,6 +118,13 @@ class Settings(BaseSettings):
             "When set, all Resend notification emails are delivered to this address "
             "instead of the real recipient (dev/testing only). "
             "Leave unset in production."
+        ),
+    )
+    SKIP_EMAIL_VERIFICATION: bool = Field(
+        default=False,
+        description=(
+            "Local/dev only: mark new registrations verified without an inbox click. "
+            "Ignored when ENVIRONMENT=production."
         ),
     )
 
@@ -209,6 +229,20 @@ class Settings(BaseSettings):
     @property
     def is_development(self) -> bool:
         return self.ENVIRONMENT == "development"
+
+    @property
+    def org_owner_email_set(self) -> frozenset[str]:
+        return frozenset(
+            email.strip().lower()
+            for email in self.ORG_OWNER_EMAILS.split(",")
+            if email.strip()
+        )
+
+    @property
+    def email_verification_required(self) -> bool:
+        if self.ENVIRONMENT == "production":
+            return True
+        return not self.SKIP_EMAIL_VERIFICATION
 
     @property
     def rate_limit_storage_uri(self) -> str:

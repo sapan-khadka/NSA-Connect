@@ -130,16 +130,20 @@ def default_org_has_approved_member(db: Session) -> bool:
 
 
 def bootstrap_first_org_owner(db: Session, member: Member) -> bool:
-    """Promote the first registrant when the default org has no approved members.
+    """Promote the registrant to approved org owner when appropriate.
 
-    Safe for live SEMO/NSA data: if anyone is already approved, this is a no-op
-    and returns False (normal pending registration continues). Never deletes
-    members or other org data.
+    Org owner is a system flag (`is_org_owner`), not the chapter president seat.
+    The owner remains a general member and appoints a president separately.
 
-    Returns True when this member was promoted to approved president + org owner.
+    Rules:
+    - If ORG_OWNER_EMAILS is configured: only those emails are promoted (even when
+      other pending members exist; skips when an approved owner already exists).
+    - If ORG_OWNER_EMAILS is empty: legacy empty-org recovery — first registrant
+      on an org with no approved members becomes owner (SEMO students included).
     """
     from sqlalchemy import select
 
+    from app.core.validators import is_org_owner_email, org_owner_emails_configured
     from app.models.member import MemberPosition, MemberRole, MemberStatus
 
     organization = get_default_organization(db)
@@ -150,12 +154,27 @@ def bootstrap_first_org_owner(db: Session, member: Member) -> bool:
         .with_for_update(),
     )
 
-    if default_org_has_approved_member(db):
+    allowlist_configured = org_owner_emails_configured()
+    if allowlist_configured:
+        if not is_org_owner_email(member.email or ""):
+            return False
+        # Prefer not to create a second owner if one already exists.
+        existing_owner = db.scalar(
+            select(OrganizationMembership).where(
+                OrganizationMembership.organization_id == organization.id,
+                OrganizationMembership.is_org_owner.is_(True),
+                OrganizationMembership.status == MemberStatus.APPROVED,
+            ),
+        )
+        if existing_owner is not None and existing_owner.user_id != member.id:
+            return False
+    elif default_org_has_approved_member(db):
         return False
 
     member.status = MemberStatus.APPROVED
-    member.role = MemberRole.PRESIDENT
-    member.position = MemberPosition.PRESIDENT
+    # Owner is not the chapter president — they appoint one later.
+    member.role = MemberRole.GENERAL
+    member.position = MemberPosition.MEMBER
     sync_membership_from_member(db, member, organization_id=organization.id)
     membership = get_membership_for_user(db, member.id, organization.id)
     if membership is None:

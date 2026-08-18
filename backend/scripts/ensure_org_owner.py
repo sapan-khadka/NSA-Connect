@@ -4,13 +4,13 @@ Does NOT delete members or org data. Safe to run on a live database.
 
 Usage (from backend/):
     python -m scripts.ensure_org_owner
-    python -m scripts.ensure_org_owner --email president@semo.edu
+    python -m scripts.ensure_org_owner --email owner@example.com
 
 Without --email: promotes an existing approved president/board+ membership
 to is_org_owner when none exists.
 
-With --email: finds that user, ensures they are approved president + org owner
-(only when the org has no owner yet, unless --force).
+With --email: finds that user, ensures they are approved + org owner
+(without claiming the president seat). Use --force to transfer ownership.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ import argparse
 from sqlalchemy import select
 
 from app.core.database import SessionLocal
-from app.models.member import Member, MemberPosition, MemberRole, MemberStatus
+from app.models.member import Member, MemberStatus
 from app.models.organization_membership import OrganizationMembership
 from app.services.organization_context import (
     ensure_default_university_and_org,
@@ -60,16 +60,17 @@ def _promote_email(db, email: str, *, force: bool) -> None:
         existing_owner.is_org_owner = False
 
     member.status = MemberStatus.APPROVED
-    member.role = MemberRole.PRESIDENT
-    member.position = MemberPosition.PRESIDENT
+    # Do not claim the exclusive president seat — owner appoints a president.
     sync_membership_from_member(db, member, organization_id=org_id)
     membership = get_membership_for_user(db, member.id, org_id)
     assert membership is not None
+    membership.status = MemberStatus.APPROVED
     membership.is_org_owner = True
     db.commit()
     print(
-        f"Promoted {member.email} → approved president + org owner "
-        f"(membership id={membership.id})",
+        f"Promoted {member.email} → approved org owner "
+        f"(role={member.role.value}, position={member.position.value}, "
+        f"membership id={membership.id})",
     )
 
 
@@ -77,7 +78,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Ensure NSA org owner membership")
     parser.add_argument(
         "--email",
-        help="Promote this existing user to approved president + org owner",
+        help="Promote this existing user to approved org owner (not president)",
     )
     parser.add_argument(
         "--force",
@@ -97,8 +98,8 @@ def main() -> None:
         if owner is None:
             print(
                 "No approved board+ membership to promote.\n"
-                "Either register on an empty org (auto-bootstrap), or:\n"
-                "  python -m scripts.ensure_org_owner --email you@semo.edu",
+                "Either register the allowlisted owner email, or:\n"
+                "  python -m scripts.ensure_org_owner --email you@example.com",
             )
             return
         print(
