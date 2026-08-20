@@ -17,7 +17,7 @@ Handles member registration and approvals, role-based access, events with prep t
 | ORM | [SQLAlchemy 2](https://www.sqlalchemy.org/) |
 | Migrations | [Alembic](https://alembic.sqlalchemy.org/) |
 | Cache / queue | [Redis 7](https://redis.io/) + [Celery](https://docs.celeryq.dev/) |
-| Email | [SendGrid](https://sendgrid.com/) |
+| Email | [Resend](https://resend.com/) |
 | Receipts | [Cloudinary](https://cloudinary.com/) |
 | Tests | [pytest](https://docs.pytest.org/) + [Vitest](https://vitest.dev/) |
 
@@ -56,9 +56,11 @@ docker compose exec backend python -m scripts.seed_demo_data
 
 | URL | Description |
 |-----|-------------|
-| http://localhost:8000/docs | Swagger API docs |
-| http://localhost:8000/api/v1/health | Health check |
+| http://localhost:8000/docs | Swagger API docs (disabled when `ENVIRONMENT=production`) |
+| http://localhost:8000/health | Liveness check |
+| http://localhost:8000/health/ready | Readiness (Postgres + Redis) |
 | http://localhost:5173 | Frontend dev server (run separately) |
+| http://localhost:8080 | Optional nginx frontend image (`docker compose --profile frontend up`) |
 
 ### Frontend dev server
 
@@ -85,6 +87,7 @@ source ../.venv/bin/activate
 pip install -r requirements-dev.txt
 
 cp .env.example .env   # edit as needed
+# Local skip-inbox (optional): SKIP_EMAIL_VERIFICATION=true
 alembic upgrade head
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
@@ -100,7 +103,9 @@ Copy `backend/.env.example` to `backend/.env`.
 | `DATABASE_URL` | PostgreSQL connection string |
 | `REDIS_URL` | Redis for Celery |
 | `SECRET_KEY` | JWT signing key |
-| `SENDGRID_API_KEY` | Transactional email |
+| `ORG_OWNER_EMAILS` | Comma-separated emails allowed to register as org owner |
+| `SKIP_EMAIL_VERIFICATION` | Local only; must be `false` in production |
+| `RESEND_API_KEY` | Required in production for all outbound email |
 | `EMAIL_ENABLED` | Set `true` to send real emails |
 | `CLOUDINARY_CLOUD_NAME` | Receipt image uploads |
 | `CLOUDINARY_API_KEY` | Cloudinary API key |
@@ -337,6 +342,8 @@ See [PRODUCTION.md](PRODUCTION.md) and [BOARD_RUNBOOK.md](BOARD_RUNBOOK.md).
 ## Production
 
 Deploy checklist: [PRODUCTION.md](PRODUCTION.md). Backups: [BACKUPS.md](BACKUPS.md). Board ops: [BOARD_RUNBOOK.md](BOARD_RUNBOOK.md).
+
+Frontend production image: `frontend/Dockerfile` (nginx, proxies `/api` and `/ws` to the API). See [PRODUCTION.md](PRODUCTION.md#frontend-image).
 
 ---
 

@@ -49,7 +49,7 @@ Short ops guide for the chapter board. Tech on-call should keep [PRODUCTION.md](
 ## Password reset
 
 1. Member uses **Forgot password** on the guest shell with their account email.
-2. They must receive mail from SendGrid/Resend. If nothing arrives:
+2. They must receive mail from Resend. If nothing arrives:
    - Confirm `EMAIL_ENABLED=true` and provider keys on the API + worker.
    - Confirm `EMAIL_TEST_OVERRIDE_RECIPIENT` is empty in production.
    - Check Celery worker is running (reset email is async where configured).
