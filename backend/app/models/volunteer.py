@@ -22,7 +22,7 @@ class VolunteerSlot(Base):
     )
 
     id = Column(Integer, primary_key=True, index=True)
-    event_id = Column(Integer, ForeignKey("events.id"), nullable=False)
+    event_id = Column(Integer, ForeignKey("events.id"), nullable=False, index=True)
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=False, default="")
     capacity = Column(Integer, nullable=False)
@@ -61,8 +61,8 @@ class VolunteerSignup(Base):
     )
 
     id = Column(Integer, primary_key=True, index=True)
-    slot_id = Column(Integer, ForeignKey("volunteer_slots.id"), nullable=False)
-    member_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    slot_id = Column(Integer, ForeignKey("volunteer_slots.id", ondelete="CASCADE"), nullable=False)
+    member_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,

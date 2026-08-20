@@ -18,6 +18,7 @@ from app.models.discussion_room_pin import DiscussionRoomPin
 from app.models.discussion_room_read import DiscussionRoomRead
 from app.models.discussion_room_user_archive import DiscussionRoomUserArchive
 from app.models.discussion_thread_pin import DiscussionThreadPin
+from app.models.email_verification_token import EmailVerificationToken
 from app.models.event import Event, EventType, MeetingVisibility
 from app.models.event_checkin import EventCheckIn
 from app.models.event_feedback import EventFeedback
@@ -77,7 +78,6 @@ from app.models.org_document import OrgDocument, OrgDocumentChunk, OrgDocumentVi
 from app.models.organization import Organization, OrganizationStatus
 from app.models.organization_membership import OrganizationMembership
 from app.models.password_reset_token import PasswordResetToken
-from app.models.email_verification_token import EmailVerificationToken
 from app.models.preptask import PrepTaskGroup, PrepTaskGroupItem
 from app.models.reminder import PrepTaskReminder, ReminderType
 from app.models.semester_report import ReportRangeType, SemesterReport

@@ -22,8 +22,14 @@ class EventRsvp(Base):
     )
 
     id = Column(Integer, primary_key=True, index=True)
-    event_id = Column(Integer, ForeignKey("events.id"), nullable=False)
-    member_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    event_id = Column(
+        Integer, ForeignKey("events.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    member_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
     status = Column(
         SqlEnum(
             RsvpStatus, values_callable=lambda statuses: [s.value for s in statuses]
