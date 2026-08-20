@@ -21,6 +21,7 @@ from app.core.dependencies import (
 )
 from app.core.rate_limit import limit
 from app.core.security import create_ws_ticket
+from app.core.upload import read_upload_with_limit
 from app.integrations.cloudinary_client import CloudinaryUploadError
 from app.models.member import Member
 from app.schemas.discussion import (
@@ -186,7 +187,7 @@ async def upload_discussion_attachment_endpoint(
     current_member: Member = Depends(get_current_member),
 ):
     del current_member  # auth gate only — any authenticated member may upload
-    file_bytes = await file.read()
+    file_bytes = await read_upload_with_limit(file, max_bytes=25 * 1024 * 1024)
     try:
         uploaded = upload_discussion_attachment_file(
             file_bytes=file_bytes,
@@ -723,7 +724,7 @@ async def upload_discussion_room_avatar_endpoint(
     db: Session = Depends(get_db),
     current_member: Member = Depends(get_current_member),
 ):
-    file_bytes = await file.read()
+    file_bytes = await read_upload_with_limit(file, max_bytes=10 * 1024 * 1024)
     try:
         room = set_group_room_avatar(
             db,

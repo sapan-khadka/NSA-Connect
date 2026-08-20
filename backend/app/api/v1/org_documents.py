@@ -15,6 +15,7 @@ from app.core.safe_messages import (
     GENERIC_EMBEDDING_UNAVAILABLE,
     GENERIC_PDF_PROCESSING_ERROR,
 )
+from app.core.upload import read_upload_with_limit
 from app.models.member import Member
 from app.schemas.org_document import (
     OrgDocumentListResponse,
@@ -123,7 +124,7 @@ async def create_org_document_endpoint(
     db: Session = Depends(get_db),
     current_member: Member = Depends(require_board),
 ):
-    file_bytes = await file.read()
+    file_bytes = await read_upload_with_limit(file, max_bytes=10 * 1024 * 1024)
     try:
         return create_org_document(
             db,

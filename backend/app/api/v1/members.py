@@ -23,6 +23,7 @@ from app.core.password_validation import WeakPasswordError
 from app.core.permissions import member_has_role_at_least
 from app.core.rate_limit import change_password_key, limit
 from app.core.security import create_token_pair
+from app.core.upload import read_upload_with_limit
 from app.integrations.cloudinary_client import CloudinaryUploadError
 from app.lib.member_talents import ALL_MEMBER_TALENTS, MEMBER_TALENT_LABELS
 from app.lib.semester import get_current_semester_slug
@@ -207,7 +208,7 @@ async def upload_my_avatar(
     current_member: Member = Depends(get_current_member),
     db: Session = Depends(get_db),
 ):
-    file_bytes = await file.read()
+    file_bytes = await read_upload_with_limit(file, max_bytes=10 * 1024 * 1024)
     try:
         member = set_member_avatar(
             db,
@@ -379,15 +380,10 @@ def invite_member(
 ):
     try:
         member = create_invited_member(db, data)
-    except MemberAlreadyExistsError:
+    except (MemberAlreadyExistsError, StudentIdAlreadyExistsError):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Email already registered",
-        ) from None
-    except StudentIdAlreadyExistsError:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Student ID already registered",
+            detail="An account with this email or student ID already exists",
         ) from None
 
     setup_email_sent = send_initial_password_setup(db, member)
@@ -408,7 +404,7 @@ async def import_members(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Upload must be a CSV file",
         )
-    return import_members_csv(db, await file.read())
+    return import_members_csv(db, await read_upload_with_limit(file, max_bytes=5 * 1024 * 1024))
 
 
 @router.patch("/{member_id}/approve", response_model=MemberResponse)
@@ -672,7 +668,7 @@ async def upload_member_document_endpoint(
     db: Session = Depends(get_db),
 ):
     """Upload a member document (PDF/JPEG/PNG/WebP) via existing Cloudinary storage."""
-    file_bytes = await file.read()
+    file_bytes = await read_upload_with_limit(file, max_bytes=10 * 1024 * 1024)
     display_name = (file_name or file.filename or "document").strip()
 
     try:
@@ -726,7 +722,7 @@ async def replace_member_document_endpoint(
     db: Session = Depends(get_db),
 ):
     """Replace an existing document file (same id), keeping ownership on member_id."""
-    file_bytes = await file.read()
+    file_bytes = await read_upload_with_limit(file, max_bytes=10 * 1024 * 1024)
     display_name = file_name
     if display_name is None and file.filename:
         display_name = file.filename

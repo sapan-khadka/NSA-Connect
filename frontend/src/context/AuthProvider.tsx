@@ -7,7 +7,7 @@ import {
 } from "react";
 
 import { fetchCurrentMember, type MemberResponse, type TokenResponse } from "../lib/auth-api";
-import { refreshSession } from "../lib/api";
+import api, { refreshSession } from "../lib/api";
 import {
   readStoredAccessToken,
   readStoredRefreshToken,
@@ -176,6 +176,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const logout = useCallback(() => {
+    // Best-effort server-side token revocation; don't block on failure.
+    const stored = readStoredAccessToken();
+    if (stored) {
+      api.post("/v1/auth/logout", null, {
+        headers: { Authorization: `Bearer ${stored}` },
+      }).catch(() => {});
+    }
     setToken(null);
     setMember(null);
     syncAccessToken(null);

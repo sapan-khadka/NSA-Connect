@@ -15,6 +15,7 @@ from app.core.database import get_db
 from app.core.dependencies import require_board, require_treasury_writer
 from app.core.rate_limit import limit, receipt_scan_key
 from app.core.safe_messages import GENERIC_AI_UNAVAILABLE
+from app.core.upload import read_upload_with_limit
 from app.integrations.cloudinary_client import CloudinaryUploadError
 from app.lib.event_finance import EventFinanceLockedError
 from app.lib.semester import SEMESTER_QUERY_PATTERN
@@ -80,7 +81,7 @@ async def upload_finance_receipt_endpoint(
     file: UploadFile = File(...),
     _: Member = Depends(require_treasury_writer),
 ):
-    file_bytes = await file.read()
+    file_bytes = await read_upload_with_limit(file, max_bytes=10 * 1024 * 1024)
 
     try:
         result = upload_finance_receipt(
@@ -126,7 +127,7 @@ async def scan_finance_receipt_endpoint(
     file: UploadFile = File(...),
     _: Member = Depends(require_treasury_writer),
 ):
-    file_bytes = await file.read()
+    file_bytes = await read_upload_with_limit(file, max_bytes=10 * 1024 * 1024)
 
     try:
         return scan_finance_receipt(

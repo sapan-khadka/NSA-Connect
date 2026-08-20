@@ -17,7 +17,6 @@ from app.core.security import (
     InvalidTokenError,
     create_token_pair,
     decode_refresh_token,
-    resolve_user_id,
 )
 from app.models.member import Member
 from app.models.organization import Organization
@@ -25,13 +24,35 @@ from app.schemas.auth import (
     EmailVerificationConfirmRequest,
     EmailVerificationRequest,
     EmailVerificationResponse,
+    LogoutResponse,
     PasswordResetConfirmRequest,
+    PasswordResetConfirmResponse,
     PasswordResetRequest,
     PasswordResetRequestResponse,
     RefreshTokenRequest,
     TokenResponse,
 )
 from app.schemas.member import MemberCreateRequest, MemberLoginRequest, MemberResponse
+from app.services.auth_service import (
+    AuthTokenKind,
+    InvalidTokenPayloadError,
+    MemberNotFoundForTokenError,
+    TokenRevokedError,
+    invalid_payload_detail,
+    load_authenticated_member,
+    revoked_detail,
+)
+from app.services.auth_service import (
+    MemberNotApprovedError as TokenMemberNotApprovedError,
+)
+from app.services.email_verification_service import (
+    EMAIL_VERIFICATION_INVALID_TOKEN_MESSAGE,
+    EMAIL_VERIFICATION_REQUEST_MESSAGE,
+    EMAIL_VERIFICATION_SUCCESS_MESSAGE,
+    InvalidEmailVerificationTokenError,
+    request_email_verification,
+    verify_email_with_token,
+)
 from app.services.member_service import (
     InvalidCredentialsError,
     InvalidRegistrationEmailError,
@@ -44,14 +65,6 @@ from app.services.member_service import (
     create_member,
 )
 from app.services.organization_context import get_default_organization
-from app.services.email_verification_service import (
-    EMAIL_VERIFICATION_INVALID_TOKEN_MESSAGE,
-    EMAIL_VERIFICATION_REQUEST_MESSAGE,
-    EMAIL_VERIFICATION_SUCCESS_MESSAGE,
-    InvalidEmailVerificationTokenError,
-    request_email_verification,
-    verify_email_with_token,
-)
 from app.services.password_reset_service import (
     PASSWORD_RESET_INVALID_TOKEN_MESSAGE,
     PASSWORD_RESET_REQUEST_MESSAGE,
@@ -76,15 +89,10 @@ def register(
 ):
     try:
         member = create_member(db, data)
-    except MemberAlreadyExistsError:
+    except (MemberAlreadyExistsError, StudentIdAlreadyExistsError):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Email already registered",
-        ) from None
-    except StudentIdAlreadyExistsError:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Student ID already registered",
+            detail="An account with this email or student ID already exists",
         ) from None
     except StudentIdRequiredError:
         raise HTTPException(
@@ -173,41 +181,31 @@ def refresh_tokens(data: RefreshTokenRequest, db: Session = Depends(get_db)):
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
 
-    user_id = resolve_user_id(payload)
-    if user_id is None:
+    try:
+        member = load_authenticated_member(db, payload, attach_membership=False)
+    except InvalidTokenPayloadError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid refresh token payload",
+            detail=invalid_payload_detail(AuthTokenKind.REFRESH),
             headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    member = db.get(Member, user_id)
-    if member is None:
+        ) from exc
+    except MemberNotFoundForTokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Member not found",
             headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    if payload.get("email") != member.email:
+        ) from exc
+    except TokenRevokedError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid refresh token payload",
+            detail=revoked_detail(AuthTokenKind.REFRESH),
             headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    if payload.get("tv") != member.token_version:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Refresh token has been revoked",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    if not member.can_authenticate():
+        ) from exc
+    except TokenMemberNotApprovedError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Member account is not approved",
-        )
+        ) from exc
 
     (
         access_token,
@@ -227,6 +225,16 @@ def refresh_tokens(data: RefreshTokenRequest, db: Session = Depends(get_db)):
         expires_at=expires_at,
         refresh_expires_at=refresh_expires_at,
     )
+
+
+@router.post("/logout", response_model=LogoutResponse)
+def logout(
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    current_member.token_version += 1
+    db.commit()
+    return LogoutResponse(message="Logged out")
 
 
 @router.get("/me", response_model=MemberResponse)
@@ -297,7 +305,7 @@ def password_reset_request(
     return PasswordResetRequestResponse(message=PASSWORD_RESET_REQUEST_MESSAGE)
 
 
-@router.post("/password-reset/confirm")
+@router.post("/password-reset/confirm", response_model=PasswordResetConfirmResponse)
 def password_reset_confirm(
     data: PasswordResetConfirmRequest,
     db: Session = Depends(get_db),
@@ -319,6 +327,6 @@ def password_reset_confirm(
             detail=str(exc),
         ) from None
 
-    return {
-        "message": "Password updated. You can sign in with your new password.",
-    }
+    return PasswordResetConfirmResponse(
+        message="Password updated. You can sign in with your new password.",
+    )

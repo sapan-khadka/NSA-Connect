@@ -15,3 +15,25 @@ def test_health_returns_200():
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+def test_health_ready_ok(client, monkeypatch):
+    class FakeRedis:
+        def ping(self):
+            return True
+
+    monkeypatch.setattr("app.api.v1.health.get_rate_limit_redis", lambda: FakeRedis())
+    response = client.get("/health/ready")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
+def test_health_ready_reports_redis_down(client, monkeypatch):
+    class FakeRedis:
+        def ping(self):
+            raise ConnectionError("redis down")
+
+    monkeypatch.setattr("app.api.v1.health.get_rate_limit_redis", lambda: FakeRedis())
+    response = client.get("/health/ready")
+    assert response.status_code == 503
+    assert response.json()["detail"] == "redis unavailable"

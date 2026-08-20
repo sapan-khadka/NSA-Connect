@@ -95,22 +95,17 @@ class Settings(BaseSettings):
     )
 
     EMAIL_ENABLED: bool = False
-    EMAIL_FROM: str = "NSA Connect <noreply@semo.edu>"
     FRONTEND_URL: str = Field(
         default="http://localhost:5173",
         description="Public URL of the NSA Connect web app for links in emails",
     )
-    SENDGRID_API_KEY: str = Field(
-        default="",
-        description="SendGrid API key for transactional email",
-    )
     RESEND_API_KEY: str = Field(
         default="",
-        description="Resend API key for notification emails",
+        description="Resend API key for all outbound email",
     )
     RESEND_FROM_EMAIL: str = Field(
         default="NSA Connect <onboarding@resend.dev>",
-        description="From address for Resend notification emails",
+        description="From address for all Resend outbound email",
     )
     EMAIL_TEST_OVERRIDE_RECIPIENT: str = Field(
         default="",
@@ -266,6 +261,30 @@ def get_frontend_url() -> str:
     if from_env:
         return from_env.rstrip("/")
     return Settings().FRONTEND_URL.rstrip("/")
+
+
+def docs_enabled(app_settings: Settings | None = None) -> bool:
+    """OpenAPI/Swagger are local/staging only."""
+    current = app_settings if app_settings is not None else settings
+    return current.ENVIRONMENT != "production"
+
+
+def cors_allow_origins(app_settings: Settings | None = None) -> list[str]:
+    """Browser origins allowed to call the API (FRONTEND_URL plus local Vite)."""
+    current = app_settings if app_settings is not None else settings
+    origins: list[str] = []
+    frontend = (
+        current.FRONTEND_URL.strip().rstrip("/")
+        if app_settings is not None
+        else get_frontend_url()
+    )
+    if frontend.startswith("http://") or frontend.startswith("https://"):
+        origins.append(frontend)
+    if current.ENVIRONMENT != "production":
+        for extra in ("http://localhost:5173", "http://127.0.0.1:5173"):
+            if extra not in origins:
+                origins.append(extra)
+    return origins
 
 
 settings = get_settings()

@@ -136,7 +136,7 @@ def test_invite_duplicate_email_returns_409(
     )
 
     assert response.status_code == 409
-    assert response.json()["detail"] == "Email already registered"
+    assert response.json()["detail"] == "An account with this email or student ID already exists"
 
 
 def test_invite_duplicate_student_id_returns_409(
@@ -152,7 +152,7 @@ def test_invite_duplicate_student_id_returns_409(
     )
 
     assert response.status_code == 409
-    assert response.json()["detail"] == "Student ID already registered"
+    assert response.json()["detail"] == "An account with this email or student ID already exists"
 
 
 def test_invited_member_placeholder_password_cannot_log_in(

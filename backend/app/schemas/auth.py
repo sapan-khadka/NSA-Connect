@@ -2,8 +2,6 @@ from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field, field_serializer, field_validator
 
-from app.core.validators import SemoEmailStr
-
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -50,6 +48,14 @@ class EmailVerificationRequest(BaseModel):
     @classmethod
     def normalize_email(cls, value: str) -> str:
         return value.lower().strip()
+
+
+class PasswordResetConfirmResponse(BaseModel):
+    message: str
+
+
+class LogoutResponse(BaseModel):
+    message: str
 
 
 class EmailVerificationResponse(BaseModel):

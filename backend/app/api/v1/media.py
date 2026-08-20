@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_member, get_current_organization
+from app.core.upload import read_upload_with_limit
 from app.models.member import Member
 from app.models.organization import Organization
 from app.schemas.media_album import (
@@ -198,7 +199,7 @@ async def upload_media_album_item_endpoint(
     current_member: Member = Depends(get_current_member),
     db: Session = Depends(get_db),
 ):
-    file_bytes = await file.read()
+    file_bytes = await read_upload_with_limit(file, max_bytes=100 * 1024 * 1024)
     try:
         item = upload_media_album_item(
             db,

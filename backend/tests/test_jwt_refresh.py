@@ -124,6 +124,31 @@ def test_old_refresh_token_rejected_after_password_change(client, db_session):
     assert refresh.json()["detail"] == "Refresh token has been revoked"
 
 
+def test_logout_revokes_access_and_refresh_tokens(client, db_session):
+    register_member(client)
+    set_member_approved(db_session)
+
+    login = login_member(client)
+    access_token = login.json()["access_token"]
+    refresh_token = login.json()["refresh_token"]
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    logout = client.post("/api/v1/auth/logout", headers=headers)
+    assert logout.status_code == 200
+    assert logout.json()["message"] == "Logged out"
+
+    me = client.get("/api/v1/auth/me", headers=headers)
+    assert me.status_code == 401
+    assert me.json()["detail"] == "Token has been revoked"
+
+    refresh = client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": refresh_token},
+    )
+    assert refresh.status_code == 401
+    assert refresh.json()["detail"] == "Refresh token has been revoked"
+
+
 def test_rejected_member_token_rejected(client, db_session):
     register_member(client)
     set_member_approved(db_session)

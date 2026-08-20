@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.dependencies import get_current_member, require_board
 from app.core.safe_messages import GENERIC_EMAIL_SEND_FAILED
@@ -11,13 +12,16 @@ from app.schemas.inbox_notification import (
     MarkAllInboxReadResponse,
     MarkInboxReadResponse,
 )
-from app.schemas.notification_check import RunNotificationCheckRequest
+from app.schemas.notification_check import (
+    RunNotificationCheckRequest,
+    RunNotificationCheckResponse,
+)
 from app.schemas.notification_preferences import (
     NotificationPreferencesResponse,
     NotificationPreferencesUpdateRequest,
 )
 from app.schemas.notification_summary import NotificationSummaryResponse
-from app.schemas.test_email import SendTestEmailRequest
+from app.schemas.test_email import SendTestEmailRequest, SendTestEmailResponse
 from app.services.inbox_notification_service import (
     InboxNotificationNotFoundError,
     list_inbox_notifications,
@@ -96,31 +100,45 @@ def update_my_notification_preferences(
     return update_notification_preferences(db, current_member.id, data)
 
 
-@router.post("/test-email")
+@router.post("/test-email", response_model=SendTestEmailResponse)
 def send_test_email_endpoint(
     payload: SendTestEmailRequest,
     current_member: Member = Depends(require_board),
 ):
+    caller = current_member.email.lower().strip()
+    recipient = (
+        str(payload.to_email).lower().strip() if payload.to_email else caller
+    )
+    if recipient != caller:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Test email can only be sent to your own address",
+        )
     try:
-        email_id = send_test_email(to_email=str(payload.to_email))
+        email_id = send_test_email(to_email=caller)
     except ResendDeliveryError:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=GENERIC_EMAIL_SEND_FAILED,
         ) from None
 
-    return {
-        "success": True,
-        "message": f"Test email sent to {payload.to_email}.",
-        "email_id": email_id,
-    }
+    return SendTestEmailResponse(
+        success=True,
+        message=f"Test email sent to {caller}.",
+        email_id=email_id,
+    )
 
 
-@router.post("/run-check")
+@router.post("/run-check", response_model=RunNotificationCheckResponse)
 def run_notification_check_endpoint(
     payload: RunNotificationCheckRequest | None = None,
     _: Member = Depends(require_board),
     db: Session = Depends(get_db),
 ):
+    if settings.ENVIRONMENT == "production":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Notification scans run on a schedule in production",
+        )
     as_of = payload.as_of if payload else None
     return run_scheduled_notification_checks(db, as_of=as_of)
