@@ -371,3 +371,19 @@ def test_run_check_endpoint_runs_scan(mock_run, client, db_session):
 
     assert response.status_code == 200
     mock_run.assert_called_once()
+
+
+@patch("app.api.v1.notifications.run_scheduled_notification_checks")
+def test_run_check_endpoint_refuses_production(mock_run, client, db_session, monkeypatch):
+    create_board_member(db_session)
+    monkeypatch.setattr("app.api.v1.notifications.settings.ENVIRONMENT", "production")
+
+    response = client.post(
+        "/api/v1/notifications/run-check",
+        headers=auth_header(client, email="board@semo.edu"),
+        json={},
+    )
+
+    assert response.status_code == 403
+    assert "schedule" in response.json()["detail"].lower()
+    mock_run.assert_not_called()

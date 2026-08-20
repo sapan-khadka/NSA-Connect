@@ -483,7 +483,7 @@ def test_general_member_cannot_update_another_members_task(
     task_id = task_response.json()["id"]
 
     patch = client.patch(
-        f"/api/v1/tasks/{task_id}",
+        f"/api/v1/event-tasks/{task_id}",
         json={"is_complete": True},
         headers=general_member_headers_fn,
     )

@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.config import settings
+from app.core.config import get_frontend_url, settings
 from app.core.password_validation import validate_password_strength
 from app.core.security import hash_password, verify_password
 from app.models.member import Member, MemberStatus
@@ -80,10 +80,7 @@ def issue_password_token(
 def send_initial_password_setup(db: Session, member: Member) -> bool:
     """Issue a setup token and report whether the email provider accepted it."""
     raw_token = issue_password_token(db, member)
-    setup_url = (
-        f"{settings.FRONTEND_URL.rstrip('/')}"
-        f"/reset-password?token={raw_token}&mode=setup"
-    )
+    setup_url = f"{get_frontend_url()}/reset-password?token={raw_token}&mode=setup"
     try:
         send_password_setup_email(
             to_email=member.email,
@@ -109,7 +106,7 @@ def request_password_reset(db: Session, email: str) -> None:
 
     raw_token = issue_password_token(db, member)
 
-    reset_url = f"{settings.FRONTEND_URL.rstrip('/')}/reset-password?token={raw_token}"
+    reset_url = f"{get_frontend_url()}/reset-password?token={raw_token}"
     try:
         send_password_reset_email(
             to_email=member.email,

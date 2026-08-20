@@ -85,7 +85,7 @@ CHAT_TOOL_DEFINITIONS: list[dict[str, Any]] = [
     },
     {
         "name": "get_event_prep_tasks",
-        "description": "List prep tasks for an event. Board+ only.",
+        "description": "List checklist tasks for an event. Board+ only.",
         "input_schema": {
             "type": "object",
             "properties": {"event_id": {"type": "integer", "minimum": 1}},

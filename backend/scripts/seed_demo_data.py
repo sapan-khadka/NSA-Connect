@@ -9,6 +9,7 @@ from decimal import Decimal
 
 from sqlalchemy import select
 
+from app.core.config import settings
 from app.core.database import SessionLocal
 from app.core.security import hash_password
 from app.models.event import Event, EventType
@@ -17,6 +18,9 @@ from app.models.member import Member, MemberRole, MemberStatus
 
 
 def seed_demo_data() -> None:
+    if settings.ENVIRONMENT == "production":
+        raise SystemExit("Refusing to seed demo data in production.")
+
     db = SessionLocal()
 
     try:

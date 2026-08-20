@@ -38,11 +38,15 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
     # Root & health
     EndpointAuthRule("GET", "/", "API root message", "public", "none"),
     EndpointAuthRule("GET", "/health", "Liveness check", "public", "none"),
+    EndpointAuthRule(
+        "GET", "/health/ready", "Readiness check (Postgres + Redis)", "public", "none"
+    ),
     # Auth
     EndpointAuthRule(
         "POST", "/api/v1/auth/register", "Register pending member", "public", "none"
     ),
     EndpointAuthRule("POST", "/api/v1/auth/login", "Login", "public", "none"),
+    EndpointAuthRule("POST", "/api/v1/auth/logout", "Logout (revoke tokens)", "member", "none"),
     EndpointAuthRule(
         "POST",
         "/api/v1/auth/refresh",
@@ -844,13 +848,6 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
         "require_board",
     ),
     EndpointAuthRule(
-        "POST",
-        "/api/v1/events/{event_id}/prep-tasks",
-        "Add prep task (alias)",
-        "board",
-        "require_board",
-    ),
-    EndpointAuthRule(
         "GET",
         "/api/v1/events/{event_id}/slots",
         "List volunteer slots/roles",
@@ -1378,25 +1375,6 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
         "Delete event task",
         "task_manager",
         "require_task_manager",
-    ),
-    # Prep tasks (legacy)
-    EndpointAuthRule(
-        "PATCH",
-        "/api/v1/tasks/{task_id}",
-        "Update prep task",
-        "member",
-        "get_current_member",
-        object_rules="Assignee or board+ in service",
-        skip_role_probe=True,
-    ),
-    EndpointAuthRule(
-        "PATCH",
-        "/api/v1/tasks/{task_id}/checklist-items/{item_id}",
-        "Toggle prep checklist item",
-        "member",
-        "get_current_member",
-        object_rules="Assignee or board+ in service",
-        skip_role_probe=True,
     ),
     # Volunteer slots
     EndpointAuthRule(

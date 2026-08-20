@@ -54,6 +54,8 @@ def _test_settings(base_settings):
             # Do not inherit developer .env allowlist into suite defaults.
             "ORG_OWNER_EMAILS": "",
             "SKIP_EMAIL_VERIFICATION": False,
+            "RESEND_API_KEY": "",
+            "EMAIL_TEST_OVERRIDE_RECIPIENT": "",
         }
     )
 
@@ -82,6 +84,10 @@ def reset_settings_cache(monkeypatch, request):
         "app.services.avatar_upload_service",
         "app.services.member_document_service",
         "app.services.email_service",
+        "app.services.email_verification_service",
+        "app.services.resend_email_service",
+        "app.services.password_reset_service",
+        "app.api.v1.notifications",
         "app.services.constitution_ingest_service",
         "app.services.constitution_search_service",
     ):
@@ -118,8 +124,7 @@ def disable_first_owner_bootstrap(monkeypatch, request):
 
 @pytest.fixture(autouse=True)
 def block_external_integrations():
-    """Never hit Redis, Celery brokers, SendGrid, Anthropic, or OpenAI during tests."""
-    sendgrid_response = MagicMock(status_code=202, body="accepted")
+    """Never hit Redis, Celery brokers, Resend, Anthropic, or OpenAI during tests."""
     anthropic_sdk_client = MagicMock(name="anthropic_sdk_client")
     anthropic_sdk_client.messages.create.side_effect = AssertionError(
         "Real Anthropic API must not be called in tests; use mock_claude_checklist_api",
@@ -140,7 +145,6 @@ def block_external_integrations():
     openai_sdk_client.embeddings.create.side_effect = fake_embeddings_create
 
     with (
-        patch("app.integrations.sendgrid_client.SendGridAPIClient") as sendgrid_client,
         patch(
             "anthropic.Anthropic", return_value=anthropic_sdk_client
         ) as anthropic_client,
@@ -149,10 +153,13 @@ def block_external_integrations():
         patch("celery.app.task.Task.apply_async") as celery_apply_async,
         patch("app.services.email_service.settings.EMAIL_ENABLED", False),
         patch(
+            "resend.Emails.send",
+            return_value={"id": "test-resend-id"},
+        ) as resend_send,
+        patch(
             "app.services.receipt_upload_service.upload_receipt"
         ) as cloudinary_upload_receipt,
     ):
-        sendgrid_client.return_value.send.return_value = sendgrid_response
         from app.integrations.cloudinary_client import CloudinaryUploadResult
 
         cloudinary_upload_receipt.return_value = CloudinaryUploadResult(
@@ -163,7 +170,6 @@ def block_external_integrations():
             resource_type="image",
         )
         yield {
-            "sendgrid_client": sendgrid_client,
             "anthropic_client": anthropic_client,
             "anthropic_sdk_client": anthropic_sdk_client,
             "openai_client": openai_client,
@@ -171,6 +177,7 @@ def block_external_integrations():
             "celery_delay": celery_delay,
             "celery_apply_async": celery_apply_async,
             "cloudinary_upload_receipt": cloudinary_upload_receipt,
+            "resend_send": resend_send,
         }
 
 

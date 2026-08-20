@@ -34,8 +34,8 @@ def _table_names() -> list[str]:
 
 
 def reset_chapter_data(*, yes: bool) -> None:
-    if settings.ENVIRONMENT == "production" and not yes:
-        raise SystemExit("Refusing to wipe production without --yes")
+    if settings.ENVIRONMENT == "production":
+        raise SystemExit("Refusing to wipe production.")
 
     if not yes:
         raise SystemExit("Refusing to run without --yes (destructive).")

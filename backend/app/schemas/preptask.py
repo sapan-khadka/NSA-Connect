@@ -1,3 +1,9 @@
+"""Prep task schemas — legacy checklist-task view of ``EventTask``.
+
+Checklist tasks are stored as ``event_tasks`` with ``task_kind=checklist``.
+``PrepTaskResponse`` is a narrowed response shape for event detail payloads;
+prefer ``EventTaskResponse`` for new endpoints.
+"""
 from datetime import datetime
 from typing import TYPE_CHECKING
 

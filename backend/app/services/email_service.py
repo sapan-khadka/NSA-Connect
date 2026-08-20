@@ -2,12 +2,13 @@ import logging
 from datetime import UTC, datetime
 
 from app.core.config import settings
-from app.integrations.sendgrid_client import SendGridDeliveryError, send_email
+from app.integrations.resend_client import ResendDeliveryError
+from app.services.resend_email_service import send_resend_email
 
 logger = logging.getLogger(__name__)
 
 WELCOME_EMAIL_SUBJECT = "Welcome to NSA Connect"
-PREP_TASK_DUE_SOON_SUBJECT = "Prep task due soon: {group_name}"
+PREP_TASK_DUE_SOON_SUBJECT = "Checklist task due soon: {group_name}"
 VOLUNTEER_TASK_ASSIGNED_SUBJECT = "Volunteer task assigned: {task_name}"
 MEETING_ATTENDANCE_RECORDED_SUBJECT = (
     "Board meeting attendance recorded: {meeting_title}"
@@ -34,23 +35,17 @@ def send_welcome_email(*, email: str, full_name: str) -> None:
         logger.info("Welcome email (disabled) to=%s subject=%s", email, subject)
         return
 
-    if not settings.SENDGRID_API_KEY:
+    if not settings.RESEND_API_KEY:
         logger.error(
-            "Welcome email skipped: EMAIL_ENABLED=true but SENDGRID_API_KEY is missing"
+            "Welcome email skipped: EMAIL_ENABLED=true but RESEND_API_KEY is missing"
         )
         return
 
     try:
-        send_email(
-            api_key=settings.SENDGRID_API_KEY,
-            from_email=settings.EMAIL_FROM,
-            to_email=email,
-            subject=subject,
-            body=body,
-        )
-        logger.info("Welcome email sent via SendGrid to=%s", email)
-    except SendGridDeliveryError:
-        logger.exception("SendGrid failed to deliver welcome email to=%s", email)
+        send_resend_email(to_email=email, subject=subject, body=body)
+        logger.info("Welcome email sent via Resend to=%s", email)
+    except ResendDeliveryError:
+        logger.exception("Resend failed to deliver welcome email to=%s", email)
     except Exception:
         logger.exception("Unexpected error sending welcome email to=%s", email)
 
@@ -65,7 +60,7 @@ def build_prep_task_due_soon_email_body(
     due_label = due_date.astimezone(UTC).strftime("%B %d, %Y at %I:%M %p %Z")
     return (
         f"Hi {full_name},\n\n"
-        f'Your prep task "{group_name}" for "{event_title}" is due on {due_label}.\n'
+        f'Your checklist task "{group_name}" for "{event_title}" is due on {due_label}.\n'
         "Please sign in to NSA Connect and complete the checklist "
         "before the deadline.\n\n"
         "Best,\n"
@@ -98,26 +93,20 @@ def send_prep_task_due_soon_email(
         )
         return True
 
-    if not settings.SENDGRID_API_KEY:
+    if not settings.RESEND_API_KEY:
         logger.error(
             "Prep task due-soon email skipped: EMAIL_ENABLED=true "
-            "but SENDGRID_API_KEY is missing"
+            "but RESEND_API_KEY is missing"
         )
         return False
 
     try:
-        send_email(
-            api_key=settings.SENDGRID_API_KEY,
-            from_email=settings.EMAIL_FROM,
-            to_email=email,
-            subject=subject,
-            body=body,
-        )
-        logger.info("Prep task due-soon email sent via SendGrid to=%s", email)
+        send_resend_email(to_email=email, subject=subject, body=body)
+        logger.info("Prep task due-soon email sent via Resend to=%s", email)
         return True
-    except SendGridDeliveryError:
+    except ResendDeliveryError:
         logger.exception(
-            "SendGrid failed to deliver prep task due-soon email to=%s", email
+            "Resend failed to deliver prep task due-soon email to=%s", email
         )
         return False
     except Exception:
@@ -170,26 +159,20 @@ def send_volunteer_task_assigned_email(
         )
         return True
 
-    if not settings.SENDGRID_API_KEY:
+    if not settings.RESEND_API_KEY:
         logger.error(
             "Volunteer task assigned email skipped: EMAIL_ENABLED=true "
-            "but SENDGRID_API_KEY is missing"
+            "but RESEND_API_KEY is missing"
         )
         return False
 
     try:
-        send_email(
-            api_key=settings.SENDGRID_API_KEY,
-            from_email=settings.EMAIL_FROM,
-            to_email=email,
-            subject=subject,
-            body=body,
-        )
-        logger.info("Volunteer task assigned email sent via SendGrid to=%s", email)
+        send_resend_email(to_email=email, subject=subject, body=body)
+        logger.info("Volunteer task assigned email sent via Resend to=%s", email)
         return True
-    except SendGridDeliveryError:
+    except ResendDeliveryError:
         logger.exception(
-            "SendGrid failed to deliver volunteer task assigned email to=%s",
+            "Resend failed to deliver volunteer task assigned email to=%s",
             email,
         )
         return False
@@ -284,30 +267,24 @@ def send_meeting_record_notification_email(
         )
         return True
 
-    if not settings.SENDGRID_API_KEY:
+    if not settings.RESEND_API_KEY:
         logger.error(
             "Meeting record notification skipped: EMAIL_ENABLED=true "
-            "but SENDGRID_API_KEY is missing"
+            "but RESEND_API_KEY is missing"
         )
         return False
 
     try:
-        send_email(
-            api_key=settings.SENDGRID_API_KEY,
-            from_email=settings.EMAIL_FROM,
-            to_email=email,
-            subject=subject,
-            body=body,
-        )
+        send_resend_email(to_email=email, subject=subject, body=body)
         logger.info(
-            "Meeting record notification sent via SendGrid to=%s kind=%s",
+            "Meeting record notification sent via Resend to=%s kind=%s",
             email,
             notification_kind,
         )
         return True
-    except SendGridDeliveryError:
+    except ResendDeliveryError:
         logger.exception(
-            "SendGrid failed to deliver meeting record notification to=%s",
+            "Resend failed to deliver meeting record notification to=%s",
             email,
         )
         return False

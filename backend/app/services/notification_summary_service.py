@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.core.permissions import member_has_role_at_least
 from app.models.event_suggestion import EventSuggestion, EventSuggestionStatus
 from app.models.event_task import EventTask, EventTaskStatus
-from app.models.member import Member, MemberPosition, MemberRole, MemberStatus
+from app.models.member import Member, MemberPosition, MemberRole
 from app.schemas.notification_summary import NotificationSummaryResponse
 from app.services.discussion_inbox_service import list_discussion_inbox
 from app.services.event_task_service import list_my_event_tasks

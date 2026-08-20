@@ -77,13 +77,41 @@ def test_board_can_send_test_email(mock_send, client, board_headers):
     response = client.post(
         "/api/v1/notifications/test-email",
         headers=board_headers,
-        json={"to_email": "sapankhadka110@gmail.com"},
+        json={"to_email": "board@semo.edu"},
     )
 
     assert response.status_code == 200
     assert response.json()["success"] is True
-    assert "sapankhadka110@gmail.com" in response.json()["message"]
-    mock_send.assert_called_once_with(to_email="sapankhadka110@gmail.com")
+    assert "board@semo.edu" in response.json()["message"]
+    mock_send.assert_called_once_with(to_email="board@semo.edu")
+
+
+@patch("app.api.v1.notifications.send_test_email")
+def test_board_test_email_defaults_to_caller(mock_send, client, board_headers):
+    mock_send.return_value = "email_123"
+
+    response = client.post(
+        "/api/v1/notifications/test-email",
+        headers=board_headers,
+        json={},
+    )
+
+    assert response.status_code == 200
+    mock_send.assert_called_once_with(to_email="board@semo.edu")
+
+
+@patch("app.api.v1.notifications.send_test_email")
+def test_board_cannot_send_test_email_to_another_address(
+    mock_send, client, board_headers
+):
+    response = client.post(
+        "/api/v1/notifications/test-email",
+        headers=board_headers,
+        json={"to_email": "other@semo.edu"},
+    )
+
+    assert response.status_code == 403
+    mock_send.assert_not_called()
 
 
 def test_test_email_rejects_invalid_address(client, board_headers):
@@ -201,7 +229,7 @@ def test_test_email_endpoint_returns_resend_error_message(
     response = client.post(
         "/api/v1/notifications/test-email",
         headers=board_headers,
-        json={"to_email": "test@semo.edu"},
+        json={"to_email": "board@semo.edu"},
     )
 
     assert response.status_code == 502

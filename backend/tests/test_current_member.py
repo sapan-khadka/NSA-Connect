@@ -17,8 +17,12 @@ def _register(client, email="sapan@semo.edu", password="securepass123"):
 
 
 def _approve_member(db_session, email="sapan@semo.edu"):
+    from datetime import UTC, datetime
+
     member = db_session.scalar(select(Member).where(Member.email == email))
     member.status = MemberStatus.APPROVED
+    if member.email_verified_at is None:
+        member.email_verified_at = datetime.now(UTC)
     db_session.commit()
 
 

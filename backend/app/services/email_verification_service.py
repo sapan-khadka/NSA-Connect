@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.config import settings
+from app.core.config import get_frontend_url, settings
 from app.core.security import hash_password, verify_password
 from app.models.email_verification_token import EmailVerificationToken
 from app.models.member import Member
@@ -66,17 +66,20 @@ def send_verification_email_for_member(db: Session, member: Member) -> bool:
         return True
 
     raw_token = issue_email_verification_token(db, member)
-    verify_url = (
-        f"{settings.FRONTEND_URL.rstrip('/')}"
-        f"/verify-email?token={raw_token}"
-    )
+    verify_url = f"{get_frontend_url()}/verify-email?token={raw_token}"
 
     if not settings.RESEND_API_KEY.strip():
-        logger.warning(
-            "Email verification link for %s (RESEND_API_KEY unset): %s",
-            member.email,
-            verify_url,
-        )
+        if settings.ENVIRONMENT == "production":
+            logger.error(
+                "Email verification skipped for member_id=%s: RESEND_API_KEY unset",
+                member.id,
+            )
+        else:
+            logger.warning(
+                "Email verification link for %s (RESEND_API_KEY unset): %s",
+                member.email,
+                verify_url,
+            )
         return False
 
     try:
@@ -88,7 +91,8 @@ def send_verification_email_for_member(db: Session, member: Member) -> bool:
         )
     except Exception:
         logger.exception("Failed to send verification email to %s", member.email)
-        logger.warning("Verification link for %s: %s", member.email, verify_url)
+        if settings.ENVIRONMENT != "production":
+            logger.warning("Verification link for %s: %s", member.email, verify_url)
         return False
     return True
 

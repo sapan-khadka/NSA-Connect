@@ -9,7 +9,7 @@ from conftest import (
 from app.models.preptask import PrepTaskGroup, PrepTaskGroupItem
 
 BOARD_REQUIRED_DETAIL = "Requires board role or higher"
-TASK_FORBIDDEN_DETAIL = "Not allowed to update this prep task"
+TASK_FORBIDDEN_DETAIL = "You cannot modify this task"
 
 
 def _event_payload(**overrides):
@@ -153,19 +153,11 @@ def test_general_member_can_get_event_detail(
     assert response.json()["prep_tasks"] == []
 
 
-@pytest.mark.parametrize(
-    "path",
-    [
-        "/api/v1/events/{event_id}/tasks",
-        "/api/v1/events/{event_id}/prep-tasks",
-    ],
-)
 def test_general_member_cannot_add_prep_task(
     client,
     db_session,
     general_member_headers,
     event_id,
-    path,
 ):
     _seed_prep_task_group(
         db_session,
@@ -174,7 +166,7 @@ def test_general_member_cannot_add_prep_task(
     )
 
     response = client.post(
-        path.format(event_id=event_id),
+        f"/api/v1/events/{event_id}/tasks",
         json=_prep_task_payload(),
         headers=general_member_headers,
     )
@@ -230,7 +222,7 @@ def test_general_member_cannot_update_unassigned_prep_task(
     prep_task_id,
 ):
     response = client.patch(
-        f"/api/v1/tasks/{prep_task_id}",
+        f"/api/v1/event-tasks/{prep_task_id}",
         json={"is_complete": True},
         headers=general_member_headers,
     )
@@ -266,7 +258,7 @@ def test_general_member_cannot_reassign_prep_task(
     task_id = create_response.json()["id"]
 
     response = client.patch(
-        f"/api/v1/tasks/{task_id}",
+        f"/api/v1/event-tasks/{task_id}",
         json={"assignee_id": None},
         headers=general_member_headers,
     )
@@ -301,7 +293,7 @@ def test_assignee_can_mark_assigned_prep_task_complete(
     task_id = create_response.json()["id"]
 
     response = client.patch(
-        f"/api/v1/tasks/{task_id}",
+        f"/api/v1/event-tasks/{task_id}",
         json={"is_complete": True},
         headers=board_member_headers,
     )
@@ -316,7 +308,7 @@ def test_board_member_can_update_prep_task(
     prep_task_id,
 ):
     response = client.patch(
-        f"/api/v1/tasks/{prep_task_id}",
+        f"/api/v1/event-tasks/{prep_task_id}",
         json={"is_complete": True},
         headers=board_member_headers,
     )
@@ -327,7 +319,7 @@ def test_board_member_can_update_prep_task(
 
 def test_unauthenticated_request_gets_401_on_update_prep_task(client, prep_task_id):
     response = client.patch(
-        f"/api/v1/tasks/{prep_task_id}",
+        f"/api/v1/event-tasks/{prep_task_id}",
         json={"is_complete": True},
     )
 

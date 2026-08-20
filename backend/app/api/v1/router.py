@@ -19,7 +19,6 @@ from app.api.v1.org_documents import router as org_documents_router
 from app.api.v1.public_events import router as public_events_router
 from app.api.v1.reports import router as reports_router
 from app.api.v1.slots import router as slots_router
-from app.api.v1.tasks import router as tasks_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -38,7 +37,7 @@ api_router.include_router(events_router)
 api_router.include_router(event_suggestions_router)
 api_router.include_router(event_tasks_router)
 api_router.include_router(slots_router)
-api_router.include_router(tasks_router)
+
 api_router.include_router(reports_router)
 api_router.include_router(finance_router)
 api_router.include_router(dues_router)

@@ -69,4 +69,4 @@ def test_register_rejects_duplicate_email(client):
     response = register_member(client)
 
     assert response.status_code == 409
-    assert response.json()["detail"] == "Email already registered"
+    assert response.json()["detail"] == "An account with this email or student ID already exists"

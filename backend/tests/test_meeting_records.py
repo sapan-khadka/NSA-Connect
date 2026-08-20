@@ -44,6 +44,8 @@ def board_member_headers(client, db_session):
 
 @pytest.fixture
 def secretary_headers(client, db_session):
+    from datetime import UTC, datetime
+
     from app.core.security import hash_password
     from app.models.member import Member, MemberPosition, MemberRole, MemberStatus
 
@@ -58,6 +60,7 @@ def secretary_headers(client, db_session):
         role=MemberRole.BOARD,
         status=MemberStatus.APPROVED,
         position=MemberPosition.SECRETARY,
+        email_verified_at=datetime.now(UTC),
     )
     db_session.add(member)
     db_session.commit()
