@@ -53,6 +53,7 @@ import { VerifyEmailPage } from "./pages/VerifyEmailPage";
 import { ReportDetailPage } from "./pages/ReportDetailPage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { TaskOversightPage } from "./pages/TaskOversightPage";
+import { canViewTaskOversight } from "./lib/roles";
 
 export const appRoutes: RouteObject[] = [
   {
@@ -293,7 +294,11 @@ export const appRoutes: RouteObject[] = [
           {
             path: "oversight",
             element: (
-              <ProtectedRoute minRole="board">
+              <ProtectedRoute
+                allow={(member) =>
+                  canViewTaskOversight(member.role, member.position)
+                }
+              >
                 <TaskOversightPage />
               </ProtectedRoute>
             ),

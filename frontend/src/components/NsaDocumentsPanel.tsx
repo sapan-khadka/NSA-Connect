@@ -1,8 +1,12 @@
-import { FileText, Lock, Trash2, Upload } from "lucide-react";
+import { FileText, Lock, Scale, Trash2, Upload } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage } from "../lib/api-error";
+import {
+  uploadConstitutionPdf,
+  type ConstitutionUploadResult,
+} from "../lib/constitution-api";
 import {
   deleteOrgDocument,
   fetchOrgDocuments,
@@ -31,6 +35,10 @@ export function NsaDocumentsPanel() {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [constitutionFile, setConstitutionFile] = useState<File | null>(null);
+  const [constitutionUploading, setConstitutionUploading] = useState(false);
+  const [constitutionResult, setConstitutionResult] =
+    useState<ConstitutionUploadResult | null>(null);
 
   async function reload() {
     setLoading(true);
@@ -48,6 +56,24 @@ export function NsaDocumentsPanel() {
   useEffect(() => {
     void reload();
   }, []);
+
+  async function handleConstitutionUpload(event: FormEvent) {
+    event.preventDefault();
+    if (!constitutionFile || !isBoard || constitutionUploading) {
+      return;
+    }
+    setConstitutionUploading(true);
+    setError(null);
+    try {
+      const result = await uploadConstitutionPdf(constitutionFile);
+      setConstitutionResult(result);
+      setConstitutionFile(null);
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Constitution upload failed."));
+    } finally {
+      setConstitutionUploading(false);
+    }
+  }
 
   async function handleUpload(event: FormEvent) {
     event.preventDefault();
@@ -100,8 +126,9 @@ export function NsaDocumentsPanel() {
           NSA Documents
         </h2>
         <p className="mt-1 max-w-2xl text-sm text-label">
-          Chapter files the AI Assistant can search. Public documents are
-          visible to every member; board-only documents stay private to the
+          Chapter files the AI Assistant can search. Upload the canonical
+          constitution separately from handbooks and policies. Public documents
+          are visible to every member; board-only documents stay private to the
           board.
         </p>
       </header>
@@ -114,11 +141,75 @@ export function NsaDocumentsPanel() {
 
       {isBoard ? (
         <form
+          onSubmit={(event) => void handleConstitutionUpload(event)}
+          className="rounded-2xl border border-[#EBEBEA] bg-white p-4"
+        >
+          <div className="flex items-start gap-3">
+            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F3F3F2] text-foreground">
+              <AppIcon icon={Scale} size="sm" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-semibold text-foreground">
+                Constitution (canonical)
+              </p>
+              <p className="mt-1 text-[12px] text-label">
+                Replaces the indexed constitution used by AI chat. PDF only, up
+                to 10 MB. Upload a new file whenever the chapter ratifies an
+                updated version.
+              </p>
+            </div>
+          </div>
+          <label className="mt-3 block text-sm">
+            <span className="mb-1 block text-[12px] font-medium text-label">
+              Constitution PDF
+            </span>
+            <input
+              type="file"
+              accept="application/pdf,.pdf"
+              required
+              onChange={(event) =>
+                setConstitutionFile(event.target.files?.[0] ?? null)
+              }
+              className="block w-full text-sm text-label file:mr-3 file:rounded-lg file:border-0 file:bg-foreground file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white"
+            />
+          </label>
+          <div className="mt-4">
+            <Button
+              type="submit"
+              size="sm"
+              disabled={constitutionUploading || !constitutionFile}
+              className="w-full sm:w-auto"
+            >
+              <AppIcon icon={Upload} size="xs" />
+              {constitutionUploading
+                ? "Uploading & indexing constitution…"
+                : "Upload constitution for AI"}
+            </Button>
+          </div>
+          {constitutionResult ? (
+            <p className="mt-3 text-[12px] text-label" role="status">
+              Indexed{" "}
+              {constitutionResult.filename
+                ? `"${constitutionResult.filename}"`
+                : "constitution"}
+              {" · "}
+              {constitutionResult.page_count} page
+              {constitutionResult.page_count === 1 ? "" : "s"}
+              {" · "}
+              {constitutionResult.chunk_count} AI section
+              {constitutionResult.chunk_count === 1 ? "" : "s"}
+            </p>
+          ) : null}
+        </form>
+      ) : null}
+
+      {isBoard ? (
+        <form
           onSubmit={(event) => void handleUpload(event)}
           className="rounded-2xl border border-[#EBEBEA] bg-white p-4"
         >
           <p className="text-[13px] font-semibold text-foreground">
-            Upload document (PDF)
+            Chapter documents (PDF)
           </p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <label className="block text-sm">

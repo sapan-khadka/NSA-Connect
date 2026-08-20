@@ -114,6 +114,53 @@ describe("ProtectedRoute", () => {
     expect(screen.getByText("Treasury content")).toBeInTheDocument();
   });
 
+  it("redirects when the allow check fails", async () => {
+    render(
+      <MemoryRouter initialEntries={["/events/oversight"]}>
+        <MockAuthProvider
+          value={{
+            member: createMockMember("board"),
+            isAuthenticated: true,
+          }}
+        >
+          <Routes>
+            <Route
+              path="/events/oversight"
+              element={
+                <ProtectedRoute allow={() => false}>
+                  <div>Oversight content</div>
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/" element={<div>Home page</div>} />
+          </Routes>
+        </MockAuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Home page")).toBeInTheDocument();
+    expect(screen.queryByText("Oversight content")).not.toBeInTheDocument();
+  });
+
+  it("renders when the allow check passes", () => {
+    render(
+      <MemoryRouter initialEntries={["/events/oversight"]}>
+        <MockAuthProvider
+          value={{
+            member: createMockMember("president"),
+            isAuthenticated: true,
+          }}
+        >
+          <ProtectedRoute allow={() => true}>
+            <div>Oversight content</div>
+          </ProtectedRoute>
+        </MockAuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Oversight content")).toBeInTheDocument();
+  });
+
   it("redirects board members away from general-only routes to home", async () => {
     render(
       <MemoryRouter initialEntries={["/member"]}>

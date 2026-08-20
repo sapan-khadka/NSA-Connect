@@ -16,7 +16,7 @@ export function DraftPrepChecklist({
     <section className="rounded-md border border-accent/20 bg-accent/5 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-foreground">Generated prep checklist</h3>
+          <h3 className="text-sm font-semibold text-foreground">Generated checklist</h3>
           <p className="mt-1 text-sm text-label">
             {taskCount} tasks across {categories.length} categories will be added when
             you create this event.

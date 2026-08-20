@@ -1,3 +1,4 @@
+/** Adapters between legacy PrepTask (checklist) and canonical EventTask shapes. */
 import type { EventTaskResponse } from "./event-tasks-api";
 import type { PrepTaskResponse } from "./events-api";
 

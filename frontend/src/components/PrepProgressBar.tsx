@@ -8,7 +8,7 @@ type PrepProgressBarProps = {
 
 export function PrepProgressBar({
   progress,
-  label = "Prep progress",
+  label = "Checklist progress",
   variant = "default",
 }: PrepProgressBarProps) {
   const fillClass =

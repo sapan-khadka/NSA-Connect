@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { Link } from "react-router";
 
-import {
-  fetchDiscussionInbox,
-  type DiscussionInboxRoom,
-} from "../lib/discussion-api";
+import { useDiscussionInbox } from "../context/DiscussionInboxProvider";
+import type { DiscussionInboxRoom } from "../lib/discussion-api";
+import { sortDiscussionInboxRooms } from "../lib/discussion-inbox";
 import {
   DiscussionInboxRow,
   DiscussionInboxSectionLabel,
@@ -14,26 +13,9 @@ import { ArrowLink } from "./ui/ArrowLink";
 import { HomeCard } from "./ui/HomeCard";
 
 const INBOX_PATH = "/discussions";
-const INBOX_POLL_MS = 45_000;
 
 function totalUnread(rooms: DiscussionInboxRoom[]): number {
   return rooms.reduce((sum, room) => sum + Math.max(0, room.unread_count), 0);
-}
-
-/** Match Discussions page pin + recency order. */
-function sortRooms(rooms: DiscussionInboxRoom[]): DiscussionInboxRoom[] {
-  const pinned = rooms.filter((room) => room.pinned);
-  const unpinned = rooms.filter((room) => !room.pinned);
-  return [
-    ...pinned.sort((a, b) => {
-      if (a.room_id === "board") return -1;
-      if (b.room_id === "board") return 1;
-      return (b.pinned_at ?? "").localeCompare(a.pinned_at ?? "");
-    }),
-    ...unpinned.sort((a, b) =>
-      (b.last_message_at ?? "").localeCompare(a.last_message_at ?? ""),
-    ),
-  ];
 }
 
 function DiscussionCardShell({
@@ -87,7 +69,10 @@ function InboxRoomSections({
   rooms: DiscussionInboxRoom[];
   previewLimit: number;
 }) {
-  const ordered = useMemo(() => sortRooms(rooms), [rooms]);
+  const ordered = useMemo(
+    () => sortDiscussionInboxRooms(rooms),
+    [rooms],
+  );
   const groups = useMemo(
     () => groupDiscussionInboxRooms(ordered),
     [ordered],
@@ -167,63 +152,7 @@ export function HomeDiscussionSection({
   previewLimit?: number;
   variant?: "card" | "rail";
 }) {
-  const [rooms, setRooms] = useState<DiscussionInboxRoom[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    let pollId: number | null = null;
-
-    async function load(opts?: { silent?: boolean }) {
-      if (!opts?.silent) {
-        setLoading(true);
-        setError(null);
-      }
-      try {
-        const response = await fetchDiscussionInbox();
-        if (cancelled) {
-          return;
-        }
-        setRooms(response.rooms);
-        setError(null);
-      } catch {
-        if (cancelled) {
-          return;
-        }
-        if (!opts?.silent) {
-          setRooms([]);
-          setError("Couldn’t load inbox");
-        }
-      } finally {
-        if (!cancelled && !opts?.silent) {
-          setLoading(false);
-        }
-      }
-    }
-
-    void load();
-    pollId = window.setInterval(() => {
-      if (document.visibilityState === "visible") {
-        void load({ silent: true });
-      }
-    }, INBOX_POLL_MS);
-
-    function handleVisibility() {
-      if (document.visibilityState === "visible") {
-        void load({ silent: true });
-      }
-    }
-    document.addEventListener("visibilitychange", handleVisibility);
-
-    return () => {
-      cancelled = true;
-      if (pollId != null) {
-        window.clearInterval(pollId);
-      }
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, []);
+  const { rooms, loading, error } = useDiscussionInbox();
 
   const unreadTotal = totalUnread(rooms);
   const openLink =
@@ -243,7 +172,7 @@ export function HomeDiscussionSection({
     return (
       <DiscussionCardShell headerAction={openLink} variant={variant}>
         <p className="home-discussion-empty" role="alert">
-          {error}
+          Couldn’t load inbox
         </p>
       </DiscussionCardShell>
     );

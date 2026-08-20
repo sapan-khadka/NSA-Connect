@@ -9,6 +9,7 @@ import { buildNavLinkClass } from "../components/AppNav";
 import { AppLogo } from "../components/AppLogo";
 import { GuestChrome, isGuestMarketingPath } from "./GuestMarketingLayout";
 import { ChatNotificationProvider } from "../context/ChatNotificationProvider";
+import { DiscussionInboxProvider } from "../context/DiscussionInboxProvider";
 import { NotificationSummaryProvider } from "../context/NotificationSummaryProvider";
 import { ToastProvider } from "../context/ToastProvider";
 import { useAuth } from "../context/useAuth";
@@ -102,7 +103,8 @@ export function AppLayout() {
     <NotificationSummaryProvider>
       <ToastProvider>
         <ChatNotificationProvider>
-          <div
+          <DiscussionInboxProvider>
+            <div
             className={[
               "ds-app-shell",
               "ds-app-shell--app",
@@ -169,6 +171,7 @@ export function AppLayout() {
               {hideMobileBottomNav ? null : <MobileBottomNav />}
             </div>
           </div>
+          </DiscussionInboxProvider>
         </ChatNotificationProvider>
       </ToastProvider>
     </NotificationSummaryProvider>

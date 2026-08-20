@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router";
 
 import { Bell, BellOff, FileText, MoreHorizontal, Users } from "lucide-react";
@@ -12,11 +12,11 @@ import { NewDirectMessageModal } from "../components/discussions/NewDirectMessag
 import { AppIcon } from "../components/ui/AppIcon";
 import { Button } from "../components/ui/Button";
 import { useAuth } from "../context/useAuth";
+import { useDiscussionInbox } from "../context/DiscussionInboxProvider";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import {
   approveDiscussionRoom,
   archiveDiscussionInboxRoom,
-  fetchDiscussionInbox,
   fetchDiscussionRoom,
   fetchMyDiscussionRooms,
   fetchPendingDiscussionRooms,
@@ -26,10 +26,9 @@ import {
   toggleDiscussionRoomPin,
   toggleDiscussionRoomUserArchive,
   unarchiveDiscussionInboxRoom,
-  type DiscussionArchivedRoom,
-  type DiscussionInboxRoom,
   type DiscussionRoom,
 } from "../lib/discussion-api";
+import { sortDiscussionInboxRooms as sortRooms } from "../lib/discussion-inbox";
 import {
   discussionRoomIdFromPath,
   discussionRoomPath,
@@ -39,22 +38,7 @@ import { openDirectMessage } from "../lib/open-direct-message";
 import { fetchAssignableMembers } from "../lib/members-api";
 import { canViewTaskOversight, memberSatisfiesMinRole } from "../lib/roles";
 
-const INBOX_POLL_MS = 12_000;
-
-function sortRooms(rooms: DiscussionInboxRoom[]): DiscussionInboxRoom[] {
-  const pinned = rooms.filter((room) => room.pinned);
-  const unpinned = rooms.filter((room) => !room.pinned);
-  return [
-    ...pinned.sort((a, b) => {
-      if (a.room_id === "board") return -1;
-      if (b.room_id === "board") return 1;
-      return (b.pinned_at ?? "").localeCompare(a.pinned_at ?? "");
-    }),
-    ...unpinned.sort((a, b) =>
-      (b.last_message_at ?? "").localeCompare(a.last_message_at ?? ""),
-    ),
-  ];
-}
+const QUEUES_POLL_MS = 12_000;
 
 function isInvalidDiscussionsDeepLink(pathname: string): boolean {
   return (
@@ -71,8 +55,6 @@ export function DiscussionsPage() {
   const { member } = useAuth();
   const isMdUp = useMediaQuery("(min-width: 768px)");
   const selectedRoomId = discussionRoomIdFromPath(location.pathname);
-  const selectedRoomIdRef = useRef(selectedRoomId);
-  selectedRoomIdRef.current = selectedRoomId;
   const scope = discussionScopeFromPath(location.pathname);
 
   const canCreateGroup = member
@@ -84,9 +66,16 @@ export function DiscussionsPage() {
     : false;
   const canManageArchive = canReviewGroups;
 
-  const [rooms, setRooms] = useState<DiscussionInboxRoom[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    rooms,
+    archivedRooms,
+    personalArchivedRooms,
+    loading,
+    error,
+    refresh,
+    setRooms,
+    setPersonalArchivedRooms,
+  } = useDiscussionInbox();
   const [pinningId, setPinningId] = useState<string | null>(null);
   const [, setMutingId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -101,12 +90,6 @@ export function DiscussionsPage() {
   const [activeRoomDetail, setActiveRoomDetail] =
     useState<DiscussionRoom | null>(null);
   const [unarchivingId, setUnarchivingId] = useState<string | null>(null);
-  const [archivedRooms, setArchivedRooms] = useState<DiscussionArchivedRoom[]>(
-    [],
-  );
-  const [personalArchivedRooms, setPersonalArchivedRooms] = useState<
-    DiscussionInboxRoom[]
-  >([]);
   const [showArchived, setShowArchived] = useState(false);
   const [queuesVersion, setQueuesVersion] = useState(0);
   const [boardMemberCount, setBoardMemberCount] = useState<number | null>(null);
@@ -129,45 +112,6 @@ export function DiscussionsPage() {
 
   useEffect(() => {
     let cancelled = false;
-
-    async function loadInbox(opts?: { silent?: boolean }) {
-      if (!opts?.silent) {
-        setLoading(true);
-        setError(null);
-      }
-      try {
-        const response = await fetchDiscussionInbox();
-        if (!cancelled) {
-          // Keep the open thread cleared so polling cannot restore unread
-          // while the user is actively reading it.
-          const activeId = selectedRoomIdRef.current;
-          setRooms(
-            sortRooms(
-              response.rooms.map((room) =>
-                room.room_id === activeId
-                  ? { ...room, unread_count: 0, unread_display: null }
-                  : room,
-              ),
-            ),
-          );
-          setArchivedRooms(response.archived_rooms ?? []);
-          setPersonalArchivedRooms(
-            sortRooms(response.personal_archived_rooms ?? []),
-          );
-        }
-      } catch {
-        if (!cancelled && !opts?.silent) {
-          setRooms([]);
-          setArchivedRooms([]);
-          setPersonalArchivedRooms([]);
-          setError("Could not load discussions.");
-        }
-      } finally {
-        if (!cancelled && !opts?.silent) {
-          setLoading(false);
-        }
-      }
-    }
 
     async function loadQueues() {
       if (!member) {
@@ -211,18 +155,15 @@ export function DiscussionsPage() {
       }
     }
 
-    void loadInbox();
     void loadQueues();
 
     const pollId = window.setInterval(() => {
       if (document.visibilityState === "visible") {
-        void loadInbox({ silent: true });
         void loadQueues();
       }
-    }, INBOX_POLL_MS);
+    }, QUEUES_POLL_MS);
 
     function handleFocus() {
-      void loadInbox({ silent: true });
       void loadQueues();
     }
 
@@ -246,7 +187,19 @@ export function DiscussionsPage() {
           : room,
       ),
     );
-  }, [selectedRoomId]);
+  }, [selectedRoomId, setRooms]);
+
+  const displayRooms = useMemo(
+    () =>
+      selectedRoomId
+        ? rooms.map((room) =>
+            room.room_id === selectedRoomId
+              ? { ...room, unread_count: 0, unread_display: null }
+              : room,
+          )
+        : rooms,
+    [rooms, selectedRoomId],
+  );
 
   const activeCustomRoomId = scope?.type === "room" ? scope.roomId : null;
 
@@ -285,16 +238,7 @@ export function DiscussionsPage() {
   }, [isMdUp, loading, selectedRoomId, rooms, navigate]);
 
   async function reloadInboxSilent() {
-    try {
-      const response = await fetchDiscussionInbox();
-      setRooms(sortRooms(response.rooms));
-      setArchivedRooms(response.archived_rooms ?? []);
-      setPersonalArchivedRooms(
-        sortRooms(response.personal_archived_rooms ?? []),
-      );
-    } catch {
-      // Keep existing list on silent refresh failure.
-    }
+    await refresh({ silent: true });
   }
 
   async function handleUnarchiveRoom(roomId: string) {
@@ -589,7 +533,7 @@ export function DiscussionsPage() {
     <div className="discussions-shell -mx-4 -my-5 flex min-h-[28rem] overflow-hidden border-y border-[#F0F0EE] bg-white sm:-mx-6 sm:-my-6 lg:-mx-8 xl:-mx-10">
       {showList ? (
         <DiscussionRoomSidebar
-          rooms={rooms}
+          rooms={displayRooms}
           selectedRoomId={selectedRoomId}
           onTogglePin={handleTogglePin}
           onToggleMute={(roomId) => void handleToggleMute(roomId)}
@@ -775,7 +719,7 @@ export function DiscussionsPage() {
             />
           ) : (
             <div className="flex h-full flex-col items-center justify-center px-8 text-center">
-              {rooms.length === 0 && !loading ? (
+              {displayRooms.length === 0 && !loading ? (
                 <div className="max-w-[22rem]">
                   <p className="text-[15px] font-semibold tracking-tight text-foreground">
                     Start a conversation
