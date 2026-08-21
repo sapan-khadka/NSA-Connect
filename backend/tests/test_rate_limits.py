@@ -58,7 +58,8 @@ def isolated_rate_limit_redis(monkeypatch):
 
     fake.flushall()
     rate_limit_module.limiter._storage.reset()
-    reset_rate_limit_redis(None)
+    # Keep a fake client installed for later modules (do not clear to None).
+    reset_rate_limit_redis(fakeredis.FakeRedis(decode_responses=True))
 
 
 def _failed_login(client: TestClient, email: str = "sapan@semo.edu"):

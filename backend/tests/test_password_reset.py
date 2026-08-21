@@ -223,7 +223,7 @@ def isolated_rate_limit_redis(monkeypatch):
 
     fake.flushall()
     rate_limit_module.limiter._storage.reset()
-    reset_rate_limit_redis(None)
+    reset_rate_limit_redis(fakeredis.FakeRedis(decode_responses=True))
 
 
 def test_password_reset_rate_limit_by_email(

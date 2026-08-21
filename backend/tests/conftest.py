@@ -122,18 +122,34 @@ def disable_first_owner_bootstrap(monkeypatch, request):
     )
 
 
-@pytest.fixture(autouse=True)
-def use_fake_rate_limit_redis():
-    """Keep rate-limit Redis calls off the network (CI has no Redis service)."""
+@pytest.fixture(scope="session", autouse=True)
+def use_fake_rate_limit_backends():
+    """Session-wide in-memory rate-limit backends (CI has no Redis).
+
+    Must be session-scoped: module-scoped fixtures (e.g. auth matrix login)
+    run before function-scoped autouse fixtures and still hit Redis otherwise.
+    """
     try:
         import fakeredis
     except ImportError as exc:
         pytest.skip(f"fakeredis required for tests: {exc}")
 
+    from limits.storage import MemoryStorage
+    from limits.strategies import STRATEGIES
+
+    from app.core import rate_limit as rate_limit_module
     from app.core.rate_limit import reset_rate_limit_redis
 
     fake = fakeredis.FakeRedis(decode_responses=True)
     reset_rate_limit_redis(fake)
+
+    storage = MemoryStorage()
+    rate_limit_module.limiter._storage = storage
+    rate_limit_module.limiter._limiter = STRATEGIES[
+        rate_limit_module.limiter._strategy or "fixed-window"
+    ](storage)
+    rate_limit_module.limiter._storage_dead = False
+
     yield fake
     reset_rate_limit_redis(None)
 
