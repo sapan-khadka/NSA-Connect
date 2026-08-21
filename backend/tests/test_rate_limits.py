@@ -162,6 +162,16 @@ def test_clear_login_failures_resets_counter():
     check_login_account_failures(email)
 
 
+def test_clear_login_failures_skips_redis_when_disabled(monkeypatch):
+    monkeypatch.setattr(settings, "RATE_LIMIT_ENABLED", False)
+
+    def boom():
+        raise AssertionError("Redis must not be used when rate limits are disabled")
+
+    monkeypatch.setattr(rate_limit_module, "get_rate_limit_redis", boom)
+    clear_login_failures("anyone@semo.edu")
+
+
 def test_account_login_failures_do_not_block_other_accounts(
     client,
     db_session,

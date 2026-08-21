@@ -123,8 +123,24 @@ def disable_first_owner_bootstrap(monkeypatch, request):
 
 
 @pytest.fixture(autouse=True)
+def use_fake_rate_limit_redis():
+    """Keep rate-limit Redis calls off the network (CI has no Redis service)."""
+    try:
+        import fakeredis
+    except ImportError as exc:
+        pytest.skip(f"fakeredis required for tests: {exc}")
+
+    from app.core.rate_limit import reset_rate_limit_redis
+
+    fake = fakeredis.FakeRedis(decode_responses=True)
+    reset_rate_limit_redis(fake)
+    yield fake
+    reset_rate_limit_redis(None)
+
+
+@pytest.fixture(autouse=True)
 def block_external_integrations():
-    """Never hit Redis, Celery brokers, Resend, Anthropic, or OpenAI during tests."""
+    """Never hit Celery brokers, Resend, Anthropic, or OpenAI during tests."""
     anthropic_sdk_client = MagicMock(name="anthropic_sdk_client")
     anthropic_sdk_client.messages.create.side_effect = AssertionError(
         "Real Anthropic API must not be called in tests; use mock_claude_checklist_api",

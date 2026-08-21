@@ -137,6 +137,8 @@ def record_login_failure(email: str) -> None:
 
 
 def clear_login_failures(email: str) -> None:
+    if not settings.RATE_LIMIT_ENABLED:
+        return
     get_rate_limit_redis().delete(f"rl:login:fail:{_normalize_email(email)}")
 
 
