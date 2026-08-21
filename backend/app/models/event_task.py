@@ -51,7 +51,7 @@ class EventTask(Base):
     __tablename__ = "event_tasks"
 
     id = Column(Integer, primary_key=True, index=True)
-    event_id = Column(Integer, ForeignKey("events.id"), nullable=False)
+    event_id = Column(Integer, ForeignKey("events.id"), nullable=False, index=True)
     task_kind = Column(
         SqlEnum(
             EventTaskKind,
@@ -64,7 +64,10 @@ class EventTask(Base):
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=False, default="")
     group_id = Column(Integer, ForeignKey("prep_task_groups.id"), nullable=True)
-    assignee_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    assignee_id = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True, index=True,
+    )
     status = Column(
         SqlEnum(
             EventTaskStatus,
@@ -78,7 +81,7 @@ class EventTask(Base):
     completion_note = Column(Text, nullable=True)
     completion_photo_url = Column(String(2048), nullable=True)
     completed_at = Column(DateTime(timezone=True), nullable=True)
-    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,

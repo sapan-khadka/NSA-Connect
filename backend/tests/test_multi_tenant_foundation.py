@@ -89,7 +89,7 @@ def test_auth_me_includes_organization(client, db_session):
     assert len(memberships) == 1
 
 
-def test_university_email_domain_validation(db_session):
+def test_university_email_domain_validation(db_session, monkeypatch):
     assert validate_university_email(db_session, "student@semo.edu") == "student@semo.edu"
     university = university_for_email(db_session, "student@semo.edu")
     assert university is not None
@@ -97,6 +97,21 @@ def test_university_email_domain_validation(db_session):
 
     with pytest.raises(ValueError, match="@semo.edu"):
         validate_university_email(db_session, "student@gmail.com")
+
+    import app.core.config as config_module
+
+    monkeypatch.setattr(
+        config_module.settings,
+        "ORG_OWNER_EMAILS",
+        "chapter.owner@gmail.com",
+    )
+    assert (
+        validate_university_email(db_session, "chapter.owner@gmail.com")
+        == "chapter.owner@gmail.com"
+    )
+    owner_uni = university_for_email(db_session, "chapter.owner@gmail.com")
+    assert owner_uni is not None
+    assert owner_uni.slug == "semo"
 
 
 def test_president_seeded_as_org_owner(db_session):
@@ -145,6 +160,8 @@ def test_sync_membership_preserves_is_org_owner(db_session):
 
 @pytest.mark.empty_org
 def test_empty_org_first_register_becomes_owner(client, db_session):
+    from conftest import mark_email_verified
+
     response = client.post(
         "/api/v1/auth/register",
         json={
@@ -159,13 +176,15 @@ def test_empty_org_first_register_becomes_owner(client, db_session):
     assert response.status_code == 201
     body = response.json()
     assert body["status"] == "approved"
-    assert body["role"] == "president"
+    assert body["role"] == "general"
+    assert body.get("is_org_owner") is True
 
     membership = get_membership_for_user(db_session, body["id"])
     assert membership is not None
     assert membership.is_org_owner is True
-    assert membership.role == MemberRole.PRESIDENT
+    assert membership.role == MemberRole.GENERAL
 
+    mark_email_verified(db_session, email="first-owner@semo.edu")
     login = client.post(
         "/api/v1/auth/login",
         json={"email": "first-owner@semo.edu", "password": "securepass123"},

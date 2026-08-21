@@ -18,14 +18,10 @@ import { Link, useNavigate } from "react-router";
 import { Avatar } from "../design-system/components/Avatar";
 import { Drawer } from "../design-system/components/feedback/Drawer";
 import { useAuth } from "../context/useAuth";
+import { useMemberWorkspaceData } from "../hooks/useMemberWorkspaceData";
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/api-error";
 import type { DuesStatus, MemberDuesRecord } from "../lib/dues-api";
-import {
-  fetchMyEventTasks,
-  fetchTaskOverview,
-  type EventTaskResponse,
-} from "../lib/event-tasks-api";
 import { formatCurrencyCompact } from "../lib/format-currency";
 import { memberMailtoHref } from "../lib/member-mailto";
 import {
@@ -34,27 +30,16 @@ import {
 } from "../lib/members-directory";
 import {
   groupMemberActivityByDay,
-  mapMemberActivityApiItem,
   takeMemberActivityPreview,
-  type MemberActivityItem,
 } from "../lib/member-activity-timeline";
-import { fetchMemberActivity } from "../lib/members-api";
 import {
   buildResponsibilityItems,
-  type MemberResponsibilityItem,
 } from "../lib/member-workspace-responsibilities";
-import {
-  fetchMemberWorkspaceSchedule,
-  takeSchedulePreview,
-  type ScheduleCommitment,
-} from "../lib/member-workspace-schedule";
+import { takeSchedulePreview } from "../lib/member-workspace-schedule";
 import { openDirectMessage } from "../lib/open-direct-message";
 import {
   canManageEventTasks,
-  canViewMemberDirectory,
-  canViewTaskOversight,
   formatMemberPositionLabel,
-  isMemberRole,
   memberHoldsBoardSeat,
 } from "../lib/roles";
 import { AppIcon } from "./ui/AppIcon";
@@ -203,87 +188,37 @@ export function MemberQuickViewDrawer({
   const moreRef = useRef<HTMLDivElement>(null);
   const [messageLoading, setMessageLoading] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const [activityItems, setActivityItems] = useState<MemberActivityItem[]>([]);
-  const [responsibilities, setResponsibilities] = useState<
-    MemberResponsibilityItem[]
-  >([]);
-  const [upcoming, setUpcoming] = useState<ScheduleCommitment | null>(null);
-  const [sectionsLoading, setSectionsLoading] = useState(false);
 
   const useExternalActivity = activityItemsProp !== undefined;
 
-  useEffect(() => {
-    if (!open || !member || useExternalActivity) {
-      return;
-    }
+  const {
+    memberTasks,
+    scheduleItems,
+    activityItems,
+    isLoading: sectionsLoading,
+  } = useMemberWorkspaceData({
+    member,
+    enabled: open && Boolean(member) && !useExternalActivity,
+    activityLimit: 12,
+  });
 
-    let cancelled = false;
-    setSectionsLoading(true);
-    setActivityItems([]);
-    setResponsibilities([]);
-    setUpcoming(null);
+  const canOpenEventManage = Boolean(
+    currentMember &&
+      canManageEventTasks(currentMember.role, currentMember.position),
+  );
 
-    const isSelf = currentMember?.id === member.id;
-    const canFetchTaskOverview = Boolean(
-      currentMember &&
-        canViewTaskOversight(currentMember.role, currentMember.position),
-    );
-    const canOpenEventManage = Boolean(
-      currentMember &&
-        canManageEventTasks(currentMember.role, currentMember.position),
-    );
-    const viewerIsBoard = Boolean(
-      currentMember && canViewMemberDirectory(currentMember.role),
-    );
-    const memberRole = isMemberRole(member.role) ? member.role : "general";
+  const responsibilities = useMemo(
+    () =>
+      buildResponsibilityItems(memberTasks, {
+        canOpenEventManage,
+      }),
+    [memberTasks, canOpenEventManage],
+  );
 
-    void (async () => {
-      const [activityResult, overviewResult, myTasksResult, scheduleResult] =
-        await Promise.all([
-          fetchMemberActivity(member.id, { limit: 12 }).catch(() => ({
-            items: [],
-            total: 0,
-          })),
-          canFetchTaskOverview
-            ? fetchTaskOverview().catch(() => null)
-            : Promise.resolve(null),
-          isSelf && !canFetchTaskOverview
-            ? fetchMyEventTasks().catch(() => null)
-            : Promise.resolve(null),
-          fetchMemberWorkspaceSchedule({
-            memberId: member.id,
-            memberRole,
-            isSelf,
-            viewerIsBoard,
-          }).catch(() => [] as ScheduleCommitment[]),
-        ]);
-
-      if (cancelled) {
-        return;
-      }
-
-      let tasks: EventTaskResponse[] = [];
-      if (overviewResult) {
-        const row = overviewResult.members.find(
-          (entry) => entry.member_id === member.id,
-        );
-        tasks = row?.tasks ?? [];
-      } else if (myTasksResult) {
-        tasks = myTasksResult.tasks;
-      }
-
-      setActivityItems(activityResult.items.map(mapMemberActivityApiItem));
-      setResponsibilities(
-        buildResponsibilityItems(tasks, { canOpenEventManage }),
-      );
-      setUpcoming(takeSchedulePreview(scheduleResult).preview[0] ?? null);
-      setSectionsLoading(false);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open, member, useExternalActivity, currentMember]);
+  const upcoming = useMemo(
+    () => takeSchedulePreview(scheduleItems).preview[0] ?? null,
+    [scheduleItems],
+  );
 
   useEffect(() => {
     if (!moreOpen) {

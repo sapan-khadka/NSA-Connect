@@ -15,7 +15,7 @@ import { fetchMeetings } from "../../lib/meetings-api";
 import {
   canManageMeetingRecords,
   canManageTreasury,
-  canViewMemberDirectory,
+  viewerCanManageMembers,
 } from "../../lib/roles";
 import { AppIcon } from "../ui/AppIcon";
 
@@ -39,7 +39,7 @@ export function HomeTodaysFocus({
   nextEvent: EventResponse | null;
   isLoading?: boolean;
 }) {
-  const canReviewMembers = canViewMemberDirectory(member.role);
+  const canReviewMembers = viewerCanManageMembers(member);
   const canReviewFinance = canManageTreasury(member.role, member.position);
   const canManageMinutes = canManageMeetingRecords(
     member.role,

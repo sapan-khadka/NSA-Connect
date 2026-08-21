@@ -1,5 +1,4 @@
 import { cleanup, render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { MemberAiInsightsCard } from "./MemberAiInsightsCard";
@@ -9,39 +8,19 @@ describe("MemberAiInsightsCard", () => {
     cleanup();
   });
 
-  it("renders placeholder insights, suggestions, and actions", () => {
+  it("renders an unavailable state without invented insights", () => {
     render(<MemberAiInsightsCard />);
 
     expect(screen.getByLabelText("AI Insights")).toBeInTheDocument();
+    expect(screen.getByText("Unavailable")).toBeInTheDocument();
     expect(
-      screen.getByText("Member has missed four events."),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Member is highly engaged.")).toBeInTheDocument();
-    expect(screen.getByText("Recommend leadership role.")).toBeInTheDocument();
-    expect(screen.getByText("Outstanding dues.")).toBeInTheDocument();
-    expect(
-      screen.getByText("Recommend sending reminder."),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Suggestions")).toBeInTheDocument();
-    expect(screen.getByText("Suggested actions")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Send reminder" }),
+      screen.getByText("AI insights are not available yet"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Placeholder UX only/i),
-    ).toBeInTheDocument();
-  });
-
-  it("acknowledges action clicks without calling a backend", async () => {
-    const user = userEvent.setup();
-    render(<MemberAiInsightsCard />);
-
-    await user.click(screen.getByRole("button", { name: "Follow up on dues" }));
-
+      screen.queryByText("Member has missed four events."),
+    ).not.toBeInTheDocument();
     expect(
-      screen.getByText(
-        "Action noted for review. AI suggestions are preview-only for now.",
-      ),
+      screen.getByText(/No backend AI is generating insights/i),
     ).toBeInTheDocument();
   });
 });

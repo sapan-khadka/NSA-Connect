@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.config import settings
+from app.core.permissions import member_has_role_at_least
 from app.integrations.cloudinary_client import (
     CloudinaryUploadError,
     CloudinaryUploadResult,
@@ -41,7 +42,7 @@ def can_manage_member_documents(viewer: Member, member_id: int) -> bool:
     """
     if viewer.id == member_id:
         return True
-    return viewer.has_role_at_least(MemberRole.BOARD)
+    return member_has_role_at_least(viewer, MemberRole.BOARD)
 
 
 def _display_name(member: Member | None) -> str:
@@ -71,8 +72,8 @@ def ensure_member_accessible(db: Session, member_id: int, viewer: Member) -> Mem
     except MemberNotFoundError:
         raise
 
-    if subject.status != MemberStatus.APPROVED and not viewer.has_role_at_least(
-        MemberRole.BOARD,
+    if subject.status != MemberStatus.APPROVED and not member_has_role_at_least(
+        viewer, MemberRole.BOARD
     ):
         raise MemberNotFoundError
 

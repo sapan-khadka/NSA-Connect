@@ -5,7 +5,7 @@ import { GuestField } from "../components/guest/GuestField";
 import { Mail } from "lucide-react";
 import { requestPasswordReset } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/api-error";
-import { SEMO_EMAIL_DOMAIN, validateSemoEmail } from "../lib/validation";
+import { validateEmailAddress } from "../lib/validation";
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -17,7 +17,7 @@ export function ForgotPasswordPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const emailError = validateSemoEmail(email);
+    const emailError = validateEmailAddress(email);
     setFieldError(emailError ?? undefined);
 
     if (emailError) {
@@ -46,8 +46,8 @@ export function ForgotPasswordPage() {
           <p className="guest-card-kicker">Account</p>
           <h1>Forgot password</h1>
           <p className="guest-auth-lede">
-            Enter your @{SEMO_EMAIL_DOMAIN} email and we&apos;ll send a reset
-            link if an account exists.
+            Enter your account email and we&apos;ll send a reset link if an
+            account exists.
           </p>
         </header>
 
@@ -77,7 +77,7 @@ export function ForgotPasswordPage() {
               setFieldError(undefined);
               setServerError(null);
             }}
-            onBlur={() => setFieldError(validateSemoEmail(email) ?? undefined)}
+            onBlur={() => setFieldError(validateEmailAddress(email) ?? undefined)}
             error={fieldError}
             placeholder="you@semo.edu"
           />

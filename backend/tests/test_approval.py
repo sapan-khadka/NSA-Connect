@@ -2,6 +2,7 @@ from conftest import (
     auth_header,
     create_board_member,
     login_member,
+    mark_email_verified,
     register_member,
     set_member_approved,
 )
@@ -10,6 +11,7 @@ from conftest import (
 def test_pending_member_cannot_login(client, db_session):
     create_board_member(db_session)
     register_member(client)
+    mark_email_verified(db_session)
 
     response = login_member(client)
 
@@ -25,6 +27,7 @@ def test_board_member_approves_pending_signup(client, db_session):
     assert pending.status_code == 201
     assert pending.json()["status"] == "pending"
     member_id = pending.json()["id"]
+    mark_email_verified(db_session, email="newmember@semo.edu")
 
     pending_login = login_member(client, email="newmember@semo.edu")
     assert pending_login.status_code == 403
@@ -49,6 +52,7 @@ def test_approve_queues_welcome_email(block_external_integrations, client, db_se
         client, email="newmember@semo.edu", student_id="11111111"
     )
     member_id = pending.json()["id"]
+    mark_email_verified(db_session, email="newmember@semo.edu")
 
     response = client.patch(
         f"/api/v1/members/{member_id}/approve",
@@ -66,6 +70,8 @@ def test_board_member_lists_pending_signups(client, db_session):
     create_board_member(db_session)
     register_member(client, email="pending1@semo.edu", student_id="11111111")
     register_member(client, email="pending2@semo.edu", student_id="22222222")
+    mark_email_verified(db_session, email="pending1@semo.edu")
+    mark_email_verified(db_session, email="pending2@semo.edu")
 
     response = client.get(
         "/api/v1/members/pending",
@@ -84,6 +90,7 @@ def test_board_member_rejects_pending_signup(client, db_session):
         client, email="rejectme@semo.edu", student_id="33333333"
     )
     member_id = pending.json()["id"]
+    mark_email_verified(db_session, email="rejectme@semo.edu")
 
     response = client.patch(
         f"/api/v1/members/{member_id}/reject",

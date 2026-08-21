@@ -124,8 +124,8 @@ export function formatActivityDateTimeLabel(iso: string): string {
 }
 
 /**
- * Build a readable activity timeline from known event signals + placeholders.
- * No backend activity feed exists yet.
+ * Build an activity timeline from known event signals only.
+ * Omits invented reminder / sample volunteer / sample poster rows.
  */
 export function buildEventActivityTimeline(input: {
   event: EventDetailResponse;
@@ -135,108 +135,56 @@ export function buildEventActivityTimeline(input: {
 }): EventActivityItem[] {
   const now = input.now ?? new Date();
   const items: EventActivityItem[] = [];
+  const startsAt = input.event.starts_at
+    ? new Date(input.event.starts_at)
+    : null;
 
-  // Recent placeholder: budget update
   if (input.hasBudget) {
     items.push({
-      id: "budget-updated",
+      id: "budget-assigned",
       kind: "budget",
-      title: "Budget updated",
-      detail: "Planned spend refreshed for this event.",
-      occurredAt: new Date(now.getTime() - 2 * 60_000).toISOString(),
-      isPlaceholder: true,
-    });
-  } else {
-    items.push({
-      id: "budget-pending",
-      kind: "budget",
-      title: "Budget not assigned yet",
-      detail: "Assign a planned budget when ready.",
-      occurredAt: new Date(now.getTime() - 3 * 60_000).toISOString(),
-      isPlaceholder: true,
+      title: "Budget assigned",
+      detail: "A planned budget is set for this event.",
+      occurredAt: (startsAt ?? now).toISOString(),
+      isPlaceholder: false,
     });
   }
 
-  // Today: volunteer signal (real count when available, else placeholder)
-  const todayNoon = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate(),
-    11,
-    20,
-  );
   if (input.volunteerCount > 0) {
     items.push({
       id: "volunteer-assigned",
       kind: "volunteer",
-      title: "Volunteer assigned",
+      title: "Volunteers signed up",
       detail:
         input.volunteerCount === 1
           ? "1 member signed up to help."
           : `${input.volunteerCount} members signed up to help.`,
-      occurredAt: todayNoon.toISOString(),
+      occurredAt: now.toISOString(),
       isPlaceholder: false,
-    });
-  } else {
-    items.push({
-      id: "volunteer-placeholder",
-      kind: "volunteer",
-      title: "Volunteer assigned",
-      detail: "Sample: roles will appear here when members sign up.",
-      occurredAt: todayNoon.toISOString(),
-      isPlaceholder: true,
     });
   }
 
-  // Yesterday: reminder (placeholder — no reminder API)
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-  yesterday.setHours(16, 5, 0, 0);
-  items.push({
-    id: "reminder-sent",
-    kind: "reminder",
-    title: "Reminder email sent",
-    detail: "Preview activity. Reminder delivery is not tracked yet.",
-    occurredAt: yesterday.toISOString(),
-    isPlaceholder: true,
-  });
-
-  // Earlier weekday: poster / cover
-  const earlier = new Date(now);
-  earlier.setDate(now.getDate() - 3);
-  earlier.setHours(14, 40, 0, 0);
   if (input.event.event_photo_url) {
     items.push({
       id: "poster-uploaded",
       kind: "photo",
-      title: "Poster uploaded",
+      title: "Cover photo set",
       detail: "Cover photo is live on the event card.",
-      occurredAt: earlier.toISOString(),
+      occurredAt: (startsAt ?? now).toISOString(),
       isPlaceholder: false,
-    });
-  } else {
-    items.push({
-      id: "poster-placeholder",
-      kind: "photo",
-      title: "Poster uploaded",
-      detail: "Sample: upload a cover photo to replace this placeholder.",
-      occurredAt: earlier.toISOString(),
-      isPlaceholder: true,
     });
   }
 
-  // Schedule confirmed (anchored near event create-ish using starts_at offset placeholder)
-  const scheduleAt = new Date(now);
-  scheduleAt.setDate(now.getDate() - 4);
-  scheduleAt.setHours(10, 15, 0, 0);
-  items.push({
-    id: "schedule-set",
-    kind: "schedule",
-    title: "Date & time confirmed",
-    detail: "Event schedule is set on the manage page.",
-    occurredAt: scheduleAt.toISOString(),
-    isPlaceholder: true,
-  });
+  if (startsAt && Number.isFinite(startsAt.getTime())) {
+    items.push({
+      id: "schedule-set",
+      kind: "schedule",
+      title: "Date & time set",
+      detail: "Event schedule is saved on the manage page.",
+      occurredAt: startsAt.toISOString(),
+      isPlaceholder: false,
+    });
+  }
 
   return items.sort(
     (a, b) =>

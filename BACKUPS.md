@@ -179,7 +179,7 @@ Set `BACKUP_S3_ENABLED=false` for local-only backups (development).
 4. Run restore (see above)
 5. `docker compose up -d` for backend, Redis, Celery
 6. `docker compose exec backend alembic upgrade head` *(only if backup predates latest migration)*
-7. Verify `/api/v1/health` and spot-check critical data
+7. Verify `GET /health` and `GET /health/ready`, then spot-check critical data
 
 ### Corrupted database
 

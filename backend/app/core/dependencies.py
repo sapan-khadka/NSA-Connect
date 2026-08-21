@@ -12,10 +12,19 @@ from app.core.permissions import (
     member_has,
     member_has_role_at_least,
 )
-from app.core.security import InvalidTokenError, decode_access_token, resolve_user_id
+from app.core.security import InvalidTokenError, decode_access_token
 from app.models.member import Member, MemberRole
 from app.models.organization import Organization
-from app.services.organization_context import ensure_membership_for_member
+from app.services.auth_service import (
+    AuthTokenKind,
+    InvalidTokenPayloadError,
+    MemberNotApprovedError,
+    MemberNotFoundForTokenError,
+    TokenRevokedError,
+    invalid_payload_detail,
+    load_authenticated_member,
+    revoked_detail,
+)
 
 security = HTTPBearer()
 
@@ -33,50 +42,31 @@ def get_current_member(
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
 
-    user_id = resolve_user_id(payload)
-    if user_id is None:
+    try:
+        return load_authenticated_member(db, payload)
+    except InvalidTokenPayloadError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token payload",
+            detail=invalid_payload_detail(AuthTokenKind.ACCESS),
             headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    member = db.get(Member, user_id)
-    if member is None:
+        ) from exc
+    except MemberNotFoundForTokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Member not found",
             headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    token_email = payload.get("email")
-    if token_email != member.email:
+        ) from exc
+    except TokenRevokedError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token payload",
+            detail=revoked_detail(AuthTokenKind.ACCESS),
             headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    token_version = payload.get("tv")
-    if token_version != member.token_version:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token has been revoked",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    if not member.can_authenticate():
+        ) from exc
+    except MemberNotApprovedError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Member account is not approved",
-        )
-
-    membership = ensure_membership_for_member(db, member)
-    # Request-scoped only; not persisted on the Member row.
-    member._active_organization_id = membership.organization_id
-    member._active_membership = membership
-
-    return member
+        ) from exc
 
 
 def get_current_organization(
@@ -99,7 +89,11 @@ def get_current_organization(
 
 
 def require_permission(permission: Permission):
-    """FastAPI dependency: require a platform permission on the active membership."""
+    """FastAPI dependency: require a platform permission on the active membership.
+
+    Routes today use role/position guards (``require_board``, etc.) instead.
+    Keep this for future permission-matrix endpoints.
+    """
 
     def guard(current_member: Member = Depends(get_current_member)) -> Member:
         if not member_has(current_member, permission):

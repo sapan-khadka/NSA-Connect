@@ -16,23 +16,25 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     logger.info("Starting %s [%s]", settings.APP_NAME, settings.ENVIRONMENT)
 
+    from app.core.production_checks import enforce_production_config
+
+    enforce_production_config(settings)
+
     with engine.connect() as connection:
         connection.execute(text("SELECT 1"))
 
     logger.info("Database connection verified")
 
     from app.core.database import SessionLocal
-    from app.services.organization_context import (
-        ensure_default_university_and_org,
-        ensure_nsa_org_owner,
-    )
+    from app.services.organization_context import ensure_default_university_and_org
 
     db = SessionLocal()
     try:
         ensure_default_university_and_org(db)
-        ensure_nsa_org_owner(db)
     except Exception:
         logger.exception("Tenancy bootstrap skipped or failed")
+        if settings.ENVIRONMENT == "production":
+            raise
     finally:
         db.close()
 

@@ -1,62 +1,37 @@
-import type { MemberResponse } from "../../lib/auth-api";
-import type { EventTaskResponse, TaskOverviewMember } from "../../lib/event-tasks-api";
-import type { EventResponse } from "../../lib/events-api";
-import type { MyTasksSummary } from "../../lib/home-tasks";
 import {
   orderVisibleWidgetsForBriefing,
   type HomeWidgetId,
 } from "../../lib/home-workspace";
-import { HomeFeaturedEvent } from "./HomeFeaturedEvent";
-import { HomeMeetingMinutesCard } from "./HomeMeetingMinutesCard";
-import { HomeQuickActions } from "./HomeQuickActions";
-import { HomeRecentActivity } from "./HomeRecentActivity";
-import { HomeTeamPulse } from "./HomeTeamPulse";
-import { HomeTodaysFocus } from "./HomeTodaysFocus";
-import { HomeUpcomingDeadlines } from "./HomeUpcomingDeadlines";
-import { HomeUpcomingEvents } from "./HomeUpcomingEvents";
-import { HomeWorkCenter } from "./HomeWorkCenter";
+import { HomeWidgetContent, type HomeWidgetData } from "./HomeWidgetContent";
 
-type HomeBriefingLayoutProps = {
-  member: MemberResponse;
-  featuredEvents: EventResponse[];
-  myTasks: EventTaskResponse[];
-  overviewMembers: TaskOverviewMember[];
-  overviewLoading: boolean;
-  tasksSummary: MyTasksSummary;
-  isLoading: boolean;
-  financePendingCount: number;
-  pendingMemberApprovals: number;
-  showAssistant: boolean;
-  showTaskOversight: boolean;
-  tasksPath: string;
-  completingTaskId: number | null;
-  taskCompleteError: string | null;
-  onCompleteTask: (taskId: number) => void;
+type HomeBriefingLayoutProps = HomeWidgetData & {
   /** Visible workspace widgets (Edit dashboard show/hide). */
   visibleWidgetIds: HomeWidgetId[];
 };
+
+function briefingSectionClass(id: HomeWidgetId): string {
+  if (id === "featured") {
+    return "home-briefing__section home-briefing__section--hero";
+  }
+  if (
+    id === "upcoming" ||
+    id === "deadlines" ||
+    id === "minutes" ||
+    id === "actions" ||
+    id === "pulse"
+  ) {
+    return "home-briefing__section home-briefing__section--plain";
+  }
+  return "home-briefing__section";
+}
 
 /**
  * Reading Home — flat document flow for board and members.
  * Photo event banner is the shared chapter highlight; Focus + work follow.
  */
 export function HomeBriefingLayout({
-  member,
-  featuredEvents,
-  myTasks,
-  overviewMembers,
-  overviewLoading,
-  tasksSummary,
-  isLoading,
-  financePendingCount,
-  pendingMemberApprovals,
-  showAssistant,
-  showTaskOversight,
-  tasksPath,
-  completingTaskId,
-  taskCompleteError,
-  onCompleteTask,
   visibleWidgetIds,
+  ...data
 }: HomeBriefingLayoutProps) {
   const order = orderVisibleWidgetsForBriefing(visibleWidgetIds);
   const show = (id: HomeWidgetId) => order.includes(id);
@@ -78,30 +53,14 @@ export function HomeBriefingLayout({
   return (
     <div className="home-briefing">
       {show("featured") ? (
-        <section className="home-briefing__section home-briefing__section--hero">
-          <HomeFeaturedEvent
-            events={featuredEvents}
-            canManage={showAssistant}
-            canCreateEvent={showAssistant}
-            isLoading={isLoading}
-            density="lg"
-            contentScale={1}
-            presentation="hero"
-          />
+        <section className={briefingSectionClass("featured")}>
+          <HomeWidgetContent id="featured" surface="briefing" data={data} />
         </section>
       ) : null}
 
       {show("overview") ? (
-        <section className="home-briefing__section">
-          <HomeTodaysFocus
-            member={member}
-            tasksSummary={tasksSummary}
-            tasksPath={tasksPath}
-            pendingMemberApprovals={pendingMemberApprovals}
-            financePendingCount={financePendingCount}
-            nextEvent={featuredEvents[0] ?? null}
-            isLoading={isLoading}
-          />
+        <section className={briefingSectionClass("overview")}>
+          <HomeWidgetContent id="overview" surface="briefing" data={data} />
         </section>
       ) : null}
 
@@ -116,76 +75,45 @@ export function HomeBriefingLayout({
         >
           {showTasks ? (
             <section className="home-briefing__pane">
-              <HomeWorkCenter
-                member={member}
-                tasksSummary={tasksSummary}
-                tasksPath={tasksPath}
-                isLoading={isLoading}
-                completingTaskId={completingTaskId}
-                taskCompleteError={taskCompleteError}
-                onCompleteTask={onCompleteTask}
-                taskLimit={8}
-              />
+              <HomeWidgetContent id="tasks" surface="briefing" data={data} />
             </section>
           ) : null}
 
           {showActivity ? (
             <section className="home-briefing__pane">
-              <HomeRecentActivity memberId={member.id} />
+              <HomeWidgetContent id="activity" surface="briefing" data={data} />
             </section>
           ) : null}
         </div>
       ) : null}
 
       {show("upcoming") ? (
-        <section className="home-briefing__section home-briefing__section--plain">
-          <HomeUpcomingEvents
-            events={featuredEvents}
-            isLoading={isLoading}
-            limit={5}
-            skipFeatured
-          />
+        <section className={briefingSectionClass("upcoming")}>
+          <HomeWidgetContent id="upcoming" surface="briefing" data={data} />
         </section>
       ) : null}
 
       {show("deadlines") ? (
-        <section className="home-briefing__section home-briefing__section--plain">
-          <HomeUpcomingDeadlines
-            personalTasks={myTasks}
-            overviewMembers={overviewMembers}
-            useOversight={showTaskOversight}
-            isLoading={
-              showTaskOversight ? overviewLoading : isLoading
-            }
-            tasksPath={tasksPath}
-            memberLimit={14}
-            tasksPerMember={8}
-          />
+        <section className={briefingSectionClass("deadlines")}>
+          <HomeWidgetContent id="deadlines" surface="briefing" data={data} />
         </section>
       ) : null}
 
       {show("minutes") ? (
-        <section className="home-briefing__section home-briefing__section--plain">
-          <HomeMeetingMinutesCard />
+        <section className={briefingSectionClass("minutes")}>
+          <HomeWidgetContent id="minutes" surface="briefing" data={data} />
         </section>
       ) : null}
 
       {show("actions") ? (
-        <section className="home-briefing__section home-briefing__section--plain">
-          <HomeQuickActions member={member} />
+        <section className={briefingSectionClass("actions")}>
+          <HomeWidgetContent id="actions" surface="briefing" data={data} />
         </section>
       ) : null}
 
       {show("pulse") ? (
-        <section className="home-briefing__section home-briefing__section--plain">
-          <HomeTeamPulse
-            members={overviewMembers}
-            isLoading={overviewLoading}
-            density="lg"
-            pendingMemberApprovals={pendingMemberApprovals}
-            financePendingCount={financePendingCount}
-            nextEvent={featuredEvents[0] ?? null}
-          />
+        <section className={briefingSectionClass("pulse")}>
+          <HomeWidgetContent id="pulse" surface="briefing" data={data} />
         </section>
       ) : null}
     </div>

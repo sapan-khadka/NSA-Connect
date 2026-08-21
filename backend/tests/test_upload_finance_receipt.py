@@ -132,8 +132,8 @@ def test_upload_receipt_rejects_file_over_size_limit(client, treasurer_member_he
         files={"file": ("large.jpg", oversized, "image/jpeg")},
     )
 
-    assert response.status_code == 422
-    assert response.json()["detail"] == "Receipt file exceeds 10 MB limit"
+    assert response.status_code == 413
+    assert response.json()["detail"] == "Upload exceeds 10 MB limit"
 
 
 def test_upload_receipt_returns_503_when_cloudinary_not_configured(

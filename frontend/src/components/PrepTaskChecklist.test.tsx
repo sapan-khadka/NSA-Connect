@@ -94,7 +94,7 @@ describe("PrepTaskChecklist", () => {
       />,
     );
 
-    await user.selectOptions(screen.getByLabelText("Assign prep task"), "2");
+    await user.selectOptions(screen.getByLabelText("Assign checklist task"), "2");
     expect(onAssign).toHaveBeenCalledWith(10, 2);
   });
 

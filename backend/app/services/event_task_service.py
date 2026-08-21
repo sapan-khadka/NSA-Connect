@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.permissions import member_has_role_at_least
 from app.models.event import Event
 from app.models.event_task import (
     EventTask,
@@ -326,7 +327,7 @@ def update_event_task(
     if task is None:
         raise EventTaskNotFoundError
 
-    is_board = current_member.has_role_at_least(MemberRole.BOARD)
+    is_board = member_has_role_at_least(current_member, MemberRole.BOARD)
     is_assignee = task.assignee_id == current_member.id
     if not (is_board or is_assignee):
         raise EventTaskForbiddenError
@@ -399,7 +400,7 @@ def update_event_task_checklist_item(
     if task.task_kind != EventTaskKind.CHECKLIST:
         raise EventTaskNotFoundError
 
-    is_board = current_member.has_role_at_least(MemberRole.BOARD)
+    is_board = member_has_role_at_least(current_member, MemberRole.BOARD)
     is_assignee = task.assignee_id == current_member.id
     if not (is_board or is_assignee):
         raise EventTaskForbiddenError

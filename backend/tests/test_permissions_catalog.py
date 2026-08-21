@@ -67,6 +67,15 @@ def test_owner_alone_cannot_manage_tasks():
     assert not can_view_task_oversight(member)
 
 
+def test_owner_satisfies_board_and_president_role_gates():
+    from app.core.permissions import member_has_role_at_least
+
+    member = _member(role=MemberRole.GENERAL, is_org_owner=True)
+    assert member_has_role_at_least(member, MemberRole.BOARD)
+    assert member_has_role_at_least(member, MemberRole.PRESIDENT)
+    assert not member_has_role_at_least(member, MemberRole.TREASURER)
+
+
 def test_owner_union_president_keeps_task_permissions():
     member = _member(
         role=MemberRole.PRESIDENT,

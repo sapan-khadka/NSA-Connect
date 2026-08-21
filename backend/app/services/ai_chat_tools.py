@@ -10,6 +10,7 @@ from typing import Any
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.permissions import member_has_role_at_least
 from app.lib.event_visibility import (
     apply_event_visibility_filter,
     event_visible_to_member,
@@ -84,7 +85,7 @@ CHAT_TOOL_DEFINITIONS: list[dict[str, Any]] = [
     },
     {
         "name": "get_event_prep_tasks",
-        "description": "List prep tasks for an event. Board+ only.",
+        "description": "List checklist tasks for an event. Board+ only.",
         "input_schema": {
             "type": "object",
             "properties": {"event_id": {"type": "integer", "minimum": 1}},
@@ -246,7 +247,7 @@ def _tool_result(payload: Any) -> str:
 
 
 def _require_role(member: Member, minimum_role: MemberRole) -> None:
-    if not member.has_role_at_least(minimum_role):
+    if not member_has_role_at_least(member, minimum_role):
         raise ChatToolPermissionError(
             f"Requires {minimum_role.value} role or higher",
         )
@@ -368,7 +369,7 @@ def _search_members(db: Session, member: Member, tool_input: dict[str, Any]) -> 
     if not query:
         raise ChatToolValidationError("query is required")
     limit = max(1, min(int(tool_input.get("limit") or 10), 25))
-    is_board = member.has_role_at_least(MemberRole.BOARD)
+    is_board = member_has_role_at_least(member, MemberRole.BOARD)
 
     statement = select(Member).where(
         or_(
@@ -555,7 +556,7 @@ def _get_finance_summary(
 def _list_open_tasks(db: Session, member: Member, tool_input: dict[str, Any]) -> str:
     limit = max(1, min(int(tool_input.get("limit") or 15), 30))
     assignee_name = str(tool_input.get("assignee_name") or "").strip()
-    is_board = member.has_role_at_least(MemberRole.BOARD)
+    is_board = member_has_role_at_least(member, MemberRole.BOARD)
 
     statement = (
         select(EventTask)

@@ -68,7 +68,7 @@ describe("ManageBoardPositionsDrawer", () => {
     );
 
     const dialog = await screen.findByRole("dialog", {
-      name: /Manage board positions/i,
+      name: /Custom titles/i,
     });
     expect(within(dialog).getAllByText("Protected").length).toBeGreaterThan(0);
     expect(within(dialog).getByText("Cultural Lead")).toBeInTheDocument();

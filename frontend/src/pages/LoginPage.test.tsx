@@ -77,6 +77,37 @@ describe("LoginPage", () => {
     });
   });
 
+  it("shows email verification guidance when inbox is unverified", async () => {
+    const { loginMember } = await import("../lib/auth-api");
+    vi.mocked(loginMember).mockRejectedValue(
+      createAxiosError(403, "Verify your email before signing in"),
+    );
+
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <MockAuthProvider>
+          <LoginPage />
+        </MockAuthProvider>
+      </MemoryRouter>,
+    );
+
+    await user.type(screen.getByLabelText("Email"), "pending@semo.edu");
+    await user.type(screen.getByLabelText("Password"), "securepass123");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+
+    expect(
+      await screen.findByText("Verify your email before signing in"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Resend verification email" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Your account is pending approval"),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows API errors for invalid credentials", async () => {
     const { loginMember } = await import("../lib/auth-api");
     vi.mocked(loginMember).mockRejectedValue(

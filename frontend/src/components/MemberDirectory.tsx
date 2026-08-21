@@ -20,7 +20,7 @@ import {
   memberHasAnyTalent,
   MEMBER_TALENT_LABELS,
 } from "../lib/member-talents";
-import { isRoleAtLeast } from "../lib/roles";
+import { memberSatisfiesMinRole } from "../lib/roles";
 
 import { AppIcon } from "./ui/AppIcon";
 import { Button } from "./ui/Button";
@@ -76,7 +76,9 @@ export function MemberDirectory() {
     menuId: filtersMenuId,
   } = useDismissibleMenu();
 
-  const isBoard = currentMember ? isRoleAtLeast(currentMember.role, "board") : false;
+  const isBoard = currentMember
+    ? memberSatisfiesMinRole(currentMember, "board")
+    : false;
   const canInvite = isBoard && selectedTalents.length > 0;
   const activeFilterCount =
     selectedTalents.length + selectedMajors.length + selectedYears.length;

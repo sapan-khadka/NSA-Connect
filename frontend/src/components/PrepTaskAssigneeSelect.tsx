@@ -20,7 +20,7 @@ export function PrepTaskAssigneeSelect({
       <select
         value={assigneeId ?? ""}
         disabled={disabled}
-        aria-label="Assign prep task"
+        aria-label="Assign checklist task"
         onChange={(event) => {
           const value = event.target.value;
           onAssign(value === "" ? null : Number(value));

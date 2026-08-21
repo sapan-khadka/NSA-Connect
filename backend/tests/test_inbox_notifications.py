@@ -64,9 +64,10 @@ def test_inbox_list_mark_read_and_mark_all(client, db_session):
 
 
 def test_pending_member_notifies_board(client, db_session):
+    from app.services.email_verification_service import issue_email_verification_token
+
     create_board_member(db_session)
     register_member(client, email="new@semo.edu", student_id="33333333")
-    # registration creates pending member and should notify board
     pending = (
         db_session.query(Member).filter(Member.email == "new@semo.edu").one()
     )
@@ -75,6 +76,16 @@ def test_pending_member_notifies_board(client, db_session):
     board = (
         db_session.query(Member).filter(Member.email == "board@semo.edu").one()
     )
+    assert (
+        db_session.query(InboxNotification)
+        .filter(InboxNotification.member_id == board.id)
+        .count()
+        == 0
+    )
+
+    token = issue_email_verification_token(db_session, pending)
+    assert client.post("/api/v1/auth/verify-email", json={"token": token}).status_code == 200
+
     rows = (
         db_session.query(InboxNotification)
         .filter(InboxNotification.member_id == board.id)

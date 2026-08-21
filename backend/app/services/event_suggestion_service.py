@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.permissions import member_has_role_at_least
 from app.lib.event_photo_archive import default_show_in_photo_archive
 from app.models.event import Event, EventType
 from app.models.event_suggestion import EventSuggestion, EventSuggestionStatus
@@ -121,7 +122,7 @@ class EventSuggestionNotConvertibleError(Exception):
 
 
 def member_can_view_suggestion(member: Member, suggestion: EventSuggestion) -> bool:
-    if member.has_role_at_least(MemberRole.BOARD):
+    if member_has_role_at_least(member, MemberRole.BOARD):
         return True
     if suggestion.suggested_by_id == member.id:
         return True
@@ -171,7 +172,7 @@ def list_event_suggestions(db: Session, *, member: Member) -> list[EventSuggesti
         .order_by(EventSuggestion.created_at.desc())
     )
 
-    if not member.has_role_at_least(MemberRole.BOARD):
+    if not member_has_role_at_least(member, MemberRole.BOARD):
         query = query.where(
             or_(
                 EventSuggestion.suggested_by_id == member.id,
@@ -187,7 +188,7 @@ def list_event_suggestions(db: Session, *, member: Member) -> list[EventSuggesti
         )
 
     rows = list(db.scalars(query).all())
-    if member.has_role_at_least(MemberRole.BOARD):
+    if member_has_role_at_least(member, MemberRole.BOARD):
         return rows
     return [
         row

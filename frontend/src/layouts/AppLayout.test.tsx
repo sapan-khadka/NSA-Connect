@@ -77,11 +77,14 @@ describe("AppLayout navigation", () => {
       within(sidebar).queryByRole("link", { name: "Treasury" }),
     ).not.toBeInTheDocument();
     expect(
+      within(sidebar).queryByRole("link", { name: "Reports" }),
+    ).not.toBeInTheDocument();
+    expect(
       within(sidebar).queryByRole("link", { name: "Finance" }),
     ).not.toBeInTheDocument();
     expect(within(sidebar).getByText("Main")).toBeInTheDocument();
     expect(within(sidebar).getByText("Work")).toBeInTheDocument();
-    expect(within(sidebar).getByText("Finance")).toBeInTheDocument();
+    expect(within(sidebar).queryByText("Finance")).not.toBeInTheDocument();
     expect(within(sidebar).getByText("Admin")).toBeInTheDocument();
     expect(within(sidebar).getByRole("link", { name: "Tasks" })).toHaveAttribute(
       "href",
@@ -165,6 +168,30 @@ describe("AppLayout navigation", () => {
     expect(
       within(sidebar).getByRole("link", { name: "Discussions" }),
     ).toHaveAttribute("href", "/discussions");
+    expect(within(sidebar).getByRole("link", { name: "Meetings" })).toHaveAttribute(
+      "href",
+      "/events/meetings",
+    );
+    expect(within(sidebar).getByRole("link", { name: "Reports" })).toHaveAttribute(
+      "href",
+      "/reports",
+    );
+  });
+
+  it("shows Treasury and Meetings for org owners without a board role", () => {
+    renderWithRouter(undefined, {
+      initialEntries: ["/"],
+      auth: {
+        member: createMockMember("general", { is_org_owner: true }),
+        isAuthenticated: true,
+      },
+    });
+
+    const sidebar = screen.getByRole("navigation", { name: "Primary" });
+    expect(within(sidebar).getByRole("link", { name: "Treasury" })).toHaveAttribute(
+      "href",
+      "/finance",
+    );
     expect(within(sidebar).getByRole("link", { name: "Meetings" })).toHaveAttribute(
       "href",
       "/events/meetings",

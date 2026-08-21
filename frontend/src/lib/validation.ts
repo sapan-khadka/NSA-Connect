@@ -156,7 +156,7 @@ export type LoginFormErrors = Partial<Record<keyof LoginFormValues, string>>;
 export function validateLoginForm(values: LoginFormValues): LoginFormErrors {
   const errors: LoginFormErrors = {};
 
-  const emailError = validateSemoEmail(values.email);
+  const emailError = validateEmailAddress(values.email);
   if (emailError) {
     errors.email = emailError;
   }
@@ -167,6 +167,24 @@ export function validateLoginForm(values: LoginFormValues): LoginFormErrors {
   }
 
   return errors;
+}
+
+export function validateRegisterEmail(value: string): string | null {
+  return validateEmailAddress(value);
+}
+
+export function validateRegisterStudentId(
+  value: string,
+  email: string,
+): string | null {
+  const domain = normalizeSemoEmail(email).split("@").pop();
+  if (domain !== SEMO_EMAIL_DOMAIN) {
+    // Org-owner allowlist accounts may omit student ID; backend enforces.
+    if (!value.trim()) {
+      return null;
+    }
+  }
+  return validateStudentId(value);
 }
 
 export type RegisterFormValues = {
@@ -180,41 +198,45 @@ export type RegisterFormValues = {
 
 export type RegisterFormErrors = Partial<Record<keyof RegisterFormValues, string>>;
 
-const registerValidators: Record<
-  keyof RegisterFormValues,
-  (value: string) => string | null
-> = {
-  full_name: validateFullName,
-  email: validateSemoEmail,
-  password: validateRegisterPassword,
-  student_id: validateStudentId,
-  major: validateMajor,
-  graduation_year: validateGraduationYear,
-};
-
 export function validateRegisterForm(
   values: RegisterFormValues,
 ): RegisterFormErrors {
   const errors: RegisterFormErrors = {};
 
-  for (const field of Object.keys(registerValidators) as Array<
-    keyof RegisterFormValues
-  >) {
-    if (field === "password") {
-      const error = validateRegisterPassword(values.password, {
-        email: values.email,
-        fullName: values.full_name,
-      });
-      if (error) {
-        errors.password = error;
-      }
-      continue;
-    }
+  const fullNameError = validateFullName(values.full_name);
+  if (fullNameError) {
+    errors.full_name = fullNameError;
+  }
 
-    const error = registerValidators[field](values[field]);
-    if (error) {
-      errors[field] = error;
-    }
+  const emailError = validateRegisterEmail(values.email);
+  if (emailError) {
+    errors.email = emailError;
+  }
+
+  const studentIdError = validateRegisterStudentId(
+    values.student_id,
+    values.email,
+  );
+  if (studentIdError) {
+    errors.student_id = studentIdError;
+  }
+
+  const majorError = validateMajor(values.major);
+  if (majorError) {
+    errors.major = majorError;
+  }
+
+  const yearError = validateGraduationYear(values.graduation_year);
+  if (yearError) {
+    errors.graduation_year = yearError;
+  }
+
+  const passwordError = validateRegisterPassword(values.password, {
+    email: values.email,
+    fullName: values.full_name,
+  });
+  if (passwordError) {
+    errors.password = passwordError;
   }
 
   return errors;
@@ -231,8 +253,22 @@ export function validateRegisterField(
       fullName: values?.full_name,
     });
   }
-
-  return registerValidators[field](value);
+  if (field === "email") {
+    return validateRegisterEmail(value);
+  }
+  if (field === "student_id") {
+    return validateRegisterStudentId(value, values?.email ?? "");
+  }
+  if (field === "full_name") {
+    return validateFullName(value);
+  }
+  if (field === "major") {
+    return validateMajor(value);
+  }
+  if (field === "graduation_year") {
+    return validateGraduationYear(value);
+  }
+  return null;
 }
 
 export type ProfileFormValues = {

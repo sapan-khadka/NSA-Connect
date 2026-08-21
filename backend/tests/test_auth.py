@@ -19,7 +19,9 @@ def test_register_bootstraps_first_member_when_org_empty(client):
     data = response.json()
     assert data["email"] == "sapan@semo.edu"
     assert data["status"] == "approved"
-    assert data["role"] == "president"
+    # Empty-org bootstrap: org owner flag, not chapter president seat.
+    assert data["role"] == "general"
+    assert data.get("is_org_owner") is True
     assert "password" not in data
 
 
@@ -45,10 +47,12 @@ def test_register_rejects_non_semo_domain(client):
     assert response.status_code == 422
 
 
-def test_login_rejects_non_semo_domain(client):
+def test_login_rejects_unknown_non_owner_email(client):
+    """Non-allowlisted Gmail is not a registered account — invalid credentials."""
     response = login_member(client, email=BAD_DOMAIN_EMAIL)
 
-    assert response.status_code == 422
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid email or password"
 
 
 def test_login_rejects_wrong_password(client, db_session):
@@ -65,4 +69,4 @@ def test_register_rejects_duplicate_email(client):
     response = register_member(client)
 
     assert response.status_code == 409
-    assert response.json()["detail"] == "Email already registered"
+    assert response.json()["detail"] == "An account with this email or student ID already exists"

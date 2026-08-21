@@ -22,9 +22,10 @@ def test_register_creates_member(client):
     assert data["student_id"] == VALID_STUDENT_ID
     assert data["major"] == VALID_MAJOR
     assert data["graduation_year"] == VALID_GRADUATION_YEAR
-    # Empty org: first registrant is auto-bootstrapped as owner/president.
-    assert data["role"] == "president"
+    # Empty org: first registrant is auto-bootstrapped as org owner (not president).
+    assert data["role"] == "general"
     assert data["status"] == "approved"
+    assert data.get("is_org_owner") is True
     assert "password" not in data
     assert "hashed_password" not in data
 
@@ -46,7 +47,7 @@ def test_register_rejects_duplicate_email(client):
 
     assert first.status_code == 201
     assert second.status_code == 409
-    assert second.json()["detail"] == "Email already registered"
+    assert second.json()["detail"] == "An account with this email or student ID already exists"
 
 
 def test_register_rejects_duplicate_student_id(client):
@@ -58,7 +59,7 @@ def test_register_rejects_duplicate_student_id(client):
 
     assert first.status_code == 201
     assert second.status_code == 409
-    assert second.json()["detail"] == "Student ID already registered"
+    assert second.json()["detail"] == "An account with this email or student ID already exists"
 
 
 def test_register_rejects_non_semo_email(client):

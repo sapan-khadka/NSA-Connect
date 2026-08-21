@@ -8,7 +8,7 @@ from conftest import (
 
 from app.models.preptask import PrepTaskGroup, PrepTaskGroupItem
 
-FORBIDDEN_DETAIL = "Not allowed to update this prep task"
+FORBIDDEN_DETAIL = "You cannot modify this task"
 
 
 def _event_payload(**overrides):
@@ -88,7 +88,7 @@ def test_board_member_can_check_checklist_item(
     item_id = task["checklist_items"][0]["id"]
 
     response = client.patch(
-        f"/api/v1/tasks/{task['id']}/checklist-items/{item_id}",
+        f"/api/v1/event-tasks/{task['id']}/checklist-items/{item_id}",
         json={"is_completed": True},
         headers=board_member_headers,
     )
@@ -110,13 +110,13 @@ def test_board_member_can_uncheck_checklist_item(
 
     for item_id in item_ids:
         client.patch(
-            f"/api/v1/tasks/{task['id']}/checklist-items/{item_id}",
+            f"/api/v1/event-tasks/{task['id']}/checklist-items/{item_id}",
             json={"is_completed": True},
             headers=board_member_headers,
         )
 
     response = client.patch(
-        f"/api/v1/tasks/{task['id']}/checklist-items/{item_ids[0]}",
+        f"/api/v1/event-tasks/{task['id']}/checklist-items/{item_ids[0]}",
         json={"is_completed": False},
         headers=board_member_headers,
     )
@@ -136,7 +136,7 @@ def test_checking_all_items_marks_task_complete(
 
     for item in task["checklist_items"]:
         response = client.patch(
-            f"/api/v1/tasks/{task['id']}/checklist-items/{item['id']}",
+            f"/api/v1/event-tasks/{task['id']}/checklist-items/{item['id']}",
             json={"is_completed": True},
             headers=board_member_headers,
         )
@@ -162,7 +162,7 @@ def test_assignee_can_toggle_checklist_item(
     item_id = task["checklist_items"][0]["id"]
 
     response = client.patch(
-        f"/api/v1/tasks/{task['id']}/checklist-items/{item_id}",
+        f"/api/v1/event-tasks/{task['id']}/checklist-items/{item_id}",
         json={"is_completed": True},
         headers=board_member_headers,
     )
@@ -181,7 +181,7 @@ def test_non_assignee_cannot_toggle_checklist_item(
     item_id = task["checklist_items"][0]["id"]
 
     response = client.patch(
-        f"/api/v1/tasks/{task['id']}/checklist-items/{item_id}",
+        f"/api/v1/event-tasks/{task['id']}/checklist-items/{item_id}",
         json={"is_completed": True},
         headers=general_member_headers,
     )
@@ -198,7 +198,7 @@ def test_toggle_checklist_item_returns_404_for_unknown_item(
     task = _create_event_with_task(client, board_member_headers, db_session)
 
     response = client.patch(
-        f"/api/v1/tasks/{task['id']}/checklist-items/99999",
+        f"/api/v1/event-tasks/{task['id']}/checklist-items/99999",
         json={"is_completed": True},
         headers=board_member_headers,
     )

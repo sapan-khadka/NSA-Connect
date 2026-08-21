@@ -1,14 +1,5 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useEffect, useRef, useState } from "react";
 
-import type { MemberResponse } from "../../lib/auth-api";
-import type { EventTaskResponse, TaskOverviewMember } from "../../lib/event-tasks-api";
-import type { EventResponse } from "../../lib/events-api";
-import type { MyTasksSummary } from "../../lib/home-tasks";
 import { useIsLgUp } from "../../hooks/useMediaQuery";
 import {
   HOME_CANVAS_DESIGN_WIDTH,
@@ -17,7 +8,6 @@ import {
   HOME_GRID_ROW_PX,
   applyResizeDelta,
   canvasHeight,
-  contentFitScale,
   cycleSizePreset,
   densityForSize,
   designToScreen,
@@ -25,7 +15,6 @@ import {
   effectiveHeight,
   measureScale,
   normalizeWidget,
-  previewLimitForWidget,
   rectForWidget,
   screenToDesign,
   snapRectToGuides,
@@ -35,39 +24,14 @@ import {
   type HomeWidgetLayout,
   type ResizeHandle,
   type ScaleMetrics,
-  type WidgetDensity,
 } from "../../lib/home-workspace";
-import { HomeFeaturedEvent } from "./HomeFeaturedEvent";
-import { HomeMeetingMinutesCard } from "./HomeMeetingMinutesCard";
-import { HomeQuickActions } from "./HomeQuickActions";
-import { HomeRecentActivity } from "./HomeRecentActivity";
-import { HomeTeamPulse } from "./HomeTeamPulse";
-import { HomeTodaysFocus } from "./HomeTodaysFocus";
-import { HomeUpcomingDeadlines } from "./HomeUpcomingDeadlines";
-import { HomeUpcomingEvents } from "./HomeUpcomingEvents";
+import { HomeWidgetContent, type HomeWidgetData } from "./HomeWidgetContent";
 import { HomeWidgetShell } from "./HomeWidgetShell";
-import { HomeWorkCenter } from "./HomeWorkCenter";
 
-type HomeAdaptiveWorkspaceProps = {
+type HomeAdaptiveWorkspaceProps = HomeWidgetData & {
   widgets: HomeWidgetLayout[];
   isCustomizing: boolean;
   selectedId: HomeWidgetId | null;
-  member: MemberResponse;
-  featuredEvents: EventResponse[];
-  myTasks: EventTaskResponse[];
-  overviewMembers: TaskOverviewMember[];
-  overviewLoading: boolean;
-  tasksSummary: MyTasksSummary;
-  isLoading: boolean;
-  financePendingCount: number;
-  pendingMemberApprovals: number;
-  showAssistant: boolean;
-  showTaskOversight: boolean;
-  tasksPath: string;
-  completingTaskId: number | null;
-  taskCompleteError: string | null;
-  onCompleteTask: (taskId: number) => void;
-  onFeaturedEventsChange: (events: EventResponse[]) => void;
   onSelect: (id: HomeWidgetId | null) => void;
   onEnterCustomize: () => void;
   onExitCustomize: () => void;
@@ -93,122 +57,6 @@ type DragSession =
       startClientX: number;
       startClientY: number;
     };
-
-function renderWidgetContent(
-  id: HomeWidgetId,
-  density: WidgetDensity,
-  screenWidth: number,
-  screenHeight: number,
-  props: HomeAdaptiveWorkspaceProps,
-): ReactNode {
-  switch (id) {
-    case "featured":
-      return (
-        <HomeFeaturedEvent
-          events={props.featuredEvents}
-          canManage={props.showAssistant}
-          canCreateEvent={props.showAssistant}
-          isLoading={props.isLoading}
-          density={density}
-          contentScale={contentFitScale(screenWidth, screenHeight)}
-          presentation={
-            density === "xs" || density === "sm" ? "strip" : "hero"
-          }
-        />
-      );
-    case "overview":
-      return (
-        <HomeTodaysFocus
-          member={props.member}
-          tasksSummary={props.tasksSummary}
-          tasksPath={props.tasksPath}
-          pendingMemberApprovals={props.pendingMemberApprovals}
-          financePendingCount={props.financePendingCount}
-          nextEvent={props.featuredEvents[0] ?? null}
-          isLoading={props.isLoading}
-        />
-      );
-    case "actions":
-      return <HomeQuickActions member={props.member} />;
-    case "tasks":
-      return (
-        <HomeWorkCenter
-          member={props.member}
-          tasksSummary={props.tasksSummary}
-          tasksPath={props.tasksPath}
-          isLoading={props.isLoading}
-          completingTaskId={props.completingTaskId}
-          taskCompleteError={props.taskCompleteError}
-          onCompleteTask={props.onCompleteTask}
-          taskLimit={previewLimitForWidget(density, "tasks", screenHeight)}
-        />
-      );
-    case "inbox":
-      /* Inbox is rendered as a fixed right rail on Home — not a canvas widget. */
-      return null;
-    case "activity":
-      return (
-        <HomeRecentActivity
-          memberId={props.member.id}
-          limit={Math.min(
-            3,
-            previewLimitForWidget(density, "activity", screenHeight),
-          )}
-        />
-      );
-    case "upcoming":
-      return (
-        <HomeUpcomingEvents
-          events={props.featuredEvents}
-          isLoading={props.isLoading}
-          limit={previewLimitForWidget(density, "events", screenHeight)}
-          skipFeatured
-        />
-      );
-    case "deadlines":
-      return (
-        <HomeUpcomingDeadlines
-          personalTasks={props.myTasks}
-          overviewMembers={props.overviewMembers}
-          useOversight={props.showTaskOversight}
-          isLoading={
-            props.showTaskOversight ? props.overviewLoading : props.isLoading
-          }
-          tasksPath={props.tasksPath}
-          limit={previewLimitForWidget(density, "deadlines", screenHeight)}
-          memberLimit={
-            density === "xs" || density === "sm"
-              ? 4
-              : density === "md"
-                ? 8
-                : 14
-          }
-          tasksPerMember={
-            density === "xs" || density === "sm"
-              ? 3
-              : density === "md"
-                ? 5
-                : 8
-          }
-        />
-      );
-    case "pulse":
-      return (
-        <HomeTeamPulse
-          members={props.overviewMembers}
-          isLoading={props.overviewLoading}
-          density={density}
-          pendingMemberApprovals={props.pendingMemberApprovals}
-          financePendingCount={props.financePendingCount}
-          nextEvent={props.featuredEvents[0] ?? null}
-        />
-      );
-    case "minutes":
-      return <HomeMeetingMinutesCard />;
-    default:
-      return null;
-  }
-}
 
 function sizeLabelFor(widget: HomeWidgetLayout): string {
   return `${Math.round(widget.w)} × ${Math.round(effectiveHeight(widget))} px`;
@@ -635,7 +483,14 @@ export function HomeAdaptiveWorkspace(props: HomeAdaptiveWorkspaceProps) {
               beginResize(widget, handle, event)
             }
           >
-            {renderWidgetContent(widget.id, density, screenW, screenH, props)}
+            <HomeWidgetContent
+              id={widget.id}
+              surface="canvas"
+              data={props}
+              density={density}
+              screenWidth={screenW}
+              screenHeight={screenH}
+            />
           </HomeWidgetShell>
         );
       })}

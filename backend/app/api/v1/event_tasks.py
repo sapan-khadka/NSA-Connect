@@ -8,6 +8,7 @@ from app.core.dependencies import (
     require_task_manager,
     require_task_oversight,
 )
+from app.core.upload import read_upload_with_limit
 from app.models.member import Member
 from app.schemas.event_task import (
     EventTaskChecklistItemUpdateRequest,
@@ -129,7 +130,7 @@ async def upload_task_photo_endpoint(
     file: UploadFile = File(...),
     _: Member = Depends(get_current_member),
 ):
-    file_bytes = await file.read()
+    file_bytes = await read_upload_with_limit(file, max_bytes=10 * 1024 * 1024)
 
     try:
         result = upload_task_photo(

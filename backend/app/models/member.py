@@ -1,6 +1,6 @@
 from enum import StrEnum
 
-from sqlalchemy import JSON, Boolean, Column, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.orm import relationship
 
@@ -203,9 +203,15 @@ class Member(Base):
     )
     avatar_url = Column(String(2048), nullable=True)
     avatar_public_id = Column(String(512), nullable=True)
+    email_verified_at = Column(DateTime(timezone=True), nullable=True)
 
     password_reset_tokens = relationship(
         "PasswordResetToken",
+        back_populates="member",
+        cascade="all, delete-orphan",
+    )
+    email_verification_tokens = relationship(
+        "EmailVerificationToken",
         back_populates="member",
         cascade="all, delete-orphan",
     )

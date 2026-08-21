@@ -32,6 +32,30 @@ export function isRoleAtLeast(role: MemberRole, required: MemberRole): boolean {
   return ROLE_LEVELS[role] >= ROLE_LEVELS[required];
 }
 
+/**
+ * Single board/owner access rule. Matches backend `member_has_role_at_least`.
+ * Use this for nav, routes, and Edit — not `isRoleAtLeast(member.role, …)`
+ * alone, which misses org owners who stay on the general role.
+ *
+ * Org owners satisfy general/board/president gates so they can open board
+ * surfaces (treasury view, meetings, approvals) without holding those seats.
+ * They do not satisfy treasurer write gates.
+ */
+export function memberSatisfiesMinRole(
+  member: { role: MemberRole; is_org_owner?: boolean },
+  minimum: MemberRole,
+): boolean {
+  if (isRoleAtLeast(member.role, minimum)) {
+    return true;
+  }
+  if (!member.is_org_owner) {
+    return false;
+  }
+  return (
+    minimum === "general" || minimum === "board" || minimum === "president"
+  );
+}
+
 export function getDashboardPath(_role: MemberRole): string {
   return "/";
 }
@@ -47,16 +71,6 @@ export function canManageTreasury(
   return position === "vice_president";
 }
 
-/** Matches GET /v1/finance/event-budgets and the /finance route (board+). */
-export function canAccessFinance(role: MemberRole): boolean {
-  return isRoleAtLeast(role, "board");
-}
-
-/** Matches board-only member admin (pending approvals, role/position controls). */
-export function canViewMemberDirectory(role: MemberRole): boolean {
-  return isRoleAtLeast(role, "board");
-}
-
 /**
  * Member documents: self may manage own files; board+ may manage any member's.
  *
@@ -68,11 +82,12 @@ export function canAccessMemberDocuments(
   role: MemberRole,
   viewerId: number,
   subjectMemberId: number,
+  isOrgOwner = false,
 ): boolean {
   if (viewerId === subjectMemberId) {
     return true;
   }
-  return isRoleAtLeast(role, "board");
+  return memberSatisfiesMinRole({ role, is_org_owner: isOrgOwner }, "board");
 }
 
 /** All approved members can browse the networking directory. */
@@ -82,6 +97,46 @@ export function canBrowseMemberDirectory(_role: MemberRole): boolean {
 
 export function formatRoleLabel(role: MemberRole): string {
   return role.charAt(0).toUpperCase() + role.slice(1);
+}
+
+/** Sidebar / badge label: org owner is never shown as President. */
+export function formatMemberAccessLabel(member: {
+  role: MemberRole;
+  position?: MemberPosition;
+  is_org_owner?: boolean;
+}): string {
+  if (member.is_org_owner) {
+    return "Owner";
+  }
+  if (member.position === "president" || member.role === "president") {
+    return "President";
+  }
+  if (member.position === "treasurer" || member.role === "treasurer") {
+    return "Treasurer";
+  }
+  if (member.position && member.position !== "member") {
+    return formatPositionLabel(member.position);
+  }
+  return formatRoleLabel(member.role);
+}
+
+/** Matches board-only member admin (pending approvals, role/position controls). */
+export function canViewMemberDirectory(
+  role: MemberRole,
+  isOrgOwner = false,
+): boolean {
+  return memberSatisfiesMinRole({ role, is_org_owner: isOrgOwner }, "board");
+}
+
+export function viewerCanManageMembers(
+  member: { role: MemberRole; is_org_owner?: boolean } | null | undefined,
+): boolean {
+  return Boolean(member && memberSatisfiesMinRole(member, "board"));
+}
+
+/** Matches GET /v1/finance/event-budgets and the /finance route (board+). */
+export function canAccessFinance(role: MemberRole, isOrgOwner = false): boolean {
+  return memberSatisfiesMinRole({ role, is_org_owner: isOrgOwner }, "board");
 }
 
 export const ROLE_BADGE_STYLES: Record<MemberRole, string> = {

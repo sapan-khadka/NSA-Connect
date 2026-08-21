@@ -51,6 +51,11 @@ def _test_settings(base_settings):
             "CLOUDINARY_API_SECRET": "test-secret",
             "AI_ENABLED": False,
             "OPENAI_API_KEY": "test-openai-key",
+            # Do not inherit developer .env allowlist into suite defaults.
+            "ORG_OWNER_EMAILS": "",
+            "SKIP_EMAIL_VERIFICATION": False,
+            "RESEND_API_KEY": "",
+            "EMAIL_TEST_OVERRIDE_RECIPIENT": "",
         }
     )
 
@@ -79,6 +84,10 @@ def reset_settings_cache(monkeypatch, request):
         "app.services.avatar_upload_service",
         "app.services.member_document_service",
         "app.services.email_service",
+        "app.services.email_verification_service",
+        "app.services.resend_email_service",
+        "app.services.password_reset_service",
+        "app.api.v1.notifications",
         "app.services.constitution_ingest_service",
         "app.services.constitution_search_service",
     ):
@@ -113,10 +122,41 @@ def disable_first_owner_bootstrap(monkeypatch, request):
     )
 
 
+@pytest.fixture(scope="session", autouse=True)
+def use_fake_rate_limit_backends():
+    """Session-wide in-memory rate-limit backends (CI has no Redis).
+
+    Must be session-scoped: module-scoped fixtures (e.g. auth matrix login)
+    run before function-scoped autouse fixtures and still hit Redis otherwise.
+    """
+    try:
+        import fakeredis
+    except ImportError as exc:
+        pytest.skip(f"fakeredis required for tests: {exc}")
+
+    from limits.storage import MemoryStorage
+    from limits.strategies import STRATEGIES
+
+    from app.core import rate_limit as rate_limit_module
+    from app.core.rate_limit import reset_rate_limit_redis
+
+    fake = fakeredis.FakeRedis(decode_responses=True)
+    reset_rate_limit_redis(fake)
+
+    storage = MemoryStorage()
+    rate_limit_module.limiter._storage = storage
+    rate_limit_module.limiter._limiter = STRATEGIES[
+        rate_limit_module.limiter._strategy or "fixed-window"
+    ](storage)
+    rate_limit_module.limiter._storage_dead = False
+
+    yield fake
+    reset_rate_limit_redis(None)
+
+
 @pytest.fixture(autouse=True)
 def block_external_integrations():
-    """Never hit Redis, Celery brokers, SendGrid, Anthropic, or OpenAI during tests."""
-    sendgrid_response = MagicMock(status_code=202, body="accepted")
+    """Never hit Celery brokers, Resend, Anthropic, or OpenAI during tests."""
     anthropic_sdk_client = MagicMock(name="anthropic_sdk_client")
     anthropic_sdk_client.messages.create.side_effect = AssertionError(
         "Real Anthropic API must not be called in tests; use mock_claude_checklist_api",
@@ -137,7 +177,6 @@ def block_external_integrations():
     openai_sdk_client.embeddings.create.side_effect = fake_embeddings_create
 
     with (
-        patch("app.integrations.sendgrid_client.SendGridAPIClient") as sendgrid_client,
         patch(
             "anthropic.Anthropic", return_value=anthropic_sdk_client
         ) as anthropic_client,
@@ -146,10 +185,13 @@ def block_external_integrations():
         patch("celery.app.task.Task.apply_async") as celery_apply_async,
         patch("app.services.email_service.settings.EMAIL_ENABLED", False),
         patch(
+            "resend.Emails.send",
+            return_value={"id": "test-resend-id"},
+        ) as resend_send,
+        patch(
             "app.services.receipt_upload_service.upload_receipt"
         ) as cloudinary_upload_receipt,
     ):
-        sendgrid_client.return_value.send.return_value = sendgrid_response
         from app.integrations.cloudinary_client import CloudinaryUploadResult
 
         cloudinary_upload_receipt.return_value = CloudinaryUploadResult(
@@ -160,7 +202,6 @@ def block_external_integrations():
             resource_type="image",
         )
         yield {
-            "sendgrid_client": sendgrid_client,
             "anthropic_client": anthropic_client,
             "anthropic_sdk_client": anthropic_sdk_client,
             "openai_client": openai_client,
@@ -168,6 +209,7 @@ def block_external_integrations():
             "celery_delay": celery_delay,
             "celery_apply_async": celery_apply_async,
             "cloudinary_upload_receipt": cloudinary_upload_receipt,
+            "resend_send": resend_send,
         }
 
 
@@ -256,12 +298,27 @@ def set_member_approved(db_session: Session, email=VALID_EMAIL):
     this helper want a regular approved member, so reset role/position after
     approval.
     """
+    from datetime import UTC, datetime
+
     member = db_session.scalar(select(Member).where(Member.email == email))
     member.status = MemberStatus.APPROVED
     member.role = MemberRole.GENERAL
     member.position = MemberPosition.MEMBER
+    if member.email_verified_at is None:
+        member.email_verified_at = datetime.now(UTC)
     sync_membership_from_member(db_session, member)
     db_session.commit()
+
+
+def mark_email_verified(db_session: Session, email=VALID_EMAIL):
+    """Mark a registered member's email as verified (test helper)."""
+    from datetime import UTC, datetime
+
+    member = db_session.scalar(select(Member).where(Member.email == email))
+    assert member is not None
+    if member.email_verified_at is None:
+        member.email_verified_at = datetime.now(UTC)
+        db_session.commit()
 
 
 def create_board_member(
@@ -270,6 +327,8 @@ def create_board_member(
     password=VALID_PASSWORD,
     student_id="87654321",
 ):
+    from datetime import UTC, datetime
+
     from app.core.security import hash_password
     from app.models.member import MemberRole
 
@@ -282,6 +341,7 @@ def create_board_member(
         hashed_password=hash_password(password),
         role=MemberRole.BOARD,
         status=MemberStatus.APPROVED,
+        email_verified_at=datetime.now(UTC),
         university_id=get_default_university_id(db_session),
     )
     db_session.add(member)
@@ -297,6 +357,8 @@ def create_vice_president_member(
     password=VALID_PASSWORD,
     student_id="76543210",
 ):
+    from datetime import UTC, datetime
+
     from app.core.security import hash_password
     from app.models.member import MemberPosition, MemberRole
 
@@ -310,6 +372,7 @@ def create_vice_president_member(
         role=MemberRole.BOARD,
         position=MemberPosition.VICE_PRESIDENT,
         status=MemberStatus.APPROVED,
+        email_verified_at=datetime.now(UTC),
         university_id=get_default_university_id(db_session),
     )
     db_session.add(member)
@@ -325,6 +388,8 @@ def create_president_member(
     password=VALID_PASSWORD,
     student_id="99887766",
 ):
+    from datetime import UTC, datetime
+
     from app.core.security import hash_password
     from app.models.member import MemberRole
     from app.services.organization_context import ensure_nsa_org_owner
@@ -338,6 +403,7 @@ def create_president_member(
         hashed_password=hash_password(password),
         role=MemberRole.PRESIDENT,
         status=MemberStatus.APPROVED,
+        email_verified_at=datetime.now(UTC),
         university_id=get_default_university_id(db_session),
     )
     db_session.add(member)
@@ -354,6 +420,8 @@ def create_treasurer_member(
     password=VALID_PASSWORD,
     student_id="55443322",
 ):
+    from datetime import UTC, datetime
+
     from app.core.security import hash_password
     from app.models.member import MemberRole
 
@@ -366,6 +434,7 @@ def create_treasurer_member(
         hashed_password=hash_password(password),
         role=MemberRole.TREASURER,
         status=MemberStatus.APPROVED,
+        email_verified_at=datetime.now(UTC),
         university_id=get_default_university_id(db_session),
     )
     db_session.add(member)

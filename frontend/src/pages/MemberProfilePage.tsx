@@ -19,47 +19,30 @@ import { MemberWorkspaceUpcomingSchedule } from "../components/member-workspace/
 import { PageBackLink } from "../components/ui/PageBackLink";
 import { Skeleton } from "../design-system/components/Skeleton";
 import { useAuth } from "../context/useAuth";
+import { useMemberWorkspaceData } from "../hooks/useMemberWorkspaceData";
 import { type MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/api-error";
-import {
-  fetchMemberDuesHistory,
-  fetchMyDuesHistory,
-  type MemberDuesHistoryItem,
-} from "../lib/dues-api";
+import type { MemberDuesHistoryItem } from "../lib/dues-api";
 import { buildFinancialStatusSummary } from "../lib/member-workspace-financial";
 import {
-  fetchMyEventTasks,
-  fetchTaskOverview,
-  type EventTaskResponse,
-} from "../lib/event-tasks-api";
-import {
-  mapMemberActivityApiItem,
   takeMemberActivityPreview,
   type MemberActivityItem,
 } from "../lib/member-activity-timeline";
-import {
-  fetchMemberActivity,
-  fetchMemberById,
-  fetchMemberMeetingAttendanceStreak,
-} from "../lib/members-api";
+import { fetchMemberById } from "../lib/members-api";
 import {
   buildResponsibilityItems,
   getAssignTaskPath,
   getResponsibilitiesViewAllPath,
 } from "../lib/member-workspace-responsibilities";
 import {
-  fetchMemberWorkspaceSchedule,
   takeSchedulePreview,
-  type ScheduleCommitment,
 } from "../lib/member-workspace-schedule";
 import { buildMemberWorkspaceInsights } from "../lib/member-workspace-insights";
 import {
   canManageEventTasks,
   canAccessMemberDocuments,
-  canManageTreasury,
-  canViewMemberDirectory,
   canViewTaskOversight,
-  isMemberRole,
+  viewerCanManageMembers,
 } from "../lib/roles";
 import { getCurrentSemesterSlug } from "../lib/semester";
 
@@ -149,21 +132,27 @@ export function MemberProfilePage() {
   const { memberId } = useParams();
   const { member: currentMember } = useAuth();
   const [profile, setProfile] = useState<MemberResponse | null>(null);
-  const [memberTasks, setMemberTasks] = useState<EventTaskResponse[]>([]);
-  const [scheduleItems, setScheduleItems] = useState<ScheduleCommitment[]>([]);
-  const [activityItems, setActivityItems] = useState<MemberActivityItem[]>([]);
-  const [duesHistory, setDuesHistory] = useState<MemberDuesHistoryItem[]>([]);
-  const [duesHistoryUnavailable, setDuesHistoryUnavailable] = useState(false);
-  const [consecutiveMissedMeetings, setConsecutiveMissedMeetings] = useState<
-    number | null
-  >(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const canFetchDues = Boolean(
-    currentMember &&
-      canManageTreasury(currentMember.role, currentMember.position),
-  );
+  const {
+    memberTasks,
+    scheduleItems,
+    activityItems,
+    duesHistory,
+    duesHistoryUnavailable,
+    consecutiveMissedMeetings,
+    isLoading: isWorkspaceLoading,
+  } = useMemberWorkspaceData({
+    member: profile,
+    enabled: profile !== null,
+    activityLimit: 50,
+    includeDues: true,
+    includeMeetingStreak: true,
+  });
+
+  const isLoading = isProfileLoading || isWorkspaceLoading;
+
   const canFetchTaskOverview = Boolean(
     currentMember &&
       canViewTaskOversight(currentMember.role, currentMember.position),
@@ -172,9 +161,7 @@ export function MemberProfilePage() {
     currentMember &&
       canManageEventTasks(currentMember.role, currentMember.position),
   );
-  const viewerIsBoard = Boolean(
-    currentMember && canViewMemberDirectory(currentMember.role),
-  );
+  const viewerIsBoard = viewerCanManageMembers(currentMember);
 
   const responsibilityItems = useMemo(
     () =>
@@ -238,110 +225,29 @@ export function MemberProfilePage() {
     const id = Number(memberId);
     if (!Number.isFinite(id)) {
       setError("Member not found.");
-      setIsLoading(false);
+      setProfile(null);
+      setIsProfileLoading(false);
       return;
     }
 
     let cancelled = false;
-    setIsLoading(true);
+    setIsProfileLoading(true);
     setError(null);
 
     void (async () => {
       try {
         const member = await fetchMemberById(id);
-        if (cancelled) {
-          return;
+        if (!cancelled) {
+          setProfile(member);
         }
-        setProfile(member);
-        setMemberTasks([]);
-        setScheduleItems([]);
-        setActivityItems([]);
-        setDuesHistory([]);
-        setDuesHistoryUnavailable(false);
-        setConsecutiveMissedMeetings(null);
-
-        const isSelf = currentMember?.id === member.id;
-        const memberRole = isMemberRole(member.role) ? member.role : "general";
-        const canFetchMeetingStreak = isSelf || viewerIsBoard;
-
-        const duesHistoryPromise = isSelf
-          ? fetchMyDuesHistory().catch(() => null)
-          : canFetchDues
-            ? fetchMemberDuesHistory(member.id).catch(() => null)
-            : Promise.resolve(null);
-
-        const [
-          overviewResult,
-          myTasksResult,
-          scheduleResult,
-          activityResult,
-          duesHistoryResult,
-          meetingStreakResult,
-        ] = await Promise.all([
-          canFetchTaskOverview
-            ? fetchTaskOverview().catch(() => null)
-            : Promise.resolve(null),
-          isSelf && !canFetchTaskOverview
-            ? fetchMyEventTasks().catch(() => null)
-            : Promise.resolve(null),
-          fetchMemberWorkspaceSchedule({
-            memberId: member.id,
-            memberRole,
-            isSelf,
-            viewerIsBoard,
-          }).catch(() => [] as ScheduleCommitment[]),
-          fetchMemberActivity(member.id, { limit: 50 }).catch(() => ({
-            items: [],
-            total: 0,
-          })),
-          duesHistoryPromise,
-          canFetchMeetingStreak
-            ? fetchMemberMeetingAttendanceStreak(member.id).catch(() => null)
-            : Promise.resolve(null),
-        ]);
-
-        if (cancelled) {
-          return;
-        }
-
-        let tasks: EventTaskResponse[] = [];
-
-        if (overviewResult) {
-          const row = overviewResult.members.find(
-            (entry) => entry.member_id === member.id,
-          );
-          tasks = row?.tasks ?? [];
-        } else if (myTasksResult) {
-          tasks = myTasksResult.tasks;
-        }
-
-        setMemberTasks(tasks);
-        setScheduleItems(scheduleResult);
-        setActivityItems(activityResult.items.map(mapMemberActivityApiItem));
-        if (duesHistoryResult) {
-          setDuesHistory(duesHistoryResult.records);
-          setDuesHistoryUnavailable(false);
-        } else {
-          setDuesHistory([]);
-          setDuesHistoryUnavailable(!isSelf && !canFetchDues);
-        }
-        setConsecutiveMissedMeetings(
-          meetingStreakResult?.consecutive_missed_meetings ?? null,
-        );
       } catch (fetchError) {
         if (!cancelled) {
           setProfile(null);
-          setMemberTasks([]);
-          setScheduleItems([]);
-          setActivityItems([]);
-          setDuesHistory([]);
-          setDuesHistoryUnavailable(false);
-          setConsecutiveMissedMeetings(null);
           setError(getApiErrorMessage(fetchError));
         }
       } finally {
         if (!cancelled) {
-          setIsLoading(false);
+          setIsProfileLoading(false);
         }
       }
     })();
@@ -349,13 +255,7 @@ export function MemberProfilePage() {
     return () => {
       cancelled = true;
     };
-  }, [
-    memberId,
-    canFetchDues,
-    canFetchTaskOverview,
-    currentMember?.id,
-    viewerIsBoard,
-  ]);
+  }, [memberId]);
   if (isLoading) {
     return <MemberWorkspaceSkeleton />;
   }
@@ -421,6 +321,7 @@ export function MemberProfilePage() {
                 currentMember.role,
                 currentMember.id,
                 profile.id,
+                Boolean(currentMember.is_org_owner),
               ),
           )}
         />

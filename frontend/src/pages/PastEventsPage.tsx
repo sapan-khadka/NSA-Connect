@@ -19,7 +19,7 @@ import { fetchEventBudgetBreakdown, type FinanceEventBudgetSummary } from "../li
 import { formatCurrency } from "../lib/format-currency";
 import { Card } from "../components/ui/Card";
 import { formatEventDateTime } from "../lib/format-datetime";
-import { isRoleAtLeast } from "../lib/roles";
+import { memberSatisfiesMinRole } from "../lib/roles";
 
 export function PastEventsPage() {
   const { member } = useAuth();
@@ -30,7 +30,7 @@ export function PastEventsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const canManage = member ? isRoleAtLeast(member.role, "board") : false;
+  const canManage = member ? memberSatisfiesMinRole(member, "board") : false;
 
   useEffect(() => {
     let cancelled = false;

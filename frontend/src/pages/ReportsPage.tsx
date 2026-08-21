@@ -15,7 +15,7 @@ import {
   formatSemesterLabel,
   getRecentSemesterOptions,
 } from "../lib/semester";
-import { isRoleAtLeast } from "../lib/roles";
+import { memberSatisfiesMinRole } from "../lib/roles";
 
 type RangeMode = "semester" | "custom";
 
@@ -27,7 +27,7 @@ function nextDayIso(date: string): string {
 
 export function ReportsPage() {
   const { member } = useAuth();
-  const canGenerate = member ? isRoleAtLeast(member.role, "board") : false;
+  const canGenerate = member ? memberSatisfiesMinRole(member, "board") : false;
 
   const [reports, setReports] = useState<ReportListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -92,7 +92,7 @@ export function ReportsPage() {
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-label">
           End-of-semester summaries for sharing with advisors and incoming board
-          members. All members can view generated reports.
+          members.
         </p>
       </Card>
 

@@ -16,6 +16,7 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy import delete, select, update
 
+from app.core.config import settings
 from app.core.database import SessionLocal
 from app.core.security import hash_password
 from app.models.event import Event, EventType, MeetingVisibility
@@ -74,6 +75,9 @@ def claim_exclusive_position_if_free(
 
 
 def seed_walkthrough_data() -> None:
+    if settings.ENVIRONMENT == "production":
+        raise SystemExit("Refusing to seed walkthrough data in production.")
+
     db = SessionLocal()
     hp = hash_password(PWD)
 

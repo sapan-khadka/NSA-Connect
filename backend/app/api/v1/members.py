@@ -20,8 +20,10 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.dependencies import get_current_member, require_board, require_president
 from app.core.password_validation import WeakPasswordError
+from app.core.permissions import member_has_role_at_least
 from app.core.rate_limit import change_password_key, limit
 from app.core.security import create_token_pair
+from app.core.upload import read_upload_with_limit
 from app.integrations.cloudinary_client import CloudinaryUploadError
 from app.lib.member_talents import ALL_MEMBER_TALENTS, MEMBER_TALENT_LABELS
 from app.lib.semester import get_current_semester_slug
@@ -108,8 +110,8 @@ from app.services.member_service import (
     get_member_by_id,
     list_assignable_approved_members,
     list_assignable_board_members,
-    list_members_by_status,
     list_members_paginated,
+    list_pending_members_for_approval,
     reject_member,
     update_member_board_role,
     update_member_profile,
@@ -147,15 +149,17 @@ def list_members(
     current_member: Member = Depends(get_current_member),
     db: Session = Depends(get_db),
 ):
-    if status is not None and not current_member.has_role_at_least(MemberRole.BOARD):
+    if status is not None and not member_has_role_at_least(
+        current_member, MemberRole.BOARD
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only board members can filter by status",
         )
 
     effective_status = status
-    if effective_status is None and not current_member.has_role_at_least(
-        MemberRole.BOARD
+    if effective_status is None and not member_has_role_at_least(
+        current_member, MemberRole.BOARD
     ):
         effective_status = MemberStatus.APPROVED
 
@@ -204,7 +208,7 @@ async def upload_my_avatar(
     current_member: Member = Depends(get_current_member),
     db: Session = Depends(get_db),
 ):
-    file_bytes = await file.read()
+    file_bytes = await read_upload_with_limit(file, max_bytes=10 * 1024 * 1024)
     try:
         member = set_member_avatar(
             db,
@@ -315,7 +319,7 @@ def list_pending_members(
     current_member: Member = Depends(require_board),
     db: Session = Depends(get_db),
 ):
-    members = list_members_by_status(db, MemberStatus.PENDING)
+    members = list_pending_members_for_approval(db)
     return MemberListResponse(
         members=[
             MemberResponse.from_member(member, viewer=current_member)
@@ -376,15 +380,10 @@ def invite_member(
 ):
     try:
         member = create_invited_member(db, data)
-    except MemberAlreadyExistsError:
+    except (MemberAlreadyExistsError, StudentIdAlreadyExistsError):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Email already registered",
-        ) from None
-    except StudentIdAlreadyExistsError:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Student ID already registered",
+            detail="An account with this email or student ID already exists",
         ) from None
 
     setup_email_sent = send_initial_password_setup(db, member)
@@ -405,7 +404,7 @@ async def import_members(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Upload must be a CSV file",
         )
-    return import_members_csv(db, await file.read())
+    return import_members_csv(db, await read_upload_with_limit(file, max_bytes=5 * 1024 * 1024))
 
 
 @router.patch("/{member_id}/approve", response_model=MemberResponse)
@@ -573,8 +572,8 @@ def get_member_activity_endpoint(
             detail="Member not found",
         ) from None
 
-    if subject.status != MemberStatus.APPROVED and not current_member.has_role_at_least(
-        MemberRole.BOARD,
+    if subject.status != MemberStatus.APPROVED and not member_has_role_at_least(
+        current_member, MemberRole.BOARD
     ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -669,7 +668,7 @@ async def upload_member_document_endpoint(
     db: Session = Depends(get_db),
 ):
     """Upload a member document (PDF/JPEG/PNG/WebP) via existing Cloudinary storage."""
-    file_bytes = await file.read()
+    file_bytes = await read_upload_with_limit(file, max_bytes=10 * 1024 * 1024)
     display_name = (file_name or file.filename or "document").strip()
 
     try:
@@ -723,7 +722,7 @@ async def replace_member_document_endpoint(
     db: Session = Depends(get_db),
 ):
     """Replace an existing document file (same id), keeping ownership on member_id."""
-    file_bytes = await file.read()
+    file_bytes = await read_upload_with_limit(file, max_bytes=10 * 1024 * 1024)
     display_name = file_name
     if display_name is None and file.filename:
         display_name = file.filename
@@ -949,8 +948,8 @@ def get_member_endpoint(
             detail="Member not found",
         ) from None
 
-    if member.status != MemberStatus.APPROVED and not current_member.has_role_at_least(
-        MemberRole.BOARD,
+    if member.status != MemberStatus.APPROVED and not member_has_role_at_least(
+        current_member, MemberRole.BOARD
     ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

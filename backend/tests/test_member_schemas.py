@@ -37,14 +37,17 @@ def test_member_create_request_accepts_uppercase_semo_email():
     assert data.email == "sapan@semo.edu"
 
 
-def test_member_create_request_rejects_non_semo_email():
-    with pytest.raises(ValidationError, match="semo.edu"):
-        MemberCreateRequest(**{**VALID_CREATE, "email": NON_SEMO_EMAIL})
+def test_member_create_request_accepts_non_semo_email_at_schema():
+    """Owner-allowlist Gmail is valid at the schema; domain policy lives in the service."""
+    data = MemberCreateRequest(**{**VALID_CREATE, "email": NON_SEMO_EMAIL})
+    assert data.email == "sapan@gmail.com"
 
 
-def test_member_create_request_rejects_semo_email_lookalike():
-    with pytest.raises(ValidationError, match="semo.edu"):
-        MemberCreateRequest(**{**VALID_CREATE, "email": "sapan@semo.edu.evil.com"})
+def test_member_create_request_normalizes_lookalike_email():
+    data = MemberCreateRequest(
+        **{**VALID_CREATE, "email": "sapan@semo.edu.evil.com"},
+    )
+    assert data.email == "sapan@semo.edu.evil.com"
 
 
 def test_member_create_request_rejects_short_password():
@@ -73,9 +76,9 @@ def test_member_login_request_requires_semo_email():
     assert data.email == "sapan@semo.edu"
 
 
-def test_member_login_request_rejects_non_semo_email():
-    with pytest.raises(ValidationError, match="semo.edu"):
-        MemberLoginRequest(email=NON_SEMO_EMAIL, password="secret")
+def test_member_login_request_accepts_non_semo_email_at_schema():
+    data = MemberLoginRequest(email=NON_SEMO_EMAIL, password="secret")
+    assert data.email == "sapan@gmail.com"
 
 
 def test_member_role_update_request():

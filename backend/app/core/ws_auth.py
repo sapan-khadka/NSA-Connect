@@ -5,9 +5,15 @@ from sqlalchemy.orm import Session
 from app.core.security import (
     InvalidTokenError,
     decode_ws_or_access_token,
-    resolve_user_id,
 )
 from app.models.member import Member
+from app.services.auth_service import (
+    InvalidTokenPayloadError,
+    MemberNotApprovedError,
+    MemberNotFoundForTokenError,
+    TokenRevokedError,
+    load_authenticated_member,
+)
 
 
 class TokenAuthenticationError(Exception):
@@ -31,21 +37,13 @@ def authenticate_member_from_token(db: Session, token: str | None) -> Member:
     except InvalidTokenError as exc:
         raise TokenAuthenticationError("Invalid or expired token") from exc
 
-    user_id = resolve_user_id(payload)
-    if user_id is None:
-        raise TokenAuthenticationError("Invalid token payload")
-
-    member = db.get(Member, user_id)
-    if member is None:
-        raise TokenAuthenticationError("Member not found")
-
-    if payload.get("email") != member.email:
-        raise TokenAuthenticationError("Invalid token payload")
-
-    if payload.get("tv") != member.token_version:
-        raise TokenAuthenticationError("Token has been revoked")
-
-    if not member.can_authenticate():
-        raise TokenAuthorizationError("Member account is not approved")
-
-    return member
+    try:
+        return load_authenticated_member(db, payload)
+    except InvalidTokenPayloadError as exc:
+        raise TokenAuthenticationError("Invalid token payload") from exc
+    except MemberNotFoundForTokenError as exc:
+        raise TokenAuthenticationError("Member not found") from exc
+    except TokenRevokedError as exc:
+        raise TokenAuthenticationError("Token has been revoked") from exc
+    except MemberNotApprovedError as exc:
+        raise TokenAuthorizationError("Member account is not approved") from exc

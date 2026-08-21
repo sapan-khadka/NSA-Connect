@@ -99,6 +99,11 @@ vi.mock("../lib/meetings-api", () => ({
   fetchMeetings: vi.fn().mockResolvedValue({ meetings: [], total: 0 }),
 }));
 
+vi.mock("../lib/reports-api", () => ({
+  fetchReports: vi.fn().mockResolvedValue({ reports: [], total: 0 }),
+  generateReport: vi.fn(),
+}));
+
 describe("protected route redirects", () => {
   afterEach(() => {
     cleanup();
@@ -208,6 +213,61 @@ describe("protected route redirects", () => {
     });
 
     expect(await screen.findByText("Event budget tracking")).toBeInTheDocument();
+  });
+
+  it("allows org owners to view /finance budget tracking", async () => {
+    renderWithRouter(undefined, {
+      initialEntries: ["/finance"],
+      auth: {
+        member: createMockMember("general", { is_org_owner: true }),
+        isAuthenticated: true,
+      },
+    });
+
+    expect(await screen.findByText("Event budget tracking")).toBeInTheDocument();
+  });
+
+  it("allows org owners to view /events/meetings", async () => {
+    renderWithRouter(undefined, {
+      initialEntries: ["/events/meetings"],
+      auth: {
+        member: createMockMember("general", { is_org_owner: true }),
+        isAuthenticated: true,
+      },
+    });
+
+    expect(
+      await screen.findByRole("heading", { name: "Meetings" }),
+    ).toBeInTheDocument();
+  });
+
+  it("redirects general members from /reports to home", async () => {
+    const { router } = renderWithRouter(undefined, {
+      initialEntries: ["/reports"],
+      auth: {
+        member: createMockMember("general"),
+        isAuthenticated: true,
+      },
+    });
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/");
+    });
+    expect(screen.queryByRole("heading", { name: "Reports" })).not.toBeInTheDocument();
+  });
+
+  it("allows org owners to view /reports", async () => {
+    renderWithRouter(undefined, {
+      initialEntries: ["/reports"],
+      auth: {
+        member: createMockMember("general", { is_org_owner: true }),
+        isAuthenticated: true,
+      },
+    });
+
+    expect(
+      await screen.findByRole("heading", { name: "Reports" }),
+    ).toBeInTheDocument();
   });
 
   it("redirects general members from /finance to home", async () => {

@@ -1,13 +1,13 @@
 from datetime import UTC, datetime
 
-from app.core.config import settings
+from app.core.config import get_frontend_url
 from app.integrations.resend_client import ResendDeliveryError
 from app.models.event_rsvp import RsvpStatus
 from app.services.resend_email_service import send_resend_email
 
 
 def _frontend_base_url() -> str:
-    return settings.FRONTEND_URL.rstrip("/")
+    return get_frontend_url()
 
 
 def build_event_url(event_id: int) -> str:

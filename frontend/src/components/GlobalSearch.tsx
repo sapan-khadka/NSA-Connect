@@ -123,7 +123,9 @@ export function GlobalSearch({
   const [activeIndex, setActiveIndex] = useState(0);
 
   const includeMembers = member ? canBrowseMemberDirectory(member.role) : false;
-  const includeFinance = member ? canAccessFinance(member.role) : false;
+  const includeFinance = member
+    ? canAccessFinance(member.role, Boolean(member.is_org_owner))
+    : false;
 
   const {
     query,

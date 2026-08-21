@@ -1,0 +1,80 @@
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    client_max_body_size 32m;
+
+    gzip on;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+
+    # SPA document policy. Not inherited onto /api/ so JSON keeps the API CSP.
+    # style-src unsafe-inline: React inline styles. img/media: Cloudinary + GIF picker.
+    set $csp "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://res.cloudinary.com https://media.giphy.com https://media.tenor.com https://c.tenor.com; media-src 'self' blob: https://res.cloudinary.com; connect-src 'self' ws: wss: https://tenor.googleapis.com; worker-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests";
+
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable" always;
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options SAMEORIGIN always;
+        add_header Referrer-Policy strict-origin-when-cross-origin always;
+        add_header Cross-Origin-Opener-Policy same-origin always;
+        add_header Permissions-Policy "camera=(), microphone=(self), geolocation=(), payment=(), usb=()" always;
+        add_header Content-Security-Policy $csp always;
+        try_files $uri =404;
+    }
+
+    location /api/ {
+        proxy_pass ${API_UPSTREAM};
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+    }
+
+    location /ws/ {
+        proxy_pass ${API_UPSTREAM};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 86400s;
+        proxy_send_timeout 86400s;
+    }
+
+    location /health {
+        proxy_pass ${API_UPSTREAM};
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location = /nginx-health {
+        access_log off;
+        default_type text/plain;
+        add_header X-Content-Type-Options nosniff always;
+        return 200 "ok\n";
+    }
+
+    location / {
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options SAMEORIGIN always;
+        add_header Referrer-Policy strict-origin-when-cross-origin always;
+        add_header Cross-Origin-Opener-Policy same-origin always;
+        add_header Permissions-Policy "camera=(), microphone=(self), geolocation=(), payment=(), usb=()" always;
+        add_header Content-Security-Policy $csp always;
+        try_files $uri $uri/ /index.html;
+    }
+}

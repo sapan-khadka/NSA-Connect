@@ -128,8 +128,8 @@ export function ManageBoardPositionsDrawer({
       size="md"
       closeOnBackdrop
       showClose
-      title="Manage board positions"
-      description="Built-in officer seats stay fixed. Add custom board titles for other single-holder seats."
+      title="Custom titles"
+      description="This names extra single-holder titles. Assign President and other seats from Edit member."
     >
       <div className="flex flex-col gap-6 p-1">
         {error ? (

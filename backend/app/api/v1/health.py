@@ -1,25 +1,36 @@
-import os
+from fastapi import APIRouter, HTTPException, status
+from sqlalchemy import text
 
-from fastapi import APIRouter, Depends
-
-from app.core.config import Settings, get_frontend_url, settings
-from app.core.dependencies import require_board
-from app.models.member import Member
+from app.core.database import engine
+from app.core.rate_limit import get_rate_limit_redis
+from app.schemas.health import HealthResponse
 
 router = APIRouter(tags=["health"])
 
 
-@router.get("/health", status_code=200)
+@router.get("/health", status_code=200, response_model=HealthResponse)
 def health_check():
-    return {"status": "ok"}
+    return HealthResponse(status="ok")
 
 
-@router.get("/health/frontend-url-debug")
-def frontend_url_debug(_: Member = Depends(require_board)):
-    """Board-only: show how FRONTEND_URL is resolved (temporary debug)."""
-    return {
-        "frontend_url_os_environ": os.environ.get("FRONTEND_URL"),
-        "frontend_url_cached_settings": settings.FRONTEND_URL,
-        "frontend_url_fresh_settings": Settings().FRONTEND_URL,
-        "frontend_url_used_for_qr": get_frontend_url(),
-    }
+@router.get("/health/ready", status_code=200, response_model=HealthResponse)
+def health_ready():
+    """Readiness: Postgres and Redis must respond."""
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="database unavailable",
+        ) from exc
+
+    try:
+        get_rate_limit_redis().ping()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="redis unavailable",
+        ) from exc
+
+    return HealthResponse(status="ok")

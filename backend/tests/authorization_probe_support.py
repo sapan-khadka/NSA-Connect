@@ -291,11 +291,6 @@ def probe_request_kwargs(method: str, path_template: str) -> dict:
             "group_name": "Probe Setup",
             "due_date": "2030-05-20T12:00:00+00:00",
         }
-    elif path_template.endswith("/events/{event_id}/prep-tasks") and method == "POST":
-        kwargs["json"] = {
-            "group_name": "Probe Setup",
-            "due_date": "2030-05-20T12:00:00+00:00",
-        }
     elif path_template.endswith("/events/{event_id}/slots") and method == "POST":
         kwargs["json"] = {"task_name": "Probe slot", "max_signup_count": 2}
     elif (

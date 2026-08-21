@@ -102,7 +102,10 @@ export function SettingsLayout() {
     return <Navigate to="/settings/profile" replace />;
   }
 
-  const groups = getSettingsNavGroups(member.role);
+  const groups = getSettingsNavGroups(
+    member.role,
+    Boolean(member.is_org_owner),
+  );
 
   if (isIndex) {
     return (

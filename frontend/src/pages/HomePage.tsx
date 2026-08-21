@@ -10,6 +10,7 @@ import { HomeAdaptiveWorkspace } from "../components/home/HomeAdaptiveWorkspace"
 import { HomeBriefingLayout } from "../components/home/HomeBriefingLayout";
 import { HomeEditToolbar } from "../components/home/HomeEditToolbar";
 import { HomeWidgetDrawer } from "../components/home/HomeWidgetDrawer";
+import type { HomeWidgetData } from "../components/home/HomeWidgetContent";
 import { AppIcon } from "../components/ui/AppIcon";
 import { useAuth } from "../context/useAuth";
 import { useNotificationSummary } from "../context/NotificationSummaryProvider";
@@ -36,52 +37,23 @@ import {
 } from "../lib/home-tasks";
 import {
   canViewTaskOversight,
-  isRoleAtLeast,
+  memberSatisfiesMinRole,
 } from "../lib/roles";
 
 function PublicHomeView() {
   return <GuestLanding />;
 }
 
-type MemberHomeLayoutProps = {
-  member: MemberResponse;
-  featuredEvents: EventResponse[];
-  myTasks: EventTaskResponse[];
-  overviewMembers: TaskOverviewMember[];
-  overviewLoading: boolean;
-  tasksSummary: ReturnType<typeof summarizeMyTasks>;
-  isLoading: boolean;
+type MemberHomeLayoutProps = HomeWidgetData & {
   loadError: string | null;
-  financePendingCount: number;
-  pendingMemberApprovals: number;
-  showAssistant: boolean;
-  showTaskOversight: boolean;
-  tasksPath: string;
-  completingTaskId: number | null;
-  taskCompleteError: string | null;
-  onCompleteTask: (taskId: number) => void;
-  onFeaturedEventsChange: (events: EventResponse[]) => void;
 };
 
 function MemberHomeLayout({
-  member,
-  featuredEvents,
-  myTasks,
-  overviewMembers,
-  overviewLoading,
-  tasksSummary,
-  isLoading,
   loadError,
-  financePendingCount,
-  pendingMemberApprovals,
-  showAssistant,
-  showTaskOversight,
-  tasksPath,
-  completingTaskId,
-  taskCompleteError,
-  onCompleteTask,
-  onFeaturedEventsChange,
+  ...data
 }: MemberHomeLayoutProps) {
+  const { member, featuredEvents, tasksSummary, showAssistant, showTaskOversight } =
+    data;
   const workspace = useHomeWorkspace({
     memberId: member.id,
     showInbox: showAssistant,
@@ -168,22 +140,7 @@ function MemberHomeLayout({
             widgets={workspace.visible}
             isCustomizing={workspace.isCustomizing}
             selectedId={workspace.selectedId}
-            member={member}
-            featuredEvents={featuredEvents}
-            myTasks={myTasks}
-            overviewMembers={overviewMembers}
-            overviewLoading={overviewLoading}
-            tasksSummary={tasksSummary}
-            isLoading={isLoading}
-            financePendingCount={financePendingCount}
-            pendingMemberApprovals={pendingMemberApprovals}
-            showAssistant={showAssistant}
-            showTaskOversight={showTaskOversight}
-            tasksPath={tasksPath}
-            completingTaskId={completingTaskId}
-            taskCompleteError={taskCompleteError}
-            onCompleteTask={onCompleteTask}
-            onFeaturedEventsChange={onFeaturedEventsChange}
+            {...data}
             onSelect={workspace.setSelectedId}
             onEnterCustomize={workspace.enterCustomize}
             onExitCustomize={workspace.exitCustomize}
@@ -194,21 +151,7 @@ function MemberHomeLayout({
           />
         ) : (
           <HomeBriefingLayout
-            member={member}
-            featuredEvents={featuredEvents}
-            myTasks={myTasks}
-            overviewMembers={overviewMembers}
-            overviewLoading={overviewLoading}
-            tasksSummary={tasksSummary}
-            isLoading={isLoading}
-            financePendingCount={financePendingCount}
-            pendingMemberApprovals={pendingMemberApprovals}
-            showAssistant={showAssistant}
-            showTaskOversight={showTaskOversight}
-            tasksPath={tasksPath}
-            completingTaskId={completingTaskId}
-            taskCompleteError={taskCompleteError}
-            onCompleteTask={onCompleteTask}
+            {...data}
             visibleWidgetIds={workspace.visible.map((widget) => widget.id)}
           />
         )}
@@ -232,7 +175,7 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const showAssistant = isRoleAtLeast(member.role, "board");
+  const showAssistant = memberSatisfiesMinRole(member, "board");
   const showTaskOversight = canViewTaskOversight(member.role, member.position);
   const tasksPath = getMyTasksPath(member.role);
   const tasksSummary = useMemo(() => summarizeMyTasks(myTasks), [myTasks]);
@@ -347,7 +290,6 @@ function MemberHomeView({ member }: { member: MemberResponse }) {
       onCompleteTask={(taskId) => {
         void handleCompleteTask(taskId);
       }}
-      onFeaturedEventsChange={setFeaturedEvents}
     />
   );
 }

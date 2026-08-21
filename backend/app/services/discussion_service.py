@@ -5,6 +5,7 @@ from typing import Literal
 from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.permissions import member_has_role_at_least
 from app.lib.event_visibility import event_visible_to_member
 from app.models.discussion_message import (
     MAX_DISCUSSION_CONTENT_LENGTH,
@@ -188,7 +189,7 @@ def member_can_access_event_discussion(
 ) -> bool:
     if not event_visible_to_member(event, member):
         return False
-    if member.has_role_at_least(MemberRole.BOARD):
+    if member_has_role_at_least(member, MemberRole.BOARD):
         return True
     signup = get_member_volunteer_signup(
         db,
@@ -217,7 +218,7 @@ def assert_can_access_event_discussion(
 
 
 def assert_can_access_board_discussion(member: Member) -> None:
-    if not member.has_role_at_least(MemberRole.BOARD):
+    if not member_has_role_at_least(member, MemberRole.BOARD):
         raise DiscussionForbiddenError
 
 

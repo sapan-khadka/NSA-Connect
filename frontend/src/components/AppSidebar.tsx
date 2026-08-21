@@ -24,10 +24,9 @@ import { useAuth } from "../context/useAuth";
 import { useLogout } from "../context/useLogout";
 import { avatarColorForPerson } from "../lib/avatar-color";
 import {
-  canAccessFinance,
   canBrowseMemberDirectory,
-  formatRoleLabel,
-  isRoleAtLeast,
+  formatMemberAccessLabel,
+  memberSatisfiesMinRole,
 } from "../lib/roles";
 import { AppIcon } from "./ui/AppIcon";
 import { AppLogo } from "./AppLogo";
@@ -45,7 +44,7 @@ type AppSidebarProps = {
 };
 
 const focusRingClass =
-  "outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-card";
+  "outline-none focus-visible:ring-2 focus-visible:ring-black/10 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-card";
 
 const navItemBaseClass = [
   "group relative flex w-full items-center gap-2.5 rounded-md px-2.5 py-[6px] text-[13px] font-medium tracking-body",
@@ -295,8 +294,9 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const logout = useLogout();
   const { summary } = useNotificationSummary();
   const showMembers = member ? canBrowseMemberDirectory(member.role) : false;
-  const showFinance = member ? canAccessFinance(member.role) : false;
-  const showBoardWork = member ? isRoleAtLeast(member.role, "board") : false;
+  const showBoardSurfaces = member
+    ? memberSatisfiesMinRole(member, "board")
+    : false;
 
   const myTasksCount = summary.tasks_overdue + summary.tasks_due_today;
   const eventsBadge =
@@ -347,7 +347,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       icon: MessageSquare,
       badgeCount: summary.discussions_unread,
     },
-    ...(showBoardWork
+    ...(showBoardSurfaces
       ? [
           {
             to: "/events/meetings",
@@ -359,7 +359,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   ];
 
   const financeItems: SidebarLink[] = [
-    ...(showFinance
+    ...(showBoardSurfaces
       ? [
           {
             to: "/finance",
@@ -369,11 +369,15 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
           } satisfies SidebarLink,
         ]
       : []),
-    {
-      to: "/reports",
-      label: "Reports",
-      icon: ClipboardList,
-    },
+    ...(showBoardSurfaces
+      ? [
+          {
+            to: "/reports",
+            label: "Reports",
+            icon: ClipboardList,
+          } satisfies SidebarLink,
+        ]
+      : []),
   ];
 
   const adminItems: SidebarLink[] = [
@@ -384,7 +388,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     },
   ];
 
-  const roleLabel = member ? formatRoleLabel(member.role) : "";
+  const roleLabel = member ? formatMemberAccessLabel(member) : "";
 
   return (
     <aside className="ds-sidebar">

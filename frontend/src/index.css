@@ -263,12 +263,12 @@
   }
 
   .ds-sidebar-link--active {
-    @apply bg-brand-soft text-brand shadow-none;
+    @apply bg-surface-muted text-foreground shadow-none;
     font-weight: 600;
   }
 
   .ds-sidebar-link--active:hover {
-    @apply bg-brand-soft text-brand;
+    @apply bg-surface-muted text-foreground;
   }
 
   .ds-topbar {
@@ -353,7 +353,8 @@
       --inbox-muted: #6b6b6b;
       --inbox-line: #ebebea;
       --inbox-accent: #c8102e;
-      --inbox-accent-soft: #fff1f3;
+      /* Neutral wash — do not use brand pink on discussion/inbox hover. */
+      --inbox-accent-soft: #f0f0ef;
       --inbox-wash: #f5f5f4;
 
       display: flex;

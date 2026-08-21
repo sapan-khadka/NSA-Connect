@@ -13,9 +13,6 @@ from app.core.rate_limit import (
 
 _GLOBAL_RATE_LIMIT_EXEMPT_PREFIXES = (
     "/health",
-    "/docs",
-    "/openapi.json",
-    "/redoc",
 )
 
 

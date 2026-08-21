@@ -17,6 +17,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.permissions import member_has_role_at_least
 from app.models.event_checkin import EventCheckIn
 from app.models.event_task import EventTask
 from app.models.meeting import MeetingRecord
@@ -53,14 +54,14 @@ def _can_view_checkin_activity(viewer: Member, subject_id: int) -> bool:
     """Self can see own check-ins; board+ can see others (same as list check-ins)."""
     if viewer.id == subject_id:
         return True
-    return viewer.has_role_at_least(MemberRole.BOARD)
+    return member_has_role_at_least(viewer, MemberRole.BOARD)
 
 
 def _can_view_meeting_notes_activity(viewer: Member, subject_id: int) -> bool:
     """Self can see own notes; board+ can see notes authored by others."""
     if viewer.id == subject_id:
         return True
-    return viewer.has_role_at_least(MemberRole.BOARD)
+    return member_has_role_at_least(viewer, MemberRole.BOARD)
 
 
 def _task_description(task: EventTask) -> str:

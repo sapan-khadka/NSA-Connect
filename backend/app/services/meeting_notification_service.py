@@ -2,7 +2,7 @@ from typing import Literal
 
 from sqlalchemy.orm import Session
 
-from app.core.config import settings
+from app.core.config import get_frontend_url
 from app.models.event import Event
 from app.models.member import Member
 from app.services.member_service import list_assignable_board_members
@@ -11,8 +11,7 @@ MeetingNotificationKind = Literal["attendance", "notes", "summary"]
 
 
 def build_meeting_detail_url(event_id: int) -> str:
-    base = settings.FRONTEND_URL.rstrip("/")
-    return f"{base}/events/meetings/{event_id}"
+    return f"{get_frontend_url()}/events/meetings/{event_id}"
 
 
 def notify_board_of_meeting_update(

@@ -58,7 +58,8 @@ def isolated_rate_limit_redis(monkeypatch):
 
     fake.flushall()
     rate_limit_module.limiter._storage.reset()
-    reset_rate_limit_redis(None)
+    # Keep a fake client installed for later modules (do not clear to None).
+    reset_rate_limit_redis(fakeredis.FakeRedis(decode_responses=True))
 
 
 def _failed_login(client: TestClient, email: str = "sapan@semo.edu"):
@@ -160,6 +161,16 @@ def test_clear_login_failures_resets_counter():
 
     clear_login_failures(email)
     check_login_account_failures(email)
+
+
+def test_clear_login_failures_skips_redis_when_disabled(monkeypatch):
+    monkeypatch.setattr(settings, "RATE_LIMIT_ENABLED", False)
+
+    def boom():
+        raise AssertionError("Redis must not be used when rate limits are disabled")
+
+    monkeypatch.setattr(rate_limit_module, "get_rate_limit_redis", boom)
+    clear_login_failures("anyone@semo.edu")
 
 
 def test_account_login_failures_do_not_block_other_accounts(

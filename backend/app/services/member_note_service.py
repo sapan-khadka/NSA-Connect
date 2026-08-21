@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.permissions import member_has_role_at_least
 from app.models.member import Member, MemberRole, MemberStatus
 from app.models.member_note import MemberNote
 from app.schemas.member_note import (
@@ -28,7 +29,7 @@ class MemberNotePermissionError(Exception):
 
 
 def _require_board_notes_access(viewer: Member) -> None:
-    if not viewer.has_role_at_least(MemberRole.BOARD):
+    if not member_has_role_at_least(viewer, MemberRole.BOARD):
         raise MemberNotePermissionError
 
 
@@ -57,8 +58,8 @@ def ensure_member_accessible(db: Session, member_id: int, viewer: Member) -> Mem
     except MemberNotFoundError:
         raise
 
-    if subject.status != MemberStatus.APPROVED and not viewer.has_role_at_least(
-        MemberRole.BOARD,
+    if subject.status != MemberStatus.APPROVED and not member_has_role_at_least(
+        viewer, MemberRole.BOARD
     ):
         raise MemberNotFoundError
 

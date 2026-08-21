@@ -475,7 +475,7 @@ export function CreateEventForm({
           <Card nested padding="sm">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-foreground">Prep checklist</h3>
+                <h3 className="text-sm font-semibold text-foreground">Event checklist</h3>
                 <p className="mt-1 text-sm text-label">
                   Generate 10–15 AI-suggested tasks from the event name and type.
                 </p>
@@ -514,7 +514,7 @@ export function CreateEventForm({
           <div className="flex flex-wrap items-center justify-between gap-3">
             {draftTaskCount > 0 ? (
               <p className="text-sm text-label">
-                Ready to create event with {draftTaskCount} prep tasks.
+                Ready to create event with {draftTaskCount} checklist tasks.
               </p>
             ) : (
               <span />
@@ -528,7 +528,7 @@ export function CreateEventForm({
                   ? "Creating event and tasks…"
                   : "Creating…"
                 : draftTaskCount > 0
-                  ? "Create event with prep tasks"
+                  ? "Create event with checklist tasks"
                   : "Create event"}
             </Button>
           </div>

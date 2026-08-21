@@ -255,18 +255,18 @@ describe("MembersPage", () => {
     expect(screen.getByRole("menuitem", { name: "Import CSV" })).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "Export CSV" })).toBeInTheDocument();
     expect(
-      screen.getByRole("menuitem", { name: "Board positions" }),
+      screen.getByRole("menuitem", { name: "Custom titles" }),
     ).toBeInTheDocument();
   });
 
-  it("hides board positions manage item for non-presidents", async () => {
+  it("hides custom titles manage item for non-presidents", async () => {
     const user = userEvent.setup();
     await mockDirectoryApis();
     renderMembersPage("board");
 
     await openManageMenu(user);
     expect(
-      screen.queryByRole("menuitem", { name: "Board positions" }),
+      screen.queryByRole("menuitem", { name: "Custom titles" }),
     ).not.toBeInTheDocument();
   });
 

@@ -2,6 +2,7 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -10,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from app.api.v1.discussion_ws import router as discussion_ws_router
 from app.api.v1.health import router as health_router
 from app.api.v1.router import api_router
-from app.core.config import settings
+from app.core.config import cors_allow_origins, docs_enabled, settings
 from app.core.exception_handlers import (
     exception_group_handler,
     integrity_error_handler,
@@ -24,6 +25,7 @@ from app.core.rate_limit_handlers import (
 from app.core.validation_errors import request_validation_exception_handler
 from app.lifespan import lifespan
 from app.middleware.global_rate_limit import GlobalRateLimitMiddleware
+from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.services.local_avatar_storage import (
     AvatarKind,
     avatar_upload_dir,
@@ -41,10 +43,15 @@ from app.services.local_event_photo_storage import (
     is_local_event_photo_storage_enabled,
 )
 
+_docs = docs_enabled()
+
 app = FastAPI(
     title=settings.APP_NAME,
     debug=settings.DEBUG,
     lifespan=lifespan,
+    docs_url="/docs" if _docs else None,
+    redoc_url="/redoc" if _docs else None,
+    openapi_url="/openapi.json" if _docs else None,
 )
 
 app.state.limiter = limiter
@@ -56,6 +63,17 @@ app.add_exception_handler(AppRateLimitExceeded, app_rate_limit_exceeded_handler)
 app.add_exception_handler(RateLimitExceeded, slowapi_rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(GlobalRateLimitMiddleware)
+_cors_origins = cors_allow_origins()
+if _cors_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_cors_origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
+# Outermost so JSON, errors, and CORS responses all get lock-down headers.
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.include_router(health_router)
 app.include_router(api_router)

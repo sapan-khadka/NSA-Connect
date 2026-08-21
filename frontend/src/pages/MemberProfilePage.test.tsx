@@ -214,7 +214,7 @@ describe("MemberProfilePage workspace", () => {
         name: "Current Responsibilities",
       }),
     ).toBeInTheDocument();
-    expect(within(responsibilities).getByText("Book venue")).toBeInTheDocument();
+    expect(await within(responsibilities).findByText("Book venue")).toBeInTheDocument();
     expect(
       within(responsibilities).queryByText("Done already"),
     ).not.toBeInTheDocument();

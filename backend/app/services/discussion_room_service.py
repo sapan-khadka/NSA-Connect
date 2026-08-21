@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.permissions import member_has_role_at_least
 from app.models.discussion_room import (
     MAX_DISCUSSION_ROOM_NAME_LENGTH,
     DiscussionRoom,
@@ -125,7 +126,7 @@ def assert_can_manage_group_avatar(
     }:
         raise DiscussionForbiddenError
 
-    is_board = member.has_role_at_least(MemberRole.BOARD)
+    is_board = member_has_role_at_least(member, MemberRole.BOARD)
     is_owner = any(
         row.member_id == member.id and row.role == DiscussionRoomMemberRole.OWNER
         for row in room.members
@@ -254,7 +255,7 @@ def create_discussion_room(
     description: str | None,
     member_ids: list[int],
 ) -> DiscussionRoom:
-    if not creator.has_role_at_least(MemberRole.BOARD):
+    if not member_has_role_at_least(creator, MemberRole.BOARD):
         raise DiscussionForbiddenError
 
     cleaned_name = " ".join(name.split())
@@ -598,7 +599,7 @@ def _actor_can_manage_room_members(
 ) -> bool:
     if room.kind != DiscussionRoomKind.GROUP:
         return False
-    if actor.has_role_at_least(MemberRole.BOARD):
+    if member_has_role_at_least(actor, MemberRole.BOARD):
         return True
     membership = next(
         (row for row in room.members if row.member_id == actor.id),

@@ -23,8 +23,8 @@ import {
 } from "../lib/member-talents";
 import {
   isExclusiveMemberPosition,
-  isRoleAtLeast,
   memberHoldsBoardSeat,
+  memberSatisfiesMinRole,
   type MemberPosition,
   type PromotableBoardRole,
 } from "../lib/roles";
@@ -103,10 +103,10 @@ export function EditMemberDrawer({
   const [isUpdatingPosition, setIsUpdatingPosition] = useState(false);
 
   const canEditProfile = Boolean(
-    currentMember && isRoleAtLeast(currentMember.role, "board"),
+    currentMember && memberSatisfiesMinRole(currentMember, "board"),
   );
   const canEditRolePosition = Boolean(
-    currentMember && isRoleAtLeast(currentMember.role, "president"),
+    currentMember && memberSatisfiesMinRole(currentMember, "president"),
   );
 
   useEffect(() => {
@@ -381,7 +381,7 @@ export function EditMemberDrawer({
                 Role &amp; position
               </h3>
               <p className="members-invite-section-desc">
-                President-only. Changes save immediately.
+                Assign a board seat. Changes save immediately.
               </p>
             </div>
             <div className="members-invite-section-body members-edit-role-row">

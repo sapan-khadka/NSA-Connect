@@ -8,7 +8,7 @@ from conftest import (
 
 from app.models.preptask import PrepTaskGroup, PrepTaskGroupItem
 
-FORBIDDEN_DETAIL = "Not allowed to update this prep task"
+FORBIDDEN_DETAIL = "You cannot modify this task"
 
 
 def _event_payload(**overrides):
@@ -88,7 +88,7 @@ def test_board_member_can_mark_prep_task_complete(
     assert task["is_complete"] is False
 
     response = client.patch(
-        f"/api/v1/tasks/{task['id']}",
+        f"/api/v1/event-tasks/{task['id']}",
         json={"is_complete": True},
         headers=board_member_headers,
     )
@@ -110,7 +110,7 @@ def test_board_member_can_assign_prep_task(
     task = _create_event_with_task(client, board_member_headers, db_session)
 
     response = client.patch(
-        f"/api/v1/tasks/{task['id']}",
+        f"/api/v1/event-tasks/{task['id']}",
         json={"assignee_id": assignee.id},
         headers=board_member_headers,
     )
@@ -130,7 +130,7 @@ def test_board_member_can_update_completion_and_assignee_together(
     task = _create_event_with_task(client, board_member_headers, db_session)
 
     response = client.patch(
-        f"/api/v1/tasks/{task['id']}",
+        f"/api/v1/event-tasks/{task['id']}",
         json={"is_complete": True, "assignee_id": assignee.id},
         headers=board_member_headers,
     )
@@ -158,7 +158,7 @@ def test_board_member_can_unassign_prep_task(
     assert task["assignee_id"] == assignee.id
 
     response = client.patch(
-        f"/api/v1/tasks/{task['id']}",
+        f"/api/v1/event-tasks/{task['id']}",
         json={"assignee_id": None},
         headers=board_member_headers,
     )
@@ -183,7 +183,7 @@ def test_assignee_can_mark_own_prep_task_complete(
     )
 
     response = client.patch(
-        f"/api/v1/tasks/{task['id']}",
+        f"/api/v1/event-tasks/{task['id']}",
         json={"is_complete": True},
         headers=board_member_headers,
     )
@@ -204,13 +204,15 @@ def test_patch_rejects_general_member_assignee(
     task = _create_event_with_task(client, board_member_headers, db_session)
 
     response = client.patch(
-        f"/api/v1/tasks/{task['id']}",
+        f"/api/v1/event-tasks/{task['id']}",
         json={"assignee_id": general_member.id},
         headers=board_member_headers,
     )
 
-    assert response.status_code == 422
-    assert response.json()["detail"] == "Assignee must be an approved board member"
+    assert response.status_code == 400
+    assert response.json()["detail"] == (
+        "Assignee must be a board member or an approved volunteer for this event"
+    )
 
 
 def test_general_member_cannot_reassign_prep_task(
@@ -230,7 +232,7 @@ def test_general_member_cannot_reassign_prep_task(
     )
 
     response = client.patch(
-        f"/api/v1/tasks/{task['id']}",
+        f"/api/v1/event-tasks/{task['id']}",
         json={"assignee_id": None},
         headers=general_member_headers,
     )
@@ -248,7 +250,7 @@ def test_non_assignee_cannot_update_prep_task(
     task = _create_event_with_task(client, board_member_headers, db_session)
 
     response = client.patch(
-        f"/api/v1/tasks/{task['id']}",
+        f"/api/v1/event-tasks/{task['id']}",
         json={"is_complete": True},
         headers=general_member_headers,
     )
@@ -262,13 +264,13 @@ def test_update_prep_task_returns_404_for_unknown_task(
     board_member_headers,
 ):
     response = client.patch(
-        "/api/v1/tasks/99999",
+        "/api/v1/event-tasks/99999",
         json={"is_complete": True},
         headers=board_member_headers,
     )
 
     assert response.status_code == 404
-    assert response.json()["detail"] == "Prep task not found"
+    assert response.json()["detail"] == "Task not found"
 
 
 def test_update_prep_task_requires_at_least_one_field(
@@ -276,7 +278,7 @@ def test_update_prep_task_requires_at_least_one_field(
     board_member_headers,
 ):
     response = client.patch(
-        "/api/v1/tasks/1",
+        "/api/v1/event-tasks/1",
         json={},
         headers=board_member_headers,
     )
@@ -292,10 +294,12 @@ def test_update_prep_task_rejects_invalid_assignee(
     task = _create_event_with_task(client, board_member_headers, db_session)
 
     response = client.patch(
-        f"/api/v1/tasks/{task['id']}",
+        f"/api/v1/event-tasks/{task['id']}",
         json={"assignee_id": 99999},
         headers=board_member_headers,
     )
 
-    assert response.status_code == 422
-    assert response.json()["detail"] == "Assignee must be an approved board member"
+    assert response.status_code == 400
+    assert response.json()["detail"] == (
+        "Assignee must be a board member or an approved volunteer for this event"
+    )

@@ -50,7 +50,7 @@ class Event(Base):
         ),
         nullable=False,
     )
-    starts_at = Column(DateTime(timezone=True), nullable=False)
+    starts_at = Column(DateTime(timezone=True), nullable=False, index=True)
     ends_at = Column(DateTime(timezone=True), nullable=True)
     location = Column(String(255), nullable=True)
     capacity = Column(Integer, nullable=True)
@@ -65,7 +65,7 @@ class Event(Base):
         nullable=True,
     )
     checkin_token = Column(String(64), nullable=True)
-    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_by_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     organization_id = Column(
         Integer,
         ForeignKey("organizations.id"),

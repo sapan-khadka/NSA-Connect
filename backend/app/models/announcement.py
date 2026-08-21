@@ -66,6 +66,7 @@ class Announcement(Base):
         DateTime(timezone=True),
         nullable=False,
         default=lambda: datetime.now(UTC),
+        index=True,
     )
     updated_at = Column(
         DateTime(timezone=True),

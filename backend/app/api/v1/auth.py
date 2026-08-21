@@ -17,23 +17,50 @@ from app.core.security import (
     InvalidTokenError,
     create_token_pair,
     decode_refresh_token,
-    resolve_user_id,
 )
 from app.models.member import Member
 from app.models.organization import Organization
 from app.schemas.auth import (
+    EmailVerificationConfirmRequest,
+    EmailVerificationRequest,
+    EmailVerificationResponse,
+    LogoutResponse,
     PasswordResetConfirmRequest,
+    PasswordResetConfirmResponse,
     PasswordResetRequest,
     PasswordResetRequestResponse,
     RefreshTokenRequest,
     TokenResponse,
 )
 from app.schemas.member import MemberCreateRequest, MemberLoginRequest, MemberResponse
+from app.services.auth_service import (
+    AuthTokenKind,
+    InvalidTokenPayloadError,
+    MemberNotFoundForTokenError,
+    TokenRevokedError,
+    invalid_payload_detail,
+    load_authenticated_member,
+    revoked_detail,
+)
+from app.services.auth_service import (
+    MemberNotApprovedError as TokenMemberNotApprovedError,
+)
+from app.services.email_verification_service import (
+    EMAIL_VERIFICATION_INVALID_TOKEN_MESSAGE,
+    EMAIL_VERIFICATION_REQUEST_MESSAGE,
+    EMAIL_VERIFICATION_SUCCESS_MESSAGE,
+    InvalidEmailVerificationTokenError,
+    request_email_verification,
+    verify_email_with_token,
+)
 from app.services.member_service import (
     InvalidCredentialsError,
+    InvalidRegistrationEmailError,
     MemberAlreadyExistsError,
+    MemberEmailNotVerifiedError,
     MemberNotApprovedError,
     StudentIdAlreadyExistsError,
+    StudentIdRequiredError,
     authenticate_member,
     create_member,
 )
@@ -62,15 +89,20 @@ def register(
 ):
     try:
         member = create_member(db, data)
-    except MemberAlreadyExistsError:
+    except (MemberAlreadyExistsError, StudentIdAlreadyExistsError):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Email already registered",
+            detail="An account with this email or student ID already exists",
         ) from None
-    except StudentIdAlreadyExistsError:
+    except StudentIdRequiredError:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Student ID already registered",
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Student ID is required",
+        ) from None
+    except InvalidRegistrationEmailError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=exc.message,
         ) from None
     except WeakPasswordError as exc:
         raise HTTPException(
@@ -104,6 +136,11 @@ def login(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
+        ) from None
+    except MemberEmailNotVerifiedError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Verify your email before signing in",
         ) from None
     except MemberNotApprovedError:
         raise HTTPException(
@@ -144,41 +181,31 @@ def refresh_tokens(data: RefreshTokenRequest, db: Session = Depends(get_db)):
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
 
-    user_id = resolve_user_id(payload)
-    if user_id is None:
+    try:
+        member = load_authenticated_member(db, payload, attach_membership=False)
+    except InvalidTokenPayloadError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid refresh token payload",
+            detail=invalid_payload_detail(AuthTokenKind.REFRESH),
             headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    member = db.get(Member, user_id)
-    if member is None:
+        ) from exc
+    except MemberNotFoundForTokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Member not found",
             headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    if payload.get("email") != member.email:
+        ) from exc
+    except TokenRevokedError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid refresh token payload",
+            detail=revoked_detail(AuthTokenKind.REFRESH),
             headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    if payload.get("tv") != member.token_version:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Refresh token has been revoked",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    if not member.can_authenticate():
+        ) from exc
+    except TokenMemberNotApprovedError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Member account is not approved",
-        )
+        ) from exc
 
     (
         access_token,
@@ -200,6 +227,16 @@ def refresh_tokens(data: RefreshTokenRequest, db: Session = Depends(get_db)):
     )
 
 
+@router.post("/logout", response_model=LogoutResponse)
+def logout(
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    current_member.token_version += 1
+    db.commit()
+    return LogoutResponse(message="Logged out")
+
+
 @router.get("/me", response_model=MemberResponse)
 def me(
     current_member: Member = Depends(get_current_member),
@@ -210,6 +247,43 @@ def me(
         viewer=current_member,
         organization=current_organization,
     )
+
+
+@router.post("/verify-email", response_model=EmailVerificationResponse)
+def verify_email(
+    data: EmailVerificationConfirmRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        verify_email_with_token(db, data.token)
+    except InvalidEmailVerificationTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=EMAIL_VERIFICATION_INVALID_TOKEN_MESSAGE,
+        ) from None
+    return EmailVerificationResponse(message=EMAIL_VERIFICATION_SUCCESS_MESSAGE)
+
+
+@router.post(
+    "/verify-email/resend",
+    response_model=EmailVerificationResponse,
+)
+@limit(f"{settings.RATE_LIMIT_PASSWORD_RESET_IP_MAX}/hour")
+def resend_verification_email(
+    request: Request,
+    data: EmailVerificationRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        check_password_reset_email_limit(data.email)
+    except AppRateLimitExceeded as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=exc.detail,
+        ) from None
+
+    request_email_verification(db, data.email)
+    return EmailVerificationResponse(message=EMAIL_VERIFICATION_REQUEST_MESSAGE)
 
 
 @router.post("/password-reset/request", response_model=PasswordResetRequestResponse)
@@ -231,7 +305,7 @@ def password_reset_request(
     return PasswordResetRequestResponse(message=PASSWORD_RESET_REQUEST_MESSAGE)
 
 
-@router.post("/password-reset/confirm")
+@router.post("/password-reset/confirm", response_model=PasswordResetConfirmResponse)
 def password_reset_confirm(
     data: PasswordResetConfirmRequest,
     db: Session = Depends(get_db),
@@ -253,6 +327,6 @@ def password_reset_confirm(
             detail=str(exc),
         ) from None
 
-    return {
-        "message": "Password updated. You can sign in with your new password.",
-    }
+    return PasswordResetConfirmResponse(
+        message="Password updated. You can sign in with your new password.",
+    )

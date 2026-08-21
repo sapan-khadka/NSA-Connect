@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 
+import { useDiscussionInbox } from "../../context/DiscussionInboxProvider";
 import {
-  fetchDiscussionInbox,
   postBoardDiscussion,
   postCustomRoomDiscussion,
   postEventDiscussion,
@@ -26,7 +26,7 @@ export function ForwardMessageModal({
   onClose: () => void;
 }) {
   const navigate = useNavigate();
-  const [rooms, setRooms] = useState<DiscussionInboxRoom[]>([]);
+  const { rooms } = useDiscussionInbox({ enabled: open });
   const [query, setQuery] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -35,23 +35,8 @@ export function ForwardMessageModal({
     if (!open) {
       return;
     }
-    let cancelled = false;
     setError(null);
     setQuery("");
-    void fetchDiscussionInbox()
-      .then((inbox) => {
-        if (!cancelled) {
-          setRooms(inbox.rooms);
-        }
-      })
-      .catch((caught) => {
-        if (!cancelled) {
-          setError(getApiErrorMessage(caught, "Could not load chats"));
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
   }, [open]);
 
   const filtered = useMemo(() => {

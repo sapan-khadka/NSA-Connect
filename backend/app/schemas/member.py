@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, Literal
 from pydantic import (
     BaseModel,
     ConfigDict,
+    EmailStr,
     Field,
     ValidationInfo,
     field_validator,
@@ -14,7 +15,7 @@ from app.core.password_validation import (
     PASSWORD_MAX_LENGTH,
     PASSWORD_MIN_LENGTH,
 )
-from app.core.validators import SemoEmailStr, StudentIdStr
+from app.core.validators import SemoEmailStr, StudentIdStr, validate_student_id
 from app.lib.member_talents import is_valid_talent
 from app.models.member import (
     MemberPosition,
@@ -41,10 +42,31 @@ class MemberIdentityRequest(BaseModel):
     graduation_year: int = Field(ge=CURRENT_YEAR, le=MAX_GRADUATION_YEAR)
 
 
-class MemberCreateRequest(MemberIdentityRequest):
+class MemberCreateRequest(BaseModel):
+    """Public registration. SEMO students need a student_id; org-owner emails may omit it."""
+
+    full_name: str = Field(min_length=1, max_length=255)
+    email: EmailStr
+    student_id: str | None = None
+    major: str = Field(min_length=1, max_length=255)
+    graduation_year: int = Field(ge=CURRENT_YEAR, le=MAX_GRADUATION_YEAR)
     password: str = Field(
         min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH
     )
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        return value.lower().strip()
+
+    @field_validator("student_id", mode="before")
+    @classmethod
+    def normalize_optional_student_id(cls, value: Any) -> str | None:
+        if value is None:
+            return None
+        if isinstance(value, str) and not value.strip():
+            return None
+        return validate_student_id(str(value))
 
 
 class MemberInviteRequest(MemberIdentityRequest):
@@ -147,8 +169,13 @@ class MemberProfileUpdateRequest(BaseModel):
 
 
 class MemberLoginRequest(BaseModel):
-    email: SemoEmailStr
+    email: EmailStr
     password: str = Field(min_length=1, max_length=128)
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        return value.lower().strip()
 
 
 class MemberPasswordChangeRequest(BaseModel):
@@ -208,6 +235,8 @@ class MemberResponse(BaseModel):
     phone_visibility: ProfileFieldVisibility = ProfileFieldVisibility.BOARD_ONLY
     social_handle_visibility: ProfileFieldVisibility = ProfileFieldVisibility.BOARD_ONLY
     avatar_url: str | None = None
+    is_org_owner: bool = False
+    email_verified: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -262,7 +291,11 @@ class MemberResponse(BaseModel):
         organization: "Organization | None" = None,
     ) -> "MemberResponse":
         is_self = viewer is not None and viewer.id == member.id
-        is_board = viewer is not None and viewer.has_role_at_least(MemberRole.BOARD)
+        from app.core.permissions import member_has_role_at_least
+
+        is_board = viewer is not None and member_has_role_at_least(
+            viewer, MemberRole.BOARD
+        )
 
         email_visibility = member.email_visibility or ProfileFieldVisibility.PUBLIC
         phone_visibility = member.phone_visibility or ProfileFieldVisibility.BOARD_ONLY
@@ -297,6 +330,18 @@ class MemberResponse(BaseModel):
             else None
         )
 
+        membership = getattr(member, "_active_membership", None)
+        is_org_owner = bool(membership.is_org_owner) if membership is not None else False
+        if not is_org_owner and organization is not None:
+            from sqlalchemy.orm import object_session
+
+            from app.services.organization_context import get_membership_for_user
+
+            session = object_session(member)
+            if session is not None:
+                looked = get_membership_for_user(session, member.id, organization.id)
+                is_org_owner = bool(looked and looked.is_org_owner)
+
         return cls(
             id=member.id,
             full_name=member.full_name,
@@ -319,6 +364,8 @@ class MemberResponse(BaseModel):
             phone_visibility=phone_visibility,
             social_handle_visibility=social_handle_visibility,
             avatar_url=member.avatar_url,
+            is_org_owner=is_org_owner,
+            email_verified=member.email_verified_at is not None,
         )
 
 

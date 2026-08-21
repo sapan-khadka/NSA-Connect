@@ -28,8 +28,10 @@ def secretary_and_board(db_session):
 
 
 def test_build_meeting_detail_url_uses_frontend_base():
-    with patch("app.services.meeting_notification_service.settings") as mock_settings:
-        mock_settings.FRONTEND_URL = "https://connect.example.edu/"
+    with patch(
+        "app.services.meeting_notification_service.get_frontend_url",
+        return_value="https://connect.example.edu",
+    ):
         assert (
             build_meeting_detail_url(42)
             == "https://connect.example.edu/events/meetings/42"

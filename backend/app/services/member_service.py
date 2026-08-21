@@ -1,5 +1,6 @@
 import csv
 import secrets
+from datetime import UTC, datetime
 from decimal import Decimal
 from io import StringIO
 
@@ -72,6 +73,20 @@ class InvalidCurrentPasswordError(Exception):
     pass
 
 
+class MemberEmailNotVerifiedError(Exception):
+    pass
+
+
+class StudentIdRequiredError(Exception):
+    pass
+
+
+class InvalidRegistrationEmailError(Exception):
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(message)
+
+
 def _check_member_identity_uniqueness(
     db: Session,
     *,
@@ -85,9 +100,20 @@ def _check_member_identity_uniqueness(
 
 
 def create_member(db: Session, data: MemberCreateRequest) -> Member:
-    from app.core.validators import university_for_email, validate_university_email
+    from app.core.validators import (
+        is_org_owner_email,
+        university_for_email,
+        validate_university_email,
+    )
 
-    email = validate_university_email(db, data.email)
+    try:
+        email = validate_university_email(db, data.email)
+    except ValueError as exc:
+        raise InvalidRegistrationEmailError(str(exc)) from exc
+
+    if not is_org_owner_email(email) and not data.student_id:
+        raise StudentIdRequiredError
+
     _check_member_identity_uniqueness(
         db,
         email=email,
@@ -122,13 +148,22 @@ def create_member(db: Session, data: MemberCreateRequest) -> Member:
 
     from app.services.organization_context import bootstrap_first_org_owner
 
-    # Empty-org recovery only: never runs when approved members already exist.
-    if bootstrap_first_org_owner(db, member):
-        return member
+    # Allowlisted org-owner email, or legacy empty-org bootstrap when no allowlist.
+    bootstrap_first_org_owner(db, member)
 
+    from app.core.config import settings as app_settings
+    from app.services.email_verification_service import send_verification_email_for_member
     from app.services.inbox_notification_service import notify_board_of_pending_member
 
-    notify_board_of_pending_member(db, pending_member=member)
+    if app_settings.email_verification_required:
+        # Board is notified only after the email inbox is verified.
+        send_verification_email_for_member(db, member)
+    else:
+        member.email_verified_at = datetime.now(UTC)
+        db.commit()
+        if member.is_pending:
+            notify_board_of_pending_member(db, pending_member=member)
+    db.refresh(member)
     return member
 
 
@@ -169,6 +204,7 @@ def create_invited_member(
         position=MemberPosition.MEMBER,
         status=MemberStatus.APPROVED,
         talents=[],
+        email_verified_at=datetime.now(UTC),
         university_id=(
             university.id if university is not None else get_default_university_id(db)
         ),
@@ -186,10 +222,18 @@ def create_invited_member(
 
 
 def authenticate_member(db: Session, email: str, password: str) -> Member:
+    from app.core.config import settings as app_settings
+
     member = db.scalar(select(Member).where(Member.email == email))
 
     if member is None or not verify_password(password, member.hashed_password):
         raise InvalidCredentialsError
+
+    if member.email_verified_at is None:
+        if app_settings.email_verification_required:
+            raise MemberEmailNotVerifiedError
+        member.email_verified_at = datetime.now(UTC)
+        db.commit()
 
     if not member.can_authenticate():
         raise MemberNotApprovedError
@@ -228,6 +272,19 @@ def list_members_by_status(
     if status is not None:
         query = query.where(Member.status == status)
     return list(db.scalars(query.order_by(Member.id)).unique().all())
+
+
+def list_pending_members_for_approval(db: Session) -> list[Member]:
+    """Pending signups the board/owner may approve.
+
+    Unverified accounts stay hidden unless SKIP_EMAIL_VERIFICATION is on (dev).
+    """
+    from app.core.config import settings as app_settings
+
+    members = list_members_by_status(db, MemberStatus.PENDING)
+    if not app_settings.email_verification_required:
+        return members
+    return [member for member in members if member.email_verified_at is not None]
 
 
 def _member_has_talent_filters(db: Session, talents: list[str]):
@@ -361,6 +418,14 @@ def approve_member(db: Session, member_id: int) -> Member:
     member = get_member_by_id(db, member_id)
     if member.status != MemberStatus.PENDING:
         raise InvalidMemberStatusError("Only pending members can be approved")
+    if member.email_verified_at is None:
+        from app.core.config import settings as app_settings
+
+        if app_settings.email_verification_required:
+            raise InvalidMemberStatusError(
+                "Member must verify their email before approval"
+            )
+        member.email_verified_at = datetime.now(UTC)
     member.status = MemberStatus.APPROVED
     sync_membership_from_member(db, member)
     db.commit()

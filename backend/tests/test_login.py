@@ -13,8 +13,12 @@ def _register(client, email="sapan@semo.edu", password="securepass123"):
 
 
 def _approve_member(db_session, email="sapan@semo.edu"):
+    from datetime import UTC, datetime
+
     member = db_session.scalar(select(Member).where(Member.email == email))
     member.status = MemberStatus.APPROVED
+    if member.email_verified_at is None:
+        member.email_verified_at = datetime.now(UTC)
     db_session.commit()
 
 
@@ -63,8 +67,13 @@ def test_login_rejects_unknown_email(client):
     assert response.json()["detail"] == "Invalid email or password"
 
 
-def test_login_rejects_pending_member(client):
+def test_login_rejects_pending_member(client, db_session):
+    from datetime import UTC, datetime
+
     _register(client)
+    member = db_session.scalar(select(Member).where(Member.email == "sapan@semo.edu"))
+    member.email_verified_at = datetime.now(UTC)
+    db_session.commit()
 
     response = client.post(
         "/api/v1/auth/login",
@@ -75,10 +84,11 @@ def test_login_rejects_pending_member(client):
     assert response.json()["detail"] == "Member account is not approved"
 
 
-def test_login_rejects_non_semo_email(client):
+def test_login_rejects_unknown_non_semo_email(client):
     response = client.post(
         "/api/v1/auth/login",
         json={"email": "sapan@gmail.com", "password": "securepass123"},
     )
 
-    assert response.status_code == 422
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid email or password"

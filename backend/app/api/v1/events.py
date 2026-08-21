@@ -684,12 +684,6 @@ def list_event_attendees_endpoint(
     response_model=PrepTaskResponse,
     status_code=status.HTTP_201_CREATED,
 )
-@router.post(
-    "/{event_id}/prep-tasks",
-    response_model=PrepTaskResponse,
-    status_code=status.HTTP_201_CREATED,
-    include_in_schema=False,
-)
 def add_prep_task_endpoint(
     event_id: int,
     data: PrepTaskCreateRequest,

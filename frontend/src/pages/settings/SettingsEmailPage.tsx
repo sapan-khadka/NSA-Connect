@@ -12,7 +12,7 @@ export function SettingsEmailPage() {
     return null;
   }
 
-  if (!canAccessEmailIntegration(member.role)) {
+  if (!canAccessEmailIntegration(member.role, Boolean(member.is_org_owner))) {
     return <Navigate to="/settings" replace />;
   }
 

@@ -4,9 +4,9 @@ import { useNavigate } from "react-router";
 
 import { useAuth } from "../context/useAuth";
 import {
+  canManageEventTasks,
   canManageTreasury,
-  canViewMemberDirectory,
-  isRoleAtLeast,
+  memberSatisfiesMinRole,
 } from "../lib/roles";
 import { AppIcon } from "./ui/AppIcon";
 
@@ -63,18 +63,18 @@ export function CreateMenu({ onLogTransaction, className = "" }: CreateMenuProps
 
   const items: CreateItem[] = [];
 
-  if (isRoleAtLeast(member.role, "board")) {
+  if (memberSatisfiesMinRole(member, "board")) {
     items.push({ id: "event", label: "Event", to: "/events/calendar?create=1" });
     items.push({
       id: "announcement",
       label: "Announcement",
       to: "/announcements?create=1",
     });
-    items.push({ id: "task", label: "Task", to: "/events/tasks?create=1" });
+    items.push({ id: "member", label: "Member", to: "/members?tab=pending" });
   }
 
-  if (canViewMemberDirectory(member.role)) {
-    items.push({ id: "member", label: "Member", to: "/members?tab=pending" });
+  if (canManageEventTasks(member.role, member.position)) {
+    items.push({ id: "task", label: "Task", to: "/events/tasks?create=1" });
   }
 
   if (canManageTreasury(member.role, member.position)) {

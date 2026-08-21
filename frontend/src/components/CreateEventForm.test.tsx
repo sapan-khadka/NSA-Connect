@@ -88,7 +88,7 @@ describe("CreateEventForm", () => {
     expect(mockedAddPrepTaskToEvent).not.toHaveBeenCalled();
   });
 
-  it("generates and attaches prep tasks when creating an event", async () => {
+  it("generates and attaches checklist tasks when creating an event", async () => {
     const user = userEvent.setup();
     const onCreated = vi.fn();
 
@@ -141,7 +141,7 @@ describe("CreateEventForm", () => {
     });
 
     await user.click(
-      screen.getByRole("button", { name: "Create event with prep tasks" }),
+      screen.getByRole("button", { name: "Create event with checklist tasks" }),
     );
 
     await waitFor(() => {

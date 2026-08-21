@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_member, require_board
+from app.core.upload import read_upload_with_limit
 from app.models.member import Member
 from app.schemas.event import EventResponse
 from app.schemas.event_photo import (
@@ -94,7 +95,7 @@ async def upload_event_photo_endpoint(
     current_member: Member = Depends(get_current_member),
     db: Session = Depends(get_db),
 ):
-    file_bytes = await file.read()
+    file_bytes = await read_upload_with_limit(file, max_bytes=15 * 1024 * 1024)
 
     try:
         photo = upload_and_create_event_photo(
@@ -198,7 +199,7 @@ async def upload_event_cover_photo_endpoint(
     db: Session = Depends(get_db),
 ):
     """Upload an event-specific cover photo shown on home and event cards."""
-    file_bytes = await file.read()
+    file_bytes = await read_upload_with_limit(file, max_bytes=15 * 1024 * 1024)
 
     try:
         upload_result = upload_event_photo_file(

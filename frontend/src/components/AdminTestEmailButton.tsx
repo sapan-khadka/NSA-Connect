@@ -3,21 +3,18 @@ import { useState } from "react";
 import { useAuth } from "../context/useAuth";
 import { getApiErrorMessage } from "../lib/api-error";
 import { sendTestEmail } from "../lib/notifications-api";
-import { validateEmailAddress } from "../lib/validation";
-import { inputFieldClassName } from "./ui/Input";
 
 export function AdminTestEmailButton() {
   const { member } = useAuth();
-  const [recipientEmail, setRecipientEmail] = useState(member?.email ?? "");
+  const recipientEmail = member?.email?.trim() ?? "";
   const [isSending, setIsSending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   async function handleSendTestEmail() {
-    const validationError = validateEmailAddress(recipientEmail);
-    if (validationError) {
+    if (!recipientEmail) {
       setMessage(null);
-      setErrorMessage(validationError);
+      setErrorMessage("Your account has no email address.");
       return;
     }
 
@@ -38,21 +35,16 @@ export function AdminTestEmailButton() {
   return (
     <section className="settings-block is-flush">
       <div className="settings-field">
-        <label htmlFor="settings-test-email">Recipient</label>
-        <input
-          id="settings-test-email"
-          type="email"
-          value={recipientEmail}
-          onChange={(event) => setRecipientEmail(event.target.value)}
-          placeholder="you@example.com"
-          className={`${inputFieldClassName} rounded-md`}
-        />
+        <p className="text-sm text-label">
+          Test mail is sent only to your signed-in address:{" "}
+          <strong>{recipientEmail || "unknown"}</strong>
+        </p>
       </div>
       <div className="settings-actions">
         <button
           type="button"
           onClick={() => void handleSendTestEmail()}
-          disabled={isSending}
+          disabled={isSending || !recipientEmail}
           className="event-command-btn"
         >
           {isSending ? "Sending…" : "Send test email"}
