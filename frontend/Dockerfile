@@ -9,7 +9,8 @@ RUN npm ci
 # tailwind.config.ts and can omit large tracked assets from src/assets.
 COPY . .
 
-# Same-origin API via nginx. Override only if the SPA is served without the proxy.
+# Same-origin API via nginx by default. For split hosts (e.g. Railway), set
+# VITE_API_URL at build time to the public API origin + /api.
 ARG VITE_API_URL=/api
 ENV VITE_API_URL=$VITE_API_URL
 
@@ -25,7 +26,8 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # Only substitute these so nginx $host / $uri stay intact.
 # NGINX_ENVSUBST_FILTER is a regex (see nginx Docker image docs).
 ENV NGINX_ENVSUBST_FILTER=API_UPSTREAM|PORT
-ENV API_UPSTREAM=http://backend:8000
+# Prefer private service DNS on Railway; override if needed.
+ENV API_UPSTREAM=http://backend.railway.internal:8000
 ENV PORT=80
 
 EXPOSE 80
