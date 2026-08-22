@@ -22,11 +22,13 @@ RUN apk add --no-cache wget
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Only substitute this so nginx $host / $uri stay intact.
-ENV NGINX_ENVSUBST_FILTER=API_UPSTREAM
+# Only substitute these so nginx $host / $uri stay intact.
+# NGINX_ENVSUBST_FILTER is a regex (see nginx Docker image docs).
+ENV NGINX_ENVSUBST_FILTER=API_UPSTREAM|PORT
 ENV API_UPSTREAM=http://backend:8000
+ENV PORT=80
 
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget -q -O /dev/null http://127.0.0.1/nginx-health || exit 1
+    CMD wget -q -O /dev/null http://127.0.0.1:${PORT}/nginx-health || exit 1

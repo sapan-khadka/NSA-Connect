@@ -4,7 +4,8 @@ map $http_upgrade $connection_upgrade {
 }
 
 server {
-    listen 80;
+    # Railway injects PORT; local docker defaults via Dockerfile ENV.
+    listen ${PORT};
     server_name _;
     root /usr/share/nginx/html;
     index index.html;
