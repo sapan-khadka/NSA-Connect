@@ -5,7 +5,7 @@
  */
 
 import { Filter } from "lucide-react";
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 
 import { Drawer } from "../design-system/components/feedback/Drawer";
 import { Search } from "../design-system/components/Search";
@@ -77,6 +77,14 @@ export function MembersFiltersToolbar({
 }: MembersFiltersToolbarProps) {
   const drawerTitleId = useId();
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // Pending opens the full-page reviews queue — never leave the filters
+  // drawer backdrop covering Approve / Reject / Back.
+  useEffect(() => {
+    if (focus === "pending") {
+      setFiltersOpen(false);
+    }
+  }, [focus]);
 
   const focusOptions = useMemo(() => {
     const options = [{ value: "people", label: "All" }];
@@ -223,9 +231,12 @@ export function MembersFiltersToolbar({
               name="focus"
               options={focusOptions}
               value={focus}
-              onChange={(event) =>
-                onFocusChange(event.target.value as MembersDirectoryFocus)
-              }
+              onChange={(event) => {
+                const next = event.target.value as MembersDirectoryFocus;
+                onFocusChange(next);
+                // Close immediately so the reviews screen is clickable.
+                setFiltersOpen(false);
+              }}
               className="members-filters-control"
             />
           </div>

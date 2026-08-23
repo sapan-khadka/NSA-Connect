@@ -589,80 +589,84 @@ export function MembersPage() {
             </div>
           </div>
 
-          <div className="members-crm-toolbar">
-            <MembersFiltersToolbar
-              values={filters}
-              onChange={setFilters}
-              focus={activeFocus}
-              onFocusChange={applyDirectoryFocus}
-              canReviewMembers={canReviewMembers}
-              canFetchDues={canFetchDues}
-              onResetFocus={resetFocusForFilters}
-            />
+          {/* Directory filters don't apply on the reviews queue — hide them so
+              an open Filters drawer cannot block Approve / Reject / Back. */}
+          {activeSegment === "attention" && canReviewMembers ? null : (
+            <div className="members-crm-toolbar">
+              <MembersFiltersToolbar
+                values={filters}
+                onChange={setFilters}
+                focus={activeFocus}
+                onFocusChange={applyDirectoryFocus}
+                canReviewMembers={canReviewMembers}
+                canFetchDues={canFetchDues}
+                onResetFocus={resetFocusForFilters}
+              />
 
-            <div className="members-crm-toolbar-segments max-md:hidden">
+              <div className="members-crm-toolbar-segments max-md:hidden">
                 <div
-                className="members-crm-segment"
-                role="group"
-                aria-label="Filter by roster"
-              >
-                <button
-                  type="button"
-                  className={!filters.role ? "is-active" : undefined}
-                  aria-pressed={!filters.role}
-                  onClick={() => selectRole("")}
+                  className="members-crm-segment"
+                  role="group"
+                  aria-label="Filter by roster"
                 >
-                  All
-                </button>
-                {DIRECTORY_ROLE_SEGMENTS.map(({ role, label }) => {
-                  const active = filters.role === role;
-                  return (
-                    <button
-                      key={role}
-                      type="button"
-                      className={active ? "is-active" : undefined}
-                      aria-pressed={active}
-                      onClick={() => selectRole(role)}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
+                  <button
+                    type="button"
+                    className={!filters.role ? "is-active" : undefined}
+                    aria-pressed={!filters.role}
+                    onClick={() => selectRole("")}
+                  >
+                    All
+                  </button>
+                  {DIRECTORY_ROLE_SEGMENTS.map(({ role, label }) => {
+                    const active = filters.role === role;
+                    return (
+                      <button
+                        key={role}
+                        type="button"
+                        className={active ? "is-active" : undefined}
+                        aria-pressed={active}
+                        onClick={() => selectRole(role)}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
 
-              <label className="members-crm-status-select">
-                <span className="sr-only">Status</span>
-                <select
-                  value={activeFocus}
-                  aria-label="Status"
-                  onChange={(event) =>
-                    applyDirectoryFocus(
-                      event.target.value as
-                        | "people"
-                        | "active"
-                        | "idle"
-                        | "pending"
-                        | "dues",
-                    )
-                  }
-                >
-                  <option value="people">All</option>
-                  {canReviewMembers ? (
-                    <>
-                      <option value="active">Active</option>
-                      <option value="idle">Idle</option>
-                      <option value="pending">
-                        Pending{pendingCount > 0 ? ` (${pendingCount})` : ""}
-                      </option>
-                    </>
-                  ) : null}
-                  {canFetchDues ? (
-                    <option value="dues">Outstanding dues</option>
-                  ) : null}
-                </select>
-              </label>
+                <label className="members-crm-status-select">
+                  <span className="sr-only">Status</span>
+                  <select
+                    value={activeFocus}
+                    aria-label="Status"
+                    onChange={(event) =>
+                      applyDirectoryFocus(
+                        event.target.value as
+                          | "people"
+                          | "active"
+                          | "idle"
+                          | "pending"
+                          | "dues",
+                      )
+                    }
+                  >
+                    <option value="people">All</option>
+                    {canReviewMembers ? (
+                      <>
+                        <option value="active">Active</option>
+                        <option value="idle">Idle</option>
+                        <option value="pending">
+                          Pending{pendingCount > 0 ? ` (${pendingCount})` : ""}
+                        </option>
+                      </>
+                    ) : null}
+                    {canFetchDues ? (
+                      <option value="dues">Outstanding dues</option>
+                    ) : null}
+                  </select>
+                </label>
+              </div>
             </div>
-          </div>
+          )}
         </header>
 
         {exportError ? (

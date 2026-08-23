@@ -124,7 +124,7 @@ export function Drawer({
   }
 
   return (
-    <div className="fixed inset-0 z-50">
+    <div className="fixed inset-0 z-50" data-drawer-root="">
       <button
         type="button"
         aria-label="Close panel"
@@ -139,7 +139,7 @@ export function Drawer({
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
         className={cx(
-          "absolute flex flex-col border-gray-200 bg-surface-card shadow-card-hover",
+          "absolute z-[1] flex flex-col border-gray-200 bg-surface-card shadow-card-hover",
           side === "bottom"
             ? "inset-x-0 bottom-0 max-h-[min(88dvh,40rem)] w-full rounded-t-2xl border-t pb-[max(0.75rem,env(safe-area-inset-bottom))] ds-animate-slide-up"
             : [
