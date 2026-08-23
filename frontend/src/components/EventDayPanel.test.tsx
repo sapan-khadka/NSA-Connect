@@ -157,7 +157,7 @@ describe("EventDayPanel", () => {
       />,
     );
 
-    expect(screen.getByText("No events on this day.")).toBeInTheDocument();
+    expect(screen.getByText("No events on this day")).toBeInTheDocument();
   });
 
   it("shows the Lali Gurans bloom on a Nepali festival day", () => {
@@ -175,7 +175,6 @@ describe("EventDayPanel", () => {
     );
 
     expect(screen.getByText("Holi")).toBeInTheDocument();
-    expect(screen.getByText("Nepali festival")).toBeInTheDocument();
     expect(screen.getByText("No chapter events on this day.")).toBeInTheDocument();
   });
 

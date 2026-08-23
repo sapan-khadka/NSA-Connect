@@ -22,6 +22,9 @@
     /* Mobile shell — keep nav/topbar offsets in one place */
     --ds-topbar-height: 4rem;
     --ds-mobile-nav-height: 3.75rem;
+    --ds-mobile-chrome-bottom: calc(
+      var(--ds-mobile-nav-height) + env(safe-area-inset-bottom, 0px)
+    );
   }
 
   html {
@@ -264,11 +267,28 @@
       padding-bottom: 0;
     }
 
+    /* Scrollable pages reserve space for the fixed bottom tab bar. */
+    .ds-app-shell--mobile-nav
+      .ds-app-column
+      > .ds-workspace-row
+      > .ds-main-canvas:not(:has(.discussions-shell)) {
+      padding-bottom: calc(1.25rem + var(--ds-mobile-chrome-bottom));
+    }
+
+    .ds-app-shell--mobile-nav .ds-main-canvas--events-calendar {
+      padding-bottom: 0.35rem;
+    }
+
     .ds-mobile-bottom-nav {
       display: block;
-      position: relative;
-      z-index: 45;
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 40;
       flex-shrink: 0;
+      box-sizing: border-box;
+      min-height: var(--ds-mobile-chrome-bottom);
       border-top: 1px solid #e5e7eb;
       background: rgba(255, 255, 255, 0.96);
       backdrop-filter: blur(12px);
@@ -10956,7 +10976,7 @@
   @media (max-width: 1023px) {
     .reports-page,
     .settings-shell {
-      padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+      padding-bottom: 0;
     }
 
     .settings-row {
@@ -13724,14 +13744,14 @@
   /* Mobile — bottom action sheet */
   @media (max-width: 767px) {
     .members-table-shell.is-bulk-active {
-      padding-bottom: 9.5rem;
+      padding-bottom: calc(9.5rem + var(--ds-mobile-chrome-bottom));
     }
 
     .members-bulk-bar {
       position: fixed;
       left: 0;
       right: 0;
-      bottom: 0;
+      bottom: var(--ds-mobile-chrome-bottom);
       top: auto;
       z-index: 45;
       width: 100%;
@@ -13745,7 +13765,7 @@
       border-radius: 1rem 1rem 0 0;
       border-top: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
       box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.12);
-      padding-bottom: calc(0.65rem + env(safe-area-inset-bottom, 0px) + var(--ds-mobile-nav-height));
+      padding-bottom: 0.65rem;
       background: #fff;
       backdrop-filter: none;
     }
@@ -20551,8 +20571,8 @@
 
     .events-calendar-page {
       gap: 0.4rem;
-      /* Clear fixed mobile bottom nav + safe area for upcoming strip / legend. */
-      padding-bottom: calc(0.35rem + env(safe-area-inset-bottom, 0px));
+      /* Peek chip sits above the fixed tab bar; bar inset is on the shell. */
+      padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
     }
 
     .events-calendar-card {
@@ -20604,11 +20624,19 @@
     }
 
     .events-preview-sheet-peek {
-      bottom: calc(var(--ds-mobile-nav-height) + env(safe-area-inset-bottom, 0px));
+      bottom: calc(var(--ds-mobile-chrome-bottom) + 0.35rem);
     }
 
     .events-preview-sheet-panel {
-      padding-bottom: calc(1.1rem + var(--ds-mobile-nav-height) + env(safe-area-inset-bottom, 0px));
+      bottom: var(--ds-mobile-chrome-bottom);
+      max-height: min(
+        72dvh,
+        calc(
+          100dvh - var(--ds-topbar-height) - var(--ds-mobile-chrome-bottom) -
+            env(safe-area-inset-top, 0px) - 1rem
+        )
+      );
+      padding-bottom: 1.25rem;
     }
   }
 
@@ -21028,10 +21056,26 @@
     bottom: 0;
     max-height: min(78dvh, 40rem);
     overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     border-radius: 1rem 1rem 0 0;
     background: #fff;
     box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.12);
     padding: 0.35rem 0.75rem calc(1.1rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  @media (max-width: 1023px) {
+    .events-preview-sheet-panel {
+      bottom: var(--ds-mobile-chrome-bottom);
+      max-height: min(
+        72dvh,
+        calc(
+          100dvh - var(--ds-topbar-height) - var(--ds-mobile-chrome-bottom) -
+            env(safe-area-inset-top, 0px) - 1rem
+        )
+      );
+      padding-bottom: 1.25rem;
+    }
   }
 
   .events-preview-sheet-handle {
@@ -21043,8 +21087,8 @@
   }
 
   .events-preview-sheet-peek {
-    @apply fixed left-4 right-4 z-30 rounded-xl border border-gray-200 bg-white px-4 py-3 text-left text-sm font-medium text-foreground shadow-card lg:hidden;
-    bottom: calc(var(--ds-mobile-nav-height) + 1rem + env(safe-area-inset-bottom, 0px));
+    @apply fixed left-4 right-4 z-[41] rounded-xl border border-gray-200 bg-white px-4 py-3 text-left text-sm font-medium text-foreground shadow-card lg:hidden;
+    bottom: calc(var(--ds-mobile-chrome-bottom) + 1rem);
   }
 
   .events-preview-sheet .events-sidebar-card {
@@ -21058,6 +21102,31 @@
     height: auto;
     max-height: none;
     min-height: 0;
+  }
+
+  .events-preview-sheet .calendar-day-empty,
+  .events-preview-sheet .calendar-festival-empty {
+    min-height: 10rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .events-preview-sheet .details-panel-body--dense {
+    padding-bottom: 0.75rem;
+  }
+
+  .events-preview-sheet .details-panel-actions--dense {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin-top: auto;
+    padding-top: 0.85rem;
+    padding-bottom: 0.35rem;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0) 0%,
+      #fff 24%,
+      #fff 100%
+    );
   }
 
   .events-preview-sheet .details-panel-actions--stack {
@@ -22333,11 +22402,11 @@
     animation: rsvp-confirmation-fade-in 400ms ease-out forwards;
   }
 
-  /* Full-height discussions shell — flex fill on mobile (nav is a flex sibling, not fixed). */
+  /* Full-height discussions shell — flex fill; tab bar is fixed below the scrollport. */
   .discussions-shell {
     height: calc(
-      100dvh - var(--ds-topbar-height) - var(--ds-mobile-nav-height) -
-        env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 2.5rem
+      100dvh - var(--ds-topbar-height) - var(--ds-mobile-chrome-bottom) -
+        env(safe-area-inset-top, 0px) - 2.5rem
     );
   }
 
@@ -22380,8 +22449,8 @@
   @media (min-width: 640px) {
     .discussions-shell:not(:has(.discussion-feed-pane)) {
       height: calc(
-        100dvh - var(--ds-topbar-height) - var(--ds-mobile-nav-height) -
-          env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 3rem
+        100dvh - var(--ds-topbar-height) - var(--ds-mobile-chrome-bottom) -
+          env(safe-area-inset-top, 0px) - 3rem
       );
     }
   }

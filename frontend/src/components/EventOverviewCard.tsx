@@ -326,19 +326,19 @@ export function EventOverviewCard({
       ) : null}
 
       {showEmptyDay && dayFestivals.length > 0 ? (
-        <div className="calendar-festival-empty" role="status">
-          <p className="event-command-kicker">Nepali festival</p>
-          <h3 className="event-command-title">
-            {dayFestivals.map((festival) => festival.name).join(" · ")}
-          </h3>
-          <p className="event-command-stat">No chapter events on this day.</p>
-        </div>
+        <DetailsEmptyState
+          title={dayFestivals.map((festival) => festival.name).join(" · ")}
+          description="No chapter events on this day."
+          className="calendar-festival-empty py-8"
+        />
       ) : null}
 
       {showEmptyDay && dayFestivals.length === 0 ? (
-        <p className="details-panel-inline-empty px-4 pb-4">
-          No events on this day.
-        </p>
+        <DetailsEmptyState
+          title="No events on this day"
+          description="Pick another date or create an event for this day."
+          className="calendar-day-empty py-8"
+        />
       ) : null}
 
       {!detailLoading &&

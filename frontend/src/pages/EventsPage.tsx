@@ -557,7 +557,9 @@ export function EventsPage() {
               >
                 {eventDetail?.name ??
                   selectedDayEvents[0]?.name ??
-                  "Event details"}
+                  (selectedDate != null && selectedDayEvents.length === 0
+                    ? "No events on this day"
+                    : "Event details")}
               </button>
             ) : null}
           </div>

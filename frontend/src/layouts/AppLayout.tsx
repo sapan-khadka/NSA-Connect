@@ -105,72 +105,69 @@ export function AppLayout() {
         <ChatNotificationProvider>
           <DiscussionInboxProvider>
             <div
-            className={[
-              "ds-app-shell",
-              "ds-app-shell--app",
-              showInboxPane ? "ds-app-shell--with-inbox" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-          >
-            <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:flex lg:w-[var(--sidebar-width)]">
-              <AppSidebar />
-            </div>
-
-            <MobileSidebarDrawer
-              open={mobileSidebarOpen}
-              onClose={() => setMobileSidebarOpen(false)}
-            >
-              <AppSidebar onNavigate={() => setMobileSidebarOpen(false)} />
-            </MobileSidebarDrawer>
-
-            <div
               className={[
-                "ds-app-column min-w-0 flex-col lg:pl-[var(--sidebar-width)]",
-                isHome ? "ds-home-shell" : "",
+                "ds-app-shell",
+                "ds-app-shell--app",
+                showInboxPane ? "ds-app-shell--with-inbox" : "",
+                hideMobileBottomNav ? "" : "ds-app-shell--mobile-nav",
               ]
                 .filter(Boolean)
                 .join(" ")}
             >
-              <AppTopBar
-                showMenuButton
-                onOpenSidebar={() => setMobileSidebarOpen(true)}
-              />
+              <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:flex lg:w-[var(--sidebar-width)]">
+                <AppSidebar />
+              </div>
+
+              <MobileSidebarDrawer
+                open={mobileSidebarOpen}
+                onClose={() => setMobileSidebarOpen(false)}
+              >
+                <AppSidebar onNavigate={() => setMobileSidebarOpen(false)} />
+              </MobileSidebarDrawer>
 
               <div
                 className={[
-                  "ds-workspace-row",
-                  showInboxPane ? "ds-workspace-row--with-inbox" : "",
+                  "ds-app-column min-w-0 flex-col lg:pl-[var(--sidebar-width)]",
+                  isHome ? "ds-home-shell" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
               >
-                <main
+                <AppTopBar
+                  showMenuButton
+                  onOpenSidebar={() => setMobileSidebarOpen(true)}
+                />
+
+                <div
                   className={[
-                    "ds-main-canvas",
-                    eventsCalendarCanvas
-                      ? "pb-3 lg:pb-0"
-                      : hideMobileBottomNav
-                        ? "pb-4 lg:pb-8"
-                        : "pb-6 lg:pb-8",
-                    fluidCanvas ? "ds-main-canvas--fluid" : "",
-                    isHome ? "ds-main-canvas--home" : "",
-                    eventsCalendarCanvas
-                      ? "ds-main-canvas--events-calendar"
-                      : "",
+                    "ds-workspace-row",
+                    showInboxPane ? "ds-workspace-row--with-inbox" : "",
                   ]
                     .filter(Boolean)
                     .join(" ")}
                 >
-                  <Outlet />
-                </main>
+                  <main
+                    className={[
+                      "ds-main-canvas",
+                      fluidCanvas ? "ds-main-canvas--fluid" : "",
+                      isHome ? "ds-main-canvas--home" : "",
+                      eventsCalendarCanvas
+                        ? "ds-main-canvas--events-calendar"
+                        : "",
+                      "lg:pb-8",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                  >
+                    <Outlet />
+                  </main>
 
-                {showInboxPane ? <AppInboxRail /> : null}
+                  {showInboxPane ? <AppInboxRail /> : null}
+                </div>
+
+                {hideMobileBottomNav ? null : <MobileBottomNav />}
               </div>
-
-              {hideMobileBottomNav ? null : <MobileBottomNav />}
             </div>
-          </div>
           </DiscussionInboxProvider>
         </ChatNotificationProvider>
       </ToastProvider>
