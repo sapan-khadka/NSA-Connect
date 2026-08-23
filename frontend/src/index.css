@@ -267,31 +267,21 @@
       padding-bottom: 0;
     }
 
-    /* Scrollable pages reserve space for the fixed bottom tab bar. */
-    .ds-app-shell--mobile-nav
-      .ds-app-column
-      > .ds-workspace-row
-      > .ds-main-canvas:not(:has(.discussions-shell)) {
-      padding-bottom: calc(1.25rem + var(--ds-mobile-chrome-bottom));
-    }
-
-    .ds-app-shell--mobile-nav .ds-main-canvas--events-calendar {
-      padding-bottom: 0.35rem;
-    }
-
+    /*
+     * Bottom tab bar stays in normal flex flow (not position:fixed).
+     * That reserves a real strip under the canvas so page content and
+     * clicks never sit under the nav. Fixed overlays (sheets / peeks)
+     * still use --ds-mobile-chrome-bottom to clear this strip.
+     */
     .ds-mobile-bottom-nav {
       display: block;
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      z-index: 40;
+      position: relative;
+      z-index: 45;
       flex-shrink: 0;
       box-sizing: border-box;
       min-height: var(--ds-mobile-chrome-bottom);
       border-top: 1px solid #e5e7eb;
-      background: rgba(255, 255, 255, 0.96);
-      backdrop-filter: blur(12px);
+      background: #ffffff;
       padding-top: 0.2rem;
       padding-bottom: max(0.35rem, env(safe-area-inset-bottom, 0px));
       padding-left: env(safe-area-inset-left, 0px);
@@ -10976,7 +10966,7 @@
   @media (max-width: 1023px) {
     .reports-page,
     .settings-shell {
-      padding-bottom: 0;
+      padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
     }
 
     .settings-row {
@@ -20571,8 +20561,8 @@
 
     .events-calendar-page {
       gap: 0.4rem;
-      /* Peek chip sits above the fixed tab bar; bar inset is on the shell. */
-      padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+      /* Room for the peek chip above the in-flow tab bar. */
+      padding-bottom: 3.5rem;
     }
 
     .events-calendar-card {
@@ -22402,7 +22392,7 @@
     animation: rsvp-confirmation-fade-in 400ms ease-out forwards;
   }
 
-  /* Full-height discussions shell — flex fill; tab bar is fixed below the scrollport. */
+  /* Full-height discussions shell — flex fill; tab bar is an in-flow sibling below. */
   .discussions-shell {
     height: calc(
       100dvh - var(--ds-topbar-height) - var(--ds-mobile-chrome-bottom) -

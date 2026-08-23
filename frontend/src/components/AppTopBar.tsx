@@ -288,10 +288,17 @@ export function MobileSidebarDrawer({
   }
 
   return (
-    <div className="fixed inset-0 z-50 lg:hidden" aria-hidden={!visible}>
+    <div
+      className={[
+        "fixed inset-0 z-50 lg:hidden",
+        visible ? "pointer-events-auto" : "pointer-events-none",
+      ].join(" ")}
+      aria-hidden={!visible}
+    >
       <button
         type="button"
         aria-label="Close navigation"
+        tabIndex={visible ? 0 : -1}
         className={[
           "absolute inset-0 bg-black/40 transition-opacity duration-300 ease-out",
           visible ? "opacity-100" : "opacity-0",

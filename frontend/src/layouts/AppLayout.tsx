@@ -109,7 +109,6 @@ export function AppLayout() {
                 "ds-app-shell",
                 "ds-app-shell--app",
                 showInboxPane ? "ds-app-shell--with-inbox" : "",
-                hideMobileBottomNav ? "" : "ds-app-shell--mobile-nav",
               ]
                 .filter(Boolean)
                 .join(" ")}
@@ -149,12 +148,16 @@ export function AppLayout() {
                   <main
                     className={[
                       "ds-main-canvas",
+                      eventsCalendarCanvas
+                        ? "pb-3 lg:pb-0"
+                        : hideMobileBottomNav
+                          ? "pb-4 lg:pb-8"
+                          : "pb-6 lg:pb-8",
                       fluidCanvas ? "ds-main-canvas--fluid" : "",
                       isHome ? "ds-main-canvas--home" : "",
                       eventsCalendarCanvas
                         ? "ds-main-canvas--events-calendar"
                         : "",
-                      "lg:pb-8",
                     ]
                       .filter(Boolean)
                       .join(" ")}
