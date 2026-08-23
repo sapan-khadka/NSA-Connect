@@ -6,6 +6,7 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.permissions import member_has_role_at_least
+from app.core.text_sanitize import sanitize_plain_text
 from app.lib.event_visibility import event_visible_to_member
 from app.models.discussion_message import (
     MAX_DISCUSSION_CONTENT_LENGTH,
@@ -78,10 +79,7 @@ MESSAGE_EDIT_WINDOW_SECONDS = 15 * 60
 
 
 def _normalize_content(content: str, *, allow_empty: bool = False) -> str:
-    # Drop C0 controls (keep tab/newline) and DEL; reject empty after strip.
-    cleaned = "".join(
-        ch for ch in content if ch in "\t\n\r" or (ord(ch) >= 32 and ch != "\x7f")
-    ).strip()
+    cleaned = sanitize_plain_text(content)
     if not cleaned:
         if allow_empty:
             return ""

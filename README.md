@@ -335,13 +335,13 @@ export ORG_OWNER_PASSWORD='…strong password…'
 python -m scripts.seed_chapter_owner
 ```
 
-See [PRODUCTION.md](PRODUCTION.md) and [BOARD_RUNBOOK.md](BOARD_RUNBOOK.md).
+See [DEPLOYMENT.md](DEPLOYMENT.md) (staging vs production), [PRODUCTION.md](PRODUCTION.md), and [BOARD_RUNBOOK.md](BOARD_RUNBOOK.md).
 
 ---
 
 ## Production
 
-Deploy checklist: [PRODUCTION.md](PRODUCTION.md). Backups: [BACKUPS.md](BACKUPS.md). Board ops: [BOARD_RUNBOOK.md](BOARD_RUNBOOK.md).
+Branches & environments: [DEPLOYMENT.md](DEPLOYMENT.md). Deploy checklist: [PRODUCTION.md](PRODUCTION.md). Backups: [BACKUPS.md](BACKUPS.md). Board ops: [BOARD_RUNBOOK.md](BOARD_RUNBOOK.md).
 
 Frontend production image: `frontend/Dockerfile` (nginx, proxies `/api` and `/ws` to the API). See [PRODUCTION.md](PRODUCTION.md#frontend-image).
 

@@ -12,7 +12,7 @@ from app.integrations.anthropic_client import (
     get_anthropic_client,
 )
 from app.models.member import Member
-from app.prompts.chatbot import build_chat_system_prompt
+from app.prompts.chatbot import build_chat_system_prompt, wrap_untrusted_user_message
 from app.schemas.ai import (
     ChatConstitutionSource,
     ChatRequest,
@@ -118,7 +118,10 @@ def _retrieve_constitution_context(
 def _history_messages(history) -> list[dict[str, Any]]:
     messages: list[dict[str, Any]] = []
     for item in history:
-        messages.append({"role": item.role, "content": item.content})
+        content = item.content
+        if item.role == "user":
+            content = wrap_untrusted_user_message(content)
+        messages.append({"role": item.role, "content": content})
     return messages
 
 
@@ -207,7 +210,9 @@ def _prepare_chat_context(
         document_context=document_context,
     )
     messages = _history_messages(data.history)
-    messages.append({"role": "user", "content": data.message.strip()})
+    messages.append(
+        {"role": "user", "content": wrap_untrusted_user_message(data.message)},
+    )
     return system_prompt, sources, messages
 
 

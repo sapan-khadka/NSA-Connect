@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_member, require_board
+from app.core.rate_limit import AppRateLimitExceeded, enforce_ai_user_limit
 from app.core.safe_messages import GENERIC_AI_UNAVAILABLE
+from app.core.security_events import log_security_event
 from app.models.member import Member
 from app.schemas.ai import (
     ChatRequest,
@@ -38,15 +40,32 @@ from app.services.ai_minutes_service import (
 router = APIRouter(prefix="/ai", tags=["ai"])
 
 
+def _enforce_ai_quota(request: Request, member: Member) -> None:
+    try:
+        enforce_ai_user_limit(member.id)
+    except AppRateLimitExceeded as exc:
+        log_security_event(
+            "ai_rate_limited",
+            request=request,
+            member_id=member.id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=exc.detail,
+        ) from None
+
+
 @router.post(
     "/generate-checklist",
     response_model=GenerateChecklistResponse,
     status_code=status.HTTP_200_OK,
 )
 def generate_checklist_endpoint(
+    request: Request,
     data: GenerateChecklistRequest,
-    _: Member = Depends(require_board),
+    current_member: Member = Depends(require_board),
 ) -> GenerateChecklistResponse:
+    _enforce_ai_quota(request, current_member)
     try:
         return generate_event_checklist(
             event_name=data.event_name,
@@ -71,9 +90,11 @@ def generate_checklist_endpoint(
     status_code=status.HTTP_200_OK,
 )
 def draft_announcement_email_endpoint(
+    request: Request,
     data: DraftAnnouncementEmailRequest,
-    _: Member = Depends(require_board),
+    current_member: Member = Depends(require_board),
 ) -> DraftAnnouncementEmailResponse:
+    _enforce_ai_quota(request, current_member)
     try:
         return draft_event_announcement_email(
             event_name=data.event_name,
@@ -100,9 +121,11 @@ def draft_announcement_email_endpoint(
     status_code=status.HTTP_200_OK,
 )
 def summarize_minutes_endpoint(
+    request: Request,
     data: SummarizeMinutesRequest,
-    _: Member = Depends(require_board),
+    current_member: Member = Depends(require_board),
 ) -> SummarizeMinutesResponse:
+    _enforce_ai_quota(request, current_member)
     try:
         return summarize_meeting_minutes(
             notes=data.notes,
@@ -122,10 +145,12 @@ def summarize_minutes_endpoint(
 
 @router.post("/chat/stream")
 def chat_stream_endpoint(
+    request: Request,
     data: ChatRequest,
     db: Session = Depends(get_db),
     current_member: Member = Depends(get_current_member),
 ) -> StreamingResponse:
+    _enforce_ai_quota(request, current_member)
     try:
         event_stream = stream_chat_with_nsa_assistant(
             db,
@@ -160,10 +185,12 @@ def chat_stream_endpoint(
     status_code=status.HTTP_200_OK,
 )
 def chat_endpoint(
+    request: Request,
     data: ChatRequest,
     db: Session = Depends(get_db),
     current_member: Member = Depends(get_current_member),
 ) -> ChatResponse:
+    _enforce_ai_quota(request, current_member)
     try:
         return chat_with_nsa_assistant(
             db,

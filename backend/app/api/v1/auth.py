@@ -18,6 +18,7 @@ from app.core.security import (
     create_token_pair,
     decode_refresh_token,
 )
+from app.core.security_events import log_security_event
 from app.models.member import Member
 from app.models.organization import Organization
 from app.schemas.auth import (
@@ -75,6 +76,12 @@ from app.services.password_reset_service import (
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+# Avoid confirming whether an email/student ID is already registered.
+REGISTER_CONFLICT_MESSAGE = (
+    "Unable to complete registration. If you already have an account, sign in "
+    "or reset your password."
+)
+
 
 @router.post(
     "/register",
@@ -90,9 +97,14 @@ def register(
     try:
         member = create_member(db, data)
     except (MemberAlreadyExistsError, StudentIdAlreadyExistsError):
+        log_security_event(
+            "register_conflict",
+            request=request,
+            email=data.email.lower().strip(),
+        )
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="An account with this email or student ID already exists",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=REGISTER_CONFLICT_MESSAGE,
         ) from None
     except StudentIdRequiredError:
         raise HTTPException(
@@ -110,6 +122,12 @@ def register(
             detail=str(exc),
         ) from None
 
+    log_security_event(
+        "register_success",
+        request=request,
+        member_id=member.id,
+        email=member.email,
+    )
     organization = get_default_organization(db)
     return MemberResponse.from_member(member, viewer=member, organization=organization)
 
@@ -124,6 +142,11 @@ def login(
     try:
         check_login_account_failures(data.email)
     except AppRateLimitExceeded as exc:
+        log_security_event(
+            "login_locked",
+            request=request,
+            email=data.email.lower().strip(),
+        )
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=exc.detail,
@@ -133,22 +156,46 @@ def login(
         member = authenticate_member(db, data.email, data.password)
     except InvalidCredentialsError:
         record_login_failure(data.email)
+        log_security_event(
+            "login_failure",
+            request=request,
+            email=data.email.lower().strip(),
+            reason="invalid_credentials",
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         ) from None
     except MemberEmailNotVerifiedError:
+        log_security_event(
+            "login_failure",
+            request=request,
+            email=data.email.lower().strip(),
+            reason="email_unverified",
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Verify your email before signing in",
         ) from None
     except MemberNotApprovedError:
+        log_security_event(
+            "login_failure",
+            request=request,
+            email=data.email.lower().strip(),
+            reason="not_approved",
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Member account is not approved",
         ) from None
 
     clear_login_failures(data.email)
+    log_security_event(
+        "login_success",
+        request=request,
+        member_id=member.id,
+        email=member.email,
+    )
 
     (
         access_token,
@@ -229,11 +276,18 @@ def refresh_tokens(data: RefreshTokenRequest, db: Session = Depends(get_db)):
 
 @router.post("/logout", response_model=LogoutResponse)
 def logout(
+    request: Request,
     current_member: Member = Depends(get_current_member),
     db: Session = Depends(get_db),
 ):
     current_member.token_version += 1
     db.commit()
+    log_security_event(
+        "logout",
+        request=request,
+        member_id=current_member.id,
+        email=current_member.email,
+    )
     return LogoutResponse(message="Logged out")
 
 
@@ -302,11 +356,17 @@ def password_reset_request(
         ) from None
 
     request_password_reset(db, data.email)
+    log_security_event(
+        "password_reset_request",
+        request=request,
+        email=data.email.lower().strip(),
+    )
     return PasswordResetRequestResponse(message=PASSWORD_RESET_REQUEST_MESSAGE)
 
 
 @router.post("/password-reset/confirm", response_model=PasswordResetConfirmResponse)
 def password_reset_confirm(
+    request: Request,
     data: PasswordResetConfirmRequest,
     db: Session = Depends(get_db),
 ):
@@ -317,6 +377,11 @@ def password_reset_confirm(
             new_password=data.new_password,
         )
     except InvalidPasswordResetTokenError:
+        log_security_event(
+            "password_reset_confirm_failure",
+            request=request,
+            reason="invalid_token",
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=PASSWORD_RESET_INVALID_TOKEN_MESSAGE,
@@ -327,6 +392,7 @@ def password_reset_confirm(
             detail=str(exc),
         ) from None
 
+    log_security_event("password_reset_confirm_success", request=request)
     return PasswordResetConfirmResponse(
         message="Password updated. You can sign in with your new password.",
     )

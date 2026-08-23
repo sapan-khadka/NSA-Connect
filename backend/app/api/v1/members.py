@@ -23,6 +23,7 @@ from app.core.password_validation import WeakPasswordError
 from app.core.permissions import member_has_role_at_least
 from app.core.rate_limit import change_password_key, limit
 from app.core.security import create_token_pair
+from app.core.security_events import log_security_event
 from app.core.upload import read_upload_with_limit
 from app.integrations.cloudinary_client import CloudinaryUploadError
 from app.lib.member_talents import ALL_MEMBER_TALENTS, MEMBER_TALENT_LABELS
@@ -272,6 +273,13 @@ def change_my_password(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
         ) from None
+
+    log_security_event(
+        "password_change_success",
+        request=request,
+        member_id=current_member.id,
+        email=current_member.email,
+    )
 
     member = get_member_by_id(db, current_member.id)
     (

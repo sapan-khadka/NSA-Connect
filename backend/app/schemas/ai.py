@@ -3,6 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.core.text_sanitize import sanitize_plain_text
 from app.models.event import EventType
 
 
@@ -128,6 +129,15 @@ class ChatHistoryMessage(BaseModel):
     role: Literal["user", "assistant"]
     content: str = Field(min_length=1, max_length=4000)
 
+    @field_validator("content", mode="before")
+    @classmethod
+    def sanitize_content(cls, value: str) -> str:
+        if isinstance(value, str):
+            value = sanitize_plain_text(value, max_length=4000)
+        if not value:
+            raise ValueError("Must not be empty")
+        return value
+
 
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
@@ -137,7 +147,7 @@ class ChatRequest(BaseModel):
     @classmethod
     def strip_message(cls, value: str) -> str:
         if isinstance(value, str):
-            value = value.strip()
+            value = sanitize_plain_text(value, max_length=4000)
         if not value:
             raise ValueError("Must not be empty")
         return value

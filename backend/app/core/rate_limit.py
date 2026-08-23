@@ -34,6 +34,9 @@ RATE_LIMIT_RECEIPT_SCAN_MESSAGE = (
 RATE_LIMIT_GLOBAL_MESSAGE = (
     "Too many requests. Please slow down and try again in a moment"
 )
+RATE_LIMIT_AI_MESSAGE = (
+    "AI usage limit reached. Please try again later"
+)
 
 
 class AppRateLimitExceeded(Exception):
@@ -156,6 +159,24 @@ def check_password_reset_email_limit(email: str) -> None:
     )
 
 
+def enforce_ai_user_limit(member_id: int) -> None:
+    """Hourly + daily caps for Anthropic-backed endpoints (cost / abuse control)."""
+    if not settings.RATE_LIMIT_ENABLED:
+        return
+    _enforce_fixed_window(
+        f"rl:ai:user:{member_id}",
+        limit=settings.RATE_LIMIT_AI_USER_MAX,
+        window_seconds=settings.RATE_LIMIT_AI_USER_WINDOW_SECONDS,
+        detail=RATE_LIMIT_AI_MESSAGE,
+    )
+    _enforce_fixed_window(
+        f"rl:ai:user:day:{member_id}",
+        limit=settings.RATE_LIMIT_AI_USER_DAILY_MAX,
+        window_seconds=settings.RATE_LIMIT_AI_USER_DAILY_WINDOW_SECONDS,
+        detail=RATE_LIMIT_AI_MESSAGE,
+    )
+
+
 def enforce_global_rate_limit(request: Request) -> None:
     if not settings.RATE_LIMIT_ENABLED:
         return
@@ -231,6 +252,8 @@ def rate_limit_message_for_path(path: str) -> str:
         return RATE_LIMIT_PASSWORD_RESET_MESSAGE
     if path.endswith("/finance/receipts/scan"):
         return RATE_LIMIT_RECEIPT_SCAN_MESSAGE
+    if "/ai/" in path:
+        return RATE_LIMIT_AI_MESSAGE
     return RATE_LIMIT_GLOBAL_MESSAGE
 
 

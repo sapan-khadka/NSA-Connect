@@ -72,6 +72,29 @@ class Settings(BaseSettings):
     RATE_LIMIT_DISCUSSION_MESSAGE_WINDOW_SECONDS: int = 60
     RATE_LIMIT_DISCUSSION_DM_MAX: int = 20
     RATE_LIMIT_DISCUSSION_DM_WINDOW_SECONDS: int = 60
+    RATE_LIMIT_AI_USER_MAX: int = Field(
+        default=30,
+        description="Max AI API calls per member per window (chat + board AI tools)",
+    )
+    RATE_LIMIT_AI_USER_WINDOW_SECONDS: int = 3600
+    RATE_LIMIT_AI_USER_DAILY_MAX: int = Field(
+        default=100,
+        description="Max AI API calls per member per rolling day",
+    )
+    RATE_LIMIT_AI_USER_DAILY_WINDOW_SECONDS: int = 86400
+
+    MAX_REQUEST_BODY_BYTES: int = Field(
+        default=35 * 1024 * 1024,
+        description="Reject requests whose Content-Length exceeds this (0 disables)",
+    )
+    HSTS_ENABLED: bool = Field(
+        default=True,
+        description="Send Strict-Transport-Security when the request is HTTPS",
+    )
+    HSTS_HEADER_VALUE: str = Field(
+        default="max-age=31536000; includeSubDomains",
+        description="Value for Strict-Transport-Security when HSTS is applied",
+    )
 
     PASSWORD_RESET_EXPIRE_MINUTES: int = 45
     EMAIL_VERIFICATION_EXPIRE_MINUTES: int = Field(

@@ -18,6 +18,7 @@ server {
     # SPA document policy. Not inherited onto /api/ so JSON keeps the API CSP.
     # style-src unsafe-inline: React inline styles. img/media: Cloudinary + GIF picker.
     set $csp "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://res.cloudinary.com https://media.giphy.com https://media.tenor.com https://c.tenor.com; media-src 'self' blob: https://res.cloudinary.com; connect-src 'self' ws: wss: https://tenor.googleapis.com; worker-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests";
+    set $hsts "max-age=31536000; includeSubDomains";
 
     location /assets/ {
         expires 1y;
@@ -28,6 +29,7 @@ server {
         add_header Cross-Origin-Opener-Policy same-origin always;
         add_header Permissions-Policy "camera=(), microphone=(self), geolocation=(), payment=(), usb=()" always;
         add_header Content-Security-Policy $csp always;
+        add_header Strict-Transport-Security $hsts always;
         try_files $uri =404;
     }
 
@@ -80,6 +82,7 @@ server {
         add_header Cross-Origin-Opener-Policy same-origin always;
         add_header Permissions-Policy "camera=(), microphone=(self), geolocation=(), payment=(), usb=()" always;
         add_header Content-Security-Policy $csp always;
+        add_header Strict-Transport-Security $hsts always;
         try_files $uri $uri/ /index.html;
     }
 }

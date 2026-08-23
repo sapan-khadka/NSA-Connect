@@ -25,6 +25,7 @@ from app.core.rate_limit_handlers import (
 from app.core.validation_errors import request_validation_exception_handler
 from app.lifespan import lifespan
 from app.middleware.global_rate_limit import GlobalRateLimitMiddleware
+from app.middleware.request_size_limit import RequestSizeLimitMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.services.local_avatar_storage import (
     AvatarKind,
@@ -63,6 +64,7 @@ app.add_exception_handler(AppRateLimitExceeded, app_rate_limit_exceeded_handler)
 app.add_exception_handler(RateLimitExceeded, slowapi_rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(GlobalRateLimitMiddleware)
+app.add_middleware(RequestSizeLimitMiddleware)
 _cors_origins = cors_allow_origins()
 if _cors_origins:
     app.add_middleware(

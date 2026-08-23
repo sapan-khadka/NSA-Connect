@@ -1,6 +1,8 @@
 # Production deploy checklist (NSA chapter pilot)
 
-Use this before pointing the board at a live URL. Pair with [BACKUPS.md](BACKUPS.md) and [BOARD_RUNBOOK.md](BOARD_RUNBOOK.md).
+Use this before pointing the board at a live URL. Pair with [BACKUPS.md](BACKUPS.md), [BOARD_RUNBOOK.md](BOARD_RUNBOOK.md), and [DEPLOYMENT.md](DEPLOYMENT.md) (staging vs production branches).
+
+**Promote path:** merge to `staging` → smoke test → merge `staging` → `main` → this checklist.
 
 ## Required environment
 
@@ -24,7 +26,18 @@ Set on the API (and Celery worker/beat) service:
 
 The API **refuses to boot** in production when fatal checks fail (`backend/app/core/production_checks.py`).
 
-OpenAPI / `/docs` / `/redoc` are disabled when `ENVIRONMENT=production`. CORS allows `FRONTEND_URL` only. The API adds `X-Content-Type-Options`, `X-Frame-Options: DENY`, and a restrictive `Content-Security-Policy` on JSON responses. The nginx frontend image applies a document CSP (scripts `'self'`, Cloudinary/Giphy/Tenor images, Google Fonts, same-origin WebSockets).
+OpenAPI / `/docs` / `/redoc` are disabled when `ENVIRONMENT=production`. CORS allows `FRONTEND_URL` only. The API adds `X-Content-Type-Options`, `X-Frame-Options: DENY`, a restrictive `Content-Security-Policy`, and **HSTS** (`Strict-Transport-Security`) on HTTPS responses outside development. The nginx frontend image applies the same HSTS header plus a document CSP (scripts `'self'`, Cloudinary/Giphy/Tenor images, Google Fonts, same-origin WebSockets).
+
+Auth uses Bearer JWTs in the browser (not cookies), so classic CSRF tokens are not used; password changes/resets/logout bump `token_version` to revoke sessions. AI endpoints are capped per member (`RATE_LIMIT_AI_USER_*`). Security events (login failures, lockouts, resets, register conflicts, AI rate limits) log under the `app.security` logger.
+
+## Database least privilege
+
+Managed Postgres often hands the app a full-owner URL. Prefer separate roles when you can:
+
+1. Migrator role (DDL) for `alembic upgrade`
+2. Runtime role (DML only) for API + Celery `DATABASE_URL`
+
+See `backend/scripts/sql/least_privilege_runtime.sql` for a starter grant script. Until that is applied, treat DB credentials as highly sensitive and rotate if leaked.
 
 ## Frontend image
 

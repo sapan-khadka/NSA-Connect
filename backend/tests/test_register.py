@@ -46,8 +46,8 @@ def test_register_rejects_duplicate_email(client):
     second = client.post("/api/v1/auth/register", json=payload)
 
     assert first.status_code == 201
-    assert second.status_code == 409
-    assert second.json()["detail"] == "An account with this email or student ID already exists"
+    assert second.status_code == 400
+    assert "Unable to complete registration" in second.json()["detail"]
 
 
 def test_register_rejects_duplicate_student_id(client):
@@ -58,8 +58,8 @@ def test_register_rejects_duplicate_student_id(client):
     )
 
     assert first.status_code == 201
-    assert second.status_code == 409
-    assert second.json()["detail"] == "An account with this email or student ID already exists"
+    assert second.status_code == 400
+    assert "Unable to complete registration" in second.json()["detail"]
 
 
 def test_register_rejects_non_semo_email(client):
