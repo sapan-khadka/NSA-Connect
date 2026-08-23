@@ -23,8 +23,7 @@ import { getApiErrorMessage } from "../../lib/api-error";
 import { memberMailtoHref } from "../../lib/member-mailto";
 import { openDirectMessage } from "../../lib/open-direct-message";
 import {
-  formatRoleLabel,
-  isMemberRole,
+  formatMemberAccessLabel,
   viewerCanManageMembers,
 } from "../../lib/roles";
 import { EditMemberDrawer } from "../EditMemberDrawer";
@@ -117,9 +116,7 @@ export function MemberWorkspaceHeader({
   const mailtoHref = memberMailtoHref(member.email);
   const canEdit = viewerCanManageMembers(currentMember);
   const isSelf = currentMember?.id === member.id;
-  const roleLabel = isMemberRole(member.role)
-    ? formatRoleLabel(member.role)
-    : member.role;
+  const roleLabel = formatMemberAccessLabel(member);
   const emailValue = member.email?.trim() || null;
   const hasCommunication =
     !isSelf || Boolean(mailtoHref) || Boolean(emailValue);

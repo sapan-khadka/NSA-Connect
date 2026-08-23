@@ -5,7 +5,7 @@ import { useAuth } from "../context/useAuth";
 import { Avatar } from "../design-system/components/Avatar";
 import { useIsLgUp } from "../hooks/useMediaQuery";
 import type { MemberResponse } from "../lib/auth-api";
-import { formatMemberPositionLabel } from "../lib/roles";
+import { formatMemberAccessLabel } from "../lib/roles";
 import {
   getSettingsNavGroups,
   type SettingsNavGroup,
@@ -39,7 +39,7 @@ function SettingsIdentity({ member }: { member: MemberResponse }) {
       <div>
         <p className="settings-identity-name">{member.full_name}</p>
         <p className="settings-identity-meta">
-          {formatMemberPositionLabel(member)}
+          {formatMemberAccessLabel(member)}
         </p>
       </div>
     </div>
