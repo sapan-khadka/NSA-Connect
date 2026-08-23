@@ -20,7 +20,7 @@ import { Card } from "./ui/Card";
 
 /** Internal scroll for dense lists so the manage tab stays viewport-sized. */
 export const MANAGE_PANEL_SCROLL_CLASS =
-  "min-h-0 max-h-[min(24rem,calc(100vh-18rem))] overflow-y-auto overscroll-contain";
+  "min-h-0 max-h-[min(24rem,calc(100dvh-18rem))] overflow-y-auto overscroll-contain";
 
 type SharedLogisticsProps = {
   event: EventDetailResponse;

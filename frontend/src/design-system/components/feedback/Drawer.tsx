@@ -141,7 +141,7 @@ export function Drawer({
         className={cx(
           "absolute flex flex-col border-gray-200 bg-surface-card shadow-card-hover",
           side === "bottom"
-            ? "inset-x-0 bottom-0 max-h-[min(88vh,40rem)] w-full rounded-t-2xl border-t ds-animate-slide-up"
+            ? "inset-x-0 bottom-0 max-h-[min(88dvh,40rem)] w-full rounded-t-2xl border-t pb-[max(0.75rem,env(safe-area-inset-bottom))] ds-animate-slide-up"
             : [
                 "inset-y-0 w-full",
                 side === "right"

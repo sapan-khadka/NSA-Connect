@@ -149,9 +149,9 @@ export function AppLayout() {
                   className={[
                     "ds-main-canvas",
                     eventsCalendarCanvas
-                      ? "pb-0"
+                      ? "pb-3 lg:pb-0"
                       : hideMobileBottomNav
-                        ? "pb-0 lg:pb-8"
+                        ? "pb-4 lg:pb-8"
                         : "pb-6 lg:pb-8",
                     fluidCanvas ? "ds-main-canvas--fluid" : "",
                     isHome ? "ds-main-canvas--home" : "",

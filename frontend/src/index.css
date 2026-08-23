@@ -19,6 +19,9 @@
     --ds-card-shadow: var(--shadow-card);
     --ds-card-shadow-hover: var(--shadow-card-hover);
     --ds-border: var(--color-border);
+    /* Mobile shell — keep nav/topbar offsets in one place */
+    --ds-topbar-height: 4rem;
+    --ds-mobile-nav-height: 3.75rem;
   }
 
   html {
@@ -26,6 +29,7 @@
     font-family: var(--font-sans);
     font-weight: 400;
     overflow-x: clip;
+    height: 100%;
   }
 
   body {
@@ -33,6 +37,13 @@
     font-family: var(--font-sans);
     font-weight: 400;
     letter-spacing: var(--tracking-body);
+    height: 100%;
+    overflow-x: clip;
+  }
+
+  #root {
+    min-height: 100%;
+    height: 100%;
   }
 
   /*
@@ -209,9 +220,11 @@
 
   @media (max-width: 1023px) {
     .ds-app-shell--app {
-      height: 100dvh;
+      height: 100%;
+      min-height: 100dvh;
       max-height: 100dvh;
       overflow: hidden;
+      overscroll-behavior: none;
     }
 
     .ds-app-column {
@@ -221,11 +234,34 @@
       overflow: hidden;
     }
 
+    .ds-topbar {
+      padding-top: env(safe-area-inset-top, 0px);
+      min-height: calc(var(--ds-topbar-height) + env(safe-area-inset-top, 0px));
+      height: auto;
+    }
+
     .ds-app-column > .ds-workspace-row {
       flex: 1 1 auto;
       min-height: 0;
-      overflow: auto;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .ds-app-column > .ds-workspace-row > .ds-main-canvas {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-x: clip;
+      overflow-y: auto;
       -webkit-overflow-scrolling: touch;
+      overscroll-behavior-y: contain;
+    }
+
+    .ds-main-canvas:has(.discussions-shell) {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding-bottom: 0;
     }
 
     .ds-mobile-bottom-nav {
@@ -238,6 +274,8 @@
       backdrop-filter: blur(12px);
       padding-top: 0.2rem;
       padding-bottom: max(0.35rem, env(safe-area-inset-bottom, 0px));
+      padding-left: env(safe-area-inset-left, 0px);
+      padding-right: env(safe-area-inset-right, 0px);
     }
   }
 
@@ -305,8 +343,8 @@
     content: none;
   }
 
-  /* Only the workspace needs stacking context. A `*` rule here would
-     override MobileBottomNav’s `position: fixed` and hide it off-screen. */
+  /* Only the workspace needs stacking context. Avoid broad `*` rules here —
+     they can break fixed overlays and mobile nav placement. */
   .ds-home-shell > .ds-workspace-row {
     position: relative;
     z-index: 1;
@@ -10918,7 +10956,19 @@
   @media (max-width: 1023px) {
     .reports-page,
     .settings-shell {
-      padding-bottom: 0.5rem;
+      padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+    }
+
+    .settings-row {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.65rem;
+    }
+
+    .settings-row-value,
+    .settings-choice {
+      flex-shrink: 1;
+      width: 100%;
     }
   }
 
@@ -13695,7 +13745,7 @@
       border-radius: 1rem 1rem 0 0;
       border-top: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
       box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.12);
-      padding-bottom: calc(0.65rem + env(safe-area-inset-bottom, 0px) + 3.75rem);
+      padding-bottom: calc(0.65rem + env(safe-area-inset-bottom, 0px) + var(--ds-mobile-nav-height));
       background: #fff;
       backdrop-filter: none;
     }
@@ -14021,7 +14071,7 @@
   .member-workspace-hero-actions {
     display: flex;
     flex-direction: row;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: flex-start;
     gap: 0.25rem;
@@ -14102,6 +14152,7 @@
     top: calc(100% + 0.3rem);
     z-index: 40;
     min-width: 12rem;
+    max-width: min(16rem, calc(100vw - 2rem));
     padding: 0.35rem;
     border: 1px solid #e5e7eb;
     border-radius: 0.5rem;
@@ -20553,11 +20604,11 @@
     }
 
     .events-preview-sheet-peek {
-      bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px));
+      bottom: calc(var(--ds-mobile-nav-height) + env(safe-area-inset-bottom, 0px));
     }
 
     .events-preview-sheet-panel {
-      padding-bottom: calc(1.1rem + 4.25rem + env(safe-area-inset-bottom, 0px));
+      padding-bottom: calc(1.1rem + var(--ds-mobile-nav-height) + env(safe-area-inset-bottom, 0px));
     }
   }
 
@@ -20975,7 +21026,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    max-height: min(78vh, 40rem);
+    max-height: min(78dvh, 40rem);
     overflow-y: auto;
     border-radius: 1rem 1rem 0 0;
     background: #fff;
@@ -20992,7 +21043,8 @@
   }
 
   .events-preview-sheet-peek {
-    @apply fixed bottom-20 left-4 right-4 z-30 rounded-xl border border-gray-200 bg-white px-4 py-3 text-left text-sm font-medium text-foreground shadow-card lg:hidden;
+    @apply fixed left-4 right-4 z-30 rounded-xl border border-gray-200 bg-white px-4 py-3 text-left text-sm font-medium text-foreground shadow-card lg:hidden;
+    bottom: calc(var(--ds-mobile-nav-height) + 1rem + env(safe-area-inset-bottom, 0px));
   }
 
   .events-preview-sheet .events-sidebar-card {
@@ -21973,7 +22025,7 @@
   .events-upcoming-panel-scroll {
     position: relative;
     z-index: 10;
-    max-height: min(32rem, calc(100vh - 14rem));
+    max-height: min(32rem, calc(100dvh - 14rem));
     overflow-y: auto;
   }
 
@@ -22281,9 +22333,23 @@
     animation: rsvp-confirmation-fade-in 400ms ease-out forwards;
   }
 
-  /* Full-height discussions shell — clears topbar; clears bottom nav on list (mobile). */
+  /* Full-height discussions shell — flex fill on mobile (nav is a flex sibling, not fixed). */
   .discussions-shell {
-    height: calc(100dvh - 4rem - 1.25rem - 4.25rem - env(safe-area-inset-bottom, 0px));
+    height: calc(
+      100dvh - var(--ds-topbar-height) - var(--ds-mobile-nav-height) -
+        env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 2.5rem
+    );
+  }
+
+  @media (max-width: 1023px) {
+    .discussions-shell {
+      flex: 1 1 auto;
+      min-height: 0;
+      height: 100%;
+      max-height: 100%;
+      margin-top: 0;
+      margin-bottom: 0;
+    }
   }
 
   .discussions-shell .discussion-feed-pane {
@@ -22299,19 +22365,32 @@
   /* Thread view hides bottom nav (< lg), so reclaim that space. */
   @media (max-width: 1023px) {
     .discussions-shell:has(.discussion-feed-pane) {
-      height: calc(100dvh - 4rem - 1.25rem);
+      height: 100%;
+      max-height: 100%;
     }
   }
 
   @media (min-width: 640px) and (max-width: 1023px) {
     .discussions-shell:has(.discussion-feed-pane) {
-      height: calc(100dvh - 4rem - 1.5rem);
+      height: 100%;
+      max-height: 100%;
     }
   }
 
   @media (min-width: 640px) {
-    .discussions-shell {
-      height: calc(100dvh - 4rem - 1.5rem - 4.25rem - env(safe-area-inset-bottom, 0px));
+    .discussions-shell:not(:has(.discussion-feed-pane)) {
+      height: calc(
+        100dvh - var(--ds-topbar-height) - var(--ds-mobile-nav-height) -
+          env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 3rem
+      );
+    }
+  }
+
+  @media (min-width: 640px) and (max-width: 1023px) {
+    .discussions-shell:not(:has(.discussion-feed-pane)) {
+      flex: 1 1 auto;
+      height: 100%;
+      max-height: 100%;
     }
   }
 
@@ -23055,7 +23134,7 @@
     display: flex;
     width: 100%;
     max-width: 32.5rem;
-    max-height: min(90vh, 36rem);
+    max-height: min(90dvh, 36rem);
     flex-direction: column;
     overflow: hidden;
     border: 1px solid #e5e7eb;
