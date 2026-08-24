@@ -2,10 +2,13 @@
  * Members directory toolbar — search + Filters panel.
  * Roster chips / status stay on the page from `md` up; on small screens they
  * also appear inside this panel.
+ *
+ * The drawer is rendered by `MembersPage` (not here) so it can stay mounted
+ * and close in the same render when switching to the reviews queue.
  */
 
 import { Filter } from "lucide-react";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useId, useMemo } from "react";
 
 import { Drawer } from "../design-system/components/feedback/Drawer";
 import { Search } from "../design-system/components/Search";
@@ -58,78 +61,23 @@ export type MembersDirectoryFocus =
 type MembersFiltersToolbarProps = {
   values: MembersDirectoryFilters;
   onChange: (next: MembersDirectoryFilters) => void;
-  focus: MembersDirectoryFocus;
-  onFocusChange: (focus: MembersDirectoryFocus) => void;
-  canReviewMembers?: boolean;
-  canFetchDues?: boolean;
-  /** Clears page-level focus chips when Reset is pressed. */
-  onResetFocus?: () => void;
+  onOpenFilters: () => void;
+  filtersOpen: boolean;
+  advancedFilterCount: number;
 };
 
 export function MembersFiltersToolbar({
   values,
   onChange,
-  focus,
-  onFocusChange,
-  canReviewMembers = false,
-  canFetchDues = false,
-  onResetFocus,
+  onOpenFilters,
+  filtersOpen,
+  advancedFilterCount,
 }: MembersFiltersToolbarProps) {
-  const drawerTitleId = useId();
-  const [filtersOpen, setFiltersOpen] = useState(false);
-
-  // Pending opens the full-page reviews queue — never leave the filters
-  // drawer backdrop covering Approve / Reject / Back.
-  useEffect(() => {
-    if (focus === "pending") {
-      setFiltersOpen(false);
-    }
-  }, [focus]);
-
-  const focusOptions = useMemo(() => {
-    const options = [{ value: "people", label: "All" }];
-    if (canReviewMembers) {
-      options.push(
-        { value: "active", label: "Active" },
-        { value: "idle", label: "Idle" },
-        { value: "pending", label: "Pending" },
-      );
-    }
-    if (canFetchDues) {
-      options.push({ value: "dues", label: "Outstanding dues" });
-    }
-    return options;
-  }, [canFetchDues, canReviewMembers]);
-
-  /** Badge counts only panel-only filters (not roster chips shown on-page). */
-  const advancedFilterCount = useMemo(() => {
-    let count = 0;
-    if (values.graduationYear) count += 1;
-    if (values.paymentStatus) count += 1;
-    if (values.memberStatus) count += 1;
-    return count;
-  }, [values.graduationYear, values.memberStatus, values.paymentStatus]);
-
-  const hasAnyFilter =
-    values.search.trim().length > 0 ||
-    Boolean(values.role) ||
-    Boolean(values.graduationYear) ||
-    Boolean(values.paymentStatus) ||
-    Boolean(values.memberStatus) ||
-    focus !== "people";
-
   function updateField<K extends keyof MembersDirectoryFilters>(
     key: K,
     next: MembersDirectoryFilters[K],
   ) {
     onChange({ ...values, [key]: next });
-  }
-
-  function resetFilters() {
-    onChange({
-      ...EMPTY_MEMBERS_DIRECTORY_FILTERS,
-    });
-    onResetFocus?.();
   }
 
   return (
@@ -163,7 +111,7 @@ export function MembersFiltersToolbar({
             ? `Filters, ${advancedFilterCount} active`
             : "Filters"
         }
-        onClick={() => setFiltersOpen(true)}
+        onClick={onOpenFilters}
       >
         <AppIcon icon={Filter} size="xs" className="text-current" />
         <span className="members-crm-filter-btn-label">Filters</span>
@@ -173,109 +121,180 @@ export function MembersFiltersToolbar({
           </span>
         ) : null}
       </button>
+    </div>
+  );
+}
 
-      <Drawer
-        open={filtersOpen}
-        onClose={() => setFiltersOpen(false)}
-        side="right"
-        size="sm"
-        title="Filters"
-        description="Status, payment, and graduation year."
-        className="members-filters-drawer"
-        footer={
-          <div className="members-filters-drawer-footer">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={!hasAnyFilter}
-              onClick={resetFilters}
-              aria-label="Reset Filters"
-            >
-              Reset
-            </Button>
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              onClick={() => setFiltersOpen(false)}
-            >
-              Done
-            </Button>
-          </div>
-        }
+type MembersFiltersDrawerProps = {
+  open: boolean;
+  onClose: () => void;
+  values: MembersDirectoryFilters;
+  onChange: (next: MembersDirectoryFilters) => void;
+  focus: MembersDirectoryFocus;
+  onFocusChange: (focus: MembersDirectoryFocus) => void;
+  canReviewMembers?: boolean;
+  canFetchDues?: boolean;
+  onResetFocus?: () => void;
+};
+
+export function MembersFiltersDrawer({
+  open,
+  onClose,
+  values,
+  onChange,
+  focus,
+  onFocusChange,
+  canReviewMembers = false,
+  canFetchDues = false,
+  onResetFocus,
+}: MembersFiltersDrawerProps) {
+  const drawerTitleId = useId();
+
+  const focusOptions = useMemo(() => {
+    const options = [{ value: "people", label: "All" }];
+    if (canReviewMembers) {
+      options.push(
+        { value: "active", label: "Active" },
+        { value: "idle", label: "Idle" },
+        { value: "pending", label: "Pending" },
+      );
+    }
+    if (canFetchDues) {
+      options.push({ value: "dues", label: "Outstanding dues" });
+    }
+    return options;
+  }, [canFetchDues, canReviewMembers]);
+
+  const hasAnyFilter =
+    values.search.trim().length > 0 ||
+    Boolean(values.role) ||
+    Boolean(values.graduationYear) ||
+    Boolean(values.paymentStatus) ||
+    Boolean(values.memberStatus) ||
+    focus !== "people";
+
+  function updateField<K extends keyof MembersDirectoryFilters>(
+    key: K,
+    next: MembersDirectoryFilters[K],
+  ) {
+    onChange({ ...values, [key]: next });
+  }
+
+  function resetFilters() {
+    onChange({
+      ...EMPTY_MEMBERS_DIRECTORY_FILTERS,
+    });
+    onResetFocus?.();
+  }
+
+  function handleFocusChange(next: MembersDirectoryFocus) {
+    onFocusChange(next);
+    if (next === "pending") {
+      onClose();
+    }
+  }
+
+  return (
+    <Drawer
+      open={open}
+      onClose={onClose}
+      side="right"
+      size="sm"
+      title="Filters"
+      description="Status, payment, and graduation year."
+      className="members-filters-drawer"
+      footer={
+        <div className="members-filters-drawer-footer">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={!hasAnyFilter}
+            onClick={resetFilters}
+            aria-label="Reset Filters"
+          >
+            Reset
+          </Button>
+          <Button type="button" variant="primary" size="sm" onClick={onClose}>
+            Done
+          </Button>
+        </div>
+      }
+    >
+      <div
+        className="members-filters-drawer-fields"
+        role="group"
+        aria-labelledby={drawerTitleId}
       >
-        <div
-          className="members-filters-drawer-fields"
-          role="group"
-          aria-labelledby={drawerTitleId}
-        >
-          <span id={drawerTitleId} className="sr-only">
-            Member filters
-          </span>
+        <span id={drawerTitleId} className="sr-only">
+          Member filters
+        </span>
 
-          {/* Mobile-only: roster + focus live in page chips on md+ */}
-          <div className="members-filters-drawer-mobile-block md:hidden">
-            <Select
-              id="members-filter-role"
-              label="Roster"
-              name="role"
-              options={ROLE_OPTIONS}
-              value={values.role}
-              onChange={(event) => updateField("role", event.target.value)}
-              className="members-filters-control"
-            />
-            <Select
-              id="members-filter-focus"
-              label="Status"
-              name="focus"
-              options={focusOptions}
-              value={focus}
-              onChange={(event) => {
-                const next = event.target.value as MembersDirectoryFocus;
-                onFocusChange(next);
-                // Close immediately so the reviews screen is clickable.
-                setFiltersOpen(false);
-              }}
-              className="members-filters-control"
-            />
-          </div>
-
+        {/* Mobile-only: roster + focus live in page chips on md+ */}
+        <div className="members-filters-drawer-mobile-block md:hidden">
           <Select
-            id="members-filter-member-status"
-            label="Membership"
-            name="memberStatus"
-            options={MEMBER_STATUS_OPTIONS}
-            value={values.memberStatus}
-            onChange={(event) =>
-              updateField("memberStatus", event.target.value)
-            }
+            id="members-filter-role"
+            label="Roster"
+            name="role"
+            options={ROLE_OPTIONS}
+            value={values.role}
+            onChange={(event) => updateField("role", event.target.value)}
             className="members-filters-control"
           />
           <Select
-            id="members-filter-payment-status"
-            label="Payment"
-            name="paymentStatus"
-            options={PAYMENT_STATUS_OPTIONS}
-            value={values.paymentStatus}
+            id="members-filter-focus"
+            label="Status"
+            name="focus"
+            options={focusOptions}
+            value={focus}
             onChange={(event) =>
-              updateField("paymentStatus", event.target.value)
-            }
-            className="members-filters-control"
-          />
-          <Select
-            id="members-filter-graduation-year"
-            label="Graduation year"
-            name="graduationYear"
-            options={GRADUATION_YEAR_OPTIONS}
-            value={values.graduationYear}
-            onChange={(event) =>
-              updateField("graduationYear", event.target.value)
+              handleFocusChange(event.target.value as MembersDirectoryFocus)
             }
             className="members-filters-control"
           />
         </div>
-      </Drawer>
-    </div>
+
+        <Select
+          id="members-filter-member-status"
+          label="Membership"
+          name="memberStatus"
+          options={MEMBER_STATUS_OPTIONS}
+          value={values.memberStatus}
+          onChange={(event) => updateField("memberStatus", event.target.value)}
+          className="members-filters-control"
+        />
+        <Select
+          id="members-filter-payment-status"
+          label="Payment"
+          name="paymentStatus"
+          options={PAYMENT_STATUS_OPTIONS}
+          value={values.paymentStatus}
+          onChange={(event) => updateField("paymentStatus", event.target.value)}
+          className="members-filters-control"
+        />
+        <Select
+          id="members-filter-graduation-year"
+          label="Graduation year"
+          name="graduationYear"
+          options={GRADUATION_YEAR_OPTIONS}
+          value={values.graduationYear}
+          onChange={(event) =>
+            updateField("graduationYear", event.target.value)
+          }
+          className="members-filters-control"
+        />
+      </div>
+    </Drawer>
   );
+}
+
+/** Badge counts only panel-only filters (not roster chips shown on-page). */
+export function countMembersAdvancedFilters(
+  values: MembersDirectoryFilters,
+): number {
+  let count = 0;
+  if (values.graduationYear) count += 1;
+  if (values.paymentStatus) count += 1;
+  if (values.memberStatus) count += 1;
+  return count;
 }

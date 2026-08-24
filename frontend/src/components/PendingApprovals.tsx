@@ -73,9 +73,10 @@ export function PendingApprovals({
   }, [loadPendingMembers]);
 
   useEffect(() => {
-    if (!isLoading) {
-      onCountChange?.(pendingMembers.length);
+    if (isLoading) {
+      return;
     }
+    onCountChange?.(pendingMembers.length);
   }, [onCountChange, pendingMembers.length, isLoading]);
 
   async function handleApprove(memberId: number) {

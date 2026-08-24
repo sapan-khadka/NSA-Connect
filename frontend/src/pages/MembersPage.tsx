@@ -8,6 +8,7 @@ import {
   Plus,
 } from "lucide-react";
 import {
+  useCallback,
   useEffect,
   useId,
   useMemo,
@@ -22,7 +23,11 @@ import { AppIcon } from "../components/ui/AppIcon";
 import { AddMemberDrawer } from "../components/AddMemberDrawer";
 import { ManageBoardPositionsDrawer } from "../components/ManageBoardPositionsDrawer";
 import { MembersDuesFollowUps } from "../components/MembersDuesFollowUps";
-import { MembersFiltersToolbar } from "../components/MembersFiltersToolbar";
+import {
+  countMembersAdvancedFilters,
+  MembersFiltersDrawer,
+  MembersFiltersToolbar,
+} from "../components/MembersFiltersToolbar";
 import { MembersTable } from "../components/MembersTable";
 import { PendingApprovals } from "../components/PendingApprovals";
 import { Modal } from "../components/ui/Modal";
@@ -208,6 +213,7 @@ export function MembersPage() {
   const [filters, setFilters] = useState<MembersDirectoryFilters>(
     EMPTY_MEMBERS_DIRECTORY_FILTERS,
   );
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const userChoseSegment = useRef(false);
   const autoFocusedPending = useRef(false);
 
@@ -360,9 +366,17 @@ export function MembersPage() {
     });
   }, [members, filters, duesByMemberId, engagementFilter, engagementByMemberId]);
 
-  function refreshDirectory() {
+  const refreshDirectory = useCallback(() => {
     setDirectoryRefreshKey((value) => value + 1);
-  }
+  }, []);
+
+  const handlePendingCountChange = useCallback((count: number) => {
+    setKpis((current) =>
+      current && current.pendingCount !== count
+        ? { ...current, pendingCount: count }
+        : current,
+    );
+  }, []);
 
   async function handleExport() {
     setExportLoading(true);
@@ -414,6 +428,15 @@ export function MembersPage() {
           : engagementFilter === "idle"
             ? "idle"
             : "people";
+  const showDirectoryToolbar = activeSegment !== "attention" || !canReviewMembers;
+  const filtersDrawerOpen = filtersOpen && showDirectoryToolbar;
+  const advancedFilterCount = countMembersAdvancedFilters(filters);
+
+  useEffect(() => {
+    if (!showDirectoryToolbar) {
+      setFiltersOpen(false);
+    }
+  }, [showDirectoryToolbar]);
 
   function selectRole(role: "" | "leadership" | "board" | "general") {
     setFilters((prev) => ({ ...prev, role }));
@@ -591,16 +614,14 @@ export function MembersPage() {
 
           {/* Directory filters don't apply on the reviews queue — hide them so
               an open Filters drawer cannot block Approve / Reject / Back. */}
-          {activeSegment === "attention" && canReviewMembers ? null : (
+          {showDirectoryToolbar ? (
             <div className="members-crm-toolbar">
               <MembersFiltersToolbar
                 values={filters}
                 onChange={setFilters}
-                focus={activeFocus}
-                onFocusChange={applyDirectoryFocus}
-                canReviewMembers={canReviewMembers}
-                canFetchDues={canFetchDues}
-                onResetFocus={resetFocusForFilters}
+                filtersOpen={filtersDrawerOpen}
+                advancedFilterCount={advancedFilterCount}
+                onOpenFilters={() => setFiltersOpen(true)}
               />
 
               <div className="members-crm-toolbar-segments max-md:hidden">
@@ -666,7 +687,7 @@ export function MembersPage() {
                 </label>
               </div>
             </div>
-          )}
+          ) : null}
         </header>
 
         {exportError ? (
@@ -712,13 +733,7 @@ export function MembersPage() {
             </div>
             <PendingApprovals
               showReject
-              onCountChange={(count) => {
-                setKpis((current) =>
-                  current
-                    ? { ...current, pendingCount: count }
-                    : current,
-                );
-              }}
+              onCountChange={handlePendingCountChange}
               onQueueChanged={refreshDirectory}
             />
             {canFetchDues ? (
@@ -803,6 +818,18 @@ export function MembersPage() {
         open={managePositionsOpen}
         onClose={() => setManagePositionsOpen(false)}
         onCatalogChanged={refreshDirectory}
+      />
+
+      <MembersFiltersDrawer
+        open={filtersDrawerOpen}
+        onClose={() => setFiltersOpen(false)}
+        values={filters}
+        onChange={setFilters}
+        focus={activeFocus}
+        onFocusChange={applyDirectoryFocus}
+        canReviewMembers={canReviewMembers}
+        canFetchDues={canFetchDues}
+        onResetFocus={resetFocusForFilters}
       />
 
       <Modal

@@ -492,6 +492,120 @@ describe("MembersPage", () => {
       screen.getByRole("button", { name: /Reject Pending Person/i }),
     ).toBeInTheDocument();
     expect(screen.queryByLabelText("Member table")).not.toBeInTheDocument();
+    expect(document.querySelector("[data-drawer-root]")).toBeNull();
+  });
+
+  it("approves a pending member on the reviews queue", async () => {
+    const user = userEvent.setup();
+    const { approveMember } = await import("../lib/members-api");
+    vi.mocked(approveMember).mockResolvedValue({
+      ...pendingMember,
+      status: "approved",
+    });
+
+    await mockDirectoryApis({
+      members: [directoryMember, pendingMember],
+      total: 2,
+      approvedTotal: 1,
+      pendingTotal: 1,
+      pendingMembers: [pendingMember],
+    });
+
+    renderMembersPage("board", "/members?tab=pending");
+    expect(await screen.findByLabelText("Needs attention")).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: /Approve Pending Person/i }),
+    );
+
+    await waitFor(() => {
+      expect(approveMember).toHaveBeenCalledWith(pendingMember.id);
+    });
+  });
+
+  it("closes an open Filters drawer when auto-opening membership reviews", async () => {
+    const user = userEvent.setup();
+    const { approveMember, fetchMembers, fetchPendingMembers, fetchMembersEngagement } =
+      await import("../lib/members-api");
+    const { fetchDuesDashboard } = await import("../lib/dues-api");
+
+    vi.mocked(approveMember).mockResolvedValue({
+      ...pendingMember,
+      status: "approved",
+    });
+
+    let resolveMembers:
+      | ((value: Awaited<ReturnType<typeof fetchMembers>>) => void)
+      | undefined;
+
+    vi.mocked(fetchMembers).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveMembers = resolve;
+        }),
+    );
+
+    vi.mocked(fetchPendingMembers).mockResolvedValue({
+      members: [pendingMember],
+      total: 1,
+    });
+
+    vi.mocked(fetchMembersEngagement).mockResolvedValue({
+      semester: "2026-summer",
+      window_days: 90,
+      active_count: 1,
+      idle_count: 0,
+      members: [
+        {
+          member_id: directoryMember.id,
+          status: "active",
+          signals: {
+            attended_event: true,
+            paid_dues: false,
+            completed_task: false,
+            in_progress_task: false,
+            shared_suggestion: false,
+          },
+        },
+      ],
+    });
+
+    vi.mocked(fetchDuesDashboard).mockResolvedValue({
+      summary: {
+        semester: "2026-summer",
+        default_amount: "20.00",
+        total_expected: "0",
+        total_collected: "0",
+        total_outstanding: "0",
+        paid_count: 0,
+        unpaid_count: 0,
+        partial_count: 0,
+        exempt_count: 0,
+        member_count: 2,
+      },
+      records: [],
+    });
+
+    renderMembersPage("board");
+
+    await user.click(screen.getByRole("button", { name: /^Filters$/i }));
+    expect(await screen.findByRole("dialog", { name: "Filters" })).toBeInTheDocument();
+
+    resolveMembers?.({
+      members: [directoryMember, pendingMember],
+      total: 2,
+      page: 1,
+      page_size: 100,
+      total_pages: 1,
+    });
+
+    expect(await screen.findByLabelText("Needs attention")).toBeInTheDocument();
+    expect(document.querySelector("[data-drawer-root]")).toBeNull();
+
+    await user.click(
+      screen.getByRole("button", { name: /Approve Pending Person/i }),
+    );
+    expect(await screen.findByText("Inbox zero for memberships")).toBeInTheDocument();
   });
 
   it("switches to People directory from Needs attention", async () => {

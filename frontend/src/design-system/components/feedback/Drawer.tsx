@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 import { cx } from "../../cx";
 import { useBodyScrollLock, useEscapeKey } from "./useOverlay";
@@ -119,11 +120,11 @@ export function Drawer({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open]);
 
-  if (!open) {
+  if (!open || typeof document === "undefined") {
     return null;
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50" data-drawer-root="">
       <button
         type="button"
@@ -189,6 +190,7 @@ export function Drawer({
           </div>
         ) : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
