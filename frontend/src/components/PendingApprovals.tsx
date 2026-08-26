@@ -1,6 +1,5 @@
 /**
- * Premium membership review queue — Linear/Rippling-style approval rows.
- * Used on Members (Needs attention) and Board Dashboard.
+ * Membership review queue — used on Members → Reviews and board surfaces.
  */
 
 import { Check, UserRoundX, Users } from "lucide-react";
@@ -123,7 +122,7 @@ export function PendingApprovals({
   return (
     <section
       aria-label="Membership reviews"
-      className="overflow-hidden rounded-2xl border border-gray-200 bg-surface-card"
+      className="overflow-hidden rounded-xl border border-gray-200 bg-surface-card"
     >
       <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-4 py-4 sm:px-5">
         <div className="min-w-0">

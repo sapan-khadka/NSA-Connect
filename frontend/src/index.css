@@ -11122,46 +11122,47 @@
     padding-block: 0;
   }
 
-  /* Members CRM chrome — framed header + segmented filters + dense table */
+  /* Members CRM chrome — quiet header + underline tabs + dense directory */
   .members-page--crm {
     --members-crm-control-h: 2.125rem;
     max-width: 90rem; /* 1440px */
     margin-inline: auto;
-    padding-block: 0.55rem;
+    padding-block: 0.75rem;
     padding-inline: 0;
   }
 
   @media (min-width: 1024px) {
     .members-page--crm {
       padding-inline: 2rem;
+      padding-block: 1rem;
     }
   }
 
   .members-page--crm .members-page-grid {
-    row-gap: 0.55rem;
+    row-gap: 0.85rem;
   }
 
   .members-page--crm .members-page-header {
     padding-bottom: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.55rem;
+    gap: 0.75rem;
   }
 
   .members-page--crm .members-page-header-inner {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 0.5rem 1rem;
+    gap: 0.75rem 1rem;
   }
 
   .members-page--crm .members-page-title {
     margin: 0;
     font-family: var(--font-sans), "IBM Plex Sans", system-ui, sans-serif;
-    font-size: 1.125rem;
-    font-weight: 650;
-    letter-spacing: -0.02em;
+    font-size: 1.3125rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
     line-height: 1.2;
     color: #111111;
   }
@@ -11174,35 +11175,93 @@
   }
 
   .members-page--crm .members-page-subtitle {
-    margin: 0.25rem 0 0;
-    max-width: 28rem;
+    margin: 0.3rem 0 0;
+    max-width: 36rem;
     font-size: 0.8125rem;
     font-weight: 450;
     line-height: 1.4;
     color: #737373;
+    font-variant-numeric: tabular-nums;
   }
 
   .members-page--crm .members-page-header-actions {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
-    gap: 0.45rem;
+    gap: 0.4rem;
+    flex: 0 0 auto;
   }
 
   .members-page--crm .members-page-section.members-page-table {
     min-width: 0;
   }
 
-  .members-health-strip {
-    display: block;
-    margin: 0.4rem 0 0;
-    padding: 0;
+  .members-page-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.05rem;
+    width: 100%;
+    margin: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  }
+
+  .members-page-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0 0 -1px;
+    padding: 0.55rem 0.75rem;
     border: 0;
-    font-size: 0.75rem;
-    font-weight: 450;
-    line-height: 1.45;
-    color: #737373;
-    font-variant-numeric: tabular-nums;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    color: #525252;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+      color 120ms ease,
+      border-color 120ms ease;
+  }
+
+  .members-page-tab:hover {
+    color: var(--color-foreground);
+  }
+
+  .members-page-tab.is-active {
+    border-bottom-color: var(--color-foreground);
+    color: var(--color-foreground);
+    font-weight: 600;
+  }
+
+  .members-page-tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.15rem;
+    height: 1.15rem;
+    padding: 0 0.3rem;
+    border-radius: 999px;
+    background: var(--color-overdue, #dc2626);
+    color: #fff;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .members-reviews-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .members-health-strip {
+    display: none;
+  }
+
+  .members-health-strip__sep {
+    margin: 0 0.35rem;
+    color: #a3a3a3;
   }
 
   .members-health-strip__sep {
@@ -11211,29 +11270,32 @@
     font-weight: 500;
   }
 
-  .members-crm-toolbar {
+  .members-page--crm .members-crm-toolbar {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.35rem 0.4rem;
-    padding: 0;
+    justify-content: space-between;
+    gap: 0.55rem 1rem;
+    padding: 0.2rem 0 0;
     border-bottom: 0;
     min-height: 0;
+  }
+
+  .members-page--crm .members-crm-toolbar > .members-crm-segment {
+    flex: 0 1 auto;
+    margin-left: auto;
   }
 
   .members-crm-toolbar-primary {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: 0.35rem;
     min-width: 0;
-    flex: 0 1 auto;
+    flex: 1 1 14rem;
   }
 
   .members-crm-toolbar-segments {
-    display: inline-flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.35rem;
+    display: none;
   }
 
   .members-crm-filter-control {
@@ -11361,13 +11423,23 @@
   .members-crm-segment--focus {
     display: inline-flex;
     align-items: stretch;
-    flex-shrink: 0;
+    flex-shrink: 1;
+    min-width: 0;
+    max-width: 100%;
     height: auto;
     min-height: 1.75rem;
     border: 0;
     border-radius: 0;
     background: transparent;
-    overflow: visible;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .members-crm-segment::-webkit-scrollbar,
+  .members-crm-segment--focus::-webkit-scrollbar {
+    display: none;
+  }
     gap: 0.15rem;
   }
 
@@ -11721,12 +11793,7 @@
   }
 
   .members-page-view-tabs {
-    width: 100%;
-    margin-top: 0.15rem;
-  }
-
-  .members-page-view-tabs .ds-seg {
-    width: 100%;
+    display: none;
   }
 
   .members-table-dues {
@@ -11968,7 +12035,8 @@
     }
 
     .members-page--crm .members-page-subtitle {
-      display: none;
+      display: block;
+      max-width: 22rem;
     }
 
     .members-page--crm .members-page-header-actions {
@@ -12252,9 +12320,15 @@
       font-size: 1.125rem;
     }
 
-    .members-page--crm .members-page-count,
-    .members-page--crm .members-page-subtitle {
+    .members-page--crm .members-page-count {
       display: none;
+    }
+
+    .members-page--crm .members-page-subtitle {
+      display: block;
+      margin-top: 0.2rem;
+      font-size: 0.75rem;
+      line-height: 1.35;
     }
 
     .members-page--crm .members-page-header-actions {
@@ -12345,18 +12419,26 @@
       display: none !important;
     }
 
-    .members-crm-segment,
-    .members-crm-segment--focus {
+    .members-crm-toolbar .members-crm-segment {
       width: 100%;
-      overflow: hidden;
+      order: 3;
+      overflow-x: auto;
+      overflow-y: hidden;
+      flex-wrap: nowrap;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    .members-crm-toolbar .members-crm-segment::-webkit-scrollbar {
+      display: none;
     }
 
     .members-crm-segment > button,
     .members-crm-segment--focus > button {
-      flex: 1 1 0;
+      flex: 0 0 auto;
       min-width: 0;
-      padding: 0 0.4rem;
-      font-size: 0.6875rem;
+      padding: 0 0.55rem;
+      font-size: 0.75rem;
     }
 
     .members-page--crm .members-table-shell {
@@ -12519,9 +12601,15 @@
       flex-shrink: 0;
     }
 
+    .members-page--crm .members-page-subtitle {
+      display: block;
+      margin-top: 0.25rem;
+      font-size: 0.75rem;
+    }
+
     /* Hide Manage on narrow phones — keep Add for space */
     .members-page--crm .members-crm-manage-btn {
-      display: none !important;
+      display: inline-flex !important;
     }
   }
 

@@ -68,7 +68,7 @@ export function MembersDuesFollowUps({
   return (
     <section
       aria-label="Outstanding dues"
-      className="overflow-hidden rounded-2xl border border-gray-200 bg-surface-card"
+      className="overflow-hidden rounded-xl border border-gray-200 bg-surface-card"
     >
       <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-4 py-4 sm:px-5">
         <div className="min-w-0">

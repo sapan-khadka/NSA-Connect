@@ -238,14 +238,11 @@ describe("MembersPage", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Members" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText("Directory, roles, and dues."),
-    ).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByLabelText("Members summary")).toBeInTheDocument();
     });
     const summary = screen.getByLabelText("Members summary");
-    expect(summary).toHaveTextContent("12 Members");
+    expect(summary).toHaveTextContent(/12 members/i);
     expect(
       screen.getByRole("button", { name: /Add Member/i }),
     ).toBeInTheDocument();
@@ -337,7 +334,7 @@ describe("MembersPage", () => {
     });
   });
 
-  it("renders roster and focus segments with summary strip", async () => {
+  it("renders roster chips, section tabs, and summary meta", async () => {
     await mockDirectoryApis({
       members: [directoryMember],
       total: 12,
@@ -361,36 +358,27 @@ describe("MembersPage", () => {
     expect(
       within(rosterGroup).queryByRole("button", { name: "General" }),
     ).not.toBeInTheDocument();
-    expect(
-      within(rosterGroup).queryByRole("button", { name: "Treasurer" }),
-    ).not.toBeInTheDocument();
-    expect(
-      within(rosterGroup).queryByRole("button", { name: "President" }),
-    ).not.toBeInTheDocument();
 
-    const statusSelect = screen.getByRole("combobox", { name: "Status" });
-    expect(statusSelect).toBeInTheDocument();
-    expect(within(statusSelect).getByRole("option", { name: "All" })).toBeInTheDocument();
-    expect(within(statusSelect).getByRole("option", { name: "Active" })).toBeInTheDocument();
-    expect(within(statusSelect).getByRole("option", { name: "Idle" })).toBeInTheDocument();
-    expect(
-      within(statusSelect).getByRole("option", { name: /Pending/i }),
-    ).toBeInTheDocument();
-    expect(
-      within(statusSelect).getByRole("option", { name: "Outstanding dues" }),
-    ).toBeInTheDocument();
+    const sections = screen.getByRole("tablist", { name: "Members sections" });
+    expect(within(sections).getByRole("tab", { name: "Directory" })).toBeInTheDocument();
+    expect(within(sections).getByRole("tab", { name: /Reviews/i })).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(within(sections).getByText("2")).toBeInTheDocument();
+    });
 
     await waitFor(() => {
       expect(screen.getByLabelText("Members summary")).toBeInTheDocument();
     });
     const summary = screen.getByLabelText("Members summary");
-    expect(summary).toHaveTextContent("12 Members");
-    expect(summary).toHaveTextContent("7 Active");
-    expect(summary).toHaveTextContent("$40 Outstanding");
-    expect(summary).toHaveTextContent("Board");
+    expect(summary).toHaveTextContent(/12 members/i);
+    expect(summary).toHaveTextContent(/7 active/i);
+    expect(summary).toHaveTextContent(/\$40 outstanding/i);
+    expect(summary).toHaveTextContent(/board/i);
   });
 
-  it("hides dues status option without treasury access", async () => {
+  it("keeps engagement filters in the drawer instead of a status select", async () => {
+    const user = userEvent.setup();
     await mockDirectoryApis({
       members: [directoryMember],
       total: 5,
@@ -399,13 +387,13 @@ describe("MembersPage", () => {
     });
     renderMembersPage("board");
 
-    const statusSelect = screen.getByRole("combobox", { name: "Status" });
-    expect(within(statusSelect).getByRole("option", { name: "Active" })).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Status" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /^Filters$/i }));
+    expect(await screen.findByLabelText("Engagement")).toBeInTheDocument();
+    expect(screen.getByLabelText("Engagement")).toHaveDisplayValue("Everyone");
     expect(
-      within(statusSelect).queryByRole("option", { name: "Outstanding dues" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /^\d+ PENDING$/ }),
+      screen.queryByRole("option", { name: "Outstanding dues" }),
     ).not.toBeInTheDocument();
   });
 
@@ -470,7 +458,10 @@ describe("MembersPage", () => {
 
     expect(await screen.findByLabelText("Member table")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Reviews (1)" }),
+      screen.getByRole("tab", { name: /Reviews/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("tab", { name: /Reviews/i })).getByText("1"),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: "Membership reviews" }),
@@ -568,7 +559,7 @@ describe("MembersPage", () => {
     await user.click(screen.getByRole("button", { name: /^Filters$/i }));
     expect(await screen.findByRole("dialog", { name: "Filters" })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Reviews (1)" }));
+    await user.click(screen.getByRole("tab", { name: /Reviews/i }));
 
     expect(
       await screen.findByRole("heading", { name: "Membership reviews" }),
@@ -595,7 +586,7 @@ describe("MembersPage", () => {
       await screen.findByRole("heading", { name: "Membership reviews" }),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Directory" }));
+    await user.click(screen.getByRole("tab", { name: "Directory" }));
     expect(await screen.findByLabelText("Member table")).toBeInTheDocument();
     expect(await screen.findByText("Alex Member")).toBeInTheDocument();
   });

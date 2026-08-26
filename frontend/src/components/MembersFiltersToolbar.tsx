@@ -1,10 +1,7 @@
 /**
  * Members directory toolbar — search + Filters panel.
- * Roster chips / status stay on the page from `md` up; on small screens they
- * also appear inside this panel.
- *
- * The drawer is rendered by `MembersPage` (not here) so it can stay mounted
- * and close in the same render when switching to the reviews queue.
+ * Roster chips live on the page; engagement/payment/year live in the drawer.
+ * On small screens, roster also appears in the drawer.
  */
 
 import { Filter } from "lucide-react";
@@ -151,12 +148,11 @@ export function MembersFiltersDrawer({
   const drawerTitleId = useId();
 
   const focusOptions = useMemo(() => {
-    const options = [{ value: "people", label: "All" }];
+    const options = [{ value: "people", label: "Everyone" }];
     if (canReviewMembers) {
       options.push(
         { value: "active", label: "Active" },
         { value: "idle", label: "Idle" },
-        { value: "pending", label: "Pending" },
       );
     }
     if (canFetchDues) {
@@ -165,13 +161,16 @@ export function MembersFiltersDrawer({
     return options;
   }, [canFetchDues, canReviewMembers]);
 
+  const drawerFocus =
+    focus === "pending" || focus === "people" ? "people" : focus;
+
   const hasAnyFilter =
     values.search.trim().length > 0 ||
     Boolean(values.role) ||
     Boolean(values.graduationYear) ||
     Boolean(values.paymentStatus) ||
     Boolean(values.memberStatus) ||
-    focus !== "people";
+    drawerFocus !== "people";
 
   function updateField<K extends keyof MembersDirectoryFilters>(
     key: K,
@@ -187,13 +186,6 @@ export function MembersFiltersDrawer({
     onResetFocus?.();
   }
 
-  function handleFocusChange(next: MembersDirectoryFocus) {
-    onFocusChange(next);
-    if (next === "pending") {
-      onClose();
-    }
-  }
-
   return (
     <Drawer
       open={open}
@@ -201,7 +193,7 @@ export function MembersFiltersDrawer({
       side="right"
       size="sm"
       title="Filters"
-      description="Status, payment, and graduation year."
+      description="Narrow the directory by engagement, membership, or payment."
       className="members-filters-drawer"
       footer={
         <div className="members-filters-drawer-footer">
@@ -230,7 +222,6 @@ export function MembersFiltersDrawer({
           Member filters
         </span>
 
-        {/* Mobile-only: roster + focus live in page chips on md+ */}
         <div className="members-filters-drawer-mobile-block md:hidden">
           <Select
             id="members-filter-role"
@@ -241,18 +232,21 @@ export function MembersFiltersDrawer({
             onChange={(event) => updateField("role", event.target.value)}
             className="members-filters-control"
           />
+        </div>
+
+        {focusOptions.length > 1 ? (
           <Select
             id="members-filter-focus"
-            label="Status"
+            label="Engagement"
             name="focus"
             options={focusOptions}
-            value={focus}
+            value={drawerFocus}
             onChange={(event) =>
-              handleFocusChange(event.target.value as MembersDirectoryFocus)
+              onFocusChange(event.target.value as MembersDirectoryFocus)
             }
             className="members-filters-control"
           />
-        </div>
+        ) : null}
 
         <Select
           id="members-filter-member-status"
@@ -288,7 +282,7 @@ export function MembersFiltersDrawer({
   );
 }
 
-/** Badge counts only panel-only filters (not roster chips shown on-page). */
+/** Badge counts panel filters (not on-page roster chips). */
 export function countMembersAdvancedFilters(
   values: MembersDirectoryFilters,
 ): number {

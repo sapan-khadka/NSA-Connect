@@ -31,7 +31,6 @@ import {
 import { MembersTable } from "../components/MembersTable";
 import { PendingApprovals } from "../components/PendingApprovals";
 import { Modal } from "../components/ui/Modal";
-import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { useAuth } from "../context/useAuth";
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/api-error";
@@ -417,9 +416,24 @@ export function MembersPage() {
             ? "idle"
             : "people";
   const filtersDrawerOpen = filtersOpen && !isReviewsView;
-  const advancedFilterCount = countMembersAdvancedFilters(filters);
-  const reviewsTabLabel =
-    pendingCount > 0 ? `Reviews (${pendingCount})` : "Reviews";
+  const advancedFilterCount =
+    countMembersAdvancedFilters(filters) +
+    (activeFocus === "active" || activeFocus === "idle" || activeFocus === "dues"
+      ? 1
+      : 0);
+  const reviewsTabLabel = "Reviews";
+  const headerMeta = !isLoading && kpis
+    ? [
+        `${memberCount} ${memberCount === 1 ? "member" : "members"}`,
+        `${activeCount} active`,
+        `${boardCount} board`,
+        outstandingAmount !== null
+          ? `${formatCurrencyCompact(outstandingAmount)} outstanding`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : null;
 
   useEffect(() => {
     if (isReviewsView) {
@@ -533,40 +547,13 @@ export function MembersPage() {
           <div className="members-page-header-inner">
             <div className="members-page-header-copy">
               <h1 className="members-page-title">Members</h1>
-              <p className="members-page-subtitle">
-                Directory, roles, and dues.
-              </p>
-              {!isLoading && kpis ? (
-                <p
-                  className="members-health-strip"
-                  aria-label="Members summary"
-                >
-                  <span className="tabular-nums">{memberCount}</span>{" "}
-                  {memberCount === 1 ? "Member" : "Members"}
-                  <span className="members-health-strip__sep" aria-hidden="true">
-                    ·
-                  </span>
-                  <span className="tabular-nums">{activeCount}</span> Active
-                  <span className="members-health-strip__sep" aria-hidden="true">
-                    ·
-                  </span>
-                  <span className="tabular-nums">{boardCount}</span> Board
-                  {outstandingAmount !== null ? (
-                    <>
-                      <span
-                        className="members-health-strip__sep"
-                        aria-hidden="true"
-                      >
-                        ·
-                      </span>
-                      <span className="tabular-nums">
-                        {formatCurrencyCompact(outstandingAmount)}
-                      </span>{" "}
-                      Outstanding
-                    </>
-                  ) : null}
+              {headerMeta ? (
+                <p className="members-page-subtitle" aria-label="Members summary">
+                  {headerMeta}
                 </p>
-              ) : null}
+              ) : (
+                <p className="members-page-subtitle">People, roles, and dues.</p>
+              )}
             </div>
 
             <div className="members-page-header-actions">
@@ -603,25 +590,47 @@ export function MembersPage() {
           </div>
 
           {canReviewMembers ? (
-            <div className="members-page-view-tabs">
-              <SegmentedControl
-                ariaLabel="Members view"
-                value={membersView}
-                fill
-                options={[
-                  { id: "directory", label: "Directory" },
-                  { id: "reviews", label: reviewsTabLabel },
-                ]}
-                onChange={(view) => {
+            <nav
+              aria-label="Members sections"
+              className="members-page-tabs"
+              role="tablist"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={membersView === "directory"}
+                className={
+                  membersView === "directory"
+                    ? "members-page-tab is-active"
+                    : "members-page-tab"
+                }
+                onClick={() => {
                   userChoseSegment.current = true;
-                  if (view === "reviews") {
-                    focusPendingQueue();
-                    return;
-                  }
                   clearFocusKeepRole();
                 }}
-              />
-            </div>
+              >
+                Directory
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={membersView === "reviews"}
+                className={
+                  membersView === "reviews"
+                    ? "members-page-tab is-active"
+                    : "members-page-tab"
+                }
+                onClick={() => {
+                  userChoseSegment.current = true;
+                  focusPendingQueue();
+                }}
+              >
+                {reviewsTabLabel}
+                {pendingCount > 0 ? (
+                  <span className="members-page-tab-badge">{pendingCount}</span>
+                ) : null}
+              </button>
+            </nav>
           ) : null}
 
           {!isReviewsView ? (
@@ -634,67 +643,33 @@ export function MembersPage() {
                 onOpenFilters={() => setFiltersOpen(true)}
               />
 
-              <div className="members-crm-toolbar-segments max-md:hidden">
-                <div
-                  className="members-crm-segment"
-                  role="group"
-                  aria-label="Filter by roster"
+              <div
+                className="members-crm-segment"
+                role="group"
+                aria-label="Filter by roster"
+              >
+                <button
+                  type="button"
+                  className={!filters.role ? "is-active" : undefined}
+                  aria-pressed={!filters.role}
+                  onClick={() => selectRole("")}
                 >
-                  <button
-                    type="button"
-                    className={!filters.role ? "is-active" : undefined}
-                    aria-pressed={!filters.role}
-                    onClick={() => selectRole("")}
-                  >
-                    All
-                  </button>
-                  {DIRECTORY_ROLE_SEGMENTS.map(({ role, label }) => {
-                    const active = filters.role === role;
-                    return (
-                      <button
-                        key={role}
-                        type="button"
-                        className={active ? "is-active" : undefined}
-                        aria-pressed={active}
-                        onClick={() => selectRole(role)}
-                      >
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <label className="members-crm-status-select">
-                  <span className="sr-only">Status</span>
-                  <select
-                    value={activeFocus}
-                    aria-label="Status"
-                    onChange={(event) =>
-                      applyDirectoryFocus(
-                        event.target.value as
-                          | "people"
-                          | "active"
-                          | "idle"
-                          | "pending"
-                          | "dues",
-                      )
-                    }
-                  >
-                    <option value="people">All</option>
-                    {canReviewMembers ? (
-                      <>
-                        <option value="active">Active</option>
-                        <option value="idle">Idle</option>
-                        <option value="pending">
-                          Pending{pendingCount > 0 ? ` (${pendingCount})` : ""}
-                        </option>
-                      </>
-                    ) : null}
-                    {canFetchDues ? (
-                      <option value="dues">Outstanding dues</option>
-                    ) : null}
-                  </select>
-                </label>
+                  All
+                </button>
+                {DIRECTORY_ROLE_SEGMENTS.map(({ role, label }) => {
+                  const active = filters.role === role;
+                  return (
+                    <button
+                      key={role}
+                      type="button"
+                      className={active ? "is-active" : undefined}
+                      aria-pressed={active}
+                      onClick={() => selectRole(role)}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ) : null}
@@ -723,7 +698,7 @@ export function MembersPage() {
         ) : null}
 
         {isReviewsView ? (
-          <section className="members-page-section space-y-4">
+          <section className="members-page-section members-reviews-stack">
             <PendingApprovals
               showReject
               onCountChange={handlePendingCountChange}
