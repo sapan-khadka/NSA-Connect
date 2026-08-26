@@ -214,6 +214,31 @@ describe("filterDirectoryMembers", () => {
     ).toHaveLength(1);
   });
 
+  it("hides rejected members from the active directory unless Archive is open", () => {
+    const withRejected = [
+      ...members,
+      member({
+        id: 4,
+        full_name: "Rejected Person",
+        role: "general",
+        status: "rejected",
+      }),
+    ];
+
+    expect(
+      filterDirectoryMembers(withRejected, EMPTY_MEMBERS_DIRECTORY_FILTERS).map(
+        (row) => row.id,
+      ),
+    ).toEqual([1, 2, 3]);
+
+    expect(
+      filterDirectoryMembers(withRejected, {
+        ...EMPTY_MEMBERS_DIRECTORY_FILTERS,
+        memberStatus: "rejected",
+      }),
+    ).toEqual([withRejected[3]]);
+  });
+
   it("filters by payment status when dues lookup is present", () => {
     const lookup = buildDuesLookup([dues({ member_id: 1, status: "unpaid" })]);
     expect(

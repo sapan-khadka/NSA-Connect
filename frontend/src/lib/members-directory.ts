@@ -393,7 +393,12 @@ export function filterDirectoryMembers(
       return false;
     }
 
-    if (filters.memberStatus && member.status !== filters.memberStatus) {
+    if (filters.memberStatus) {
+      if (member.status !== filters.memberStatus) {
+        return false;
+      }
+    } else if (member.status === "rejected") {
+      // Rejected signups live in Archive — keep them out of the active directory.
       return false;
     }
 

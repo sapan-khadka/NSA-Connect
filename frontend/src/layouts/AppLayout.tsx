@@ -47,6 +47,8 @@ export function AppLayout() {
     pathname.startsWith("/events/") ||
     pathname === "/finance" ||
     pathname.startsWith("/finance") ||
+    pathname === "/members" ||
+    pathname.startsWith("/members/") ||
     pathname === "/announcements" ||
     pathname.startsWith("/announcements/") ||
     pathname === "/assistant" ||

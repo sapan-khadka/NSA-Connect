@@ -78,6 +78,8 @@ type MembersTableProps = {
   engagementByMemberId?: MemberEngagementLookup;
   /** True when filters exclude every member but the org is not empty. */
   isFilterEmpty?: boolean;
+  /** Empty copy for the rejected-member Archive view. */
+  isArchive?: boolean;
   /** Shows row checkboxes + floating bulk action bar when true. */
   enableBulkSelection?: boolean;
   /**
@@ -163,7 +165,7 @@ function MembersDirectoryStatusPill({
     pending: { label: "Pending", tone: "pending" },
     alumni: { label: "Alumni", tone: "alumni" },
     inactive: { label: "Inactive", tone: "inactive" },
-    rejected: { label: "Inactive", tone: "inactive" },
+    rejected: { label: "Rejected", tone: "inactive" },
   };
 
   const resolved = map[normalized] ?? {
@@ -411,17 +413,23 @@ function MembersEmptyIllustration() {
 function MembersTableEmptyState({
   isFilterEmpty,
   onInvite,
+  isArchive,
 }: {
   isFilterEmpty?: boolean;
   onInvite?: () => void;
+  isArchive?: boolean;
 }) {
   if (isFilterEmpty) {
     return (
       <div className="members-table-shell members-table-empty">
         <EmptyState
           icon={<AppIcon icon={Users} size="md" className="text-current" />}
-          title="No matching members"
-          description="Try adjusting search or filters to see more people."
+          title={isArchive ? "Archive is empty" : "No matching members"}
+          description={
+            isArchive
+              ? "Rejected signups will appear here after board review."
+              : "Try adjusting search or filters to see more people."
+          }
         />
       </div>
     );
@@ -596,6 +604,7 @@ export function MembersTable({
   duesByMemberId,
   engagementByMemberId,
   isFilterEmpty = false,
+  isArchive = false,
   enableBulkSelection = false,
   forceTableView = false,
   onInvite,
@@ -838,6 +847,7 @@ export function MembersTable({
     return (
       <MembersTableEmptyState
         isFilterEmpty={isFilterEmpty}
+        isArchive={isArchive}
         onInvite={onInvite}
       />
     );

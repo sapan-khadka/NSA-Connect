@@ -242,7 +242,7 @@ describe("MembersPage", () => {
       expect(screen.getByLabelText("Members summary")).toBeInTheDocument();
     });
     const summary = screen.getByLabelText("Members summary");
-    expect(summary).toHaveTextContent(/12 members/i);
+    expect(summary).toHaveTextContent(/1 member/i);
     expect(
       screen.getByRole("button", { name: /Add Member/i }),
     ).toBeInTheDocument();
@@ -371,7 +371,7 @@ describe("MembersPage", () => {
       expect(screen.getByLabelText("Members summary")).toBeInTheDocument();
     });
     const summary = screen.getByLabelText("Members summary");
-    expect(summary).toHaveTextContent(/12 members/i);
+    expect(summary).toHaveTextContent(/1 member/i);
     expect(summary).toHaveTextContent(/7 active/i);
     expect(summary).toHaveTextContent(/\$40 outstanding/i);
     expect(summary).toHaveTextContent(/board/i);
@@ -443,6 +443,36 @@ describe("MembersPage", () => {
 
     expect(screen.getByText("Gina General")).toBeInTheDocument();
     expect(screen.queryByText("Alex Member")).not.toBeInTheDocument();
+  });
+
+  it("shows rejected members only in Archive", async () => {
+    const user = userEvent.setup();
+    const rejectedMember: MemberResponse = {
+      ...directoryMember,
+      id: 11,
+      full_name: "Rejected Person",
+      email: "rejected@semo.edu",
+      status: "rejected",
+      role: "general",
+    };
+    await mockDirectoryApis({
+      members: [directoryMember, rejectedMember],
+      total: 2,
+      approvedTotal: 1,
+      pendingTotal: 0,
+    });
+
+    renderMembersPage("board");
+
+    expect(await screen.findByText("Alex Member")).toBeInTheDocument();
+    expect(screen.queryByText("Rejected Person")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Archive/i }));
+    expect(await screen.findByText("Rejected Person")).toBeInTheDocument();
+    expect(screen.queryByText("Alex Member")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Members summary")).toHaveTextContent(
+      /1 rejected/i,
+    );
   });
 
   it("shows the Reviews tab when pending signups exist without auto-opening", async () => {

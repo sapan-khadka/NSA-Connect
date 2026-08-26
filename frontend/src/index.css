@@ -11125,16 +11125,17 @@
   /* Members CRM chrome — quiet header + underline tabs + dense directory */
   .members-page--crm {
     --members-crm-control-h: 2.125rem;
-    max-width: 90rem; /* 1440px */
-    margin-inline: auto;
+    max-width: none;
+    width: 100%;
+    margin-inline: 0;
     padding-block: 0.75rem;
     padding-inline: 0;
   }
 
   @media (min-width: 1024px) {
     .members-page--crm {
-      padding-inline: 2rem;
-      padding-block: 1rem;
+      padding-inline: 0;
+      padding-block: 0.85rem;
     }
   }
 
@@ -11440,8 +11441,6 @@
   .members-crm-segment--focus::-webkit-scrollbar {
     display: none;
   }
-    gap: 0.15rem;
-  }
 
   .members-crm-segment > button,
   .members-crm-segment--focus > button {
@@ -11489,26 +11488,29 @@
     color: #111111;
   }
 
-  .members-crm-segment__count {
-    display: inline-flex;
-    min-width: 1rem;
-    height: 1rem;
-    align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--color-surface-muted) 80%, white);
-    color: var(--color-label, #64748b);
-    font-size: 0.625rem;
-    font-weight: 600;
-    padding-inline: 0.25rem;
+  .members-crm-segment-archive {
+    margin-left: 0.55rem;
+    padding-left: 0.65rem !important;
+    border-left: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent) !important;
+  }
+
+  .members-crm-segment-archive .members-crm-segment__count {
+    background: color-mix(in srgb, var(--color-surface-muted) 85%, white);
   }
 
   .members-page--crm .members-table-shell {
     border: 1px solid #e8e8e6;
     border-radius: 0.5rem;
     box-shadow: none;
+    width: 100%;
+    min-width: 0;
     overflow: hidden;
     background: #fff;
+  }
+
+  .members-page--crm .members-table-shell.members-table-empty {
+    width: 100%;
+    min-height: 18rem;
   }
 
   .members-page--crm .members-table-scroll {

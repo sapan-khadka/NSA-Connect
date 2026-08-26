@@ -396,7 +396,17 @@ export function MembersPage() {
   }
 
   const pendingCount = kpis?.pendingCount ?? 0;
-  const memberCount = kpis?.totalMembers ?? members.length;
+  const rejectedCount = useMemo(
+    () => members.filter((row) => row.status === "rejected").length,
+    [members],
+  );
+  const isArchiveView = filters.memberStatus === "rejected";
+  const memberCount = useMemo(() => {
+    if (isArchiveView) {
+      return rejectedCount;
+    }
+    return members.filter((row) => row.status !== "rejected").length;
+  }, [isArchiveView, members, rejectedCount]);
   const activeCount = kpis?.activeCount ?? 0;
   const boardCount = kpis?.boardCount ?? 0;
   const outstandingAmount = kpis?.outstandingDuesAmount ?? null;
@@ -422,17 +432,19 @@ export function MembersPage() {
       ? 1
       : 0);
   const reviewsTabLabel = "Reviews";
-  const headerMeta = !isLoading && kpis
-    ? [
-        `${memberCount} ${memberCount === 1 ? "member" : "members"}`,
-        `${activeCount} active`,
-        `${boardCount} board`,
-        outstandingAmount !== null
-          ? `${formatCurrencyCompact(outstandingAmount)} outstanding`
-          : null,
-      ]
-        .filter(Boolean)
-        .join(" · ")
+  const headerMeta = !isLoading
+    ? isArchiveView
+      ? `${rejectedCount} rejected`
+      : [
+          `${memberCount} ${memberCount === 1 ? "member" : "members"}`,
+          `${activeCount} active`,
+          `${boardCount} board`,
+          outstandingAmount !== null
+            ? `${formatCurrencyCompact(outstandingAmount)} outstanding`
+            : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")
     : null;
 
   useEffect(() => {
@@ -443,7 +455,24 @@ export function MembersPage() {
   }, [isReviewsView]);
 
   function selectRole(role: "" | "leadership" | "board" | "general") {
-    setFilters((prev) => ({ ...prev, role }));
+    setFilters((prev) => ({
+      ...prev,
+      role,
+      // Leaving Archive returns to the active directory.
+      memberStatus: prev.memberStatus === "rejected" ? "" : prev.memberStatus,
+    }));
+  }
+
+  function openArchive() {
+    userChoseSegment.current = true;
+    setSegment("people");
+    setEngagementFilter("");
+    setFilters((prev) => ({
+      ...prev,
+      role: "",
+      paymentStatus: "",
+      memberStatus: "rejected",
+    }));
   }
 
   function clearFocusKeepRole() {
@@ -650,14 +679,16 @@ export function MembersPage() {
               >
                 <button
                   type="button"
-                  className={!filters.role ? "is-active" : undefined}
-                  aria-pressed={!filters.role}
+                  className={
+                    !filters.role && !isArchiveView ? "is-active" : undefined
+                  }
+                  aria-pressed={!filters.role && !isArchiveView}
                   onClick={() => selectRole("")}
                 >
                   All
                 </button>
                 {DIRECTORY_ROLE_SEGMENTS.map(({ role, label }) => {
-                  const active = filters.role === role;
+                  const active = !isArchiveView && filters.role === role;
                   return (
                     <button
                       key={role}
@@ -670,6 +701,24 @@ export function MembersPage() {
                     </button>
                   );
                 })}
+                <button
+                  type="button"
+                  className={[
+                    "members-crm-segment-archive",
+                    isArchiveView ? "is-active" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  aria-pressed={isArchiveView}
+                  onClick={openArchive}
+                >
+                  Archive
+                  {rejectedCount > 0 ? (
+                    <span className="members-crm-segment__count">
+                      {rejectedCount}
+                    </span>
+                  ) : null}
+                </button>
               </div>
             </div>
           ) : null}
@@ -727,9 +776,12 @@ export function MembersPage() {
               isFilterEmpty={
                 members.length > 0 && displayedMembers.length === 0
               }
-              enableBulkSelection={canManageDirectory}
+              isArchive={isArchiveView}
+              enableBulkSelection={canManageDirectory && !isArchiveView}
               onInvite={
-                canManageDirectory ? () => setAddMemberOpen(true) : undefined
+                canManageDirectory && !isArchiveView
+                  ? () => setAddMemberOpen(true)
+                  : undefined
               }
               onMemberUpdated={(updated, previousHolder) => {
                 setMembers((prev) =>
