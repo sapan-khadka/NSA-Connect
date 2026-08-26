@@ -4,7 +4,7 @@
  */
 
 import { Check, UserRoundX, Users } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 
 import { Avatar } from "../design-system/components/Avatar";
@@ -53,6 +53,11 @@ export function PendingApprovals({
   const [approvingMemberId, setApprovingMemberId] = useState<number | null>(
     null,
   );
+  const onCountChangeRef = useRef(onCountChange);
+
+  useEffect(() => {
+    onCountChangeRef.current = onCountChange;
+  }, [onCountChange]);
 
   const loadPendingMembers = useCallback(async () => {
     setIsLoading(true);
@@ -76,8 +81,8 @@ export function PendingApprovals({
     if (isLoading) {
       return;
     }
-    onCountChange?.(pendingMembers.length);
-  }, [onCountChange, pendingMembers.length, isLoading]);
+    onCountChangeRef.current?.(pendingMembers.length);
+  }, [pendingMembers.length, isLoading]);
 
   async function handleApprove(memberId: number) {
     setActionMemberId(memberId);

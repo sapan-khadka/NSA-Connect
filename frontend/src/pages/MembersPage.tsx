@@ -1,6 +1,6 @@
 /**
- * Members — CRM-style people directory + board attention queue.
- * Attention queue opens via Pending focus chip or ?tab=pending.
+ * Members — CRM-style people directory + membership reviews queue.
+ * Reviews opens via the Directory/Reviews tabs, Pending status filter, or ?tab=pending.
  */
 
 import {
@@ -31,6 +31,7 @@ import {
 import { MembersTable } from "../components/MembersTable";
 import { PendingApprovals } from "../components/PendingApprovals";
 import { Modal } from "../components/ui/Modal";
+import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { useAuth } from "../context/useAuth";
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/api-error";
@@ -64,6 +65,7 @@ import {
 import { getCurrentSemesterSlug } from "../lib/semester";
 
 type MembersSegment = "attention" | "people";
+type MembersView = "directory" | "reviews";
 type MembersFocus = "people" | "active" | "idle" | "pending" | "dues";
 
 /** Directory scope segments — leadership seats vs board vs general roster. */
@@ -215,7 +217,6 @@ export function MembersPage() {
   );
   const [filtersOpen, setFiltersOpen] = useState(false);
   const userChoseSegment = useRef(false);
-  const autoFocusedPending = useRef(false);
 
   const canReviewMembers = viewerCanManageMembers(currentMember);
   const [segment, setSegment] = useState<MembersSegment>(() =>
@@ -260,21 +261,6 @@ export function MembersPage() {
     next.delete("tab");
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams, canReviewMembers]);
-
-  useEffect(() => {
-    if (
-      !canReviewMembers ||
-      isLoading ||
-      userChoseSegment.current ||
-      autoFocusedPending.current
-    ) {
-      return;
-    }
-    if ((kpis?.pendingCount ?? 0) > 0) {
-      autoFocusedPending.current = true;
-      setSegment("attention");
-    }
-  }, [canReviewMembers, isLoading, kpis?.pendingCount]);
 
   useEffect(() => {
     let cancelled = false;
@@ -417,6 +403,8 @@ export function MembersPage() {
   const outstandingAmount = kpis?.outstandingDuesAmount ?? null;
   const activeSegment: MembersSegment =
     canReviewMembers && segment === "attention" ? "attention" : "people";
+  const isReviewsView = activeSegment === "attention" && canReviewMembers;
+  const membersView: MembersView = isReviewsView ? "reviews" : "directory";
   const duesFilterActive = filters.paymentStatus === "outstanding";
   const activeFocus: MembersFocus =
     activeSegment === "attention"
@@ -428,15 +416,17 @@ export function MembersPage() {
           : engagementFilter === "idle"
             ? "idle"
             : "people";
-  const showDirectoryToolbar = activeSegment !== "attention" || !canReviewMembers;
-  const filtersDrawerOpen = filtersOpen && showDirectoryToolbar;
+  const filtersDrawerOpen = filtersOpen && !isReviewsView;
   const advancedFilterCount = countMembersAdvancedFilters(filters);
+  const reviewsTabLabel =
+    pendingCount > 0 ? `Reviews (${pendingCount})` : "Reviews";
 
   useEffect(() => {
-    if (!showDirectoryToolbar) {
+    if (isReviewsView) {
       setFiltersOpen(false);
+      document.body.style.overflow = "";
     }
-  }, [showDirectoryToolbar]);
+  }, [isReviewsView]);
 
   function selectRole(role: "" | "leadership" | "board" | "general") {
     setFilters((prev) => ({ ...prev, role }));
@@ -612,9 +602,29 @@ export function MembersPage() {
             </div>
           </div>
 
-          {/* Directory filters don't apply on the reviews queue — hide them so
-              an open Filters drawer cannot block Approve / Reject / Back. */}
-          {showDirectoryToolbar ? (
+          {canReviewMembers ? (
+            <div className="members-page-view-tabs">
+              <SegmentedControl
+                ariaLabel="Members view"
+                value={membersView}
+                fill
+                options={[
+                  { id: "directory", label: "Directory" },
+                  { id: "reviews", label: reviewsTabLabel },
+                ]}
+                onChange={(view) => {
+                  userChoseSegment.current = true;
+                  if (view === "reviews") {
+                    focusPendingQueue();
+                    return;
+                  }
+                  clearFocusKeepRole();
+                }}
+              />
+            </div>
+          ) : null}
+
+          {!isReviewsView ? (
             <div className="members-crm-toolbar">
               <MembersFiltersToolbar
                 values={filters}
@@ -712,25 +722,8 @@ export function MembersPage() {
           </p>
         ) : null}
 
-        {activeSegment === "attention" && canReviewMembers ? (
-          <section
-            aria-label="Needs attention"
-            className="members-page-section space-y-4"
-          >
-            <div className="members-attention-toolbar">
-              <p className="members-attention-copy">
-                Review pending signups and dues follow-ups.
-              </p>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="members-attention-back"
-                onClick={clearFocusKeepRole}
-              >
-                Back to directory
-              </Button>
-            </div>
+        {isReviewsView ? (
+          <section className="members-page-section space-y-4">
             <PendingApprovals
               showReject
               onCountChange={handlePendingCountChange}

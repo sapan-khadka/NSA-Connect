@@ -11720,6 +11720,15 @@
     font-weight: 550 !important;
   }
 
+  .members-page-view-tabs {
+    width: 100%;
+    margin-top: 0.15rem;
+  }
+
+  .members-page-view-tabs .ds-seg {
+    width: 100%;
+  }
+
   .members-table-dues {
     display: inline-flex;
     align-items: center;
