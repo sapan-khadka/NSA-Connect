@@ -457,6 +457,23 @@ def login_member(client, email=VALID_EMAIL, password=VALID_PASSWORD):
     )
 
 
+def _patch_engine_for_testclient():
+    """Lifespan pings engine.connect(); tests use SQLite via dependency overrides."""
+    mock_connection = MagicMock()
+    mock_connection.execute = MagicMock()
+    return (
+        patch.object(
+            engine,
+            "connect",
+            return_value=MagicMock(
+                __enter__=MagicMock(return_value=mock_connection),
+                __exit__=MagicMock(return_value=False),
+            ),
+        ),
+        patch.object(engine, "dispose"),
+    )
+
+
 @pytest.fixture
 def db_session() -> Session:
     test_engine = create_engine(
@@ -501,19 +518,11 @@ def client(db_session: Session):
 
     app.dependency_overrides[get_db] = override_get_db
 
-    mock_connection = MagicMock()
-    mock_connection.execute = MagicMock()
+    engine_connect_patch, engine_dispose_patch = _patch_engine_for_testclient()
 
     with (
-        patch.object(
-            engine,
-            "connect",
-            return_value=MagicMock(
-                __enter__=MagicMock(return_value=mock_connection),
-                __exit__=MagicMock(return_value=False),
-            ),
-        ),
-        patch.object(engine, "dispose"),
+        engine_connect_patch,
+        engine_dispose_patch,
         patch(
             "app.core.database.create_db_session",
             side_effect=override_create_db_session,

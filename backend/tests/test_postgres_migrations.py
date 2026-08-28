@@ -26,6 +26,11 @@ def _require_postgres() -> None:
     url = str(engine.url)
     if not url.startswith("postgresql"):
         pytest.skip(f"PostgreSQL required; DATABASE_URL is {url}")
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+    except Exception as exc:
+        pytest.skip(f"PostgreSQL not reachable: {exc}")
 
 
 def test_hot_path_indexes_exist_after_migrations():

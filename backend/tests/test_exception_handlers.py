@@ -2,6 +2,7 @@
 
 import pytest
 from conftest import (
+    _patch_engine_for_testclient,
     auth_header,
     create_board_member,
     register_member,
@@ -35,7 +36,12 @@ def client_no_raise(db_session, monkeypatch):
             pass
 
     fastapi_app.dependency_overrides[get_db] = override_get_db
-    with TestClient(fastapi_app, raise_server_exceptions=False) as test_client:
+    engine_connect_patch, engine_dispose_patch = _patch_engine_for_testclient()
+    with (
+        engine_connect_patch,
+        engine_dispose_patch,
+        TestClient(fastapi_app, raise_server_exceptions=False) as test_client,
+    ):
         yield test_client
     fastapi_app.dependency_overrides.clear()
 
