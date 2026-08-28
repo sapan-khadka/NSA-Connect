@@ -11147,15 +11147,34 @@
     padding-bottom: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0;
   }
 
   .members-page--crm .members-page-header-inner {
     display: flex;
-    flex-wrap: nowrap;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .members-page--crm .members-page-header-top {
+    display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 0.75rem 1rem;
+    gap: 0.75rem;
+  }
+
+  .members-page--crm .members-page-header-copy {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .members-page--crm .members-page-header-actions {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.4rem;
+    flex: 0 0 auto;
   }
 
   .members-page--crm .members-page-title {
@@ -11166,6 +11185,14 @@
     letter-spacing: -0.025em;
     line-height: 1.2;
     color: #111111;
+  }
+
+  .members-page-title-meta {
+    display: none;
+  }
+
+  .members-crm-manage-icon-mobile {
+    display: none;
   }
 
   .members-page--crm .members-page-count {
@@ -11185,12 +11212,19 @@
     font-variant-numeric: tabular-nums;
   }
 
-  .members-page--crm .members-page-header-actions {
+  .members-page-subtitle--compact {
+    display: none;
+  }
+
+  .members-review-actions {
     display: flex;
-    flex-wrap: nowrap;
+    flex-shrink: 0;
     align-items: center;
-    gap: 0.4rem;
-    flex: 0 0 auto;
+    gap: 0.5rem;
+  }
+
+  .members-review-approve {
+    min-width: 7rem;
   }
 
   .members-page--crm .members-page-section.members-page-table {
@@ -11275,16 +11309,16 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.55rem 1rem;
-    padding: 0.2rem 0 0;
+    justify-content: flex-start;
+    gap: 0.4rem 0.75rem;
+    padding: 0;
     border-bottom: 0;
     min-height: 0;
   }
 
   .members-page--crm .members-crm-toolbar > .members-crm-segment {
-    flex: 0 1 auto;
-    margin-left: auto;
+    flex: 1 1 auto;
+    margin-left: 0;
   }
 
   .members-crm-toolbar-primary {
@@ -11319,7 +11353,11 @@
   .members-crm-search-input {
     height: var(--members-crm-control-h) !important;
     min-height: var(--members-crm-control-h) !important;
+    max-height: var(--members-crm-control-h) !important;
     width: 100% !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    line-height: 1.2 !important;
     border-radius: 0.5rem !important;
     font-size: 0.8125rem !important;
   }
@@ -12029,11 +12067,9 @@
     }
 
     .members-page--crm .members-page-header-inner {
-      flex-direction: row;
-      flex-wrap: nowrap;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 0.75rem;
+      align-items: center;
+      row-gap: 0.5rem;
+      column-gap: 0.75rem;
     }
 
     .members-page--crm .members-page-subtitle {
@@ -12042,7 +12078,6 @@
     }
 
     .members-page--crm .members-page-header-actions {
-      flex: 0 0 auto;
       gap: 0.4rem;
     }
 
@@ -12060,16 +12095,18 @@
     }
 
     .members-crm-toolbar {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 0.45rem;
+      gap: 0.35rem;
     }
 
-    .members-crm-toolbar-primary {
-      display: flex;
+    .members-page--crm .members-crm-toolbar-primary {
+      flex: 1 1 100%;
       width: 100%;
-      align-items: center;
-      gap: 0.4rem;
+    }
+
+    .members-page--crm .members-crm-toolbar > .members-crm-segment {
+      flex: 1 1 100%;
+      width: 100%;
+      margin-left: 0;
     }
 
     .members-crm-filter-control {
@@ -12290,97 +12327,126 @@
     }
   }
 
-  /* Mobile (<768): stacked touch layout */
+  /* Mobile (<768): tight stacked chrome */
   @media (max-width: 767px) {
     .members-page--crm {
-      padding-block: 0.15rem;
+      --members-crm-control-h: 2.125rem;
+      padding-block: 0;
       padding-inline: 0;
     }
 
     .members-page--crm .members-page-grid {
-      row-gap: 0.45rem;
-    }
-
-    .members-page--crm .members-page-header {
-      gap: 0.45rem;
+      row-gap: 0.55rem;
     }
 
     .members-page--crm .members-page-header-inner {
-      flex-direction: row;
-      flex-wrap: nowrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-    }
-
-    .members-page--crm .members-page-header-copy {
-      min-width: 0;
-      flex: 1 1 auto;
-    }
-
-    .members-page--crm .members-page-title {
-      font-size: 1.125rem;
-    }
-
-    .members-page--crm .members-page-count {
-      display: none;
-    }
-
-    .members-page--crm .members-page-subtitle {
-      display: block;
-      margin-top: 0.2rem;
-      font-size: 0.75rem;
-      line-height: 1.35;
-    }
-
-    .members-page--crm .members-page-header-actions {
-      width: auto;
-      flex: 0 0 auto;
       gap: 0.35rem;
     }
 
-    .members-crm-invite-btn {
-      flex: 0 0 auto;
-      padding-inline: 0.7rem !important;
+    .members-page--crm .members-page-header-top {
+      align-items: center;
+      gap: 0.5rem;
     }
 
-    .members-crm-invite-label-full {
+    .members-page--crm .members-page-title {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.35rem 0.5rem;
+      font-size: 1.25rem;
+      line-height: 1.15;
+    }
+
+    .members-page-title-meta {
+      display: inline;
+      font-size: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0;
+      color: #737373;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .members-page--crm .members-page-count,
+    .members-page--crm .members-page-subtitle,
+    .members-page--crm .members-page-subtitle--full {
       display: none;
     }
 
+    .members-page--crm .members-page-header-actions {
+      gap: 0.3rem;
+    }
+
+    .members-crm-invite-btn {
+      width: 2.125rem !important;
+      min-width: 2.125rem !important;
+      height: var(--members-crm-control-h) !important;
+      min-height: var(--members-crm-control-h) !important;
+      padding: 0 !important;
+      justify-content: center;
+    }
+
+    .members-crm-invite-label-full,
     .members-crm-invite-label-short {
-      display: inline;
+      display: none !important;
+    }
+
+    .members-crm-manage-btn {
+      width: 2.125rem !important;
+      min-width: 2.125rem !important;
+      height: var(--members-crm-control-h) !important;
+      min-height: var(--members-crm-control-h) !important;
+      padding: 0 !important;
+      justify-content: center;
+    }
+
+    .members-crm-manage-icon-mobile {
+      display: inline-flex !important;
+    }
+
+    .members-crm-manage-label,
+    .members-crm-manage-chevron {
+      display: none !important;
+    }
+
+    .members-page--crm .members-page-tabs {
+      margin: 0;
+      padding: 0;
+      border-bottom: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+    }
+
+    .members-page-tab {
+      padding: 0.45rem 0.7rem;
+      font-size: 0.8125rem;
+    }
+
+    .members-page-tab-badge {
+      min-width: 1.1rem;
+      height: 1.1rem;
+      font-size: 0.625rem;
     }
 
     .members-health-strip {
-      margin-top: 0.25rem;
-      font-size: 0.75rem;
-      white-space: normal;
+      display: none !important;
     }
 
-    .members-crm-toolbar {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 0.4rem;
+    .members-page--crm .members-crm-toolbar {
+      gap: 0.35rem;
+      margin: 0;
+      padding: 0;
     }
 
-    .members-crm-toolbar-primary {
-      display: flex;
+    .members-page--crm .members-crm-toolbar-primary {
+      flex: 1 1 100%;
       width: 100%;
-      align-items: center;
-      gap: 0.4rem;
+      min-height: var(--members-crm-control-h);
     }
 
     .members-crm-filter-control {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
       flex: 1 1 auto !important;
       width: auto !important;
       max-width: none !important;
-      height: auto;
-      gap: 0.4rem;
-      margin: 0;
+      height: var(--members-crm-control-h);
+      min-height: var(--members-crm-control-h);
     }
 
     .members-crm-search {
@@ -12388,21 +12454,19 @@
       width: 100% !important;
       min-width: 0;
       max-width: none !important;
+      height: var(--members-crm-control-h);
     }
 
     .members-crm-search-input {
-      width: 100% !important;
+      font-size: 1rem !important;
     }
 
     .members-crm-filter-btn {
-      width: auto;
-      flex: 0 0 auto;
+      width: var(--members-crm-control-h);
       min-width: var(--members-crm-control-h);
-      padding: 0 0.55rem;
-      justify-content: center;
-      border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
-      background: #fff;
-      color: var(--color-foreground);
+      min-height: var(--members-crm-control-h);
+      height: var(--members-crm-control-h);
+      padding: 0;
     }
 
     .members-crm-filter-btn-label {
@@ -12417,30 +12481,41 @@
       border: 0;
     }
 
-    .members-crm-toolbar-segments {
-      display: none !important;
-    }
-
-    .members-crm-toolbar .members-crm-segment {
+    .members-page--crm .members-crm-toolbar > .members-crm-segment {
+      flex: 1 1 100%;
       width: 100%;
-      order: 3;
-      overflow-x: auto;
-      overflow-y: hidden;
-      flex-wrap: nowrap;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-    }
-
-    .members-crm-toolbar .members-crm-segment::-webkit-scrollbar {
-      display: none;
+      min-height: 1.75rem;
+      margin: 0;
+      padding: 0;
     }
 
     .members-crm-segment > button,
     .members-crm-segment--focus > button {
-      flex: 0 0 auto;
+      min-height: 1.75rem;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.8125rem;
+    }
+
+    .members-reviews-stack {
+      gap: 0.75rem;
+    }
+
+    .members-review-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      width: 100%;
+      gap: 0.5rem;
+    }
+
+    .members-review-actions:has(> :only-child) {
+      grid-template-columns: 1fr;
+    }
+
+    .members-review-actions > button,
+    .members-review-approve {
+      width: 100%;
       min-width: 0;
-      padding: 0 0.55rem;
-      font-size: 0.75rem;
+      min-height: 2.5rem;
     }
 
     .members-page--crm .members-table-shell {
@@ -12602,24 +12677,20 @@
       height: 1rem;
       flex-shrink: 0;
     }
+  }
 
-    .members-page--crm .members-page-subtitle {
-      display: block;
-      margin-top: 0.25rem;
-      font-size: 0.75rem;
-    }
-
-    /* Hide Manage on narrow phones — keep Add for space */
-    .members-page--crm .members-crm-manage-btn {
-      display: inline-flex !important;
+  @media (max-width: 767px) {
+    .ds-main-canvas:has(.members-page--crm) {
+      padding-top: 0.75rem;
+      padding-bottom: 1rem;
     }
   }
 
   @media (max-width: 379px) {
     .members-crm-segment > button,
     .members-crm-segment--focus > button {
-      padding: 0 0.3rem;
-      font-size: 0.625rem;
+      padding: 0 0.45rem;
+      font-size: 0.75rem;
     }
   }
 
@@ -12720,6 +12791,21 @@
 
   .members-page-header-actions > * {
     flex: 0 0 auto;
+  }
+
+  /* CRM header wins over legacy members header flex rules below */
+  .members-page--crm .members-page-header-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .members-page--crm .members-page-header-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
   }
 
   /* Tablet — title + actions row, actions may wrap */

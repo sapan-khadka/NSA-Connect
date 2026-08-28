@@ -48,6 +48,11 @@ const ROLE_OPTIONS = [
   { value: "general", label: "Members" },
 ];
 
+const MOBILE_ROSTER_OPTIONS = [
+  ...ROLE_OPTIONS,
+  { value: "__archive__", label: "Archive (rejected)" },
+];
+
 export type MembersDirectoryFocus =
   | "people"
   | "active"
@@ -227,9 +232,31 @@ export function MembersFiltersDrawer({
             id="members-filter-role"
             label="Roster"
             name="role"
-            options={ROLE_OPTIONS}
-            value={values.role}
-            onChange={(event) => updateField("role", event.target.value)}
+            options={MOBILE_ROSTER_OPTIONS}
+            value={
+              values.memberStatus === "rejected"
+                ? "__archive__"
+                : values.role
+            }
+            onChange={(event) => {
+              const next = event.target.value;
+              if (next === "__archive__") {
+                onChange({
+                  ...values,
+                  role: EMPTY,
+                  memberStatus: "rejected",
+                });
+                return;
+              }
+              onChange({
+                ...values,
+                role: next,
+                memberStatus:
+                  values.memberStatus === "rejected"
+                    ? EMPTY
+                    : values.memberStatus,
+              });
+            }}
             className="members-filters-control"
           />
         </div>

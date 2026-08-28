@@ -5,6 +5,7 @@
 
 import {
   ChevronDown,
+  MoreHorizontal,
   Plus,
 } from "lucide-react";
 import {
@@ -137,19 +138,29 @@ function MembersManageMenu({
         variant="outline"
         size="sm"
         className="members-crm-manage-btn"
+        aria-label="Manage"
         aria-expanded={open}
         aria-haspopup="menu"
         aria-controls={menuId}
         onClick={() => setOpen((current) => !current)}
       >
-        Manage
-        <AppIcon icon={ChevronDown} size="xs" className="text-current opacity-80" />
+        <AppIcon
+          icon={MoreHorizontal}
+          size="xs"
+          className="members-crm-manage-icon-mobile text-current"
+        />
+        <span className="members-crm-manage-label">Manage</span>
+        <AppIcon
+          icon={ChevronDown}
+          size="xs"
+          className="members-crm-manage-chevron text-current opacity-80"
+        />
       </Button>
       {open ? (
         <div
           id={menuId}
           role="menu"
-          className="absolute left-0 top-full z-50 mt-2 min-w-[12.5rem] rounded-lg border border-gray-200 bg-surface-card py-1 shadow-sm"
+          className="members-crm-manage-menu absolute right-0 top-full z-50 mt-2 min-w-[12.5rem] rounded-lg border border-gray-200 bg-surface-card py-1 shadow-sm"
         >
           {canManagePositions ? (
             <button
@@ -574,154 +585,168 @@ export function MembersPage() {
           className="members-page-section members-page-header"
         >
           <div className="members-page-header-inner">
-            <div className="members-page-header-copy">
-              <h1 className="members-page-title">Members</h1>
-              {headerMeta ? (
-                <p className="members-page-subtitle" aria-label="Members summary">
-                  {headerMeta}
-                </p>
-              ) : (
-                <p className="members-page-subtitle">People, roles, and dues.</p>
-              )}
-            </div>
-
-            <div className="members-page-header-actions">
-              {canManageDirectory ? (
-                <>
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="members-crm-invite-btn"
-                    aria-label="Add Member"
-                    onClick={() => setAddMemberOpen(true)}
-                  >
-                    <AppIcon icon={Plus} size="xs" className="text-current" />
-                    <span className="members-crm-invite-label-full" aria-hidden="true">
-                      Add Member
-                    </span>
-                    <span className="members-crm-invite-label-short" aria-hidden="true">
-                      Add
-                    </span>
-                  </Button>
-                  <MembersManageMenu
-                    onImportClick={() => importInputRef.current?.click()}
-                    importLoading={importLoading}
-                    onExport={() => {
-                      void handleExport();
-                    }}
-                    exportLoading={exportLoading}
-                    canManagePositions={canManagePositions}
-                    onManagePositions={() => setManagePositionsOpen(true)}
-                  />
-                </>
-              ) : null}
-            </div>
-          </div>
-
-          {canReviewMembers ? (
-            <nav
-              aria-label="Members sections"
-              className="members-page-tabs"
-              role="tablist"
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={membersView === "directory"}
-                className={
-                  membersView === "directory"
-                    ? "members-page-tab is-active"
-                    : "members-page-tab"
-                }
-                onClick={() => {
-                  userChoseSegment.current = true;
-                  clearFocusKeepRole();
-                }}
-              >
-                Directory
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={membersView === "reviews"}
-                className={
-                  membersView === "reviews"
-                    ? "members-page-tab is-active"
-                    : "members-page-tab"
-                }
-                onClick={() => {
-                  userChoseSegment.current = true;
-                  focusPendingQueue();
-                }}
-              >
-                {reviewsTabLabel}
-                {pendingCount > 0 ? (
-                  <span className="members-page-tab-badge">{pendingCount}</span>
-                ) : null}
-              </button>
-            </nav>
-          ) : null}
-
-          {!isReviewsView ? (
-            <div className="members-crm-toolbar">
-              <MembersFiltersToolbar
-                values={filters}
-                onChange={setFilters}
-                filtersOpen={filtersDrawerOpen}
-                advancedFilterCount={advancedFilterCount}
-                onOpenFilters={() => setFiltersOpen(true)}
-              />
-
-              <div
-                className="members-crm-segment"
-                role="group"
-                aria-label="Filter by roster"
-              >
-                <button
-                  type="button"
-                  className={
-                    !filters.role && !isArchiveView ? "is-active" : undefined
-                  }
-                  aria-pressed={!filters.role && !isArchiveView}
-                  onClick={() => selectRole("")}
-                >
-                  All
-                </button>
-                {DIRECTORY_ROLE_SEGMENTS.map(({ role, label }) => {
-                  const active = !isArchiveView && filters.role === role;
-                  return (
-                    <button
-                      key={role}
-                      type="button"
-                      className={active ? "is-active" : undefined}
-                      aria-pressed={active}
-                      onClick={() => selectRole(role)}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-                <button
-                  type="button"
-                  className={[
-                    "members-crm-segment-archive",
-                    isArchiveView ? "is-active" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  aria-pressed={isArchiveView}
-                  onClick={openArchive}
-                >
-                  Archive
-                  {rejectedCount > 0 ? (
-                    <span className="members-crm-segment__count">
-                      {rejectedCount}
+            <div className="members-page-header-top">
+              <div className="members-page-header-copy">
+                <h1 className="members-page-title">
+                  Members
+                  {headerMeta ? (
+                    <span className="members-page-title-meta" aria-hidden="true">
+                      {isArchiveView
+                        ? `${rejectedCount} rejected`
+                        : `${memberCount} · ${activeCount} active`}
                     </span>
                   ) : null}
-                </button>
+                </h1>
+                {headerMeta ? (
+                  <p
+                    className="members-page-subtitle members-page-subtitle--full"
+                    aria-label="Members summary"
+                  >
+                    {headerMeta}
+                  </p>
+                ) : (
+                  <p className="members-page-subtitle">People, roles, and dues.</p>
+                )}
+              </div>
+
+              <div className="members-page-header-actions">
+                {canManageDirectory ? (
+                  <>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="members-crm-invite-btn"
+                      aria-label="Add Member"
+                      onClick={() => setAddMemberOpen(true)}
+                    >
+                      <AppIcon icon={Plus} size="xs" className="text-current" />
+                      <span className="members-crm-invite-label-full" aria-hidden="true">
+                        Add Member
+                      </span>
+                      <span className="members-crm-invite-label-short" aria-hidden="true">
+                        Add
+                      </span>
+                    </Button>
+                    <MembersManageMenu
+                      onImportClick={() => importInputRef.current?.click()}
+                      importLoading={importLoading}
+                      onExport={() => {
+                        void handleExport();
+                      }}
+                      exportLoading={exportLoading}
+                      canManagePositions={canManagePositions}
+                      onManagePositions={() => setManagePositionsOpen(true)}
+                    />
+                  </>
+                ) : null}
               </div>
             </div>
-          ) : null}
+
+            {canReviewMembers ? (
+              <nav
+                aria-label="Members sections"
+                className="members-page-tabs"
+                role="tablist"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={membersView === "directory"}
+                  className={
+                    membersView === "directory"
+                      ? "members-page-tab is-active"
+                      : "members-page-tab"
+                  }
+                  onClick={() => {
+                    userChoseSegment.current = true;
+                    clearFocusKeepRole();
+                  }}
+                >
+                  Directory
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={membersView === "reviews"}
+                  className={
+                    membersView === "reviews"
+                      ? "members-page-tab is-active"
+                      : "members-page-tab"
+                  }
+                  onClick={() => {
+                    userChoseSegment.current = true;
+                    focusPendingQueue();
+                  }}
+                >
+                  {reviewsTabLabel}
+                  {pendingCount > 0 ? (
+                    <span className="members-page-tab-badge">{pendingCount}</span>
+                  ) : null}
+                </button>
+              </nav>
+            ) : null}
+
+            {!isReviewsView ? (
+              <div className="members-crm-toolbar">
+                <MembersFiltersToolbar
+                  values={filters}
+                  onChange={setFilters}
+                  filtersOpen={filtersDrawerOpen}
+                  advancedFilterCount={advancedFilterCount}
+                  onOpenFilters={() => setFiltersOpen(true)}
+                />
+
+                <div
+                  className="members-crm-segment"
+                  role="group"
+                  aria-label="Filter by roster"
+                >
+                  <button
+                    type="button"
+                    className={
+                      !filters.role && !isArchiveView ? "is-active" : undefined
+                    }
+                    aria-pressed={!filters.role && !isArchiveView}
+                    onClick={() => selectRole("")}
+                  >
+                    All
+                  </button>
+                  {DIRECTORY_ROLE_SEGMENTS.map(({ role, label }) => {
+                    const active = !isArchiveView && filters.role === role;
+                    return (
+                      <button
+                        key={role}
+                        type="button"
+                        className={active ? "is-active" : undefined}
+                        aria-pressed={active}
+                        onClick={() => selectRole(role)}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    className={[
+                      "members-crm-segment-archive",
+                      isArchiveView ? "is-active" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    aria-pressed={isArchiveView}
+                    onClick={openArchive}
+                  >
+                    Archive
+                    {rejectedCount > 0 ? (
+                      <span className="members-crm-segment__count">
+                        {rejectedCount}
+                      </span>
+                    ) : null}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
         </header>
 
         {exportError ? (

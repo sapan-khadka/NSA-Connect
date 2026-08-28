@@ -222,7 +222,7 @@ export function PendingApprovals({
                     </div>
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-2 sm:pl-3">
+                  <div className="members-review-actions">
                     {showReject ? (
                       <Button
                         type="button"
@@ -248,7 +248,7 @@ export function PendingApprovals({
                       disabled={isActing}
                       loading={isApproving}
                       aria-label={`Approve ${member.full_name}`}
-                      className="min-w-[7rem]"
+                      className="members-review-approve"
                     >
                       {!isApproving ? (
                         <AppIcon
