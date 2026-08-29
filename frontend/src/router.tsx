@@ -36,6 +36,7 @@ import { MembersPage } from "./pages/MembersPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { PastEventsPage } from "./pages/PastEventsPage";
+import { PersonalNotepadPage } from "./pages/PersonalNotepadPage";
 import { BoardMeetingsPage } from "./pages/BoardMeetingsPage";
 import { MeetingDetailPage } from "./pages/MeetingDetailPage";
 import { CustomMediaAlbumPage } from "./pages/CustomMediaAlbumPage";
@@ -203,6 +204,14 @@ export const appRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute>
             <MemberProfilePage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "notepad",
+        element: (
+          <ProtectedRoute minRole="board">
+            <PersonalNotepadPage />
           </ProtectedRoute>
         ),
       },

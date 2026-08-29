@@ -19,7 +19,7 @@ HOT_PATH_INDEXES: tuple[tuple[str, str], ...] = (
     ("announcements", "ix_announcements_created_at"),
 )
 
-ALEMBIC_HEAD = "ac3d4e5f6a7b"
+ALEMBIC_HEAD = "b1c2d3e4f5b6"
 
 
 def _require_postgres() -> None:

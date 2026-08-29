@@ -16,7 +16,7 @@ import app.models.event_suggestion_interest  # noqa: F401 — register table for
 import app.models.event_suggestion_poll  # noqa: F401 — register table for create_all
 import app.models.event_suggestion_view  # noqa: F401 — register table for create_all
 import app.models.member_document  # noqa: F401 — register table for create_all
-import app.models.member_note  # noqa: F401 — register table for create_all
+import app.models.personal_note  # noqa: F401 — register table for create_all
 import app.models.org_document  # noqa: F401 — register table for create_all
 import app.models.organization  # noqa: F401 — register table for create_all
 import app.models.organization_membership  # noqa: F401 — register table for create_all

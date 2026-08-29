@@ -192,6 +192,11 @@ const ROUTES: RouteMeta[] = [
     crumbs: () => [DASHBOARD, leaf("finance", "Finance")],
   },
   {
+    pattern: /^\/notepad\/?$/,
+    title: "Notepad",
+    crumbs: () => [DASHBOARD, leaf("notepad", "Notepad")],
+  },
+  {
     pattern: /^\/reports\/?$/,
     title: "Reports",
     crumbs: () => [DASHBOARD, leaf("reports", "Reports")],

@@ -72,7 +72,7 @@ from app.models.member_dues import (
     MemberDues,
     SemesterDuesSettings,
 )
-from app.models.member_note import MemberNote
+from app.models.personal_note import PersonalNote
 from app.models.notification_sent_log import NotificationSentLog, NotificationType
 from app.models.org_document import OrgDocument, OrgDocumentChunk, OrgDocumentVisibility
 from app.models.organization import Organization, OrganizationStatus
@@ -148,6 +148,7 @@ __all__ = [
     "InboxNotificationType",
     "Member",
     "MemberNote",
+    "PersonalNote",
     "MemberDocument",
     "MemberDocumentType",
     "MemberPosition",

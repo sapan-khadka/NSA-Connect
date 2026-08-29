@@ -9,6 +9,7 @@ import {
   NotebookPen,
   Settings,
   Sparkles,
+  StickyNote,
   Users,
   Wallet,
 } from "lucide-react";
@@ -349,6 +350,11 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     },
     ...(showBoardSurfaces
       ? [
+          {
+            to: "/notepad",
+            label: "Notepad",
+            icon: StickyNote,
+          } satisfies SidebarLink,
           {
             to: "/events/meetings",
             label: "Meetings",
