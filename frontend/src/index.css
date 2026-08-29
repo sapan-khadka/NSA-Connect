@@ -20530,30 +20530,29 @@
 
   @media (max-width: 1023px) {
     .events-calendar-grid__days {
-      grid-auto-rows: minmax(2.6rem, 1fr);
+      grid-auto-rows: minmax(3.35rem, 1fr);
     }
 
     .events-calendar-day-events {
+      display: flex;
+      margin-top: 0.12rem;
+    }
+
+    .events-calendar-day-event,
+    .events-calendar-day-festival,
+    .events-calendar-day-more {
+      font-size: 0.5625rem;
+      line-height: 1.2;
+    }
+
+    /* One label per cell on narrow screens; +N still shows when multiple events. */
+    .events-calendar-day-event ~ .events-calendar-day-event {
       display: none;
     }
 
     .events-calendar-day-cell.has-events::after,
     .events-calendar-day-cell.has-festival::after {
-      content: "";
-      display: block;
-      width: 0.7rem;
-      height: 2px;
-      margin-top: 0.25rem;
-      background: #171717;
-    }
-
-    .events-calendar-day-cell.has-festival:not(.has-events)::after {
-      background: #a3a3a3;
-    }
-
-    .events-calendar-day-cell.is-outside.has-events::after,
-    .events-calendar-day-cell.is-outside.has-festival::after {
-      background: #d4d4d4;
+      display: none;
     }
   }
 
@@ -20779,7 +20778,7 @@
     }
 
     .events-calendar-grid__days {
-      grid-auto-rows: minmax(2.3rem, 1fr);
+      grid-auto-rows: minmax(3.35rem, 1fr);
     }
 
     .events-calendar-bs-date {
