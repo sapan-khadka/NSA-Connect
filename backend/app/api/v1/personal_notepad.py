@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_member
+from app.core.dependencies import require_board
 from app.models.member import Member
 from app.schemas.personal_note import (
     PersonalNoteCreateRequest,
@@ -26,7 +26,7 @@ router = APIRouter(prefix="/me/notepad", tags=["personal-notepad"])
 @router.get("", response_model=PersonalNoteListResponse)
 def list_my_notepad_notes(
     event_id: int | None = Query(default=None),
-    current_member: Member = Depends(get_current_member),
+    current_member: Member = Depends(require_board),
     db: Session = Depends(get_db),
 ):
     try:
@@ -41,7 +41,7 @@ def list_my_notepad_notes(
 @router.post("", response_model=PersonalNoteResponse, status_code=status.HTTP_201_CREATED)
 def create_my_notepad_note(
     body: PersonalNoteCreateRequest,
-    current_member: Member = Depends(get_current_member),
+    current_member: Member = Depends(require_board),
     db: Session = Depends(get_db),
 ):
     try:
@@ -69,7 +69,7 @@ def create_my_notepad_note(
 def update_my_notepad_note(
     note_id: int,
     body: PersonalNoteUpdateRequest,
-    current_member: Member = Depends(get_current_member),
+    current_member: Member = Depends(require_board),
     db: Session = Depends(get_db),
 ):
     try:
@@ -103,7 +103,7 @@ def update_my_notepad_note(
 @router.delete("/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_my_notepad_note(
     note_id: int,
-    current_member: Member = Depends(get_current_member),
+    current_member: Member = Depends(require_board),
     db: Session = Depends(get_db),
 ):
     try:

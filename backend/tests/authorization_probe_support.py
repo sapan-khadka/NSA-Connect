@@ -324,6 +324,10 @@ def probe_request_kwargs(method: str, path_template: str) -> dict:
         kwargs["json"] = {"content": "Probe private note"}
     elif path_template.endswith("/notes/{note_id}") and method == "PATCH":
         kwargs["json"] = {"content": "Updated probe note"}
+    elif path_template == "/api/v1/me/notepad" and method == "POST":
+        kwargs["json"] = {"content": "Probe personal notepad note"}
+    elif path_template.endswith("/me/notepad/{note_id}") and method == "PATCH":
+        kwargs["json"] = {"content": "Updated probe personal note"}
     elif path_template.endswith("/event-photo") and method == "POST":
         kwargs["files"] = {
             "file": ("cover.jpg", b"\xff\xd8\xffprobe", "image/jpeg"),
