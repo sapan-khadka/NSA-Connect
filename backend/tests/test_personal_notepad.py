@@ -8,10 +8,8 @@ from conftest import (
     register_member,
     set_member_approved,
 )
-from sqlalchemy import select
 
 from app.models.event import Event
-from app.models.member import Member
 from tests.test_create_event import _event_payload
 
 

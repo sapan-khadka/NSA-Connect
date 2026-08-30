@@ -15,8 +15,8 @@ from app.api.v1.media import router as media_router
 from app.api.v1.member_positions import router as member_positions_router
 from app.api.v1.members import router as members_router
 from app.api.v1.notifications import router as notifications_router
-from app.api.v1.personal_notepad import router as personal_notepad_router
 from app.api.v1.org_documents import router as org_documents_router
+from app.api.v1.personal_notepad import router as personal_notepad_router
 from app.api.v1.public_events import router as public_events_router
 from app.api.v1.reports import router as reports_router
 from app.api.v1.slots import router as slots_router

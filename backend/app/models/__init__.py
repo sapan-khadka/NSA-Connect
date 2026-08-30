@@ -72,12 +72,12 @@ from app.models.member_dues import (
     MemberDues,
     SemesterDuesSettings,
 )
-from app.models.personal_note import PersonalNote
 from app.models.notification_sent_log import NotificationSentLog, NotificationType
 from app.models.org_document import OrgDocument, OrgDocumentChunk, OrgDocumentVisibility
 from app.models.organization import Organization, OrganizationStatus
 from app.models.organization_membership import OrganizationMembership
 from app.models.password_reset_token import PasswordResetToken
+from app.models.personal_note import PersonalNote
 from app.models.preptask import PrepTaskGroup, PrepTaskGroupItem
 from app.models.reminder import PrepTaskReminder, ReminderType
 from app.models.semester_report import ReportRangeType, SemesterReport
