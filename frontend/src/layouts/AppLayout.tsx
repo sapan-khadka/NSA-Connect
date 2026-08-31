@@ -51,6 +51,7 @@ export function AppLayout() {
     pathname.startsWith("/members/") ||
     pathname === "/announcements" ||
     pathname.startsWith("/announcements/") ||
+    pathname === "/notepad" ||
     pathname === "/assistant" ||
     pathname.startsWith("/assistant/") ||
     pathname === "/settings" ||
