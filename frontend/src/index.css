@@ -19172,6 +19172,40 @@
     padding-block: 0.35rem 2.5rem;
   }
 
+  /* Personal notepad — same content width rhythm as announcements */
+  .personal-notepad-page {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: min(72rem, 100%);
+    margin-inline: 0;
+    padding-block: 0.35rem 2.5rem;
+  }
+
+  .personal-notepad-page .members-page-header {
+    margin-bottom: 1rem;
+  }
+
+  .personal-notepad-page .members-page-title {
+    margin: 0;
+    font-family: var(--font-sans), "IBM Plex Sans", system-ui, sans-serif;
+    font-size: 1.125rem;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+    color: var(--color-foreground);
+  }
+
+  .personal-notepad-page .members-page-meta {
+    margin: 0.35rem 0 0;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--color-label);
+  }
+
+  .personal-notepad-page .member-workspace-card {
+    width: 100%;
+  }
+
   .announcements-page-header {
     margin-bottom: 1rem;
   }

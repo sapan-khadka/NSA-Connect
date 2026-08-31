@@ -183,7 +183,7 @@ export function PersonalNotepadPage() {
   };
 
   return (
-    <div className="members-page event-command max-w-3xl">
+    <div className="personal-notepad-page">
       <header className="members-page-header mb-4">
         <div className="members-page-header-top">
           <div className="min-w-0">
