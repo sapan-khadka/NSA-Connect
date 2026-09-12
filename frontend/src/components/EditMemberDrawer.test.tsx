@@ -81,7 +81,7 @@ describe("EditMemberDrawer", () => {
     expect(
       within(dialog).getByLabelText("Graduation year"),
     ).toBeInTheDocument();
-    expect(within(dialog).getByText("Talents")).toBeInTheDocument();
+    expect(within(dialog).queryByText("Talents")).not.toBeInTheDocument();
     expect(
       within(dialog).queryByLabelText("Role and position"),
     ).not.toBeInTheDocument();

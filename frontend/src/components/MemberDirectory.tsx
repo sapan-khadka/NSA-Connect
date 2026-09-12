@@ -4,28 +4,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDismissibleMenu } from "../design-system";
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/api-error";
-import { useAuth } from "../context/useAuth";
 import {
   memberMatchesMajors,
   uniqueNormalizedMajors,
 } from "../lib/member-majors";
 import { memberMatchesSearch } from "../lib/member-search";
-import {
-  fetchMembers,
-  fetchTalentOptions,
-} from "../lib/members-api";
-import {
-  formatTalentFilterSummary,
-  MEMBER_TALENTS,
-  memberHasAnyTalent,
-  MEMBER_TALENT_LABELS,
-} from "../lib/member-talents";
-import { memberSatisfiesMinRole } from "../lib/roles";
+import { fetchMembers } from "../lib/members-api";
 
 import { AppIcon } from "./ui/AppIcon";
-import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
-import { InviteToEventModal } from "./InviteToEventModal";
 import { MemberDirectoryRow } from "./MemberDirectoryCard";
 
 const PAGE_SIZE_OPTIONS = [12, 24, 48] as const;
@@ -50,7 +37,6 @@ function toggleValue<T extends string | number>(current: T[], value: T): T[] {
 }
 
 export function MemberDirectory() {
-  const { member: currentMember } = useAuth();
   const [members, setMembers] = useState<MemberResponse[]>([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(PAGE_SIZE_OPTIONS[0]);
@@ -58,17 +44,12 @@ export function MemberDirectory() {
   const [totalPages, setTotalPages] = useState(0);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [selectedTalents, setSelectedTalents] = useState<string[]>([]);
   const [selectedMajors, setSelectedMajors] = useState<string[]>([]);
   const [selectedYears, setSelectedYears] = useState<number[]>([]);
   const [facetMajors, setFacetMajors] = useState<string[]>([]);
   const [facetYears, setFacetYears] = useState<number[]>([]);
-  const [talentLabels, setTalentLabels] = useState<Record<string, string>>(
-    MEMBER_TALENT_LABELS,
-  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [inviteOpen, setInviteOpen] = useState(false);
   const {
     open: filtersOpen,
     setOpen: setFiltersOpen,
@@ -76,12 +57,7 @@ export function MemberDirectory() {
     menuId: filtersMenuId,
   } = useDismissibleMenu();
 
-  const isBoard = currentMember
-    ? memberSatisfiesMinRole(currentMember, "board")
-    : false;
-  const canInvite = isBoard && selectedTalents.length > 0;
-  const activeFilterCount =
-    selectedTalents.length + selectedMajors.length + selectedYears.length;
+  const activeFilterCount = selectedMajors.length + selectedYears.length;
   const hasClientFilters =
     selectedMajors.length > 0 || selectedYears.length > 0;
 
@@ -93,16 +69,6 @@ export function MemberDirectory() {
 
     return () => window.clearTimeout(timeoutId);
   }, [search]);
-
-  useEffect(() => {
-    void fetchTalentOptions()
-      .then((response) => {
-        if (response.labels && Object.keys(response.labels).length > 0) {
-          setTalentLabels({ ...MEMBER_TALENT_LABELS, ...response.labels });
-        }
-      })
-      .catch(() => undefined);
-  }, []);
 
   useEffect(() => {
     void fetchMembers({ page: 1, page_size: SEARCH_FETCH_PAGE_SIZE })
@@ -129,7 +95,6 @@ export function MemberDirectory() {
       const data = await fetchMembers({
         page: useClientResultSet ? 1 : page,
         page_size: useClientResultSet ? SEARCH_FETCH_PAGE_SIZE : pageSize,
-        talents: selectedTalents.length > 0 ? selectedTalents : undefined,
       });
       setMembers(data.members);
       setTotal(data.total);
@@ -139,7 +104,7 @@ export function MemberDirectory() {
     } finally {
       setIsLoading(false);
     }
-  }, [useClientResultSet, page, pageSize, selectedTalents]);
+  }, [useClientResultSet, page, pageSize]);
 
   useEffect(() => {
     void loadMembers();
@@ -148,13 +113,7 @@ export function MemberDirectory() {
   const visibleMembers = useMemo(() => {
     let result = members;
 
-    // Within talents/majors/years: OR. Across sections: AND.
-    if (selectedTalents.length > 0) {
-      result = result.filter((member) =>
-        memberHasAnyTalent(member, selectedTalents),
-      );
-    }
-
+    // Within majors/years: OR. Across sections: AND.
     if (selectedMajors.length > 0) {
       result = result.filter((member) =>
         memberMatchesMajors(member, selectedMajors),
@@ -179,21 +138,17 @@ export function MemberDirectory() {
     isSearching,
     members,
     selectedMajors,
-    selectedTalents,
     selectedYears,
   ]);
 
   const filteredCount = useClientResultSet ? visibleMembers.length : total;
 
   const filterSummary =
-    selectedTalents.length > 0
-      ? formatTalentFilterSummary(selectedTalents, filteredCount, talentLabels)
-      : activeFilterCount > 0
-        ? `Showing ${filteredCount} member${filteredCount === 1 ? "" : "s"}`
-        : null;
+    activeFilterCount > 0
+      ? `Showing ${filteredCount} member${filteredCount === 1 ? "" : "s"}`
+      : null;
 
   function clearAllFilters() {
-    setSelectedTalents([]);
     setSelectedMajors([]);
     setSelectedYears([]);
     setPage(1);
@@ -263,33 +218,6 @@ export function MemberDirectory() {
                   </div>
 
                   <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-3">
-                    <section>
-                      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">
-                        Talents
-                      </p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {MEMBER_TALENTS.map((talent) => {
-                          const active = selectedTalents.includes(talent);
-                          return (
-                            <button
-                              key={talent}
-                              type="button"
-                              aria-pressed={active}
-                              onClick={() => {
-                                setSelectedTalents((current) =>
-                                  toggleValue(current, talent),
-                                );
-                                setPage(1);
-                              }}
-                              className={filterChipClass(active)}
-                            >
-                              {talentLabels[talent] ?? talent}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </section>
-
                     {facetMajors.length > 0 ? (
                       <section>
                         <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">
@@ -364,18 +292,6 @@ export function MemberDirectory() {
             </label>
           </div>
         </div>
-
-        {canInvite ? (
-          <div className="mt-4">
-            <Button
-              type="button"
-              onClick={() => setInviteOpen(true)}
-              size="lg"
-            >
-              Invite to event
-            </Button>
-          </div>
-        ) : null}
       </div>
 
       {error ? <div className="ds-mobile-edge-section ds-alert-banner lg:mx-6 lg:mt-4">{error}</div> : null}
@@ -394,7 +310,7 @@ export function MemberDirectory() {
         ) : (
           <div>
             <div
-              className="hidden grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] gap-4 border-b border-gray-100 px-4 py-2 sm:grid lg:px-6"
+              className="hidden grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)_minmax(0,1.5fr)_auto] gap-4 border-b border-gray-100 px-4 py-2 sm:grid lg:px-6"
               aria-hidden="true"
             >
               <span className="text-xs font-medium uppercase tracking-wide text-gray-400">
@@ -402,9 +318,6 @@ export function MemberDirectory() {
               </span>
               <span className="text-xs font-medium uppercase tracking-wide text-gray-400">
                 Major / Year
-              </span>
-              <span className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                Talents
               </span>
               <span className="text-right text-xs font-medium uppercase tracking-wide text-gray-400">
                 Email
@@ -472,12 +385,6 @@ export function MemberDirectory() {
           </div>
         </div>
       ) : null}
-
-      <InviteToEventModal
-        open={inviteOpen}
-        memberIds={visibleMembers.map((member) => member.id)}
-        onClose={() => setInviteOpen(false)}
-      />
     </Card>
   );
 }

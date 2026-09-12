@@ -17,11 +17,6 @@ import {
   type UpdateProfileRequest,
 } from "../lib/members-api";
 import {
-  MEMBER_TALENT_LABELS,
-  MEMBER_TALENTS,
-  type MemberTalent,
-} from "../lib/member-talents";
-import {
   isExclusiveMemberPosition,
   memberHoldsBoardSeat,
   memberSatisfiesMinRole,
@@ -53,8 +48,6 @@ type EditFormValues = {
   email: string;
   major: string;
   graduation_year: string;
-  talents: string[];
-  talent_other: string;
 };
 
 const graduationYears = getGraduationYearOptions();
@@ -65,22 +58,15 @@ function toFormValues(member: MemberResponse): EditFormValues {
     email: member.email ?? "",
     major: member.major,
     graduation_year: String(member.graduation_year),
-    talents: [...(member.talents ?? [])],
-    talent_other: member.talent_other ?? "",
   };
 }
 
 function toProfileRequest(values: EditFormValues): UpdateProfileRequest {
-  const talents = values.talents;
   return {
     full_name: values.full_name.trim(),
     email: normalizeSemoEmail(values.email),
     major: values.major.trim(),
     graduation_year: Number(values.graduation_year),
-    talents: talents as MemberTalent[],
-    talent_other: talents.includes("other")
-      ? values.talent_other.trim() || null
-      : null,
   };
 }
 
@@ -134,18 +120,6 @@ export function EditMemberDrawer({
     next: EditFormValues[K],
   ) {
     setValues((prev) => (prev ? { ...prev, [key]: next } : prev));
-  }
-
-  function toggleTalent(talent: string) {
-    setValues((prev) => {
-      if (!prev) {
-        return prev;
-      }
-      const next = prev.talents.includes(talent)
-        ? prev.talents.filter((item) => item !== talent)
-        : [...prev.talents, talent];
-      return { ...prev, talents: next };
-    });
   }
 
   async function handleSaveProfile(event: FormEvent) {
@@ -254,7 +228,7 @@ export function EditMemberDrawer({
           <div className="members-invite-section-header">
             <h3 className="members-invite-section-title">Profile</h3>
             <p className="members-invite-section-desc">
-              Name, contact, academic details, and talents.
+              Name, contact, and academic details.
             </p>
           </div>
           <div className="members-invite-section-body members-edit-fields">
@@ -331,42 +305,6 @@ export function EditMemberDrawer({
                   </option>
                 ))}
               </select>
-            </div>
-
-            <div className="members-edit-talents">
-              <p className="text-sm font-medium text-foreground">Talents</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {MEMBER_TALENTS.map((talent) => {
-                  const selected = values.talents.includes(talent);
-                  return (
-                    <button
-                      key={talent}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => toggleTalent(talent)}
-                      className={[
-                        "ds-chip",
-                        selected
-                          ? "bg-foreground text-white"
-                          : "border border-gray-200 bg-white text-label hover:text-foreground",
-                      ].join(" ")}
-                    >
-                      {MEMBER_TALENT_LABELS[talent]}
-                    </button>
-                  );
-                })}
-              </div>
-              {values.talents.includes("other") ? (
-                <input
-                  aria-label="Other talent description"
-                  value={values.talent_other}
-                  onChange={(event) =>
-                    updateField("talent_other", event.target.value)
-                  }
-                  placeholder="Describe other talent"
-                  className={`${profileInputClassName} mt-3`}
-                />
-              ) : null}
             </div>
           </div>
         </section>

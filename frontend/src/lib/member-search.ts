@@ -18,7 +18,5 @@ export function memberMatchesSearch(
     member.status,
     String(member.graduation_year),
     member.interests ?? "",
-    ...(member.talents ?? []),
-    member.talent_other ?? "",
   ].some((value) => value.toLowerCase().includes(normalizedQuery));
 }
