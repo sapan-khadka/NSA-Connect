@@ -82,13 +82,14 @@ describe("HomeRecentActivity", () => {
   });
 
   it("renders meeting notes as an activity type", async () => {
+    const recentIso = new Date().toISOString();
     vi.mocked(fetchMemberActivity).mockResolvedValue({
       items: [
         {
           id: "meeting_notes-3",
           type: "meeting_notes",
           description: "Updated meeting notes for March Board Meeting",
-          timestamp: "2026-08-01T15:00:00",
+          timestamp: recentIso,
           task_id: null,
           event_id: 12,
           dues_record_id: null,
