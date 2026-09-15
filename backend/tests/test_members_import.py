@@ -7,7 +7,7 @@ from conftest import (
     VALID_GRADUATION_YEAR,
     VALID_MAJOR,
     auth_header,
-    create_board_member,
+    create_president_member,
     register_member,
     set_member_approved,
 )
@@ -24,7 +24,7 @@ from app.services.member_import_service import (
 )
 from app.services.member_service import create_invited_member
 
-BOARD_REQUIRED_DETAIL = "Requires board role or higher"
+BOARD_REQUIRED_DETAIL = "Requires president or vice president"
 CSV_HEADERS = [
     "full_name",
     "email",
@@ -70,8 +70,8 @@ def general_member_headers(client, db_session):
 @pytest.fixture
 def board_member_headers(client, db_session):
     register_member(client, email="other@semo.edu", student_id="22222222")
-    create_board_member(db_session)
-    return auth_header(client, email="board@semo.edu")
+    create_president_member(db_session)
+    return auth_header(client, email="president@semo.edu")
 
 
 def test_board_can_import_valid_row(client, db_session, board_member_headers):

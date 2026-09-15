@@ -328,7 +328,7 @@ def finance_summary_endpoint(
         description="Limit totals to a semester slug, e.g. 2026-spring",
     ),
     db: Session = Depends(get_db),
-    _: Member = Depends(require_treasury_writer),
+    _: Member = Depends(require_board),
 ):
     return get_finance_summary(db, semester=semester)
 
@@ -351,7 +351,7 @@ def list_finance_entries_endpoint(
         description="Filter entries linked to an event",
     ),
     db: Session = Depends(get_db),
-    _: Member = Depends(require_treasury_writer),
+    _: Member = Depends(require_board),
 ):
     entries, total = list_finance_entries(
         db,

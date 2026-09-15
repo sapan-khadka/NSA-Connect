@@ -7,6 +7,7 @@ from conftest import (
 )
 
 BOARD_REQUIRED_DETAIL = "Requires board role or higher"
+PRESIDENT_REQUIRED_DETAIL = "Requires president or vice president"
 
 
 @pytest.fixture
@@ -63,7 +64,7 @@ def test_general_member_gets_403_on_approval_actions(
     response = client.request(method, path, headers=general_member_headers)
 
     assert response.status_code == 403
-    assert response.json()["detail"] == BOARD_REQUIRED_DETAIL
+    assert response.json()["detail"] == PRESIDENT_REQUIRED_DETAIL
 
 
 def test_board_member_can_access_member_directory(client, board_member_headers):
@@ -71,6 +72,24 @@ def test_board_member_can_access_member_directory(client, board_member_headers):
 
     assert response.status_code == 200
     assert "members" in response.json()
+
+
+def test_board_member_can_view_pending_but_not_approve(
+    client,
+    db_session,
+    board_member_headers,
+):
+    register_member(client, email="pending@semo.edu", student_id="33333333")
+
+    pending = client.get("/api/v1/members/pending", headers=board_member_headers)
+    assert pending.status_code == 200
+
+    approve = client.patch(
+        "/api/v1/members/2/approve",
+        headers=board_member_headers,
+    )
+    assert approve.status_code == 403
+    assert approve.json()["detail"] == PRESIDENT_REQUIRED_DETAIL
 
 
 def test_general_member_can_access_own_profile(client, general_member_headers):

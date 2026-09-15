@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_member, require_treasury_writer
+from app.core.dependencies import get_current_member, require_board, require_treasury_writer
 from app.lib.semester import SEMESTER_QUERY_PATTERN
 from app.models.member import Member
 from app.models.member_dues import DuesStatus
@@ -42,7 +42,7 @@ def get_dues_dashboard_endpoint(
     semester: str = Query(..., pattern=SEMESTER_QUERY_PATTERN),
     status_filter: DuesStatus | None = Query(default=None, alias="status"),
     search: str | None = Query(default=None, min_length=1, max_length=100),
-    _: Member = Depends(require_treasury_writer),
+    _: Member = Depends(require_board),
     db: Session = Depends(get_db),
 ):
     return get_dues_dashboard(
@@ -56,7 +56,7 @@ def get_dues_dashboard_endpoint(
 @router.get("/settings", response_model=SemesterDuesSettingsResponse)
 def get_semester_dues_settings_endpoint(
     semester: str = Query(..., pattern=SEMESTER_QUERY_PATTERN),
-    _: Member = Depends(require_treasury_writer),
+    _: Member = Depends(require_board),
     db: Session = Depends(get_db),
 ):
     settings = get_semester_settings(db, semester)
@@ -141,12 +141,12 @@ def get_my_dues_history_endpoint(
 @router.get("/history", response_model=MemberDuesHistoryResponse)
 def get_member_dues_history_endpoint(
     member_id: int = Query(..., ge=1),
-    _: Member = Depends(require_treasury_writer),
+    _: Member = Depends(require_board),
     db: Session = Depends(get_db),
 ):
     """
     All semester dues rows for another member.
-    Same privilege as the semester dues dashboard (treasury writer).
+    Board+ may view; mutations stay on treasury writers.
     """
     try:
         return get_member_dues_history(db, member_id=member_id)

@@ -37,11 +37,10 @@ class Permission(StrEnum):
     TRANSFER_OWNERSHIP = "transfer_ownership"
 
 
-# Board+ chapter capabilities (matches require_board and related surfaces).
+# Board+ chapter capabilities (view/ops surfaces). Member write + invite are
+# president/VP only — plain board can look, not edit membership.
 _BOARD_PERMISSIONS: frozenset[Permission] = frozenset(
     {
-        Permission.MANAGE_MEMBERS,
-        Permission.INVITE_MEMBERS,
         Permission.MANAGE_EVENTS,
         Permission.MANAGE_FINANCE,
         Permission.MANAGE_DISCUSSIONS,
@@ -61,6 +60,8 @@ _TREASURER_EXTRA: frozenset[Permission] = frozenset(
 
 _PRESIDENT_EXTRA: frozenset[Permission] = frozenset(
     {
+        Permission.MANAGE_MEMBERS,
+        Permission.INVITE_MEMBERS,
         Permission.ASSIGN_ROLES,
         Permission.MANAGE_TASKS,
         Permission.VIEW_TASK_OVERSIGHT,
@@ -103,13 +104,9 @@ def _permissions_for_role(role: MemberRole) -> set[Permission]:
 
 def _permissions_for_position(position: MemberPosition) -> set[Permission]:
     perms: set[Permission] = set()
+    # Vice president matches president seat capabilities (except ownership).
     if position == MemberPosition.VICE_PRESIDENT:
-        perms |= {
-            Permission.MANAGE_FINANCE_WRITE,
-            Permission.MANAGE_TASKS,
-            Permission.VIEW_TASK_OVERSIGHT,
-            Permission.MANAGE_MEETINGS,
-        }
+        perms |= _PRESIDENT_EXTRA | _BOARD_PERMISSIONS | _TREASURER_EXTRA
     if position == MemberPosition.EVENT_MANAGER:
         perms |= {Permission.MANAGE_TASKS}
     if position == MemberPosition.SECRETARY:
@@ -208,3 +205,14 @@ def can_view_task_oversight(member: Member) -> bool:
 
 def can_manage_meetings(member: Member) -> bool:
     return member_has(member, Permission.MANAGE_MEETINGS)
+
+
+def can_manage_members(member: Member) -> bool:
+    return member_has(member, Permission.MANAGE_MEMBERS)
+
+
+def can_act_as_president(member: Member) -> bool:
+    """President role, vice-president seat, or org owner president gate."""
+    if member_has_role_at_least(member, MemberRole.PRESIDENT):
+        return True
+    return effective_position(member) == MemberPosition.VICE_PRESIDENT

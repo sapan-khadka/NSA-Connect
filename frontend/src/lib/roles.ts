@@ -72,6 +72,35 @@ export function canManageTreasury(
 }
 
 /**
+ * President role, vice-president seat, or org owner — member write + role assignment.
+ * Plain board can view Members but not approve/invite/edit.
+ */
+export function canManageMembers(member: {
+  role: MemberRole;
+  position?: MemberPosition;
+  is_org_owner?: boolean;
+} | null | undefined): boolean {
+  if (!member) {
+    return false;
+  }
+  if (memberSatisfiesMinRole(member, "president")) {
+    return true;
+  }
+  return member.position === "vice_president";
+}
+
+/** @deprecated Prefer canManageMembers — same gate (president / VP / owner). */
+export function viewerCanManageMembers(
+  member: {
+    role: MemberRole;
+    position?: MemberPosition;
+    is_org_owner?: boolean;
+  } | null | undefined,
+): boolean {
+  return canManageMembers(member);
+}
+
+/**
  * Member documents: self may manage own files; board+ may manage any member's.
  *
  * Advisor access is intentionally deferred — there is no Advisor role in the
@@ -126,12 +155,6 @@ export function canViewMemberDirectory(
   isOrgOwner = false,
 ): boolean {
   return memberSatisfiesMinRole({ role, is_org_owner: isOrgOwner }, "board");
-}
-
-export function viewerCanManageMembers(
-  member: { role: MemberRole; is_org_owner?: boolean } | null | undefined,
-): boolean {
-  return Boolean(member && memberSatisfiesMinRole(member, "board"));
 }
 
 /** Matches GET /v1/finance/event-budgets and the /finance route (board+). */
@@ -311,7 +334,8 @@ export function canManageEventTasks(
   return (
     role === "president" ||
     position === "vice_president" ||
-    position === "event_manager"
+    position === "event_manager" ||
+    position === "president"
   );
 }
 
@@ -320,7 +344,11 @@ export function canViewTaskOversight(
   role: MemberRole,
   position: MemberPosition,
 ): boolean {
-  return role === "president" || position === "vice_president";
+  return (
+    role === "president" ||
+    position === "vice_president" ||
+    position === "president"
+  );
 }
 
 /** Secretary, VP, or President can record meeting attendance and minutes. */
@@ -331,7 +359,8 @@ export function canManageMeetingRecords(
   return (
     role === "president" ||
     position === "secretary" ||
-    position === "vice_president"
+    position === "vice_president" ||
+    position === "president"
   );
 }
 

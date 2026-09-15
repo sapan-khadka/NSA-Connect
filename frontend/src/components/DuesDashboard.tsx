@@ -77,6 +77,8 @@ type DuesDashboardProps = {
   semester: string;
   refreshKey: number;
   onChanged: () => void;
+  /** When false, board may view dues but not mutate. */
+  canManage?: boolean;
 };
 
 type DashboardState =
@@ -295,7 +297,12 @@ function EditAmountModal({
   );
 }
 
-export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboardProps) {
+export function DuesDashboard({
+  semester,
+  refreshKey,
+  onChanged,
+  canManage = true,
+}: DuesDashboardProps) {
   const isMobile = !useMediaQuery("(min-width: 768px)");
   const [dashboardState, setDashboardState] = useState<DashboardState>({
     status: "loading",
@@ -479,27 +486,32 @@ export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboard
         className: "text-label",
         cell: (record) => paymentMethodLabel(record.payment_method),
       },
-      {
-        id: "actions",
-        header: "Actions",
-        cell: (record) => (
-          <DuesRecordActions
-            record={record}
-            busy={busyRecordId === record.id}
-            onMarkPaid={() => setMarkPaidState({ record })}
-            onMarkUnpaid={() => void handleMarkUnpaid(record)}
-            onEditAmount={() =>
-              setEditAmountState({ record, amount: record.amount_owed })
-            }
-          />
-        ),
-      },
+      ...(canManage
+        ? [
+            {
+              id: "actions",
+              header: "Actions",
+              cell: (record: MemberDuesRecord) => (
+                <DuesRecordActions
+                  record={record}
+                  busy={busyRecordId === record.id}
+                  onMarkPaid={() => setMarkPaidState({ record })}
+                  onMarkUnpaid={() => void handleMarkUnpaid(record)}
+                  onEditAmount={() =>
+                    setEditAmountState({ record, amount: record.amount_owed })
+                  }
+                />
+              ),
+            } satisfies DataTableColumn<MemberDuesRecord>,
+          ]
+        : []),
     ],
-    [busyRecordId],
+    [busyRecordId, canManage],
   );
 
   return (
     <div className="finance-tab-stack">
+      {canManage ? (
       <details
         className="finance-setup-panel"
         open={setupOpen}
@@ -570,6 +582,7 @@ export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboard
           </p>
         </div>
       </details>
+      ) : null}
 
       {dashboardState.status === "loading" ? (
         <p className="text-sm text-label">Loading dues dashboard…</p>
@@ -684,19 +697,21 @@ export function DuesDashboard({ semester, refreshKey, onChanged }: DuesDashboard
                             <dd>{paymentMethodLabel(record.payment_method)}</dd>
                           </div>
                         </dl>
-                        <DuesRecordActions
-                          record={record}
-                          busy={busyRecordId === record.id}
-                          compact
-                          onMarkPaid={() => setMarkPaidState({ record })}
-                          onMarkUnpaid={() => void handleMarkUnpaid(record)}
-                          onEditAmount={() =>
-                            setEditAmountState({
-                              record,
-                              amount: record.amount_owed,
-                            })
-                          }
-                        />
+                        {canManage ? (
+                          <DuesRecordActions
+                            record={record}
+                            busy={busyRecordId === record.id}
+                            compact
+                            onMarkPaid={() => setMarkPaidState({ record })}
+                            onMarkUnpaid={() => void handleMarkUnpaid(record)}
+                            onEditAmount={() =>
+                              setEditAmountState({
+                                record,
+                                amount: record.amount_owed,
+                              })
+                            }
+                          />
+                        ) : null}
                       </article>
                     </li>
                   ))}

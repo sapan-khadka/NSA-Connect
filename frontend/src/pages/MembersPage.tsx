@@ -57,10 +57,11 @@ import {
   type MemberImportResponse,
 } from "../lib/members-api";
 import {
+  canAccessFinance,
+  canManageMembers,
   canManageTreasury,
+  canViewMemberDirectory,
   memberHoldsBoardSeat,
-  memberSatisfiesMinRole,
-  viewerCanManageMembers,
 } from "../lib/roles";
 import { getCurrentSemesterSlug } from "../lib/semester";
 
@@ -228,9 +229,13 @@ export function MembersPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const userChoseSegment = useRef(false);
 
-  const canReviewMembers = viewerCanManageMembers(currentMember);
+  const canViewMembersAdmin = Boolean(
+    currentMember &&
+      canViewMemberDirectory(currentMember.role, currentMember.is_org_owner),
+  );
+  const canReviewMembers = canManageMembers(currentMember);
   const [segment, setSegment] = useState<MembersSegment>(() =>
-    searchParams.get("tab") === "pending" && canReviewMembers
+    searchParams.get("tab") === "pending" && canViewMembersAdmin
       ? "attention"
       : "people",
   );
@@ -250,11 +255,10 @@ export function MembersPage() {
 
   const canFetchDues = Boolean(
     currentMember &&
-      canManageTreasury(currentMember.role, currentMember.position),
+      (canManageTreasury(currentMember.role, currentMember.position) ||
+        canAccessFinance(currentMember.role, currentMember.is_org_owner)),
   );
-  const canManagePositions = Boolean(
-    currentMember && memberSatisfiesMinRole(currentMember, "president"),
-  );
+  const canManagePositions = canManageMembers(currentMember);
   const canManageDirectory = canReviewMembers;
 
   useEffect(() => {
@@ -262,7 +266,7 @@ export function MembersPage() {
       return;
     }
 
-    if (canReviewMembers) {
+    if (canViewMembersAdmin) {
       userChoseSegment.current = true;
       setSegment("attention");
     }
@@ -270,7 +274,7 @@ export function MembersPage() {
     const next = new URLSearchParams(searchParams);
     next.delete("tab");
     setSearchParams(next, { replace: true });
-  }, [searchParams, setSearchParams, canReviewMembers]);
+  }, [searchParams, setSearchParams, canViewMembersAdmin]);
 
   useEffect(() => {
     let cancelled = false;
@@ -284,13 +288,13 @@ export function MembersPage() {
         const [directory, pendingPage, duesResult, engagementResult] =
           await Promise.all([
             fetchMembers({ page: 1, page_size: 100 }),
-            canReviewMembers
+            canViewMembersAdmin
               ? fetchPendingMembers()
               : Promise.resolve({ members: [], total: 0 }),
             canFetchDues
               ? fetchDuesDashboard({ semester }).catch(() => null)
               : Promise.resolve(null),
-            canReviewMembers
+            canViewMembersAdmin
               ? fetchMembersEngagement().catch(() => null)
               : Promise.resolve(null),
           ]);
@@ -347,7 +351,7 @@ export function MembersPage() {
     return () => {
       cancelled = true;
     };
-  }, [canFetchDues, canReviewMembers, directoryRefreshKey]);
+  }, [canFetchDues, canViewMembersAdmin, directoryRefreshKey]);
 
   const displayedMembers = useMemo(() => {
     const filtered = filterDirectoryMembers(members, filters, duesByMemberId);
@@ -422,8 +426,8 @@ export function MembersPage() {
   const boardCount = kpis?.boardCount ?? 0;
   const outstandingAmount = kpis?.outstandingDuesAmount ?? null;
   const activeSegment: MembersSegment =
-    canReviewMembers && segment === "attention" ? "attention" : "people";
-  const isReviewsView = activeSegment === "attention" && canReviewMembers;
+    canViewMembersAdmin && segment === "attention" ? "attention" : "people";
+  const isReviewsView = activeSegment === "attention" && canViewMembersAdmin;
   const membersView: MembersView = isReviewsView ? "reviews" : "directory";
   const duesFilterActive = filters.paymentStatus === "outstanding";
   const activeFocus: MembersFocus =
@@ -642,7 +646,7 @@ export function MembersPage() {
               </div>
             </div>
 
-            {canReviewMembers ? (
+            {canViewMembersAdmin ? (
               <nav
                 aria-label="Members sections"
                 className="members-page-tabs"
@@ -774,7 +778,8 @@ export function MembersPage() {
         {isReviewsView ? (
           <section className="members-page-section members-reviews-stack">
             <PendingApprovals
-              showReject
+              showReject={canReviewMembers}
+              canAct={canReviewMembers}
               onCountChange={handlePendingCountChange}
               onQueueChanged={refreshDirectory}
             />

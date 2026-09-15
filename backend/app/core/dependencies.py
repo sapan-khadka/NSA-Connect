@@ -5,7 +5,9 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.permissions import (
     Permission,
+    can_act_as_president,
     can_manage_meetings,
+    can_manage_members,
     can_manage_tasks,
     can_manage_treasury,
     can_view_task_oversight,
@@ -120,13 +122,36 @@ def _require_role(minimum_role: MemberRole):
 
 require_board = _require_role(MemberRole.BOARD)
 require_treasurer = _require_role(MemberRole.TREASURER)
-require_president = _require_role(MemberRole.PRESIDENT)
+
+
+def require_president(
+    current_member: Member = Depends(get_current_member),
+) -> Member:
+    """Allow president role, org owner president gate, or vice president seat."""
+    if can_act_as_president(current_member):
+        return current_member
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Requires president or vice president",
+    )
+
+
+def require_member_manager(
+    current_member: Member = Depends(get_current_member),
+) -> Member:
+    """Approve/invite/edit members — president, VP, or org owner."""
+    if can_manage_members(current_member):
+        return current_member
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Requires president or vice president",
+    )
 
 
 def require_treasury_writer(
     current_member: Member = Depends(get_current_member),
 ) -> Member:
-    """Allow treasurer+, or vice president by position (board role)."""
+    """Allow treasurer+, president, or vice president."""
     if can_manage_treasury(current_member):
         return current_member
     raise HTTPException(

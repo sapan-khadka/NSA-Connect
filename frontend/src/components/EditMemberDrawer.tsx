@@ -1,5 +1,5 @@
 /**
- * Edit Member — board+ profile edits; president also role/position.
+ * Edit Member — president/VP profile, role, and position edits.
  * Reused from Quick View, Members table, and Member Workspace header.
  */
 
@@ -17,9 +17,9 @@ import {
   type UpdateProfileRequest,
 } from "../lib/members-api";
 import {
+  canManageMembers,
   isExclusiveMemberPosition,
   memberHoldsBoardSeat,
-  memberSatisfiesMinRole,
   type MemberPosition,
   type PromotableBoardRole,
 } from "../lib/roles";
@@ -88,12 +88,8 @@ export function EditMemberDrawer({
   const [isUpdatingRole, setIsUpdatingRole] = useState(false);
   const [isUpdatingPosition, setIsUpdatingPosition] = useState(false);
 
-  const canEditProfile = Boolean(
-    currentMember && memberSatisfiesMinRole(currentMember, "board"),
-  );
-  const canEditRolePosition = Boolean(
-    currentMember && memberSatisfiesMinRole(currentMember, "president"),
-  );
+  const canEditProfile = canManageMembers(currentMember);
+  const canEditRolePosition = canManageMembers(currentMember);
 
   useEffect(() => {
     if (!open || !member) {

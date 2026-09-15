@@ -7,7 +7,7 @@ from conftest import (
     VALID_MAJOR,
     VALID_PASSWORD,
     auth_header,
-    create_board_member,
+    create_president_member,
     register_member,
     set_member_approved,
 )
@@ -51,8 +51,8 @@ def general_member_headers(client, db_session):
 @pytest.fixture
 def board_member_headers(client, db_session):
     register_member(client, email="other@semo.edu", student_id="22222222")
-    create_board_member(db_session)
-    return auth_header(client, email="board@semo.edu")
+    create_president_member(db_session)
+    return auth_header(client, email="president@semo.edu")
 
 
 @pytest.fixture

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   canAccessFinance,
   canAccessMemberDocuments,
+  canManageMembers,
   canManageTreasury,
   canPresidentPromoteMember,
   canViewMemberDirectory,
@@ -43,6 +44,22 @@ describe("role access helpers", () => {
     expect(canManageTreasury("board")).toBe(false);
     expect(canManageTreasury("board", "secretary")).toBe(false);
     expect(canManageTreasury("general")).toBe(false);
+  });
+
+  it("limits member write to president, VP, and org owner", () => {
+    expect(canManageMembers({ role: "board", position: "member" })).toBe(false);
+    expect(canManageMembers({ role: "treasurer", position: "treasurer" })).toBe(
+      false,
+    );
+    expect(canManageMembers({ role: "president", position: "president" })).toBe(
+      true,
+    );
+    expect(
+      canManageMembers({ role: "board", position: "vice_president" }),
+    ).toBe(true);
+    expect(
+      canManageMembers({ role: "general", position: "member", is_org_owner: true }),
+    ).toBe(true);
   });
 
   it("lets org owners open board surfaces without treasurer write", () => {

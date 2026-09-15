@@ -27,7 +27,7 @@ import {
   type FinanceExpenseCategorySummary,
   type FinanceSummaryResponse,
 } from "../lib/finance-api";
-import { canManageTreasury } from "../lib/roles";
+import { canAccessFinance, canManageTreasury } from "../lib/roles";
 import {
   financeTabSearchParams,
   parseFinanceEventId,
@@ -102,8 +102,11 @@ export function FinancePage() {
     Array<{ id: number; name: string }>
   >([]);
 
-  const canViewTreasury = member
+  const canWriteTreasury = member
     ? canManageTreasury(member.role, member.position)
+    : false;
+  const canViewTreasury = member
+    ? canAccessFinance(member.role, member.is_org_owner)
     : false;
 
   function switchTab(tab: FinanceTab) {
@@ -127,7 +130,7 @@ export function FinancePage() {
   }
 
   useEffect(() => {
-    if (!canViewTreasury || autoOpenedInbox.current || tabParam !== null) {
+    if (!canWriteTreasury || autoOpenedInbox.current || tabParam !== null) {
       return;
     }
 
@@ -135,7 +138,7 @@ export function FinancePage() {
       autoOpenedInbox.current = true;
       setSearchParams(financeTabSearchParams("inbox"), { replace: true });
     }
-  }, [canViewTreasury, pendingApprovalCount, tabParam, setSearchParams]);
+  }, [canWriteTreasury, pendingApprovalCount, tabParam, setSearchParams]);
 
   useEffect(() => {
     if (!canViewTreasury) {
@@ -178,7 +181,8 @@ export function FinancePage() {
   }, [canViewTreasury, refreshKey]);
 
   useEffect(() => {
-    if (!canViewTreasury) {
+    if (!canWriteTreasury) {
+      setPendingApprovalCount(0);
       return;
     }
 
@@ -202,7 +206,7 @@ export function FinancePage() {
     return () => {
       cancelled = true;
     };
-  }, [canViewTreasury, refreshKey]);
+  }, [canWriteTreasury, refreshKey]);
 
   useEffect(() => {
     if (!canViewTreasury) {
@@ -358,9 +362,7 @@ export function FinancePage() {
     <div className="finance-page">
       <header className="finance-page-header">
         <div className="finance-page-heading">
-          <h1 className="finance-page-title">
-            {canViewTreasury ? "Treasury" : "Event budget tracking"}
-          </h1>
+          <h1 className="finance-page-title">Treasury</h1>
           <p className="finance-page-subtitle">
             {semesterLabel} · updated {updatedLabel}
           </p>
@@ -389,7 +391,13 @@ export function FinancePage() {
           className="finance-page-tabs"
           role="tablist"
         >
-          {FINANCE_TABS.map((tab) => {
+          {FINANCE_TABS.filter(
+            (tab) =>
+              canWriteTreasury ||
+              tab.id === "pulse" ||
+              tab.id === "books" ||
+              tab.id === "dues",
+          ).map((tab) => {
             const isActive = activeTab === tab.id;
             const showBadge = tab.id === "inbox" && pendingApprovalCount > 0;
 
@@ -419,16 +427,6 @@ export function FinancePage() {
       ) : null}
 
       <div className="finance-page-body">
-        {!canViewTreasury ? (
-          <section className="finance-panel" aria-label="Event budgets">
-            <EventBudgetBreakdown
-              events={budgetEvents}
-              isLoading={budgetLoading}
-              errorMessage={budgetError}
-            />
-          </section>
-        ) : null}
-
         {canViewTreasury && activeTab === "pulse" ? (
           <div className="finance-tab-stack" data-testid="finance-pulse">
             <section className="finance-panel" aria-label="Balances">
@@ -475,7 +473,7 @@ export function FinancePage() {
           </div>
         ) : null}
 
-        {canViewTreasury && activeTab === "inbox" ? (
+        {canWriteTreasury && activeTab === "inbox" ? (
           <div className="finance-tab-stack">
             <FinanceInbox
               duesSemester={duesSemester}
@@ -491,16 +489,20 @@ export function FinancePage() {
 
         {canViewTreasury && activeTab === "books" ? (
           <div className="finance-tab-stack" data-testid="finance-books">
-            <section className="finance-panel" aria-label="Log transaction">
-              <LogFinanceEntryForm
-                eventOptions={eventOptions}
-                onCreated={handleFinanceEntryCreated}
-              />
-            </section>
+            {canWriteTreasury ? (
+              <>
+                <section className="finance-panel" aria-label="Log transaction">
+                  <LogFinanceEntryForm
+                    eventOptions={eventOptions}
+                    onCreated={handleFinanceEntryCreated}
+                  />
+                </section>
 
-            <ImportFinanceCsvPanel
-              onImported={() => setRefreshKey((current) => current + 1)}
-            />
+                <ImportFinanceCsvPanel
+                  onImported={() => setRefreshKey((current) => current + 1)}
+                />
+              </>
+            ) : null}
 
             <section className="finance-panel" aria-label="Transactions">
               <div className="finance-books-toolbar">
@@ -539,7 +541,7 @@ export function FinancePage() {
                 semester={semester}
                 refreshKey={refreshKey}
                 eventId={booksEventId ?? undefined}
-                canManage={canViewTreasury}
+                canManage={canWriteTreasury}
                 onChanged={() => setRefreshKey((current) => current + 1)}
               />
             </section>
@@ -579,6 +581,7 @@ export function FinancePage() {
             <DuesDashboard
               semester={duesSemester}
               refreshKey={refreshKey}
+              canManage={canWriteTreasury}
               onChanged={() => setRefreshKey((current) => current + 1)}
             />
           </div>

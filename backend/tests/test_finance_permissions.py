@@ -73,12 +73,17 @@ def test_unauthenticated_request_gets_401_on_finance_endpoints(
 
 
 @pytest.mark.parametrize(
-    "method,path,kwargs",
+    "method,path,kwargs,detail",
     [
-        ("get", "/api/v1/finance", {}),
-        ("get", "/api/v1/finance/summary", {}),
-        ("post", "/api/v1/finance", {"json": FINANCE_POST_PAYLOAD}),
-        ("post", "/api/v1/finance/receipts", RECEIPT_UPLOAD_KWARGS),
+        ("get", "/api/v1/finance", {}, BOARD_REQUIRED_DETAIL),
+        ("get", "/api/v1/finance/summary", {}, BOARD_REQUIRED_DETAIL),
+        ("post", "/api/v1/finance", {"json": FINANCE_POST_PAYLOAD}, TREASURER_REQUIRED_DETAIL),
+        (
+            "post",
+            "/api/v1/finance/receipts",
+            RECEIPT_UPLOAD_KWARGS,
+            TREASURER_REQUIRED_DETAIL,
+        ),
     ],
     ids=["list-entries", "summary", "create-entry", "upload-receipt"],
 )
@@ -88,11 +93,12 @@ def test_general_member_gets_403_on_all_finance_endpoints(
     method,
     path,
     kwargs,
+    detail,
 ):
     response = client.request(method, path, headers=general_member_headers, **kwargs)
 
     assert response.status_code == 403
-    assert response.json()["detail"] == TREASURER_REQUIRED_DETAIL
+    assert response.json()["detail"] == detail
 
 
 @pytest.mark.parametrize(
@@ -100,12 +106,30 @@ def test_general_member_gets_403_on_all_finance_endpoints(
     [
         ("get", "/api/v1/finance", {}),
         ("get", "/api/v1/finance/summary", {}),
+    ],
+    ids=["list-entries", "summary"],
+)
+def test_board_member_can_view_finance_ledger(
+    client,
+    board_member_headers,
+    method,
+    path,
+    kwargs,
+):
+    response = client.request(method, path, headers=board_member_headers, **kwargs)
+
+    assert response.status_code == 200
+
+
+@pytest.mark.parametrize(
+    "method,path,kwargs",
+    [
         ("post", "/api/v1/finance", {"json": FINANCE_POST_PAYLOAD}),
         ("post", "/api/v1/finance/receipts", RECEIPT_UPLOAD_KWARGS),
     ],
-    ids=["list-entries", "summary", "create-entry", "upload-receipt"],
+    ids=["create-entry", "upload-receipt"],
 )
-def test_board_member_gets_403_on_all_finance_endpoints(
+def test_board_member_gets_403_on_finance_writes(
     client,
     board_member_headers,
     method,

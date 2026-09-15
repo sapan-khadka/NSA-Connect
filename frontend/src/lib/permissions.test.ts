@@ -3,13 +3,37 @@ import { describe, expect, it } from "vitest";
 import { membershipHas, permissionsForMembership } from "./permissions";
 
 describe("permissions catalog", () => {
-  it("grants board manage_members but not manage_tasks", () => {
+  it("grants board manage_finance view but not manage_members", () => {
+    expect(
+      membershipHas({ role: "board", position: "member" }, "manage_finance"),
+    ).toBe(true);
     expect(
       membershipHas({ role: "board", position: "member" }, "manage_members"),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       membershipHas({ role: "board", position: "member" }, "manage_tasks"),
     ).toBe(false);
+  });
+
+  it("grants vice president the same member and treasury writes as president", () => {
+    expect(
+      membershipHas(
+        { role: "board", position: "vice_president" },
+        "manage_members",
+      ),
+    ).toBe(true);
+    expect(
+      membershipHas(
+        { role: "board", position: "vice_president" },
+        "manage_finance_write",
+      ),
+    ).toBe(true);
+    expect(
+      membershipHas(
+        { role: "board", position: "vice_president" },
+        "assign_roles",
+      ),
+    ).toBe(true);
   });
 
   it("does not grant task ops to owner-only memberships", () => {

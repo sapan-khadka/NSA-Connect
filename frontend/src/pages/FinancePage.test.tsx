@@ -143,24 +143,27 @@ describe("FinancePage", () => {
     vi.clearAllMocks();
   });
 
-  it("shows event budgets for board members", async () => {
-    const { fetchEventBudgetBreakdown, fetchExpenseByCategory, fetchFinanceSummary } =
-      await import("../lib/finance-api");
+  it("shows treasury pulse for board members without write controls", async () => {
+    const {
+      fetchEventBudgetBreakdown,
+      fetchExpenseByCategory,
+      fetchFinanceSummary,
+      fetchFinanceEntries,
+    } = await import("../lib/finance-api");
     vi.mocked(fetchEventBudgetBreakdown).mockResolvedValue(mockBudgetBreakdown);
     vi.mocked(fetchExpenseByCategory).mockResolvedValue(mockExpenseCategories);
+    vi.mocked(fetchFinanceSummary).mockResolvedValue(mockSummary);
+    vi.mocked(fetchFinanceEntries).mockResolvedValue({ entries: [], total: 0 });
 
     renderFinancePage("board");
 
-    expect(
-      await screen.findByRole("heading", { name: "Event budgets" }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Treasury" })).toBeInTheDocument();
+    expect(await screen.findByTestId("finance-pulse")).toBeInTheDocument();
+    expect(screen.getByText("Spend by category")).toBeInTheDocument();
     expect(screen.getByTestId("event-budget-list")).toBeInTheDocument();
-    expect(screen.getByText("Dashain Celebration")).toBeInTheDocument();
-    expect(screen.getByText("108%")).toBeInTheDocument();
-    expect(screen.queryByText("Spend by category")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("expense-category-chart")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("finance-net-balance")).not.toBeInTheDocument();
-    expect(fetchFinanceSummary).not.toHaveBeenCalled();
+    expect(screen.queryByRole("tab", { name: "Inbox" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Choose CSV" })).not.toBeInTheDocument();
+    expect(fetchFinanceSummary).toHaveBeenCalled();
   });
 
   it("shows treasury pulse and tabs for treasurer", async () => {
@@ -321,15 +324,18 @@ describe("FinancePage", () => {
     ).toBeInTheDocument();
   });
 
-  it("reloads event budgets when semester filter changes for board", async () => {
+  it("lets board view full treasury pulse when semester changes", async () => {
     const user = userEvent.setup();
     const { fetchEventBudgetBreakdown, fetchExpenseByCategory, fetchFinanceSummary } =
       await import("../lib/finance-api");
     vi.mocked(fetchEventBudgetBreakdown).mockResolvedValue(mockBudgetBreakdown);
     vi.mocked(fetchExpenseByCategory).mockResolvedValue(mockExpenseCategories);
+    vi.mocked(fetchFinanceSummary).mockResolvedValue(mockSummary);
 
     renderFinancePage("board");
-    await screen.findByTestId("event-budget-list");
+    expect(await screen.findByRole("heading", { name: "Treasury" })).toBeInTheDocument();
+    expect(await screen.findByTestId("finance-pulse")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Choose CSV" })).not.toBeInTheDocument();
 
     const semesterSelect = screen.getByRole("combobox", { name: "Semester" });
     const firstSemesterOption = semesterSelect.querySelectorAll("option")[1];
@@ -342,8 +348,12 @@ describe("FinancePage", () => {
       expect(fetchEventBudgetBreakdown).toHaveBeenLastCalledWith({
         semester: semesterValue,
       });
+      expect(fetchExpenseByCategory).toHaveBeenLastCalledWith({
+        semester: semesterValue,
+      });
+      expect(fetchFinanceSummary).toHaveBeenLastCalledWith({
+        semester: semesterValue,
+      });
     });
-    expect(fetchExpenseByCategory).not.toHaveBeenCalled();
-    expect(fetchFinanceSummary).not.toHaveBeenCalled();
   });
 });

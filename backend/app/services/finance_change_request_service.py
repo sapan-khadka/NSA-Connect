@@ -5,13 +5,19 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.permissions import (
+    can_act_as_president,
+    can_manage_treasury,
+    effective_position,
+    effective_role,
+)
 from app.lib.event_finance import assert_event_finance_editable
 from app.models.finance_change_request import (
     FinanceChangeAction,
     FinanceChangeRequest,
     FinanceChangeStatus,
 )
-from app.models.member import Member, MemberRole
+from app.models.member import Member, MemberPosition, MemberRole
 from app.schemas.finance import FinanceEntryUpdateRequest
 from app.services.event_service import EventNotFoundError
 from app.services.finance_service import (
@@ -20,7 +26,6 @@ from app.services.finance_service import (
     update_finance_entry,
 )
 
-APPROVER_ROLES = frozenset({MemberRole.TREASURER, MemberRole.PRESIDENT})
 RECENT_REVIEW_DAYS = 7
 
 
@@ -47,16 +52,29 @@ class InvalidFinanceChangeStateError(Exception):
     pass
 
 
+def _is_treasurer_side(member: Member) -> bool:
+    if effective_role(member) == MemberRole.TREASURER:
+        return True
+    return effective_position(member) == MemberPosition.TREASURER
+
+
+def _is_exec_side(member: Member) -> bool:
+    """President seat/role or vice president — cross-approves with treasurer."""
+    if can_act_as_president(member):
+        return True
+    return effective_position(member) == MemberPosition.PRESIDENT
+
+
 def _can_submit(member: Member) -> bool:
-    return member.role in APPROVER_ROLES
+    return can_manage_treasury(member)
 
 
 def _can_review(requester: Member, reviewer: Member) -> bool:
     if requester.id == reviewer.id:
         return False
-    if requester.role == MemberRole.TREASURER and reviewer.role == MemberRole.PRESIDENT:
+    if _is_treasurer_side(requester) and _is_exec_side(reviewer):
         return True
-    if requester.role == MemberRole.PRESIDENT and reviewer.role == MemberRole.TREASURER:
+    if _is_exec_side(requester) and _is_treasurer_side(reviewer):
         return True
     return False
 
@@ -217,7 +235,7 @@ def summarize_my_change_requests(
     db: Session,
     member: Member,
 ) -> FinanceChangeRequestSummary:
-    if member.role not in APPROVER_ROLES:
+    if not can_manage_treasury(member):
         return FinanceChangeRequestSummary(0, 0, 0)
 
     pending_count = (
@@ -274,7 +292,7 @@ def list_my_change_requests(
     *,
     limit: int = 50,
 ) -> list[FinanceChangeRequest]:
-    if member.role not in APPROVER_ROLES:
+    if not can_manage_treasury(member):
         return []
 
     return list(

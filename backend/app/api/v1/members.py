@@ -18,7 +18,12 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.dependencies import get_current_member, require_board, require_president
+from app.core.dependencies import (
+    get_current_member,
+    require_board,
+    require_member_manager,
+    require_president,
+)
 from app.core.password_validation import WeakPasswordError
 from app.core.permissions import member_has_role_at_least
 from app.core.rate_limit import change_password_key, limit
@@ -383,7 +388,7 @@ def export_members_csv(
 )
 def invite_member(
     data: MemberInviteRequest,
-    current_member: Member = Depends(require_board),
+    current_member: Member = Depends(require_member_manager),
     db: Session = Depends(get_db),
 ):
     try:
@@ -404,7 +409,7 @@ def invite_member(
 @router.post("/import", response_model=MemberImportResponse)
 async def import_members(
     file: UploadFile = File(...),
-    _: Member = Depends(require_board),
+    _: Member = Depends(require_member_manager),
     db: Session = Depends(get_db),
 ):
     if not file.filename or not file.filename.lower().endswith(".csv"):
@@ -418,7 +423,7 @@ async def import_members(
 @router.patch("/{member_id}/approve", response_model=MemberResponse)
 def approve_member_endpoint(
     member_id: int,
-    current_member: Member = Depends(require_board),
+    current_member: Member = Depends(require_member_manager),
     db: Session = Depends(get_db),
 ):
     try:
@@ -445,7 +450,7 @@ def approve_member_endpoint(
 @router.patch("/{member_id}/reject", response_model=MemberResponse)
 def reject_member_endpoint(
     member_id: int,
-    current_member: Member = Depends(require_board),
+    current_member: Member = Depends(require_member_manager),
     db: Session = Depends(get_db),
 ):
     try:
@@ -468,7 +473,7 @@ def reject_member_endpoint(
 def update_member_profile_endpoint(
     member_id: int,
     data: MemberProfileUpdateRequest,
-    current_member: Member = Depends(require_board),
+    current_member: Member = Depends(require_member_manager),
     db: Session = Depends(get_db),
 ):
     try:
@@ -848,7 +853,7 @@ def list_member_notes_endpoint(
 def create_member_note_endpoint(
     member_id: int,
     body: MemberNoteCreateRequest,
-    current_member: Member = Depends(require_board),
+    current_member: Member = Depends(require_member_manager),
     db: Session = Depends(get_db),
 ):
     try:
@@ -879,7 +884,7 @@ def update_member_note_endpoint(
     member_id: int,
     note_id: int,
     body: MemberNoteUpdateRequest,
-    current_member: Member = Depends(require_board),
+    current_member: Member = Depends(require_member_manager),
     db: Session = Depends(get_db),
 ):
     try:
@@ -915,7 +920,7 @@ def update_member_note_endpoint(
 def delete_member_note_endpoint(
     member_id: int,
     note_id: int,
-    current_member: Member = Depends(require_board),
+    current_member: Member = Depends(require_member_manager),
     db: Session = Depends(get_db),
 ):
     try:

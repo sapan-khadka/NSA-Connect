@@ -68,6 +68,14 @@ def test_require_president_allows_president_only():
     assert require_president(current_member=member) == member
 
 
+def test_require_president_allows_vice_president_position():
+    from app.models.member import MemberPosition
+
+    member = _member(MemberRole.BOARD)
+    member.position = MemberPosition.VICE_PRESIDENT
+    assert require_president(current_member=member) == member
+
+
 @pytest.mark.parametrize(
     "role",
     [MemberRole.GENERAL, MemberRole.BOARD, MemberRole.TREASURER],
@@ -78,4 +86,4 @@ def test_require_president_rejects_below_president(role):
         require_president(current_member=member)
 
     assert exc.value.status_code == 403
-    assert exc.value.detail == "Requires president role or higher"
+    assert exc.value.detail == "Requires president or vice president"

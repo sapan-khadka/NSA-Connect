@@ -23,6 +23,8 @@ type PendingApprovalsProps = {
   /** Called after a successful approve/reject so parents can refresh directories. */
   onQueueChanged?: () => void;
   showReject?: boolean;
+  /** When false, queue is view-only (board can look; president/VP act). */
+  canAct?: boolean;
 };
 
 function PendingRowSkeleton() {
@@ -44,6 +46,7 @@ export function PendingApprovals({
   onCountChange,
   onQueueChanged,
   showReject = true,
+  canAct = true,
 }: PendingApprovalsProps) {
   const [pendingMembers, setPendingMembers] = useState<MemberResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -222,44 +225,48 @@ export function PendingApprovals({
                     </div>
                   </div>
 
-                  <div className="members-review-actions">
-                    {showReject ? (
+                  {canAct ? (
+                    <div className="members-review-actions">
+                      {showReject ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void handleReject(member.id)}
+                          disabled={isActing}
+                          aria-label={`Reject ${member.full_name}`}
+                        >
+                          <AppIcon
+                            icon={UserRoundX}
+                            size="xs"
+                            className="text-current"
+                          />
+                          Reject
+                        </Button>
+                      ) : null}
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="primary"
                         size="sm"
-                        onClick={() => void handleReject(member.id)}
+                        onClick={() => void handleApprove(member.id)}
                         disabled={isActing}
-                        aria-label={`Reject ${member.full_name}`}
+                        loading={isApproving}
+                        aria-label={`Approve ${member.full_name}`}
+                        className="members-review-approve"
                       >
-                        <AppIcon
-                          icon={UserRoundX}
-                          size="xs"
-                          className="text-current"
-                        />
-                        Reject
+                        {!isApproving ? (
+                          <AppIcon
+                            icon={Check}
+                            size="xs"
+                            className="text-current"
+                          />
+                        ) : null}
+                        Approve
                       </Button>
-                    ) : null}
-                    <Button
-                      type="button"
-                      variant="primary"
-                      size="sm"
-                      onClick={() => void handleApprove(member.id)}
-                      disabled={isActing}
-                      loading={isApproving}
-                      aria-label={`Approve ${member.full_name}`}
-                      className="members-review-approve"
-                    >
-                      {!isApproving ? (
-                        <AppIcon
-                          icon={Check}
-                          size="xs"
-                          className="text-current"
-                        />
-                      ) : null}
-                      Approve
-                    </Button>
-                  </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-label">View only</p>
+                  )}
                 </div>
               </li>
             );

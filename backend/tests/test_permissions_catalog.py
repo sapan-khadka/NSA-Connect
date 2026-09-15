@@ -43,9 +43,11 @@ def _member(
     return member
 
 
-def test_board_has_manage_members_not_tasks():
+def test_board_has_finance_view_not_member_write():
     member = _member(role=MemberRole.BOARD)
-    assert member_has(member, Permission.MANAGE_MEMBERS)
+    assert member_has(member, Permission.MANAGE_FINANCE)
+    assert not member_has(member, Permission.MANAGE_MEMBERS)
+    assert not member_has(member, Permission.INVITE_MEMBERS)
     assert not member_has(member, Permission.MANAGE_TASKS)
     assert not can_manage_tasks(member)
 
@@ -55,6 +57,7 @@ def test_president_has_tasks_and_assign_roles():
     assert can_manage_tasks(member)
     assert can_view_task_oversight(member)
     assert member_has(member, Permission.ASSIGN_ROLES)
+    assert member_has(member, Permission.MANAGE_MEMBERS)
     assert can_manage_meetings(member)
 
 
@@ -87,11 +90,14 @@ def test_owner_union_president_keeps_task_permissions():
     assert member_has(member, Permission.MANAGE_ORG_SETTINGS)
 
 
-def test_vice_president_treasury_and_tasks():
+def test_vice_president_matches_president_capabilities():
     member = _member(role=MemberRole.BOARD, position=MemberPosition.VICE_PRESIDENT)
     assert can_manage_treasury(member)
     assert can_manage_tasks(member)
     assert can_manage_meetings(member)
+    assert member_has(member, Permission.MANAGE_MEMBERS)
+    assert member_has(member, Permission.ASSIGN_ROLES)
+    assert member_has(member, Permission.MANAGE_ORG_SETTINGS)
 
 
 def test_secretary_meetings_only_extra():

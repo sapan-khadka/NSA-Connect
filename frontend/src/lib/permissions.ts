@@ -30,8 +30,6 @@ export const PERMISSIONS = [
 export type Permission = (typeof PERMISSIONS)[number];
 
 const BOARD_PERMISSIONS: ReadonlySet<Permission> = new Set([
-  "manage_members",
-  "invite_members",
   "manage_events",
   "manage_finance",
   "manage_discussions",
@@ -45,6 +43,8 @@ const BOARD_PERMISSIONS: ReadonlySet<Permission> = new Set([
 const TREASURER_EXTRA: ReadonlySet<Permission> = new Set(["manage_finance_write"]);
 
 const PRESIDENT_EXTRA: ReadonlySet<Permission> = new Set([
+  "manage_members",
+  "invite_members",
   "assign_roles",
   "manage_tasks",
   "view_task_oversight",
@@ -103,10 +103,13 @@ function permissionsForRole(role: MemberRole): Set<Permission> {
 function permissionsForPosition(position: MemberPosition): Set<Permission> {
   const perms = new Set<Permission>();
   if (position === "vice_president") {
-    perms.add("manage_finance_write");
-    perms.add("manage_tasks");
-    perms.add("view_task_oversight");
-    perms.add("manage_meetings");
+    for (const permission of [
+      ...BOARD_PERMISSIONS,
+      ...TREASURER_EXTRA,
+      ...PRESIDENT_EXTRA,
+    ]) {
+      perms.add(permission);
+    }
   }
   if (position === "event_manager") {
     perms.add("manage_tasks");

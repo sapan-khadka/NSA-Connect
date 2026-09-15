@@ -45,7 +45,7 @@ from app.services.ai_chat_tools import execute_chat_tool
 BOARD_REQUIRED_DETAIL = "Requires board role or higher"
 TREASURER_REQUIRED_DETAIL = "Requires treasurer role or higher"
 TREASURY_WRITER_REQUIRED_DETAIL = "Requires treasurer, president, or vice president"
-PRESIDENT_REQUIRED_DETAIL = "Requires president role or higher"
+PRESIDENT_REQUIRED_DETAIL = "Requires president or vice president"
 MEETING_MANAGER_REQUIRED_DETAIL = "Requires secretary, vice president, or president"
 TASK_MANAGER_REQUIRED_DETAIL = "Requires president, vice president, or event manager"
 TASK_OVERSIGHT_REQUIRED_DETAIL = "Requires president or vice president"
@@ -283,7 +283,7 @@ def test_no_restricted_endpoints_marked_skip_probe():
 
 
 def test_all_restricted_endpoints_have_probe_definitions():
-    assert len(RESTRICTED_ENDPOINT_RULES) == 117
+    assert len(RESTRICTED_ENDPOINT_RULES) == 118
 
 
 @pytest.mark.parametrize(
