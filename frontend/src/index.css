@@ -10515,6 +10515,95 @@
     color: var(--color-foreground);
   }
 
+  .finance-import-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .finance-import-filename {
+    font-size: 0.875rem;
+    color: var(--color-label);
+  }
+
+  .finance-import-error {
+    margin-top: 0.75rem;
+  }
+
+  .finance-import-preview {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+  }
+
+  .finance-import-preview-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 0.875rem;
+    color: var(--color-foreground);
+  }
+
+  .finance-import-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 0.5rem;
+  }
+
+  .finance-import-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+  }
+
+  .finance-import-table th,
+  .finance-import-table td {
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--color-border, #e5e7eb);
+    vertical-align: top;
+  }
+
+  .finance-import-table th {
+    font-weight: 500;
+    color: var(--color-label);
+    background: var(--color-surface-muted, #f8fafc);
+  }
+
+  .finance-import-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .finance-import-skipped {
+    font-size: 0.8125rem;
+    color: var(--color-label);
+  }
+
+  .finance-import-skipped summary {
+    cursor: pointer;
+    color: var(--color-foreground);
+  }
+
+  .finance-import-skipped ul {
+    margin-top: 0.5rem;
+    padding-left: 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .finance-import-excerpt {
+    color: var(--color-label);
+  }
+
+  .finance-import-confirm {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
   .finance-dues-hint {
     margin: 0;
     font-size: 0.8125rem;

@@ -17,6 +17,7 @@ vi.mock("../lib/finance-api", () => ({
   fetchMyFinanceChangeRequests: vi.fn(),
   createFinanceEntry: vi.fn(),
   uploadFinanceReceipt: vi.fn(),
+  importFinanceCsv: vi.fn(),
 }));
 
 vi.mock("../lib/events-api", () => ({

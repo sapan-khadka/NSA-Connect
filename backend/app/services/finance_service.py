@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import case, func, select
@@ -287,6 +288,8 @@ def create_finance_entry(
     data: FinanceEntryCreateRequest,
     *,
     created_by: Member,
+    created_at: datetime | None = None,
+    commit: bool = True,
 ) -> FinanceEntry:
     if data.event_id is not None:
         _assert_finance_editable_for_event(db, data.event_id)
@@ -301,9 +304,14 @@ def create_finance_entry(
         created_by_id=created_by.id,
         organization_id=resolve_organization_id(db, created_by),
     )
+    if created_at is not None:
+        entry.created_at = created_at
     db.add(entry)
-    db.commit()
-    db.refresh(entry)
+    if commit:
+        db.commit()
+        db.refresh(entry)
+    else:
+        db.flush()
     return entry
 
 

@@ -345,6 +345,15 @@ def probe_request_kwargs(method: str, path_template: str) -> dict:
             "amount": "10.00",
             "description": "Probe",
         }
+    elif path_template == "/api/v1/finance/import" and method == "POST":
+        kwargs["files"] = {
+            "file": (
+                "expenses.csv",
+                b"Date,Category,Quantity,Event,Vendor,Price\n",
+                "text/csv",
+            ),
+        }
+        kwargs["params"] = {"dry_run": "true"}
     elif path_template.endswith("/finance/{entry_id}") and method == "PATCH":
         kwargs["json"] = {"description": "Probe patch"}
     elif path_template.endswith("/finance/dues/{dues_id}") and method == "PATCH":

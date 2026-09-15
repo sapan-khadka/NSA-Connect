@@ -1,3 +1,7 @@
+# Local chapter data dumps (never commit)
+NSA Funding Sheet*.csv
+*.Expense Sheet.csv
+
 # Python
 venv/
 __pycache__/

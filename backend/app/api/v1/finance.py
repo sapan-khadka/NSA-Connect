@@ -33,6 +33,7 @@ from app.schemas.finance import (
     FinanceEventBudgetListResponse,
     FinanceEventBudgetSummary,
     FinanceExpenseCategoryListResponse,
+    FinanceImportResponse,
     FinanceMyChangeRequestsResponse,
     FinanceSummaryResponse,
     ReceiptScanResponse,
@@ -53,6 +54,7 @@ from app.services.finance_change_request_service import (
     submit_update_request,
     summarize_my_change_requests,
 )
+from app.services.finance_import_service import import_finance_csv
 from app.services.finance_service import (
     FinanceEntryNotFoundError,
     create_finance_entry,
@@ -387,6 +389,30 @@ def create_finance_entry_endpoint(
         ) from None
 
     return FinanceEntryResponse.from_entry(entry)
+
+
+@router.post("/import", response_model=FinanceImportResponse)
+async def import_finance_entries(
+    file: UploadFile = File(...),
+    dry_run: bool = Query(
+        default=True,
+        description="When true, parse and preview without writing entries",
+    ),
+    db: Session = Depends(get_db),
+    current_member: Member = Depends(require_treasury_writer),
+):
+    if not file.filename or not file.filename.lower().endswith(".csv"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Upload must be a CSV file",
+        )
+    file_bytes = await read_upload_with_limit(file, max_bytes=5 * 1024 * 1024)
+    return import_finance_csv(
+        db,
+        file_bytes,
+        created_by=current_member,
+        dry_run=dry_run,
+    )
 
 
 @router.patch(

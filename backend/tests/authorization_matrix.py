@@ -1541,6 +1541,13 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
         "require_treasury_writer",
     ),
     EndpointAuthRule(
+        "POST",
+        "/api/v1/finance/import",
+        "Import finance CSV",
+        "treasury_writer",
+        "require_treasury_writer",
+    ),
+    EndpointAuthRule(
         "PATCH",
         "/api/v1/finance/{entry_id}",
         "Update finance entry",

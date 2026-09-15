@@ -275,3 +275,28 @@ class FinanceMyChangeRequestsResponse(BaseModel):
 
 class FinanceChangeRejectRequest(BaseModel):
     review_note: str | None = Field(default=None, max_length=5000)
+
+
+class FinanceImportSkippedRow(BaseModel):
+    row_number: int
+    reason: str
+    raw_excerpt: str | None = None
+
+
+class FinanceImportPreviewRow(BaseModel):
+    row_number: int
+    date: datetime
+    entry_type: FinanceEntryType
+    category: str
+    amount: Decimal
+    description: str
+    event_id: int | None = None
+    event_title: str | None = None
+
+
+class FinanceImportResponse(BaseModel):
+    rows_created: int
+    rows_ready: int
+    rows_skipped: int
+    skipped_rows: list[FinanceImportSkippedRow]
+    preview_rows: list[FinanceImportPreviewRow]

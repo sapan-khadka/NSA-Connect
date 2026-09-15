@@ -289,3 +289,46 @@ export async function scanFinanceReceipt(
   );
   return response.data;
 }
+
+export type FinanceImportSkippedRow = {
+  row_number: number;
+  reason: string;
+  raw_excerpt: string | null;
+};
+
+export type FinanceImportPreviewRow = {
+  row_number: number;
+  date: string;
+  entry_type: FinanceEntryType;
+  category: string;
+  amount: string;
+  description: string;
+  event_id: number | null;
+  event_title: string | null;
+};
+
+export type FinanceImportResponse = {
+  rows_created: number;
+  rows_ready: number;
+  rows_skipped: number;
+  skipped_rows: FinanceImportSkippedRow[];
+  preview_rows: FinanceImportPreviewRow[];
+};
+
+/** Treasurer CSV import of expense sheet rows (multipart file upload). */
+export async function importFinanceCsv(
+  file: File,
+  options?: { dryRun?: boolean },
+): Promise<FinanceImportResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await api.post<FinanceImportResponse>(
+    "/v1/finance/import",
+    formData,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+      params: { dry_run: options?.dryRun ?? true },
+    },
+  );
+  return response.data;
+}

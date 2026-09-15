@@ -12,6 +12,7 @@ import {
   FinanceSummaryMetrics,
   FinanceTransactionBreakdown,
 } from "../components/FinanceSummaryCard";
+import { ImportFinanceCsvPanel } from "../components/ImportFinanceCsvPanel";
 import { LogFinanceEntryForm } from "../components/LogFinanceEntryForm";
 import { useAuth } from "../context/useAuth";
 import { fetchEvents } from "../lib/events-api";
@@ -496,6 +497,10 @@ export function FinancePage() {
                 onCreated={handleFinanceEntryCreated}
               />
             </section>
+
+            <ImportFinanceCsvPanel
+              onImported={() => setRefreshKey((current) => current + 1)}
+            />
 
             <section className="finance-panel" aria-label="Transactions">
               <div className="finance-books-toolbar">
