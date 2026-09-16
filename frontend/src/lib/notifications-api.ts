@@ -110,6 +110,26 @@ export async function markAllInboxNotificationsRead(): Promise<{
   return response.data;
 }
 
+export async function dismissInboxNotification(
+  notificationId: number,
+): Promise<{ id: number; dismissed_at: string }> {
+  const response = await api.delete<{ id: number; dismissed_at: string }>(
+    `/v1/notifications/${notificationId}`,
+  );
+  return response.data;
+}
+
+export async function clearReadNotifications(): Promise<{
+  dismissed_count: number;
+  dismissed_at: string;
+}> {
+  const response = await api.post<{
+    dismissed_count: number;
+    dismissed_at: string;
+  }>("/v1/notifications/clear-read");
+  return response.data;
+}
+
 export async function fetchNotificationPreferences(): Promise<NotificationPreferences> {
   const response = await api.get<NotificationPreferences>("/v1/notifications/preferences");
   return response.data;

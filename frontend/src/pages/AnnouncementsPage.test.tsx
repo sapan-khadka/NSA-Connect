@@ -251,6 +251,31 @@ describe("AnnouncementsPage", () => {
     expect(screen.getByRole("button", { name: "Post" })).toBeInTheDocument();
   });
 
+  it("opens announcement from ?id= deep link", async () => {
+    const { fetchAnnouncements } = await import("../lib/announcements-api");
+    vi.mocked(fetchAnnouncements).mockResolvedValue({
+      total: 1,
+      announcements: [
+        {
+          id: 42,
+          title: "Deep Linked",
+          body: "Opened from notification.",
+          category: "general",
+          audience: "all_approved",
+          event_id: null,
+          is_pinned: false,
+          author: { id: 2, full_name: "Mukesh", avatar_url: null },
+          created_at: "2026-07-24T12:00:00Z",
+          updated_at: "2026-07-24T12:00:00Z",
+        },
+      ],
+    });
+
+    renderPage("member", "/announcements?id=42");
+
+    expect(await screen.findByText("Opened from notification.")).toBeInTheDocument();
+  });
+
   it("keeps pin/edit/delete inside the hover overflow menu", async () => {
     const user = userEvent.setup();
     const { fetchAnnouncements, updateAnnouncement } = await import(

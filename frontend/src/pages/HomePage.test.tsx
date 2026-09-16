@@ -112,6 +112,7 @@ function mockSummary(overrides: Partial<typeof EMPTY_NOTIFICATION_SUMMARY> = {})
     unreadCount: 0,
     markRead: async () => undefined,
     markAllRead: async () => undefined,
+    dismiss: async () => undefined,
   });
 }
 

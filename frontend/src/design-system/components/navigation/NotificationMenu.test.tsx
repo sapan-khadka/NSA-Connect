@@ -90,6 +90,45 @@ describe("NotificationMenu", () => {
     expect(onItemSelect.mock.calls[0]?.[0]?.id).toBe("1");
   });
 
+  it("closes from the header X and dismisses a row without selecting", async () => {
+    const user = userEvent.setup();
+    const onDismiss = vi.fn();
+    const onItemSelect = vi.fn();
+
+    render(
+      <MemoryRouter>
+        <NotificationMenu
+          onDismiss={onDismiss}
+          onItemSelect={onItemSelect}
+          items={[
+            {
+              id: "9",
+              title: "Removable",
+              unread: true,
+              type: "task_assigned",
+              to: "/events/tasks",
+            },
+          ]}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Notifications, 1 unread" }),
+    );
+    expect(screen.getByRole("menu", { name: "Notifications" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Remove notification" }));
+    expect(onDismiss).toHaveBeenCalledOnce();
+    expect(onDismiss.mock.calls[0]?.[0]?.id).toBe("9");
+    expect(onItemSelect).not.toHaveBeenCalled();
+
+    await user.click(
+      screen.getByRole("button", { name: "Close notifications" }),
+    );
+    expect(screen.queryByRole("menu", { name: "Notifications" })).not.toBeInTheDocument();
+  });
+
   it("shows view-all link when provided", async () => {
     const user = userEvent.setup();
 

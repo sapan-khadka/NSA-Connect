@@ -640,6 +640,33 @@ export function AnnouncementsPage() {
   }, [canManage, navigate, searchParams]);
 
   useEffect(() => {
+    if (loading || showCreateForm || editingAnnouncement) {
+      return;
+    }
+    const rawId = searchParams.get("id");
+    if (!rawId) {
+      return;
+    }
+    const announcementId = Number(rawId);
+    if (!Number.isFinite(announcementId)) {
+      return;
+    }
+    const match = announcements.find((item) => item.id === announcementId);
+    if (!match) {
+      return;
+    }
+    setOpenAnnouncement(match);
+    navigate("/announcements", { replace: true });
+  }, [
+    announcements,
+    editingAnnouncement,
+    loading,
+    navigate,
+    searchParams,
+    showCreateForm,
+  ]);
+
+  useEffect(() => {
     if (!canManage) {
       return;
     }

@@ -37,7 +37,7 @@ export function AppTopBar({
   showMenuButton = false,
 }: AppTopBarProps) {
   const { member } = useAuth();
-  const { menuItems, unreadCount, markRead, markAllRead } =
+  const { menuItems, unreadCount, markAllRead, dismiss } =
     useNotificationSummary();
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -208,10 +208,16 @@ export function AppTopBar({
             onMarkAllRead={() => {
               void markAllRead();
             }}
+            onDismiss={(item) => {
+              const id = Number(item.id);
+              if (Number.isFinite(id)) {
+                void dismiss(id);
+              }
+            }}
             onItemSelect={(item) => {
               const id = Number(item.id);
-              if (Number.isFinite(id) && item.unread) {
-                void markRead(id);
+              if (Number.isFinite(id)) {
+                void dismiss(id);
               }
             }}
           />

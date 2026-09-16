@@ -13,6 +13,7 @@ import type { NotificationMenuItem } from "../design-system/components/navigatio
 import {
   EMPTY_INBOX,
   EMPTY_NOTIFICATION_SUMMARY,
+  dismissInboxNotification,
   fetchInboxNotifications,
   fetchNotificationSummary,
   markAllInboxNotificationsRead,
@@ -34,6 +35,7 @@ type NotificationSummaryContextValue = {
   unreadCount: number;
   markRead: (notificationId: number) => Promise<void>;
   markAllRead: () => Promise<void>;
+  dismiss: (notificationId: number) => Promise<void>;
 };
 
 const NotificationSummaryContext =
@@ -202,6 +204,31 @@ export function NotificationSummaryProvider({
     }
   }, []);
 
+  const dismiss = useCallback(async (notificationId: number) => {
+    setInbox((current) => {
+      const target = current.notifications.find(
+        (item) => item.id === notificationId,
+      );
+      const nextNotifications = current.notifications.filter(
+        (item) => item.id !== notificationId,
+      );
+      return {
+        ...current,
+        notifications: nextNotifications,
+        total: Math.max(0, current.total - (target ? 1 : 0)),
+        unread_count: Math.max(
+          0,
+          current.unread_count - (target?.unread ? 1 : 0),
+        ),
+      };
+    });
+    try {
+      await dismissInboxNotification(notificationId);
+    } catch {
+      setRefreshKey((current) => current + 1);
+    }
+  }, []);
+
   const menuItems = useMemo(
     () => inboxToMenuItems(inbox.notifications),
     [inbox.notifications],
@@ -219,6 +246,7 @@ export function NotificationSummaryProvider({
       unreadCount,
       markRead,
       markAllRead,
+      dismiss,
     }),
     [
       summary,
@@ -229,6 +257,7 @@ export function NotificationSummaryProvider({
       unreadCount,
       markRead,
       markAllRead,
+      dismiss,
     ],
   );
 
@@ -251,6 +280,7 @@ export function useNotificationSummary(): NotificationSummaryContextValue {
       unreadCount: 0,
       markRead: async () => undefined,
       markAllRead: async () => undefined,
+      dismiss: async () => undefined,
     };
   }
   return value;

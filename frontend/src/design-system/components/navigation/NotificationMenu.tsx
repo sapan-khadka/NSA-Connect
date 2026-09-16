@@ -1,4 +1,4 @@
-import { Bell } from "lucide-react";
+import { Bell, X } from "lucide-react";
 import { Link } from "react-router";
 import type { ReactNode } from "react";
 
@@ -54,6 +54,8 @@ export type NotificationMenuProps = {
   unreadCount?: number;
   /** Called when an item is activated. */
   onItemSelect?: (item: NotificationMenuItem) => void;
+  /** Dismiss/remove a single item without navigating. */
+  onDismiss?: (item: NotificationMenuItem) => void;
   /** Mark all notifications as read. */
   onMarkAllRead?: () => void;
   /** Fallback when the menu is empty. */
@@ -73,6 +75,7 @@ export function NotificationMenu({
   items = [],
   unreadCount,
   onItemSelect,
+  onDismiss,
   onMarkAllRead,
   emptyMessage = "You're all caught up.",
   viewAllTo,
@@ -135,7 +138,7 @@ export function NotificationMenu({
           className="absolute right-0 top-full z-[60] mt-2 w-[22rem] overflow-hidden rounded-2xl border border-gray-200 bg-surface-card shadow-card"
         >
           <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3">
-            <div>
+            <div className="min-w-0">
               <p className="text-sm font-semibold text-foreground">
                 Notifications
               </p>
@@ -145,18 +148,28 @@ export function NotificationMenu({
                   : "You're up to date"}
               </p>
             </div>
-            {onMarkAllRead ? (
+            <div className="flex shrink-0 items-center gap-1">
+              {onMarkAllRead ? (
+                <button
+                  type="button"
+                  disabled={!hasUnread}
+                  className="rounded-lg px-2 py-1 text-xs font-semibold text-label transition enabled:hover:bg-surface-muted enabled:hover:text-foreground disabled:cursor-default disabled:text-label/50"
+                  onClick={() => {
+                    onMarkAllRead();
+                  }}
+                >
+                  Mark all read
+                </button>
+              ) : null}
               <button
                 type="button"
-                disabled={!hasUnread}
-                className="text-xs font-semibold text-label transition enabled:hover:text-foreground disabled:cursor-default disabled:text-label/50"
-                onClick={() => {
-                  onMarkAllRead();
-                }}
+                aria-label="Close notifications"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-label transition hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+                onClick={() => setOpen(false)}
               >
-                Mark all read
+                <X className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
               </button>
-            ) : null}
+            </div>
           </div>
 
           {items.length === 0 ? (
@@ -216,7 +229,7 @@ export function NotificationMenu({
                 );
 
                 const itemClass = cx(
-                  "block w-full px-4 py-3 text-left transition-colors hover:bg-surface-muted",
+                  "block min-w-0 flex-1 px-4 py-3 text-left transition-colors hover:bg-surface-muted",
                   item.unread ? "bg-badge-teal-bg/25" : "",
                 );
 
@@ -227,7 +240,11 @@ export function NotificationMenu({
                 }
 
                 return (
-                  <li key={item.id} role="none">
+                  <li
+                    key={item.id}
+                    role="none"
+                    className="group relative flex items-stretch"
+                  >
                     {item.to ? (
                       <Link
                         to={item.to}
@@ -256,6 +273,24 @@ export function NotificationMenu({
                         {body}
                       </button>
                     )}
+                    {onDismiss ? (
+                      <button
+                        type="button"
+                        aria-label="Remove notification"
+                        className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-lg text-label opacity-0 transition hover:bg-surface-muted hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 group-hover:opacity-100"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          onDismiss(item);
+                        }}
+                      >
+                        <X
+                          className="h-3.5 w-3.5"
+                          strokeWidth={1.75}
+                          aria-hidden="true"
+                        />
+                      </button>
+                    ) : null}
                   </li>
                 );
               })}

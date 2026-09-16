@@ -3,7 +3,7 @@
  * Flat feed, compact icons, no heavy card chrome.
  */
 
-import { Bell, CheckCheck, RefreshCw } from "lucide-react";
+import { Bell, CheckCheck, RefreshCw, X } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
 
@@ -16,10 +16,12 @@ import type { InboxNotification } from "../lib/notifications-api";
 
 function NotificationRow({
   item,
-  onMarkRead,
+  onActivate,
+  onDismiss,
 }: {
   item: InboxNotification;
-  onMarkRead: (id: number) => void;
+  onActivate: (id: number) => void;
+  onDismiss: (id: number) => void;
 }) {
   const visual = getNotificationVisual(item.type);
   const Icon = visual.icon;
@@ -68,45 +70,64 @@ function NotificationRow({
     </>
   );
 
+  const removeButton = (
+    <button
+      type="button"
+      className="notifications-feed-remove"
+      aria-label="Remove notification"
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onDismiss(item.id);
+      }}
+    >
+      <AppIcon icon={X} size="xs" className="text-current" />
+    </button>
+  );
+
   if (item.href) {
     return (
-      <Link
-        to={item.href}
-        className={className}
-        onClick={() => {
-          if (item.unread) {
-            onMarkRead(item.id);
-          }
-        }}
-      >
-        {body}
-      </Link>
+      <div className="notifications-feed-row">
+        <Link
+          to={item.href}
+          className={className}
+          onClick={() => {
+            onActivate(item.id);
+          }}
+        >
+          {body}
+        </Link>
+        {removeButton}
+      </div>
     );
   }
 
   return (
-    <button
-      type="button"
-      className={`${className} w-full text-left`}
-      onClick={() => {
-        if (item.unread) {
-          onMarkRead(item.id);
-        }
-      }}
-    >
-      {body}
-    </button>
+    <div className="notifications-feed-row">
+      <button
+        type="button"
+        className={`${className} w-full text-left`}
+        onClick={() => {
+          onActivate(item.id);
+        }}
+      >
+        {body}
+      </button>
+      {removeButton}
+    </div>
   );
 }
 
 function NotificationSection({
   label,
   items,
-  onMarkRead,
+  onActivate,
+  onDismiss,
 }: {
   label: string;
   items: InboxNotification[];
-  onMarkRead: (id: number) => void;
+  onActivate: (id: number) => void;
+  onDismiss: (id: number) => void;
 }) {
   if (items.length === 0) {
     return null;
@@ -118,7 +139,11 @@ function NotificationSection({
       <ul className="notifications-feed-list">
         {items.map((item) => (
           <li key={item.id}>
-            <NotificationRow item={item} onMarkRead={onMarkRead} />
+            <NotificationRow
+              item={item}
+              onActivate={onActivate}
+              onDismiss={onDismiss}
+            />
           </li>
         ))}
       </ul>
@@ -127,7 +152,7 @@ function NotificationSection({
 }
 
 export function NotificationsPage() {
-  const { inbox, loading, markRead, markAllRead, refresh } =
+  const { inbox, loading, markAllRead, dismiss, refresh } =
     useNotificationSummary();
   const [markingAll, setMarkingAll] = useState(false);
 
@@ -163,7 +188,7 @@ export function NotificationsPage() {
           <h1 className="notifications-page__title">Notifications</h1>
           <p className="notifications-page__subtitle">
             {hasUnread
-              ? `${unreadTotal} unread · tasks, budget, and board updates`
+              ? `${unreadTotal} unread · announcements, tasks, and approvals`
               : "You're all caught up."}
           </p>
         </div>
@@ -201,8 +226,8 @@ export function NotificationsPage() {
           </span>
           <p className="notifications-page__empty-title">Nothing here yet</p>
           <p className="notifications-page__empty-copy">
-            Task assignments, announcements, budget reviews, and board messages
-            will land here.
+            Announcements, task assignments, budget reviews, and membership
+            updates will land here.
           </p>
         </div>
       ) : hasUnread ? (
@@ -210,12 +235,14 @@ export function NotificationsPage() {
           <NotificationSection
             label="Unread"
             items={unreadItems}
-            onMarkRead={(id) => void markRead(id)}
+            onActivate={(id) => void dismiss(id)}
+            onDismiss={(id) => void dismiss(id)}
           />
           <NotificationSection
             label="Earlier"
             items={earlierItems}
-            onMarkRead={(id) => void markRead(id)}
+            onActivate={(id) => void dismiss(id)}
+            onDismiss={(id) => void dismiss(id)}
           />
         </div>
       ) : (
@@ -223,7 +250,8 @@ export function NotificationsPage() {
           <NotificationSection
             label="Recent"
             items={items}
-            onMarkRead={(id) => void markRead(id)}
+            onActivate={(id) => void dismiss(id)}
+            onDismiss={(id) => void dismiss(id)}
           />
         </div>
       )}
