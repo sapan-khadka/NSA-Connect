@@ -86,7 +86,7 @@ def test_checkin_records_attendance_once(
     now = datetime.now(UTC)
     event = _create_event(
         db_session,
-        starts_at=now + timedelta(minutes=30),
+        starts_at=now - timedelta(minutes=5),
         creator_id=board_member.id,
     )
     token = ensure_checkin_token(db_session, event)
@@ -148,8 +148,26 @@ def test_checkin_rejects_outside_window(db_session, board_member):
             event_id=event.id,
             member_id=member.id,
             token=token,
-            as_of=datetime(2030, 5, 30, 12, 0, tzinfo=UTC),
+            as_of=datetime(2030, 6, 1, 17, 59, tzinfo=UTC),
         )
+
+    with pytest.raises(CheckInWindowClosedError):
+        perform_checkin(
+            db_session,
+            event_id=event.id,
+            member_id=member.id,
+            token=token,
+            as_of=datetime(2030, 6, 1, 20, 1, tzinfo=UTC),
+        )
+
+    result = perform_checkin(
+        db_session,
+        event_id=event.id,
+        member_id=member.id,
+        token=token,
+        as_of=datetime(2030, 6, 1, 19, 0, tzinfo=UTC),
+    )
+    assert result.status.value == "checked_in"
 
 
 def test_regenerate_token_invalidates_old_token(
@@ -177,7 +195,7 @@ def test_regenerate_token_invalidates_old_token(
             event_id=event.id,
             member_id=member.id,
             token=old,
-            as_of=datetime(2030, 6, 1, 17, 30, tzinfo=UTC),
+            as_of=datetime(2030, 6, 1, 18, 30, tzinfo=UTC),
         )
 
 
@@ -262,7 +280,7 @@ def test_guest_checkin_without_auth(client, db_session, board_member):
     now = datetime.now(UTC)
     event = _create_event(
         db_session,
-        starts_at=now + timedelta(minutes=30),
+        starts_at=now - timedelta(minutes=5),
         creator_id=board_member.id,
     )
     token = ensure_checkin_token(db_session, event)
@@ -289,7 +307,7 @@ def test_guest_checkin_name_only_optional_affiliation(client, db_session, board_
     now = datetime.now(UTC)
     event = _create_event(
         db_session,
-        starts_at=now + timedelta(minutes=30),
+        starts_at=now - timedelta(minutes=5),
         creator_id=board_member.id,
     )
     token = ensure_checkin_token(db_session, event)
@@ -309,7 +327,7 @@ def test_guest_checkin_with_affiliation(client, db_session, board_member):
     now = datetime.now(UTC)
     event = _create_event(
         db_session,
-        starts_at=now + timedelta(minutes=30),
+        starts_at=now - timedelta(minutes=5),
         creator_id=board_member.id,
     )
     token = ensure_checkin_token(db_session, event)
@@ -361,7 +379,16 @@ def test_guest_checkin_rejects_outside_window(db_session, board_member):
             event_id=event.id,
             token=token,
             guest_name="Guest",
-            as_of=datetime(2030, 5, 30, 12, 0, tzinfo=UTC),
+            as_of=datetime(2030, 6, 1, 17, 59, tzinfo=UTC),
+        )
+
+    with pytest.raises(CheckInWindowClosedError):
+        perform_guest_checkin(
+            db_session,
+            event_id=event.id,
+            token=token,
+            guest_name="Guest",
+            as_of=datetime(2030, 6, 1, 20, 1, tzinfo=UTC),
         )
 
 
@@ -369,7 +396,7 @@ def test_checkins_list_includes_guests(client, board_headers, db_session, board_
     now = datetime.now(UTC)
     event = _create_event(
         db_session,
-        starts_at=now + timedelta(minutes=30),
+        starts_at=now - timedelta(minutes=5),
         creator_id=board_member.id,
     )
     token = ensure_checkin_token(db_session, event)
@@ -397,7 +424,7 @@ def test_attendance_summary_includes_guest_count(
     now = datetime.now(UTC)
     event = _create_event(
         db_session,
-        starts_at=now + timedelta(minutes=30),
+        starts_at=now - timedelta(minutes=5),
         creator_id=board_member.id,
     )
     token = ensure_checkin_token(db_session, event)

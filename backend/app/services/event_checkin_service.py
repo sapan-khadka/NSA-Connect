@@ -1,6 +1,6 @@
 import secrets
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from enum import StrEnum
 
 from sqlalchemy import select
@@ -13,11 +13,6 @@ from app.models.event_guest_checkin import EventGuestCheckIn, GuestAffiliationTy
 from app.models.event_rsvp import EventRsvp, RsvpStatus
 from app.models.member import Member, MemberStatus
 from app.services.event_service import EventNotFoundError
-
-CHECKIN_EARLY_BUFFER = timedelta(hours=1)
-CHECKIN_LATE_BUFFER_AFTER_END = timedelta(hours=2)
-CHECKIN_LATE_BUFFER_AFTER_START_NO_END = timedelta(hours=4)
-
 
 class InvalidCheckInTokenError(Exception):
     pass
@@ -65,13 +60,14 @@ def _as_utc(value: datetime) -> datetime:
 
 
 def get_checkin_window(event: Event) -> tuple[datetime, datetime]:
+    """Check-in is open only during the scheduled event interval [starts_at, ends_at]."""
     starts_at = _as_utc(event.starts_at)
-    window_start = starts_at - CHECKIN_EARLY_BUFFER
     if event.ends_at is not None:
-        window_end = _as_utc(event.ends_at) + CHECKIN_LATE_BUFFER_AFTER_END
+        window_end = _as_utc(event.ends_at)
     else:
-        window_end = starts_at + CHECKIN_LATE_BUFFER_AFTER_START_NO_END
-    return window_start, window_end
+        # No end time scheduled — treat start as both bounds (closed once start passes).
+        window_end = starts_at
+    return starts_at, window_end
 
 
 def is_checkin_window_open(
