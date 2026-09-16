@@ -1,4 +1,4 @@
-"""Mute, WS tickets, and discussion message inbox notifications."""
+"""Mute, WS tickets, and discussion message toast notifications (no inbox)."""
 
 from conftest import auth_header, register_member, set_member_approved
 from sqlalchemy import select
@@ -34,7 +34,7 @@ def test_ws_ticket_is_short_lived_ws_type(client, db_session):
     assert payload["email"] == "ticket@semo.edu"
 
 
-def test_dm_message_creates_inbox_notification_and_respects_mute(
+def test_dm_message_publishes_ws_without_inbox_and_respects_mute(
     client, db_session, monkeypatch
 ):
     reset_discussion_sync_redis(None)
@@ -42,9 +42,14 @@ def test_dm_message_creates_inbox_notification_and_respects_mute(
         "app.services.discussion_message_notify_service.user_present_in_room",
         lambda *_args, **_kwargs: False,
     )
+    published: list[tuple[int, dict]] = []
+
+    def _capture(user_id: int, payload: dict) -> None:
+        published.append((user_id, payload))
+
     monkeypatch.setattr(
         "app.services.discussion_message_notify_service.publish_user_notification",
-        lambda *_args, **_kwargs: None,
+        _capture,
     )
 
     alice_id = _approve_named(
@@ -72,7 +77,7 @@ def test_dm_message_creates_inbox_notification_and_respects_mute(
     )
     assert posted.status_code == 201
 
-    notifications = list(
+    inbox_rows = list(
         db_session.scalars(
             select(InboxNotification).where(
                 InboxNotification.member_id == bob_id,
@@ -80,10 +85,14 @@ def test_dm_message_creates_inbox_notification_and_respects_mute(
             )
         ).all()
     )
-    assert len(notifications) == 1
-    assert notifications[0].title
-    assert "Ping from Alice" in (notifications[0].body or "")
-    assert notifications[0].href == f"/discussions/room/{room_id}"
+    assert inbox_rows == []
+
+    assert len(published) == 1
+    assert published[0][0] == bob_id
+    assert published[0][1]["type"] == "discussion_message"
+    assert published[0][1]["notification_id"] is None
+    assert "Ping from Alice" in (published[0][1].get("body") or "")
+    assert published[0][1]["href"] == f"/discussions/room/{room_id}"
 
     mute = client.post(
         "/api/v1/discussions/mutes/toggle",
@@ -97,19 +106,11 @@ def test_dm_message_creates_inbox_notification_and_respects_mute(
     match = next(item for item in inbox["rooms"] if item["room_id"] == room_key)
     assert match["muted"] is True
 
+    published.clear()
     posted_muted = client.post(
         f"/api/v1/discussions/rooms/{room_id}/messages",
         headers=alice,
         json={"content": "Should be silent"},
     )
     assert posted_muted.status_code == 201
-
-    notifications_after = list(
-        db_session.scalars(
-            select(InboxNotification).where(
-                InboxNotification.member_id == bob_id,
-                InboxNotification.type == InboxNotificationType.DISCUSSION_MESSAGE,
-            )
-        ).all()
-    )
-    assert len(notifications_after) == 1
+    assert published == []

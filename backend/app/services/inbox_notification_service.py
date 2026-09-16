@@ -9,6 +9,8 @@ from app.models.event_volunteer_signup import EventVolunteerSignup
 from app.models.inbox_notification import InboxNotification, InboxNotificationType
 from app.models.member import Member, MemberPosition, MemberRole, MemberStatus
 from app.schemas.inbox_notification import (
+    ClearReadInboxResponse,
+    DismissInboxResponse,
     InboxNotificationListResponse,
     InboxNotificationResponse,
     MarkAllInboxReadResponse,
@@ -411,10 +413,17 @@ def notify_announcement_published(
         type=InboxNotificationType.ANNOUNCEMENT,
         title=title,
         body=f"{category} from {author.full_name}",
-        href="/announcements",
+        href=f"/announcements?id={announcement_id}",
         dedupe_key_for=lambda recipient: (
             f"announcement:{announcement_id}:{recipient.id}"
         ),
+    )
+
+
+def _active_inbox_filter(member_id: int):
+    return (
+        InboxNotification.member_id == member_id,
+        InboxNotification.dismissed_at.is_(None),
     )
 
 
@@ -427,7 +436,7 @@ def list_inbox_notifications(
     notifications = list(
         db.scalars(
             select(InboxNotification)
-            .where(InboxNotification.member_id == member_id)
+            .where(*_active_inbox_filter(member_id))
             .order_by(
                 InboxNotification.created_at.desc(),
                 InboxNotification.id.desc(),
@@ -440,7 +449,7 @@ def list_inbox_notifications(
             select(func.count())
             .select_from(InboxNotification)
             .where(
-                InboxNotification.member_id == member_id,
+                *_active_inbox_filter(member_id),
                 InboxNotification.read_at.is_(None),
             )
         )
@@ -450,7 +459,7 @@ def list_inbox_notifications(
         db.scalar(
             select(func.count())
             .select_from(InboxNotification)
-            .where(InboxNotification.member_id == member_id)
+            .where(*_active_inbox_filter(member_id))
         )
         or 0
     )
@@ -501,7 +510,7 @@ def mark_all_inbox_notifications_read(
     unread = list(
         db.scalars(
             select(InboxNotification).where(
-                InboxNotification.member_id == member_id,
+                *_active_inbox_filter(member_id),
                 InboxNotification.read_at.is_(None),
             )
         ).all()
@@ -511,3 +520,57 @@ def mark_all_inbox_notifications_read(
     if unread:
         db.commit()
     return MarkAllInboxReadResponse(marked_count=len(unread), read_at=now)
+
+
+def dismiss_inbox_notification(
+    db: Session,
+    *,
+    member_id: int,
+    notification_id: int,
+) -> DismissInboxResponse:
+    notification = db.scalar(
+        select(InboxNotification).where(
+            InboxNotification.id == notification_id,
+            InboxNotification.member_id == member_id,
+        )
+    )
+    if notification is None:
+        raise InboxNotificationNotFoundError
+
+    now = datetime.now(UTC)
+    if notification.dismissed_at is None:
+        notification.dismissed_at = now
+        if notification.read_at is None:
+            notification.read_at = now
+        db.commit()
+        db.refresh(notification)
+
+    assert notification.dismissed_at is not None
+    return DismissInboxResponse(
+        id=notification.id,
+        dismissed_at=notification.dismissed_at,
+    )
+
+
+def dismiss_all_read_inbox_notifications(
+    db: Session,
+    *,
+    member_id: int,
+) -> ClearReadInboxResponse:
+    now = datetime.now(UTC)
+    read_rows = list(
+        db.scalars(
+            select(InboxNotification).where(
+                *_active_inbox_filter(member_id),
+                InboxNotification.read_at.is_not(None),
+            )
+        ).all()
+    )
+    for notification in read_rows:
+        notification.dismissed_at = now
+    if read_rows:
+        db.commit()
+    return ClearReadInboxResponse(
+        dismissed_count=len(read_rows),
+        dismissed_at=now,
+    )

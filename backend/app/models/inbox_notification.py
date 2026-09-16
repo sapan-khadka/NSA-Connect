@@ -61,6 +61,7 @@ class InboxNotification(Base):
     href = Column(String(500), nullable=True)
     dedupe_key = Column(String(255), nullable=True)
     read_at = Column(DateTime(timezone=True), nullable=True)
+    dismissed_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,

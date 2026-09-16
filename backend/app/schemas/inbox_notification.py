@@ -44,3 +44,13 @@ class MarkInboxReadResponse(BaseModel):
 class MarkAllInboxReadResponse(BaseModel):
     marked_count: int = Field(ge=0)
     read_at: datetime
+
+
+class DismissInboxResponse(BaseModel):
+    id: int
+    dismissed_at: datetime
+
+
+class ClearReadInboxResponse(BaseModel):
+    dismissed_count: int = Field(ge=0)
+    dismissed_at: datetime

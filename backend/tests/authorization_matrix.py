@@ -1666,6 +1666,22 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
         object_rules="Scoped to current member",
     ),
     EndpointAuthRule(
+        "POST",
+        "/api/v1/notifications/clear-read",
+        "Dismiss all read inbox notifications",
+        "self",
+        "get_current_member",
+        object_rules="Scoped to current member",
+    ),
+    EndpointAuthRule(
+        "DELETE",
+        "/api/v1/notifications/{notification_id}",
+        "Dismiss inbox notification",
+        "self",
+        "get_current_member",
+        object_rules="Own notifications only",
+    ),
+    EndpointAuthRule(
         "GET",
         "/api/v1/notifications/preferences",
         "Notification preferences",

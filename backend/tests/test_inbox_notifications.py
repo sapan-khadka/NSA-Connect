@@ -159,7 +159,65 @@ def test_creating_announcement_notifies_other_members(client, db_session, monkey
     assert len(rows) == 1
     assert rows[0].type == "announcement"
     assert rows[0].title == "Dashain planning"
-    assert rows[0].href == "/announcements"
+    assert rows[0].href == f"/announcements?id={response.json()['id']}"
+
+
+def test_dismiss_and_clear_read_exclude_from_list(client, db_session):
+    register_member(client)
+    set_member_approved(db_session)
+    member = db_session.query(Member).filter(Member.email == "sapan@semo.edu").one()
+
+    first = create_inbox_notification(
+        db_session,
+        member_id=member.id,
+        type="task_assigned",
+        title="Task one",
+        href="/events/tasks",
+        dedupe_key="dismiss-t1",
+    )
+    second = create_inbox_notification(
+        db_session,
+        member_id=member.id,
+        type="announcement",
+        title="Hello",
+        href="/announcements?id=9",
+        dedupe_key="dismiss-t2",
+    )
+    assert first is not None and second is not None
+
+    headers = auth_header(client)
+    listed = client.get("/api/v1/notifications", headers=headers)
+    assert listed.status_code == 200
+    assert listed.json()["total"] == 2
+    assert listed.json()["unread_count"] == 2
+
+    dismissed = client.delete(
+        f"/api/v1/notifications/{first.id}",
+        headers=headers,
+    )
+    assert dismissed.status_code == 200
+    assert dismissed.json()["id"] == first.id
+    assert dismissed.json()["dismissed_at"]
+
+    after_dismiss = client.get("/api/v1/notifications", headers=headers).json()
+    assert after_dismiss["total"] == 1
+    assert after_dismiss["unread_count"] == 1
+    assert after_dismiss["notifications"][0]["id"] == second.id
+
+    marked = client.patch(
+        f"/api/v1/notifications/{second.id}/read",
+        headers=headers,
+    )
+    assert marked.status_code == 200
+
+    cleared = client.post("/api/v1/notifications/clear-read", headers=headers)
+    assert cleared.status_code == 200
+    assert cleared.json()["dismissed_count"] == 1
+
+    empty = client.get("/api/v1/notifications", headers=headers).json()
+    assert empty["total"] == 0
+    assert empty["unread_count"] == 0
+    assert empty["notifications"] == []
 
 
 def test_cannot_mark_another_members_notification(client, db_session):

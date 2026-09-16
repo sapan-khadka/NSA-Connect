@@ -8,6 +8,8 @@ from app.core.safe_messages import GENERIC_EMAIL_SEND_FAILED
 from app.integrations.resend_client import ResendDeliveryError
 from app.models.member import Member
 from app.schemas.inbox_notification import (
+    ClearReadInboxResponse,
+    DismissInboxResponse,
     InboxNotificationListResponse,
     MarkAllInboxReadResponse,
     MarkInboxReadResponse,
@@ -24,6 +26,8 @@ from app.schemas.notification_summary import NotificationSummaryResponse
 from app.schemas.test_email import SendTestEmailRequest, SendTestEmailResponse
 from app.services.inbox_notification_service import (
     InboxNotificationNotFoundError,
+    dismiss_all_read_inbox_notifications,
+    dismiss_inbox_notification,
     list_inbox_notifications,
     mark_all_inbox_notifications_read,
     mark_inbox_notification_read,
@@ -81,6 +85,33 @@ def mark_all_my_inbox_notifications_read(
     db: Session = Depends(get_db),
 ):
     return mark_all_inbox_notifications_read(db, member_id=current_member.id)
+
+
+@router.post("/clear-read", response_model=ClearReadInboxResponse)
+def clear_my_read_inbox_notifications(
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    return dismiss_all_read_inbox_notifications(db, member_id=current_member.id)
+
+
+@router.delete("/{notification_id}", response_model=DismissInboxResponse)
+def dismiss_my_inbox_notification(
+    notification_id: int,
+    current_member: Member = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    try:
+        return dismiss_inbox_notification(
+            db,
+            member_id=current_member.id,
+            notification_id=notification_id,
+        )
+    except InboxNotificationNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Notification not found",
+        ) from exc
 
 
 @router.get("/preferences", response_model=NotificationPreferencesResponse)

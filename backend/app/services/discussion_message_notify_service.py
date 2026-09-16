@@ -1,4 +1,7 @@
-"""Create inbox + realtime notifications for new discussion messages."""
+"""Realtime (toast) notifications for new discussion messages.
+
+Chat stays out of the durable inbox bell — Discussions unread + optional toast only.
+"""
 
 from __future__ import annotations
 
@@ -16,7 +19,6 @@ from app.models.discussion_room import (
 from app.models.discussion_room_mute import DiscussionRoomMute
 from app.models.event import Event
 from app.models.event_volunteer_signup import EventVolunteerSignup
-from app.models.inbox_notification import InboxNotificationType
 from app.models.member import Member, MemberRole, MemberStatus
 from app.services.discussion_realtime_sync import (
     publish_user_notification,
@@ -28,7 +30,6 @@ from app.services.discussion_ws_manager import (
     custom_room_key,
     event_room_key,
 )
-from app.services.inbox_notification_service import create_inbox_notification
 
 logger = logging.getLogger(__name__)
 
@@ -140,7 +141,10 @@ def notify_new_discussion_message(
     message: DiscussionMessage,
     author: Member,
 ) -> int:
-    """Notify recipients about a newly persisted message. Returns created count."""
+    """Publish realtime toast payloads for recipients. Returns notified count.
+
+    Does not create durable inbox rows — chat belongs in Discussions unread.
+    """
     if message.deleted_at is not None:
         return 0
 
@@ -161,47 +165,29 @@ def notify_new_discussion_message(
     preview = _preview(message.content)
     author_name = (author.full_name or "Member").strip() or "Member"
 
-    pending: list[tuple[Member, object]] = []
+    notified = 0
     for recipient in recipients:
         if recipient.id == author.id:
             continue
         if recipient.id in muted_ids:
             continue
-        # Viewing the thread already — skip noisy inbox/toast (unread still updates).
+        # Viewing the thread already — skip noisy toast (unread still updates).
         if user_present_in_room(room_id, recipient.id):
             continue
 
         title = author_name if is_dm else f"{author_name} · {room_label}"
-        notification = create_inbox_notification(
-            db,
-            member_id=recipient.id,
-            type=InboxNotificationType.DISCUSSION_MESSAGE,
-            title=title,
-            body=preview,
-            href=href,
-            dedupe_key=f"discussion_msg:{message.id}:{recipient.id}",
-            commit=False,
-        )
-        if notification is not None:
-            pending.append((recipient, notification))
-
-    if not pending:
-        return 0
-
-    db.commit()
-
-    for recipient, notification in pending:
         publish_user_notification(
             recipient.id,
             {
                 "type": "discussion_message",
-                "notification_id": getattr(notification, "id", None),
+                "notification_id": None,
                 "room_id": room_id,
-                "title": getattr(notification, "title", author_name),
-                "body": getattr(notification, "body", preview),
+                "title": title,
+                "body": preview,
                 "href": href,
                 "author_name": author_name,
                 "message_id": message.id,
             },
         )
-    return len(pending)
+        notified += 1
+    return notified
