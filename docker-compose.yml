@@ -97,7 +97,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-    command: celery -A app.celery_app beat --loglevel=info
+    # -s keeps the schedule db off the bind-mounted /app, which the non-root
+    # container user may not be able to write to.
+    command: celery -A app.celery_app beat --loglevel=info -s /tmp/celerybeat-schedule
 
   db-backup:
     build:

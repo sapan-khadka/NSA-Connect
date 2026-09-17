@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,6 +9,10 @@ class Settings(BaseSettings):
     APP_NAME: str = "NSA Connect API"
     ENVIRONMENT: Literal["development", "staging", "production"] = "development"
     DEBUG: bool = False
+    LOG_LEVEL: str = Field(
+        default="INFO",
+        description="Root log level; app.security stays at INFO regardless",
+    )
 
     DATABASE_URL: str = Field(
         default="postgresql://postgres:postgres@localhost:5433/nsa_connect",
@@ -66,6 +70,20 @@ class Settings(BaseSettings):
     RATE_LIMIT_PASSWORD_RESET_EMAIL_WINDOW_SECONDS: int = 3600
     RATE_LIMIT_PASSWORD_RESET_IP_MAX: int = 10
     RATE_LIMIT_PASSWORD_RESET_IP_WINDOW_SECONDS: int = 3600
+    RATE_LIMIT_TOKEN_CONFIRM_IP_MAX: int = Field(
+        default=20,
+        description=(
+            "Max password-reset / email-verification confirm attempts per IP per hour"
+        ),
+    )
+    RATE_LIMIT_TOKEN_CONFIRM_IP_WINDOW_SECONDS: int = 3600
+    RATE_LIMIT_REFRESH_IP_MAX: int = Field(
+        default=60,
+        description=(
+            "Max token refreshes per IP per minute; sized for shared campus NAT"
+        ),
+    )
+    RATE_LIMIT_REFRESH_IP_WINDOW_SECONDS: int = 60
     RATE_LIMIT_RECEIPT_SCAN_MAX: int = 10
     RATE_LIMIT_RECEIPT_SCAN_WINDOW_SECONDS: int = 3600
     RATE_LIMIT_DISCUSSION_MESSAGE_MAX: int = 40
@@ -243,6 +261,21 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @model_validator(mode="after")
+    def _trust_proxy_headers_in_production(self) -> "Settings":
+        """Managed platforms always front the app, so the peer IP is the edge.
+
+        Left at the insecure-by-default ``False``, every production request
+        buckets under one proxy address and per-IP limits collapse into a single
+        shared bucket. An explicit env value always wins.
+        """
+        if (
+            self.ENVIRONMENT == "production"
+            and "RATE_LIMIT_TRUST_PROXY_HEADERS" not in self.model_fields_set
+        ):
+            self.RATE_LIMIT_TRUST_PROXY_HEADERS = True
+        return self
 
     @property
     def is_development(self) -> bool:

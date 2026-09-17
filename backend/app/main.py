@@ -17,6 +17,7 @@ from app.core.exception_handlers import (
     integrity_error_handler,
     unhandled_exception_handler,
 )
+from app.core.logging_config import configure_logging
 from app.core.rate_limit import AppRateLimitExceeded, limiter
 from app.core.rate_limit_handlers import (
     app_rate_limit_exceeded_handler,
@@ -43,6 +44,8 @@ from app.services.local_event_photo_storage import (
     event_photos_upload_dir,
     is_local_event_photo_storage_enabled,
 )
+
+configure_logging()
 
 _docs = docs_enabled()
 

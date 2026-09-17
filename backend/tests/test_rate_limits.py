@@ -14,6 +14,8 @@ from app.core import rate_limit as rate_limit_module
 from app.core.config import settings
 from app.core.rate_limit import (
     RATE_LIMIT_LOGIN_MESSAGE,
+    RATE_LIMIT_REFRESH_MESSAGE,
+    RATE_LIMIT_TOKEN_CONFIRM_MESSAGE,
     AppRateLimitExceeded,
     check_login_account_failures,
     clear_login_failures,
@@ -246,6 +248,50 @@ def test_guest_checkin_event_limit_triggers(
         },
     )
     assert blocked.status_code == 429
+
+
+def test_password_reset_confirm_limit_triggers(client, isolated_rate_limit_redis):
+    # Token lookup bcrypt-verifies every outstanding token, so an unlimited
+    # confirm endpoint is a cheap way to burn all the CPU.
+    _, ip_state = isolated_rate_limit_redis
+    ip_state["ip"] = "10.0.4.1"
+
+    payload = {"token": "not-a-real-token", "new_password": "Str0ng!Passphrase"}
+    for _ in range(settings.RATE_LIMIT_TOKEN_CONFIRM_IP_MAX):
+        response = client.post("/api/v1/auth/password-reset/confirm", json=payload)
+        assert response.status_code == 400
+
+    blocked = client.post("/api/v1/auth/password-reset/confirm", json=payload)
+    assert blocked.status_code == 429
+    assert blocked.json()["detail"] == RATE_LIMIT_TOKEN_CONFIRM_MESSAGE
+
+
+def test_verify_email_limit_triggers(client, isolated_rate_limit_redis):
+    _, ip_state = isolated_rate_limit_redis
+    ip_state["ip"] = "10.0.4.2"
+
+    payload = {"token": "not-a-real-token"}
+    for _ in range(settings.RATE_LIMIT_TOKEN_CONFIRM_IP_MAX):
+        response = client.post("/api/v1/auth/verify-email", json=payload)
+        assert response.status_code == 400
+
+    blocked = client.post("/api/v1/auth/verify-email", json=payload)
+    assert blocked.status_code == 429
+    assert blocked.json()["detail"] == RATE_LIMIT_TOKEN_CONFIRM_MESSAGE
+
+
+def test_refresh_limit_triggers(client, isolated_rate_limit_redis):
+    _, ip_state = isolated_rate_limit_redis
+    ip_state["ip"] = "10.0.4.3"
+
+    payload = {"refresh_token": "not-a-real-token"}
+    for _ in range(settings.RATE_LIMIT_REFRESH_IP_MAX):
+        response = client.post("/api/v1/auth/refresh", json=payload)
+        assert response.status_code == 401
+
+    blocked = client.post("/api/v1/auth/refresh", json=payload)
+    assert blocked.status_code == 429
+    assert blocked.json()["detail"] == RATE_LIMIT_REFRESH_MESSAGE
 
 
 def test_normal_authenticated_browsing_stays_below_global_limit(

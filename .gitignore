@@ -37,4 +37,4 @@ backend/dev_uploads/
 
 # Database backups (never commit)
 backups/
-backup/.envbackend/celerybeat-schedule
+backup/.env

@@ -46,6 +46,23 @@ def test_production_config_flags_insecure_defaults():
     assert any("RESEND_FROM_EMAIL" in issue for issue in issues)
 
 
+def test_production_trusts_proxy_headers_by_default():
+    # Railway fronts the app, so the peer address is the edge proxy, not the
+    # client — per-IP limits would otherwise share one bucket.
+    settings = Settings(ENVIRONMENT="production")
+    assert settings.RATE_LIMIT_TRUST_PROXY_HEADERS is True
+
+
+def test_explicit_proxy_header_setting_wins_in_production():
+    settings = Settings(ENVIRONMENT="production", RATE_LIMIT_TRUST_PROXY_HEADERS=False)
+    assert settings.RATE_LIMIT_TRUST_PROXY_HEADERS is False
+
+
+def test_development_does_not_trust_proxy_headers_by_default():
+    settings = Settings(ENVIRONMENT="development")
+    assert settings.RATE_LIMIT_TRUST_PROXY_HEADERS is False
+
+
 def test_production_config_warns_when_proxy_headers_disabled():
     settings = Settings(
         ENVIRONMENT="production",

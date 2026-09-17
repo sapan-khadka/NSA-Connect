@@ -31,6 +31,12 @@ RATE_LIMIT_PASSWORD_RESET_MESSAGE = (
 RATE_LIMIT_RECEIPT_SCAN_MESSAGE = (
     "Too many receipt scans. Please try again later"
 )
+RATE_LIMIT_TOKEN_CONFIRM_MESSAGE = (
+    "Too many attempts. Please request a new link and try again later"
+)
+RATE_LIMIT_REFRESH_MESSAGE = (
+    "Too many session refresh attempts. Please sign in again"
+)
 RATE_LIMIT_GLOBAL_MESSAGE = (
     "Too many requests. Please slow down and try again in a moment"
 )
@@ -250,6 +256,12 @@ def rate_limit_message_for_path(path: str) -> str:
         return RATE_LIMIT_GUEST_CHECKIN_MESSAGE
     if path.endswith("/auth/password-reset/request"):
         return RATE_LIMIT_PASSWORD_RESET_MESSAGE
+    if path.endswith("/auth/password-reset/confirm") or path.endswith(
+        "/auth/verify-email"
+    ):
+        return RATE_LIMIT_TOKEN_CONFIRM_MESSAGE
+    if path.endswith("/auth/refresh"):
+        return RATE_LIMIT_REFRESH_MESSAGE
     if path.endswith("/finance/receipts/scan"):
         return RATE_LIMIT_RECEIPT_SCAN_MESSAGE
     if "/ai/" in path:

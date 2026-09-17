@@ -218,7 +218,12 @@ def login(
 
 
 @router.post("/refresh", response_model=TokenResponse)
-def refresh_tokens(data: RefreshTokenRequest, db: Session = Depends(get_db)):
+@limit(f"{settings.RATE_LIMIT_REFRESH_IP_MAX}/minute")
+def refresh_tokens(
+    request: Request,
+    data: RefreshTokenRequest,
+    db: Session = Depends(get_db),
+):
     try:
         payload = decode_refresh_token(data.refresh_token)
     except InvalidTokenError as exc:
@@ -304,7 +309,9 @@ def me(
 
 
 @router.post("/verify-email", response_model=EmailVerificationResponse)
+@limit(f"{settings.RATE_LIMIT_TOKEN_CONFIRM_IP_MAX}/hour")
 def verify_email(
+    request: Request,
     data: EmailVerificationConfirmRequest,
     db: Session = Depends(get_db),
 ):
@@ -365,6 +372,7 @@ def password_reset_request(
 
 
 @router.post("/password-reset/confirm", response_model=PasswordResetConfirmResponse)
+@limit(f"{settings.RATE_LIMIT_TOKEN_CONFIRM_IP_MAX}/hour")
 def password_reset_confirm(
     request: Request,
     data: PasswordResetConfirmRequest,

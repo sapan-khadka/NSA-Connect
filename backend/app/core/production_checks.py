@@ -94,9 +94,10 @@ def production_config_warnings(settings: Settings) -> list[str]:
 
     warnings: list[str] = []
     if not settings.RATE_LIMIT_TRUST_PROXY_HEADERS:
+        # Production defaults this on, so reaching here means an explicit opt-out.
         warnings.append(
-            "RATE_LIMIT_TRUST_PROXY_HEADERS is false — enable it behind Railway/nginx "
-            "so rate limits use the real client IP"
+            "RATE_LIMIT_TRUST_PROXY_HEADERS was explicitly disabled — every request "
+            "will bucket under the proxy IP, collapsing per-IP rate limits"
         )
     return warnings
 
