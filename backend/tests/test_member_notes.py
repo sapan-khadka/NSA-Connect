@@ -4,6 +4,7 @@ import pytest
 from conftest import (
     auth_header,
     create_board_member,
+    create_president_member,
     register_member,
     set_member_approved,
 )
@@ -16,6 +17,12 @@ from app.models.member import Member
 def board_headers(client, db_session):
     create_board_member(db_session)
     return auth_header(client, email="board@semo.edu")
+
+
+@pytest.fixture
+def president_headers(client, db_session):
+    create_president_member(db_session)
+    return auth_header(client, email="president@semo.edu")
 
 
 @pytest.fixture
@@ -37,10 +44,12 @@ def other_member(client, db_session):
     return db_session.scalar(select(Member).where(Member.email == "other@semo.edu"))
 
 
-def test_board_can_crud_member_notes(client, board_headers, general_member):
+def test_member_manager_can_crud_member_notes(
+    client, president_headers, general_member
+):
     empty = client.get(
         f"/api/v1/members/{general_member.id}/notes",
-        headers=board_headers,
+        headers=president_headers,
     )
     assert empty.status_code == 200
     assert empty.json()["notes"] == []
@@ -48,7 +57,7 @@ def test_board_can_crud_member_notes(client, board_headers, general_member):
 
     created = client.post(
         f"/api/v1/members/{general_member.id}/notes",
-        headers=board_headers,
+        headers=president_headers,
         json={"content": "Follow up on workshop RSVP.", "pinned": True},
     )
     assert created.status_code == 201
@@ -60,7 +69,7 @@ def test_board_can_crud_member_notes(client, board_headers, general_member):
 
     listed = client.get(
         f"/api/v1/members/{general_member.id}/notes",
-        headers=board_headers,
+        headers=president_headers,
     )
     assert listed.status_code == 200
     assert listed.json()["total"] == 1
@@ -68,7 +77,7 @@ def test_board_can_crud_member_notes(client, board_headers, general_member):
 
     updated = client.patch(
         f"/api/v1/members/{general_member.id}/notes/{body['id']}",
-        headers=board_headers,
+        headers=president_headers,
         json={"content": "Updated note.", "pinned": False},
     )
     assert updated.status_code == 200
@@ -77,15 +86,41 @@ def test_board_can_crud_member_notes(client, board_headers, general_member):
 
     deleted = client.delete(
         f"/api/v1/members/{general_member.id}/notes/{body['id']}",
-        headers=board_headers,
+        headers=president_headers,
     )
     assert deleted.status_code == 204
 
     after = client.get(
         f"/api/v1/members/{general_member.id}/notes",
-        headers=board_headers,
+        headers=president_headers,
     )
     assert after.json()["notes"] == []
+
+
+def test_board_can_read_but_not_write_member_notes(
+    client, board_headers, president_headers, general_member
+):
+    """Board reads officer notes; only president/VP may author them."""
+    created = client.post(
+        f"/api/v1/members/{general_member.id}/notes",
+        headers=president_headers,
+        json={"content": "Authored by the president.", "pinned": False},
+    )
+    assert created.status_code == 201
+
+    listed = client.get(
+        f"/api/v1/members/{general_member.id}/notes",
+        headers=board_headers,
+    )
+    assert listed.status_code == 200
+    assert listed.json()["total"] == 1
+
+    blocked = client.post(
+        f"/api/v1/members/{general_member.id}/notes",
+        headers=board_headers,
+        json={"content": "Board should not write this.", "pinned": False},
+    )
+    assert blocked.status_code == 403
 
 
 def test_general_member_cannot_access_notes(

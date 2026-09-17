@@ -55,7 +55,7 @@ def test_board_member_cannot_update_role(client, db_session):
     )
 
     assert response.status_code == 403
-    assert response.json()["detail"] == "Requires president role or higher"
+    assert response.json()["detail"] == "Requires president or vice president"
 
 
 def test_general_member_cannot_update_role(client, db_session):

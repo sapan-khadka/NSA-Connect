@@ -1,6 +1,7 @@
 from conftest import (
     auth_header,
     create_board_member,
+    create_president_member,
     register_member,
     set_member_approved,
 )
@@ -18,6 +19,11 @@ def _register_board(client, db_session):
     register_member(client, email="other@semo.edu", student_id="22222222")
     create_board_member(db_session)
     return auth_header(client, email="board@semo.edu")
+
+
+def _register_president(client, db_session):
+    create_president_member(db_session)
+    return auth_header(client, email="president@semo.edu")
 
 
 def test_member_can_update_profile_with_talents_and_privacy(client, db_session):
@@ -126,9 +132,25 @@ def test_talent_filter_uses_any_match(client, db_session):
     assert unfiltered.json()["total"] >= 2
 
 
-def test_board_can_edit_other_member_profile(client, db_session):
+def test_president_can_edit_other_member_profile(client, db_session):
     member_headers = _register_and_approve(
         client, db_session, email="editme@semo.edu", student_id="66666666"
+    )
+    me = client.get("/api/v1/members/me", headers=member_headers).json()
+
+    president_headers = _register_president(client, db_session)
+    response = client.patch(
+        f"/api/v1/members/{me['id']}",
+        headers=president_headers,
+        json={"bio": "Updated by president"},
+    )
+    assert response.status_code == 200
+    assert response.json()["bio"] == "Updated by president"
+
+
+def test_board_cannot_edit_other_member_profile(client, db_session):
+    member_headers = _register_and_approve(
+        client, db_session, email="noedit@semo.edu", student_id="66666677"
     )
     me = client.get("/api/v1/members/me", headers=member_headers).json()
 
@@ -138,8 +160,7 @@ def test_board_can_edit_other_member_profile(client, db_session):
         headers=board_headers,
         json={"bio": "Updated by board"},
     )
-    assert response.status_code == 200
-    assert response.json()["bio"] == "Updated by board"
+    assert response.status_code == 403
 
 
 def test_invite_members_to_event(client, db_session):

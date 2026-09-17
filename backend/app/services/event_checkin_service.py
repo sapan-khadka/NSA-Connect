@@ -14,6 +14,7 @@ from app.models.event_rsvp import EventRsvp, RsvpStatus
 from app.models.member import Member, MemberStatus
 from app.services.event_service import EventNotFoundError
 
+
 class InvalidCheckInTokenError(Exception):
     pass
 

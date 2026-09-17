@@ -4,6 +4,7 @@ from conftest import (
     VALID_PASSWORD,
     auth_header,
     create_board_member,
+    create_president_member,
     login_member,
     mark_email_verified,
     register_member,
@@ -66,7 +67,7 @@ def test_board_sees_only_verified_pending_members(client, db_session):
 
 
 def test_cannot_approve_unverified_pending_member(client, db_session):
-    create_board_member(db_session)
+    create_president_member(db_session)
     pending = register_member(
         client, email="needverify@semo.edu", student_id="55555555"
     )
@@ -74,7 +75,7 @@ def test_cannot_approve_unverified_pending_member(client, db_session):
 
     approve = client.patch(
         f"/api/v1/members/{member_id}/approve",
-        headers=auth_header(client, email="board@semo.edu"),
+        headers=auth_header(client, email="president@semo.edu"),
     )
 
     assert approve.status_code == 400
@@ -82,7 +83,7 @@ def test_cannot_approve_unverified_pending_member(client, db_session):
 
 
 def test_verify_then_approve_allows_login(client, db_session):
-    create_board_member(db_session)
+    create_president_member(db_session)
     pending = register_member(
         client, email="student@semo.edu", student_id="66666666"
     )
@@ -93,7 +94,7 @@ def test_verify_then_approve_allows_login(client, db_session):
 
     approve = client.patch(
         f"/api/v1/members/{member_id}/approve",
-        headers=auth_header(client, email="board@semo.edu"),
+        headers=auth_header(client, email="president@semo.edu"),
     )
     assert approve.status_code == 200
 
