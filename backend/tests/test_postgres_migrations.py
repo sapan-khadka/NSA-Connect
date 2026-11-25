@@ -1,9 +1,10 @@
 """Verify Alembic migrations against a live PostgreSQL database."""
 
+from pathlib import Path
+
 import pytest
 from alembic.config import Config
 from alembic.script import ScriptDirectory
-from pathlib import Path
 from sqlalchemy import text
 
 from app.core.database import engine
