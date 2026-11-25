@@ -256,12 +256,11 @@ describe("MembersPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("hides custom titles manage item for non-presidents", async () => {
-    const user = userEvent.setup();
+  it("hides management menu for ordinary board members", async () => {
     await mockDirectoryApis();
     renderMembersPage("board");
 
-    await openManageMenu(user);
+    expect(screen.queryByRole("button", { name: /^Manage$/i })).not.toBeInTheDocument();
     expect(
       screen.queryByRole("menuitem", { name: "Custom titles" }),
     ).not.toBeInTheDocument();
@@ -507,7 +506,7 @@ describe("MembersPage", () => {
       pendingMembers: [pendingMember],
     });
 
-    renderMembersPage("board", "/members?tab=pending");
+    renderMembersPage("president", "/members?tab=pending");
 
     expect(
       await screen.findByRole("heading", { name: "Membership reviews" }),
@@ -539,7 +538,7 @@ describe("MembersPage", () => {
       pendingMembers: [pendingMember],
     });
 
-    renderMembersPage("board", "/members?tab=pending");
+    renderMembersPage("president", "/members?tab=pending");
     expect(
       await screen.findByRole("heading", { name: "Membership reviews" }),
     ).toBeInTheDocument();
@@ -563,7 +562,7 @@ describe("MembersPage", () => {
       pendingMembers: [pendingMember],
     });
 
-    renderMembersPage("board", "/members?tab=pending");
+    renderMembersPage("president", "/members?tab=pending");
     expect(
       await screen.findByRole("heading", { name: "Membership reviews" }),
     ).toBeInTheDocument();
@@ -584,7 +583,7 @@ describe("MembersPage", () => {
       pendingMembers: [pendingMember],
     });
 
-    renderMembersPage("board");
+    renderMembersPage("president");
 
     await user.click(screen.getByRole("button", { name: /^Filters$/i }));
     expect(await screen.findByRole("dialog", { name: "Filters" })).toBeInTheDocument();
@@ -638,7 +637,7 @@ describe("MembersPage", () => {
       ],
     });
 
-    renderMembersPage("treasurer");
+    renderMembersPage("president");
 
     const tableRegion = await screen.findByLabelText("Member table");
     const table = within(tableRegion).getByRole("table", {
