@@ -448,7 +448,7 @@ export function EventsPage() {
     handleSelectDate(iso);
   }
 
-  const handleEventCreated = useCallback(async (event: EventResponse) => {
+  const handleEventCreated = useCallback(async (event: EventResponse, notice?: string) => {
     const eventDate = new Date(event.starts_at);
     const year = eventDate.getFullYear();
     const month = eventDate.getMonth();
@@ -461,7 +461,7 @@ export function EventsPage() {
     setSelectedDate(toLocalIsoDate(eventDate));
     setSelectedEventId(event.id);
     setSelectionSource("create");
-    setError(null);
+    setError(notice ?? null);
     setMobileSheetOpen(true);
 
     try {
@@ -518,7 +518,11 @@ export function EventsPage() {
 
   return (
     <div className="events-calendar-page event-command">
-      {error ? <p className="ds-field-error">{error}</p> : null}
+      {error ? (
+        <p role="alert" className="ds-alert-banner">
+          {error}
+        </p>
+      ) : null}
 
       <div className="events-calendar-columns">
         <div className="events-calendar-column-main min-w-0">
@@ -608,7 +612,7 @@ export function EventsPage() {
         <CreateEventForm
           embedded
           initialDate={createDraftDate}
-          onCreated={(event) => void handleEventCreated(event)}
+          onCreated={(event, notice) => void handleEventCreated(event, notice)}
         />
       </Modal>
     </div>

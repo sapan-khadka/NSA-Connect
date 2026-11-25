@@ -5,10 +5,19 @@ import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 import { inputFieldClassName } from "./ui/Input";
 import {
-  countChecklistTasks,
   generateEventChecklist,
   type ChecklistCategory,
 } from "../lib/ai-api";
+import {
+  countDraftItems,
+  createDraftCategory,
+  draftFieldDomId,
+  draftFromGenerated,
+  draftToCategories,
+  isDraftDirty,
+  validateDraftChecklist,
+  type DraftChecklistCategory,
+} from "../lib/draft-checklist";
 import { EVENT_TYPE_LABELS, EVENT_TYPES } from "../lib/event-types";
 import {
   buildCreateEventPayload,
@@ -29,7 +38,7 @@ import { buildPrepTaskCreates } from "../lib/prep-task-create";
 import { DraftPrepChecklist } from "./DraftPrepChecklist";
 
 type CreateEventFormProps = {
-  onCreated: (event: EventResponse) => void;
+  onCreated: (event: EventResponse, notice?: string) => void;
   /** When true, form is always open without expand/collapse chrome (modal use). */
   embedded?: boolean;
   /** Prefill the date field (YYYY-MM-DD), e.g. from a calendar day selection. */
@@ -63,7 +72,14 @@ export function CreateEventForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeneratingChecklist, setIsGeneratingChecklist] = useState(false);
   const [checklistError, setChecklistError] = useState<string | null>(null);
-  const [draftChecklist, setDraftChecklist] = useState<ChecklistCategory[]>([]);
+  const [showChecklistErrors, setShowChecklistErrors] = useState(false);
+  const [draftChecklist, setDraftChecklist] = useState<DraftChecklistCategory[]>(
+    [],
+  );
+  const [generatedSnapshot, setGeneratedSnapshot] = useState<
+    ChecklistCategory[] | null
+  >(null);
+  const [checklistFocusId, setChecklistFocusId] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(embedded);
   const [eventPhotoFile, setEventPhotoFile] = useState<File | null>(null);
 
@@ -84,8 +100,33 @@ export function CreateEventForm({
     }));
   }
 
-  function clearDraftChecklist() {
+  function resetChecklist() {
     setDraftChecklist([]);
+    setGeneratedSnapshot(null);
+    setChecklistFocusId(null);
+    setShowChecklistErrors(false);
+    setChecklistError(null);
+  }
+
+  function clearDraftChecklist() {
+    if (draftChecklist.length === 0) {
+      return;
+    }
+    const confirmed = window.confirm(
+      "Clear this checklist? This removes every category and item.",
+    );
+    if (!confirmed) {
+      return;
+    }
+    resetChecklist();
+  }
+
+  function startManualChecklist() {
+    const category = createDraftCategory();
+    setDraftChecklist([category]);
+    setGeneratedSnapshot(null);
+    setChecklistFocusId(category.id);
+    setShowChecklistErrors(false);
     setChecklistError(null);
   }
 
@@ -94,6 +135,15 @@ export function CreateEventForm({
     if (nameError) {
       setFieldErrors((current) => ({ ...current, name: nameError }));
       return;
+    }
+
+    if (isDraftDirty(draftChecklist, generatedSnapshot)) {
+      const confirmed = window.confirm(
+        "Replace this checklist? Generating again will overwrite your edits.",
+      );
+      if (!confirmed) {
+        return;
+      }
     }
 
     setIsGeneratingChecklist(true);
@@ -105,7 +155,11 @@ export function CreateEventForm({
         event_name: values.name.trim(),
         event_type: values.event_type,
       });
-      setDraftChecklist(response.categories);
+      const nextDraft = draftFromGenerated(response.categories);
+      setDraftChecklist(nextDraft);
+      setGeneratedSnapshot(draftToCategories(nextDraft));
+      setChecklistFocusId(nextDraft[0]?.id ?? null);
+      setShowChecklistErrors(false);
     } catch (error) {
       setChecklistError(getApiErrorMessage(error));
     } finally {
@@ -148,6 +202,21 @@ export function CreateEventForm({
       return;
     }
 
+    if (draftChecklist.length > 0) {
+      const checklistIssues = validateDraftChecklist(draftChecklist);
+      if (checklistIssues.length > 0) {
+        setShowChecklistErrors(true);
+        setChecklistError(
+          "Fix the highlighted checklist fields before creating the event.",
+        );
+        const firstIssue = checklistIssues[0];
+        document
+          .getElementById(draftFieldDomId(firstIssue.itemId ?? firstIssue.categoryId))
+          ?.focus();
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     setServerError(null);
 
@@ -164,8 +233,7 @@ export function CreateEventForm({
           );
           setValues(initialCreateEventValues);
           setEventPhotoFile(null);
-          setDraftChecklist([]);
-          setChecklistError(null);
+          resetChecklist();
           setIsExpanded(false);
           onCreated(created);
           return;
@@ -174,19 +242,31 @@ export function CreateEventForm({
 
       if (draftChecklist.length > 0) {
         const prepTasks = buildPrepTaskCreates(
-          draftChecklist,
+          draftToCategories(draftChecklist),
           values.event_date,
           values.event_time,
         );
-        await Promise.all(
-          prepTasks.map((prepTask) => addPrepTaskToEvent(created.id, prepTask)),
-        );
+        try {
+          await Promise.all(
+            prepTasks.map((prepTask) => addPrepTaskToEvent(created.id, prepTask)),
+          );
+        } catch (taskError) {
+          const taskMessage = getApiErrorMessage(taskError);
+          setValues(initialCreateEventValues);
+          setEventPhotoFile(null);
+          resetChecklist();
+          setIsExpanded(false);
+          onCreated(
+            result,
+            `Event created, but the checklist was not fully saved: ${taskMessage}. Open the event and review its tasks.`,
+          );
+          return;
+        }
       }
 
       setValues(initialCreateEventValues);
       setEventPhotoFile(null);
-      setDraftChecklist([]);
-      setChecklistError(null);
+      resetChecklist();
       setIsExpanded(false);
       onCreated(result);
     } catch (error) {
@@ -197,7 +277,10 @@ export function CreateEventForm({
   }
 
   const canGenerateChecklist = values.name.trim().length > 0;
-  const draftTaskCount = countChecklistTasks(draftChecklist);
+  const draftTaskCount = countDraftItems(draftChecklist);
+  const checklistIssues = showChecklistErrors
+    ? validateDraftChecklist(draftChecklist)
+    : [];
   const showForm = embedded || isExpanded;
 
   return (
@@ -520,19 +603,32 @@ export function CreateEventForm({
               <div>
                 <h3 className="text-sm font-semibold text-foreground">Event checklist</h3>
                 <p className="mt-1 text-sm text-label">
-                  Generate 10–15 AI-suggested tasks from the event name and type.
+                  Generate suggested tasks, or build the checklist yourself. You
+                  can edit it before the event is created.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  void handleGenerateChecklist();
-                }}
-                disabled={!canGenerateChecklist || isGeneratingChecklist || isSubmitting}
-                className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isGeneratingChecklist ? "Generating…" : "Generate Checklist"}
-              </button>
+              <div className="flex flex-wrap gap-2">
+                {draftChecklist.length === 0 ? (
+                  <button
+                    type="button"
+                    onClick={startManualChecklist}
+                    disabled={isGeneratingChecklist || isSubmitting}
+                    className="min-h-11 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Build manually
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleGenerateChecklist();
+                  }}
+                  disabled={!canGenerateChecklist || isGeneratingChecklist || isSubmitting}
+                  className="min-h-11 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isGeneratingChecklist ? "Generating…" : "Generate Checklist"}
+                </button>
+              </div>
             </div>
 
             {checklistError ? (
@@ -548,6 +644,15 @@ export function CreateEventForm({
               <div className="mt-4">
                 <DraftPrepChecklist
                   categories={draftChecklist}
+                  issues={checklistIssues}
+                  focusFieldId={checklistFocusId}
+                  onChange={(next) => {
+                    setDraftChecklist(next);
+                    if (validateDraftChecklist(next).length === 0) {
+                      setChecklistError(null);
+                      setShowChecklistErrors(false);
+                    }
+                  }}
                   onClear={clearDraftChecklist}
                 />
               </div>
@@ -557,7 +662,8 @@ export function CreateEventForm({
           <div className="flex flex-wrap items-center justify-between gap-3">
             {draftTaskCount > 0 ? (
               <p className="text-sm text-label">
-                Ready to create event with {draftTaskCount} checklist tasks.
+                Ready to create event with {draftTaskCount} checklist{" "}
+                {draftTaskCount === 1 ? "task" : "tasks"}.
               </p>
             ) : (
               <span />
