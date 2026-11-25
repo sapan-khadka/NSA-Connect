@@ -271,7 +271,7 @@ describe("AnnouncementsPage", () => {
       ],
     });
 
-    renderPage("member", "/announcements?id=42");
+    renderPage("general", "/announcements?id=42");
 
     expect(await screen.findByText("Opened from notification.")).toBeInTheDocument();
   });

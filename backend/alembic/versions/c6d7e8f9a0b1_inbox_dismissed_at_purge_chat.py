@@ -1,6 +1,6 @@
 """Add inbox dismissed_at; purge discussion_message inbox rows
 
-Revision ID: c5d6e7f8a9b0
+Revision ID: c6d7e8f9a0b1
 Revises: b1c2d3e4f5b6
 Create Date: 2026-09-15 02:00:00.000000
 
@@ -11,7 +11,7 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "c5d6e7f8a9b0"
+revision: str = "c6d7e8f9a0b1"
 down_revision: Union[str, Sequence[str], None] = "b1c2d3e4f5b6"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
