@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+  type RefObject,
+} from "react";
 
 import { FinanceCategoryField } from "./FinanceCategoryField";
 import { Button } from "./ui/Button";
@@ -52,6 +59,9 @@ function initialValuesForEvent(lockedEventId?: number): LogFinanceEntryFormValue
 
 const RECEIPT_IMAGE_ACCEPT = "image/jpeg,image/png,image/webp";
 const RECEIPT_FILE_ACCEPT = `${RECEIPT_IMAGE_ACCEPT},application/pdf`;
+// iOS Safari and Android Chrome ignore `capture` unless accept is the image/*
+// wildcard. A list of concrete types makes Take photo open the file picker.
+const RECEIPT_CAMERA_ACCEPT = "image/*";
 const SCAN_FALLBACK_MESSAGE =
   "Couldn't read that receipt clearly. Please fill in the details manually";
 
@@ -64,6 +74,55 @@ function fieldId(prefix: string | undefined, name: string): string {
 
 function isReceiptImage(file: File): boolean {
   return RECEIPT_IMAGE_ACCEPT.split(",").includes(file.type);
+}
+
+const receiptPickerLabelClassName = [
+  "relative inline-flex min-h-11 cursor-pointer items-center justify-center rounded-[10px]",
+  "border border-gray-200 bg-surface-card px-4 py-2 text-sm font-medium text-foreground",
+  "transition duration-200 ease-out hover:border-foreground/25 hover:bg-surface-muted",
+  "focus-within:outline-none focus-within:ring-2 focus-within:ring-primary/20 focus-within:ring-offset-2",
+].join(" ");
+
+function ReceiptPickerLabel({
+  label,
+  inputId,
+  inputRef,
+  accept,
+  capture,
+  disabled,
+  onFile,
+}: {
+  label: string;
+  inputId: string;
+  inputRef: RefObject<HTMLInputElement | null>;
+  accept: string;
+  capture?: "environment";
+  disabled: boolean;
+  onFile: (file: File | null) => void;
+}) {
+  return (
+    <label
+      htmlFor={inputId}
+      className={`${receiptPickerLabelClassName} ${
+        disabled ? "pointer-events-none cursor-not-allowed opacity-60" : ""
+      }`}
+      aria-disabled={disabled || undefined}
+    >
+      {label}
+      <input
+        ref={inputRef}
+        id={inputId}
+        type="file"
+        accept={accept}
+        capture={capture}
+        disabled={disabled}
+        className="absolute h-px w-px overflow-hidden opacity-0"
+        onChange={(event) => {
+          onFile(event.target.files?.[0] ?? null);
+        }}
+      />
+    </label>
+  );
 }
 
 function applyScanToFormValues(
@@ -372,47 +431,24 @@ export function LogFinanceEntryForm({
         <div className="space-y-3 md:col-span-2">
           <p className={labelClassName}>Receipt</p>
 
-          <input
-            ref={cameraInputRef}
-            id={fieldId(idPrefix, "receipt-camera")}
-            type="file"
-            accept={RECEIPT_IMAGE_ACCEPT}
-            capture="environment"
-            className="sr-only"
-            onChange={(event) => {
-              const file = event.target.files?.[0] ?? null;
-              handleReceiptFileSelected(file, { autoScan: true });
-            }}
-          />
-          <input
-            ref={uploadInputRef}
-            id={fieldId(idPrefix, "receipt")}
-            type="file"
-            accept={RECEIPT_FILE_ACCEPT}
-            className="sr-only"
-            onChange={(event) => {
-              const file = event.target.files?.[0] ?? null;
-              handleReceiptFileSelected(file, { autoScan: false });
-            }}
-          />
-
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            <Button
-              type="button"
-              variant="outline"
+            <ReceiptPickerLabel
+              label="Take photo"
+              inputId={fieldId(idPrefix, "receipt-camera")}
+              inputRef={cameraInputRef}
+              accept={RECEIPT_CAMERA_ACCEPT}
+              capture="environment"
               disabled={isScanning || isSubmitting}
-              onClick={() => cameraInputRef.current?.click()}
-            >
-              Take photo
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
+              onFile={(file) => handleReceiptFileSelected(file, { autoScan: true })}
+            />
+            <ReceiptPickerLabel
+              label="Upload file"
+              inputId={fieldId(idPrefix, "receipt")}
+              inputRef={uploadInputRef}
+              accept={RECEIPT_FILE_ACCEPT}
               disabled={isScanning || isSubmitting}
-              onClick={() => uploadInputRef.current?.click()}
-            >
-              Upload file
-            </Button>
+              onFile={(file) => handleReceiptFileSelected(file, { autoScan: false })}
+            />
             <Button
               type="button"
               disabled={

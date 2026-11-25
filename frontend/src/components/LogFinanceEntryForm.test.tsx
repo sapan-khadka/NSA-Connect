@@ -142,6 +142,76 @@ describe("LogFinanceEntryForm", () => {
     expect(onCreated).toHaveBeenCalled();
   });
 
+  it("requests the rear camera for Take photo and a file picker for Upload file", () => {
+    render(
+      <LogFinanceEntryForm
+        eventOptions={[]}
+        onCreated={vi.fn()}
+        presentation="standalone"
+        idPrefix="picker"
+      />,
+    );
+
+    const camera = document.getElementById("picker-receipt-camera") as HTMLInputElement;
+    const upload = document.getElementById("picker-receipt") as HTMLInputElement;
+
+    expect(camera).toHaveAttribute("accept", "image/*");
+    expect(camera).toHaveAttribute("capture", "environment");
+    expect(camera.closest("label")).toHaveTextContent("Take photo");
+    expect(camera.closest("label")).toHaveAttribute("for", "picker-receipt-camera");
+
+    expect(upload).toHaveAttribute(
+      "accept",
+      "image/jpeg,image/png,image/webp,application/pdf",
+    );
+    expect(upload).not.toHaveAttribute("capture");
+    expect(upload.closest("label")).toHaveTextContent("Upload file");
+    expect(upload.closest("label")).toHaveAttribute("for", "picker-receipt");
+  });
+
+  it("auto-scans a camera photo and leaves an uploaded file for manual scan", async () => {
+    const user = userEvent.setup();
+    const { scanFinanceReceipt } = await import("../lib/finance-api");
+    vi.mocked(scanFinanceReceipt).mockResolvedValue({
+      readable: true,
+      vendor: null,
+      purchase_date: null,
+      purchase_time: null,
+      amount: "8.00",
+      description: "Tea",
+      category: null,
+      confidence: "medium",
+    });
+
+    render(
+      <LogFinanceEntryForm
+        eventOptions={[]}
+        onCreated={vi.fn()}
+        presentation="standalone"
+        idPrefix="source"
+      />,
+    );
+
+    const camera = document.getElementById("source-receipt-camera") as HTMLInputElement;
+    await user.upload(
+      camera,
+      new File(["jpeg"], "shot.jpg", { type: "image/jpeg" }),
+    );
+
+    await waitFor(() => {
+      expect(scanFinanceReceipt).toHaveBeenCalledTimes(1);
+    });
+
+    const upload = document.getElementById("source-receipt") as HTMLInputElement;
+    await user.upload(
+      upload,
+      new File(["pdf"], "receipt.pdf", { type: "application/pdf" }),
+    );
+
+    expect(scanFinanceReceipt).toHaveBeenCalledTimes(1);
+    expect(screen.getByText(/receipt\.pdf/)).toBeInTheDocument();
+  });
+
   it("pre-fills fields from a successful receipt scan without auto-submitting", async () => {
     const user = userEvent.setup();
     const { scanFinanceReceipt, createFinanceEntry } = await import(
