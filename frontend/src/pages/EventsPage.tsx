@@ -60,7 +60,14 @@ export function EventsPage() {
   const [rsvpLoading, setRsvpLoading] = useState(false);
   const [upcomingDrawerOpen, setUpcomingDrawerOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createDraftDate, setCreateDraftDate] = useState<string | null>(null);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+
+  const openCreateModal = useCallback((date: string | null = null) => {
+    setCreateDraftDate(date);
+    setMobileSheetOpen(false);
+    setCreateModalOpen(true);
+  }, []);
 
   useEffect(() => {
     const dateParam = searchParams.get("date");
@@ -87,10 +94,14 @@ export function EventsPage() {
     }
 
     if (createParam === "1" && member && memberSatisfiesMinRole(member, "board")) {
-      setCreateModalOpen(true);
+      const draftDate =
+        dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)
+          ? dateParam
+          : null;
+      openCreateModal(draftDate);
       navigate("/events/calendar", { replace: true });
     }
-  }, [searchParams, member, navigate]);
+  }, [searchParams, member, navigate, openCreateModal]);
 
   useEffect(() => {
     const q = searchParams.get("q");
@@ -443,6 +454,7 @@ export function EventsPage() {
     const month = eventDate.getMonth();
 
     setCreateModalOpen(false);
+    setCreateDraftDate(null);
     setViewYear(year);
     setViewMonth(month);
     setViewMode("month");
@@ -499,6 +511,9 @@ export function EventsPage() {
       void handleRsvpStatusChange(status);
     },
     showingDefaultUpcoming: false,
+    onCreateEvent: (date: string) => {
+      openCreateModal(date);
+    },
   };
 
   return (
@@ -584,11 +599,15 @@ export function EventsPage() {
       <Modal
         open={createModalOpen}
         title="New event"
-        onClose={() => setCreateModalOpen(false)}
+        onClose={() => {
+          setCreateModalOpen(false);
+          setCreateDraftDate(null);
+        }}
         size="lg"
       >
         <CreateEventForm
           embedded
+          initialDate={createDraftDate}
           onCreated={(event) => void handleEventCreated(event)}
         />
       </Modal>

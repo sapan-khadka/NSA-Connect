@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { getApiErrorMessage } from "../lib/api-error";
 import { Button } from "./ui/Button";
@@ -32,6 +32,8 @@ type CreateEventFormProps = {
   onCreated: (event: EventResponse) => void;
   /** When true, form is always open without expand/collapse chrome (modal use). */
   embedded?: boolean;
+  /** Prefill the date field (YYYY-MM-DD), e.g. from a calendar day selection. */
+  initialDate?: string | null;
 };
 
 const inputClassName = `${inputFieldClassName} mt-1`;
@@ -39,10 +41,23 @@ const inputClassName = `${inputFieldClassName} mt-1`;
 export function CreateEventForm({
   onCreated,
   embedded = false,
+  initialDate = null,
 }: CreateEventFormProps) {
-  const [values, setValues] = useState<CreateEventFormValues>(
-    initialCreateEventValues,
-  );
+  const [values, setValues] = useState<CreateEventFormValues>(() => ({
+    ...initialCreateEventValues,
+    event_date: initialDate ?? "",
+  }));
+
+  useEffect(() => {
+    if (!initialDate) {
+      return;
+    }
+    setValues((current) =>
+      current.event_date === initialDate
+        ? current
+        : { ...current, event_date: initialDate },
+    );
+  }, [initialDate]);
   const [fieldErrors, setFieldErrors] = useState<CreateEventFormErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);

@@ -105,6 +105,7 @@ type EventOverviewCardProps = {
   onRsvpStatusChange: (status: RsvpStatus) => void;
   /** True when showing the default soonest-upcoming event (not a calendar day pick). */
   showingDefaultUpcoming?: boolean;
+  onCreateEvent?: (date: string) => void;
 };
 
 export function EventOverviewCard({
@@ -118,9 +119,12 @@ export function EventOverviewCard({
   rsvpLoading,
   onRsvpStatusChange,
   showingDefaultUpcoming = false,
+  onCreateEvent,
 }: EventOverviewCardProps) {
   const { member } = useAuth();
   const canManage = member ? memberSatisfiesMinRole(member, "board") : false;
+  const canCreateForDay =
+    canManage && selectedDate != null && typeof onCreateEvent === "function";
   const previewEvent =
     eventDetail ??
     dayEvents.find((event) => event.id === selectedEventId) ??
@@ -330,14 +334,30 @@ export function EventOverviewCard({
           title={dayFestivals.map((festival) => festival.name).join(" · ")}
           description="No chapter events on this day."
           className="calendar-festival-empty py-8"
+          actionLabel={canCreateForDay ? "Create event" : undefined}
+          onAction={
+            canCreateForDay && selectedDate
+              ? () => onCreateEvent(selectedDate)
+              : undefined
+          }
         />
       ) : null}
 
       {showEmptyDay && dayFestivals.length === 0 ? (
         <DetailsEmptyState
           title="No events on this day"
-          description="Pick another date or create an event for this day."
+          description={
+            canCreateForDay
+              ? "Schedule something for this day."
+              : "Pick another date or create an event for this day."
+          }
           className="calendar-day-empty py-8"
+          actionLabel={canCreateForDay ? "Create event" : undefined}
+          onAction={
+            canCreateForDay && selectedDate
+              ? () => onCreateEvent(selectedDate)
+              : undefined
+          }
         />
       ) : null}
 

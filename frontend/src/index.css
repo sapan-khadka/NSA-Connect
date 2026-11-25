@@ -320,8 +320,8 @@
   }
 
   .ds-topbar {
-    /* Keep above home canvas / inbox stacking so Create + notifications panel over content */
-    @apply sticky top-0 z-40 flex h-16 shrink-0 items-center gap-3 border-b px-4 sm:px-6 lg:px-8;
+    /* Above events mobile preview sheet (z-50) so Create / notifications stay tappable */
+    @apply sticky top-0 z-[55] flex h-16 shrink-0 items-center gap-3 border-b px-4 sm:px-6 lg:px-8;
     border-color: #ebebea;
     background: rgba(255, 255, 255, 0.92);
     backdrop-filter: blur(12px);

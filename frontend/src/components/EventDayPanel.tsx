@@ -26,6 +26,7 @@ type EventDayPanelProps = {
   showingDefaultUpcoming?: boolean;
   /** Mobile bottom-sheet presentation */
   presentation?: "aside" | "sheet";
+  onCreateEvent?: (date: string) => void;
 };
 
 function formatUpcomingDate(isoDate: string): string {
@@ -121,6 +122,7 @@ export function EventDayPanel({
   onRsvpStatusChange,
   showingDefaultUpcoming = false,
   presentation = "aside",
+  onCreateEvent,
 }: EventDayPanelProps) {
   return (
     <aside
@@ -142,6 +144,7 @@ export function EventDayPanel({
         rsvpLoading={rsvpLoading}
         onRsvpStatusChange={onRsvpStatusChange}
         showingDefaultUpcoming={showingDefaultUpcoming}
+        onCreateEvent={onCreateEvent}
       />
     </aside>
   );
