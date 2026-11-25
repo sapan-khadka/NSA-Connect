@@ -38,7 +38,7 @@ import { buildPrepTaskCreates } from "../lib/prep-task-create";
 import { DraftPrepChecklist } from "./DraftPrepChecklist";
 
 type CreateEventFormProps = {
-  onCreated: (event: EventResponse) => void;
+  onCreated: (event: EventResponse, notice?: string) => void;
   /** When true, form is always open without expand/collapse chrome (modal use). */
   embedded?: boolean;
   /** Prefill the date field (YYYY-MM-DD), e.g. from a calendar day selection. */
@@ -246,9 +246,22 @@ export function CreateEventForm({
           values.event_date,
           values.event_time,
         );
-        await Promise.all(
-          prepTasks.map((prepTask) => addPrepTaskToEvent(created.id, prepTask)),
-        );
+        try {
+          await Promise.all(
+            prepTasks.map((prepTask) => addPrepTaskToEvent(created.id, prepTask)),
+          );
+        } catch (taskError) {
+          const taskMessage = getApiErrorMessage(taskError);
+          setValues(initialCreateEventValues);
+          setEventPhotoFile(null);
+          resetChecklist();
+          setIsExpanded(false);
+          onCreated(
+            result,
+            `Event created, but the checklist was not fully saved: ${taskMessage}. Open the event and review its tasks.`,
+          );
+          return;
+        }
       }
 
       setValues(initialCreateEventValues);

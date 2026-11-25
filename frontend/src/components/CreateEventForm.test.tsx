@@ -135,6 +135,40 @@ describe("CreateEventForm", () => {
     expect(mockedAddPrepTaskToEvent).not.toHaveBeenCalled();
   });
 
+  it("tells the organizer when the event is created but checklist tasks fail", async () => {
+    const user = userEvent.setup();
+    const onCreated = vi.fn();
+    mockedGenerateEventChecklist.mockResolvedValue(generatedChecklist());
+    mockCreatedEvent();
+    mockedAddPrepTaskToEvent.mockRejectedValue(new Error("task save failed"));
+
+    render(<CreateEventForm embedded onCreated={onCreated} />);
+    await user.type(screen.getByLabelText("Event name"), "Dashain Celebration");
+    await user.type(screen.getByLabelText(/Description/), "Annual cultural night.");
+    await user.selectOptions(screen.getByLabelText("Event type"), "cultural");
+    await user.type(screen.getByLabelText("Date"), "2030-06-01");
+    await user.clear(screen.getByLabelText("Start time"));
+    await user.type(screen.getByLabelText("Start time"), "18:00");
+    await user.click(screen.getByRole("button", { name: "Generate Checklist" }));
+    expect(await screen.findByText(/5 tasks across 2 categories/)).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Create event with checklist tasks" }),
+    );
+
+    await waitFor(() => {
+      expect(onCreated).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 12 }),
+        expect.stringContaining(
+          "Event created, but the checklist was not fully saved",
+        ),
+      );
+    });
+    expect(mockedCreateEvent).toHaveBeenCalledTimes(1);
+    expect(
+      screen.queryByRole("region", { name: "Checklist draft" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("generates and attaches checklist tasks when creating an event", async () => {
     const user = userEvent.setup();
     const onCreated = vi.fn();
