@@ -64,6 +64,7 @@ from app.services.finance_service import (
     get_finance_summary,
     list_finance_entries,
 )
+from app.services.private_asset_url import resolve_private_asset_url
 from app.services.receipt_scan_service import ReceiptScanError, scan_finance_receipt
 from app.services.receipt_upload_service import (
     ReceiptUploadUnavailableError,
@@ -107,7 +108,13 @@ async def upload_finance_receipt_endpoint(
         ) from exc
 
     return ReceiptUploadResponse(
-        receipt_url=result.receipt_url,
+        receipt_url=resolve_private_asset_url(
+            stored_url=result.receipt_url,
+            public_id=result.public_id,
+            resource_type=result.resource_type,
+            force_authenticated=True,
+        )
+        or result.receipt_url,
         public_id=result.public_id,
         bytes=result.bytes,
         format=result.format,

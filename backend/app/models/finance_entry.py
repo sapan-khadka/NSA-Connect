@@ -42,6 +42,8 @@ class FinanceEntry(Base):
     amount = Column(Numeric(10, 2), nullable=False)
     description = Column(Text, nullable=False, default="")
     receipt_url = Column(String(2048), nullable=True)
+    receipt_public_id = Column(String(512), nullable=True)
+    receipt_resource_type = Column(String(32), nullable=True)
     event_id = Column(Integer, ForeignKey("events.id"), nullable=True, index=True)
     created_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     organization_id = Column(

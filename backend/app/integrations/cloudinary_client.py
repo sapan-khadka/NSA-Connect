@@ -2,6 +2,14 @@ from dataclasses import dataclass
 
 import cloudinary
 import cloudinary.uploader
+import cloudinary.utils
+
+# Public CDN delivery (event photos, avatars, task photos).
+DELIVERY_TYPE_UPLOAD = "upload"
+# Requires a signature / auth token to fetch — use for member PII.
+DELIVERY_TYPE_AUTHENTICATED = "authenticated"
+
+DEFAULT_SIGNED_URL_TTL_SECONDS = 3600
 
 
 class CloudinaryUploadError(Exception):
@@ -15,6 +23,7 @@ class CloudinaryUploadResult:
     bytes: int
     format: str | None
     resource_type: str
+    delivery_type: str = DELIVERY_TYPE_UPLOAD
 
 
 @dataclass(frozen=True)
@@ -40,14 +49,7 @@ class CloudinaryDiscussionAttachmentResult:
     duration_seconds: float | None = None
 
 
-def upload_receipt(
-    *,
-    cloud_name: str,
-    api_key: str,
-    api_secret: str,
-    file_bytes: bytes,
-    folder: str,
-) -> CloudinaryUploadResult:
+def _configure(*, cloud_name: str, api_key: str, api_secret: str) -> None:
     cloudinary.config(
         cloud_name=cloud_name,
         api_key=api_key,
@@ -55,11 +57,69 @@ def upload_receipt(
         secure=True,
     )
 
+
+def is_authenticated_cloudinary_url(url: str | None) -> bool:
+    """True when the stored CDN URL was uploaded as type=authenticated."""
+    if not url:
+        return False
+    return "/authenticated/" in url
+
+
+def build_signed_delivery_url(
+    *,
+    cloud_name: str,
+    api_key: str,
+    api_secret: str,
+    public_id: str,
+    resource_type: str = "image",
+    delivery_type: str = DELIVERY_TYPE_AUTHENTICATED,
+    expires_in_seconds: int = DEFAULT_SIGNED_URL_TTL_SECONDS,
+) -> str:
+    """Return a signed URL for an authenticated Cloudinary asset.
+
+    The signature (``s--…--``) is derived from the API secret, so the link is
+    not a public CDN path. It does not expire: Cloudinary's expiring
+    ``auth_token`` needs a separate token key configured on the account, and
+    passing ``auth_token`` without that key raises, which would make every
+    private receipt and member document unviewable.
+
+    ``expires_in_seconds`` is accepted for callers and reserved for when a
+    token key is configured.
+    """
+    del expires_in_seconds
+    _configure(cloud_name=cloud_name, api_key=api_key, api_secret=api_secret)
+    try:
+        url, _options = cloudinary.utils.cloudinary_url(
+            public_id,
+            resource_type=resource_type or "image",
+            type=delivery_type,
+            secure=True,
+            sign_url=True,
+        )
+    except Exception as exc:
+        raise CloudinaryUploadError("Failed to sign Cloudinary delivery URL") from exc
+    if not url:
+        raise CloudinaryUploadError("Cloudinary signed URL was empty")
+    return url
+
+
+def upload_receipt(
+    *,
+    cloud_name: str,
+    api_key: str,
+    api_secret: str,
+    file_bytes: bytes,
+    folder: str,
+    delivery_type: str = DELIVERY_TYPE_UPLOAD,
+) -> CloudinaryUploadResult:
+    _configure(cloud_name=cloud_name, api_key=api_key, api_secret=api_secret)
+
     try:
         result = cloudinary.uploader.upload(
             file_bytes,
             folder=folder,
             resource_type="auto",
+            type=delivery_type,
             use_filename=True,
             unique_filename=True,
         )
@@ -77,6 +137,7 @@ def upload_receipt(
         bytes=int(result.get("bytes", len(file_bytes))),
         format=result.get("format"),
         resource_type=result.get("resource_type", "image"),
+        delivery_type=delivery_type,
     )
 
 
@@ -217,15 +278,15 @@ def delete_cloudinary_asset(
     api_secret: str,
     public_id: str,
     resource_type: str = "image",
+    delivery_type: str = DELIVERY_TYPE_UPLOAD,
 ) -> None:
-    cloudinary.config(
-        cloud_name=cloud_name,
-        api_key=api_key,
-        api_secret=api_secret,
-        secure=True,
-    )
+    _configure(cloud_name=cloud_name, api_key=api_key, api_secret=api_secret)
 
     try:
-        cloudinary.uploader.destroy(public_id, resource_type=resource_type)
+        cloudinary.uploader.destroy(
+            public_id,
+            resource_type=resource_type,
+            type=delivery_type,
+        )
     except Exception as exc:
         raise CloudinaryUploadError("Failed to delete asset from Cloudinary") from exc

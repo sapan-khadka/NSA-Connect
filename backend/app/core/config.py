@@ -193,6 +193,15 @@ class Settings(BaseSettings):
         default="nsa-connect/member-documents",
         description="Cloudinary folder for member document uploads",
     )
+    CLOUDINARY_SIGNED_URL_TTL_SECONDS: int = Field(
+        default=3600,
+        ge=60,
+        le=86400,
+        description=(
+            "Reserved. Signed receipt and document URLs do not expire yet, "
+            "because expiring Cloudinary tokens need an account token key"
+        ),
+    )
     CLOUDINARY_MEMBER_AVATARS_FOLDER: str = Field(
         default="nsa-connect/member-avatars",
         description="Cloudinary folder for member profile avatars",

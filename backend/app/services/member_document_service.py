@@ -17,6 +17,10 @@ from app.schemas.member_document import (
     MemberDocumentResponse,
 )
 from app.services.member_service import MemberNotFoundError, get_member_by_id
+from app.services.private_asset_url import (
+    cloudinary_delivery_type_for_url,
+    resolve_private_asset_url,
+)
 from app.services.receipt_upload_service import (
     ReceiptUploadUnavailableError,
     upload_member_document,
@@ -57,7 +61,12 @@ def _to_response(document: MemberDocument, *, can_manage: bool) -> MemberDocumen
         member_id=document.member_id,
         uploaded_by_id=document.uploaded_by_id,
         uploaded_by_name=_display_name(document.uploaded_by),
-        file_url=document.file_url,
+        file_url=resolve_private_asset_url(
+            stored_url=document.file_url,
+            public_id=document.public_id,
+            resource_type=document.resource_type,
+        )
+        or document.file_url,
         file_name=document.file_name,
         document_type=document.document_type,
         uploaded_at=document.uploaded_at,
@@ -89,6 +98,7 @@ def _delete_cloudinary_asset(
     *,
     public_id: str,
     resource_type: str | None,
+    stored_url: str | None = None,
 ) -> None:
     if not (
         settings.CLOUDINARY_CLOUD_NAME
@@ -103,6 +113,7 @@ def _delete_cloudinary_asset(
             api_secret=settings.CLOUDINARY_API_SECRET,
             public_id=public_id,
             resource_type=resource_type or "image",
+            delivery_type=cloudinary_delivery_type_for_url(stored_url),
         )
     except CloudinaryUploadError:
         pass
@@ -204,6 +215,7 @@ def replace_member_document(
 
     old_public_id = document.public_id
     old_resource_type = document.resource_type
+    old_file_url = document.file_url
 
     document.file_url = upload_result.receipt_url
     document.public_id = upload_result.public_id
@@ -224,6 +236,7 @@ def replace_member_document(
         _delete_cloudinary_asset(
             public_id=old_public_id,
             resource_type=old_resource_type,
+            stored_url=old_file_url,
         )
 
     return _to_response(document, can_manage=True)
@@ -251,6 +264,7 @@ def delete_member_document(
     _delete_cloudinary_asset(
         public_id=document.public_id,
         resource_type=document.resource_type,
+        stored_url=document.file_url,
     )
     db.delete(document)
     db.commit()
