@@ -43,9 +43,9 @@ describe("MemberWorkspaceHeader", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders compact overview with Edit Member and overflow only", () => {
+  it("renders compact overview with Edit Member and overflow for vice president", () => {
     render(
-      <MockAuthProvider value={{ member: boardViewer, isAuthenticated: true }}>
+      <MockAuthProvider value={{ member: { ...boardViewer, position: "vice_president" }, isAuthenticated: true }}>
         <MemoryRouter>
           <MemberWorkspaceHeader member={member} />
         </MemoryRouter>
@@ -80,11 +80,11 @@ describe("MemberWorkspaceHeader", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("hides Edit Member for general viewers but keeps overflow", () => {
+  it.each(["general", "board"] as const)("hides Edit Member for %s viewers but keeps overflow", (role) => {
     render(
       <MockAuthProvider
         value={{
-          member: { ...boardViewer, id: 9, role: "general" },
+          member: { ...boardViewer, id: 9, role },
           isAuthenticated: true,
         }}
       >
@@ -110,7 +110,7 @@ describe("MemberWorkspaceHeader", () => {
     });
 
     render(
-      <MockAuthProvider value={{ member: boardViewer, isAuthenticated: true }}>
+      <MockAuthProvider value={{ member: { ...boardViewer, position: "vice_president" }, isAuthenticated: true }}>
         <MemoryRouter>
           <MemberWorkspaceHeader member={member} />
         </MemoryRouter>
