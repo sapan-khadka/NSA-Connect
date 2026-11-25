@@ -92,9 +92,7 @@ export function validateCreateEventField(
       }
       return null;
     case "description":
-      if (!value.trim()) {
-        return "Description is required";
-      }
+      // Optional in the form — empty falls back to the event name on submit.
       if (value.trim().length > 5000) {
         return "Description must be 5000 characters or fewer";
       }
@@ -191,12 +189,14 @@ export function formatBudgetForSubmit(value: string): string {
 }
 
 export function buildCreateEventPayload(values: CreateEventFormValues) {
+  const name = values.name.trim();
   const location = values.location.trim();
   const capacityRaw = values.capacity.trim();
   const capacity = capacityRaw ? Number(capacityRaw) : null;
+  const description = values.description.trim() || name;
   return {
-    name: values.name.trim(),
-    description: values.description.trim(),
+    name,
+    description,
     event_type: values.event_type,
     starts_at: combineDateAndTime(values.event_date, values.event_time),
     budget: formatBudgetForSubmit(values.budget),

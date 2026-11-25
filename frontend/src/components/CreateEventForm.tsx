@@ -120,6 +120,31 @@ export function CreateEventForm({
     setFieldErrors(errors);
 
     if (Object.keys(errors).length > 0) {
+      const firstKey = Object.keys(errors)[0] as keyof CreateEventFormValues;
+      const fieldId =
+        firstKey === "name"
+          ? "event-name"
+          : firstKey === "description"
+            ? "event-description"
+            : firstKey === "location"
+              ? "event-location"
+              : firstKey === "capacity"
+                ? "event-capacity"
+                : firstKey === "event_type"
+                  ? "event-type"
+                  : firstKey === "event_date"
+                    ? "event-date"
+                    : firstKey === "event_time"
+                      ? "event-time"
+                      : firstKey === "budget"
+                        ? "event-budget"
+                        : null;
+      const target = fieldId ? document.getElementById(fieldId) : null;
+      if (target instanceof HTMLElement) {
+        target.scrollIntoView?.({ behavior: "smooth", block: "center" });
+        target.focus();
+      }
+      setServerError("Please fill in the required fields highlighted below.");
       return;
     }
 
@@ -250,7 +275,10 @@ export function CreateEventForm({
               htmlFor="event-description"
               className="block text-sm font-medium text-foreground"
             >
-              {values.event_type === "meeting" ? "Agenda / description" : "Description"}
+              {values.event_type === "meeting"
+                ? "Agenda / description"
+                : "Description"}{" "}
+              <span className="font-normal text-label">(optional)</span>
             </label>
             <textarea
               id="event-description"

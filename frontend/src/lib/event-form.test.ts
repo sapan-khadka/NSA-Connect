@@ -34,8 +34,21 @@ describe("event form", () => {
     );
 
     expect(errors.name).toBeTruthy();
-    expect(errors.description).toBeTruthy();
+    expect(errors.description).toBeUndefined();
     expect(errors.event_date).toBeTruthy();
+  });
+
+  it("falls back to the event name when description is empty", () => {
+    const values = formValues({
+      name: "Spring Social",
+      description: "   ",
+      event_type: "social",
+      event_date: "2030-06-15",
+      event_time: "18:00",
+    });
+
+    expect(validateCreateEventForm(values).description).toBeUndefined();
+    expect(buildCreateEventPayload(values).description).toBe("Spring Social");
   });
 
   it("treats budget as optional and defaults an empty value to 0.00", () => {

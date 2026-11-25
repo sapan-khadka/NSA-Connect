@@ -40,8 +40,11 @@ describe("CreateEventForm", () => {
     await user.click(screen.getByRole("button", { name: "Create event" }));
 
     expect(await screen.findByText("Event name is required")).toBeInTheDocument();
-    expect(screen.getByText("Description is required")).toBeInTheDocument();
     expect(screen.getByText("Event date is required")).toBeInTheDocument();
+    expect(screen.queryByText("Description is required")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Please fill in the required fields highlighted below."),
+    ).toBeInTheDocument();
     expect(mockedCreateEvent).not.toHaveBeenCalled();
   });
 
@@ -65,7 +68,7 @@ describe("CreateEventForm", () => {
 
     await user.click(screen.getByRole("button", { name: "New event" }));
     await user.type(screen.getByLabelText("Event name"), "Spring Social");
-    await user.type(screen.getByLabelText("Description"), "Food and games.");
+    await user.type(screen.getByLabelText(/Description/), "Food and games.");
     await user.selectOptions(screen.getByLabelText("Event type"), "social");
     await user.clear(screen.getByLabelText(/Budget \(USD\)/));
     await user.type(screen.getByLabelText(/Budget \(USD\)/), "125.5");
@@ -125,7 +128,10 @@ describe("CreateEventForm", () => {
 
     await user.click(screen.getByRole("button", { name: "New event" }));
     await user.type(screen.getByLabelText("Event name"), "Dashain Celebration");
-    await user.type(screen.getByLabelText("Description"), "Annual cultural night.");
+    await user.type(
+      screen.getByLabelText(/Description/),
+      "Annual cultural night.",
+    );
     await user.selectOptions(screen.getByLabelText("Event type"), "cultural");
     await user.type(screen.getByLabelText("Date"), "2030-06-01");
     await user.clear(screen.getByLabelText("Start time"));
