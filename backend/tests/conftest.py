@@ -195,11 +195,14 @@ def block_external_integrations():
         from app.integrations.cloudinary_client import CloudinaryUploadResult
 
         cloudinary_upload_receipt.return_value = CloudinaryUploadResult(
-            receipt_url="https://res.cloudinary.com/test/image/upload/v1/receipt.jpg",
+            receipt_url=(
+                "https://res.cloudinary.com/test/image/authenticated/v1/receipt.jpg"
+            ),
             public_id="nsa-connect/finance-receipts/receipt",
             bytes=128,
             format="jpg",
             resource_type="image",
+            delivery_type="authenticated",
         )
         yield {
             "anthropic_client": anthropic_client,

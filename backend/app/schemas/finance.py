@@ -20,6 +20,8 @@ class FinanceEntryCreateRequest(BaseModel):
     amount: Decimal = Field(gt=Decimal("0"), le=MAX_FINANCE_AMOUNT)
     description: str = Field(default="", max_length=5000)
     receipt_url: str | None = Field(default=None, max_length=2048)
+    receipt_public_id: str | None = Field(default=None, max_length=512)
+    receipt_resource_type: str | None = Field(default=None, max_length=32)
     event_id: int | None = None
 
     @field_validator("category", mode="before")
@@ -45,6 +47,15 @@ class FinanceEntryCreateRequest(BaseModel):
             value = value.strip()
         return value or None
 
+    @field_validator("receipt_public_id", "receipt_resource_type", mode="before")
+    @classmethod
+    def normalize_optional_receipt_meta(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            value = value.strip()
+        return value or None
+
     @field_validator("amount")
     @classmethod
     def amount_must_have_two_decimal_places(cls, value: Decimal) -> Decimal:
@@ -59,6 +70,8 @@ class FinanceEntryUpdateRequest(BaseModel):
     amount: Decimal | None = Field(default=None, gt=Decimal("0"), le=MAX_FINANCE_AMOUNT)
     description: str | None = Field(default=None, max_length=5000)
     receipt_url: str | None = Field(default=None, max_length=2048)
+    receipt_public_id: str | None = Field(default=None, max_length=512)
+    receipt_resource_type: str | None = Field(default=None, max_length=32)
     event_id: int | None = None
 
     @field_validator("category", mode="before")
@@ -80,6 +93,15 @@ class FinanceEntryUpdateRequest(BaseModel):
     @field_validator("receipt_url", mode="before")
     @classmethod
     def normalize_receipt_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            value = value.strip()
+        return value or None
+
+    @field_validator("receipt_public_id", "receipt_resource_type", mode="before")
+    @classmethod
+    def normalize_optional_receipt_meta(cls, value: str | None) -> str | None:
         if value is None:
             return None
         if isinstance(value, str):
@@ -113,13 +135,21 @@ class FinanceEntryResponse(BaseModel):
 
     @classmethod
     def from_entry(cls, entry: "FinanceEntry") -> "FinanceEntryResponse":
+        from app.services.private_asset_url import resolve_private_asset_url
+
+        receipt_url = resolve_private_asset_url(
+            stored_url=entry.receipt_url,
+            public_id=entry.receipt_public_id,
+            resource_type=entry.receipt_resource_type,
+            force_authenticated=bool(entry.receipt_public_id),
+        )
         return cls(
             id=entry.id,
             entry_type=entry.entry_type,
             category=entry.category,
             amount=entry.amount,
             description=entry.description,
-            receipt_url=entry.receipt_url,
+            receipt_url=receipt_url,
             event_id=entry.event_id,
             created_by_id=entry.created_by_id,
             created_at=entry.created_at,

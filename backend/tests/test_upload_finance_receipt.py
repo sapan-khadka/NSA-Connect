@@ -30,9 +30,7 @@ def test_treasurer_can_upload_receipt_image(
 
     assert response.status_code == 201
     body = response.json()
-    assert body["receipt_url"] == (
-        "https://res.cloudinary.com/test/image/upload/v1/receipt.jpg"
-    )
+    assert body["receipt_url"].startswith("https://res.cloudinary.com/")
     assert body["public_id"] == "nsa-connect/finance-receipts/receipt"
     assert body["bytes"] == 128
     assert body["format"] == "jpg"
@@ -44,18 +42,22 @@ def test_treasurer_can_upload_receipt_image(
     ].call_args.kwargs
     assert upload_kwargs["file_bytes"] == MINIMAL_JPEG
     assert upload_kwargs["folder"] == "nsa-connect/finance-receipts"
+    assert upload_kwargs["delivery_type"] == "authenticated"
 
 
 def test_uploaded_receipt_url_can_be_used_when_creating_finance_entry(
     client,
     treasurer_member_headers,
+    db_session,
+    block_external_integrations,
 ):
     upload_response = client.post(
         "/api/v1/finance/receipts",
         headers=treasurer_member_headers,
         files={"file": ("receipt.jpg", MINIMAL_JPEG, "image/jpeg")},
     )
-    receipt_url = upload_response.json()["receipt_url"]
+    upload_body = upload_response.json()
+    receipt_url = upload_body["receipt_url"]
 
     create_response = client.post(
         "/api/v1/finance",
@@ -66,11 +68,23 @@ def test_uploaded_receipt_url_can_be_used_when_creating_finance_entry(
             "amount": "42.00",
             "description": "Snacks with receipt",
             "receipt_url": receipt_url,
+            "receipt_public_id": upload_body["public_id"],
+            "receipt_resource_type": upload_body["resource_type"],
         },
     )
 
     assert create_response.status_code == 201
-    assert create_response.json()["receipt_url"] == receipt_url
+    listed_url = create_response.json()["receipt_url"]
+    assert listed_url.startswith("https://res.cloudinary.com/")
+
+    from app.models.finance_entry import FinanceEntry
+
+    entry = db_session.get(FinanceEntry, create_response.json()["id"])
+    assert entry is not None
+    assert entry.receipt_public_id == upload_body["public_id"]
+    assert entry.receipt_resource_type == upload_body["resource_type"]
+    # Stored URL is the client-provided reference; responses re-sign from public_id.
+    assert entry.receipt_url == receipt_url
 
 
 @pytest.mark.parametrize(

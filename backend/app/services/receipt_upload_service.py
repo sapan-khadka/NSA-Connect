@@ -1,5 +1,6 @@
 from app.core.config import settings
 from app.integrations.cloudinary_client import (
+    DELIVERY_TYPE_AUTHENTICATED,
     CloudinaryUploadError,
     CloudinaryUploadResult,
     upload_receipt,
@@ -67,6 +68,7 @@ def upload_finance_receipt(
             api_secret=settings.CLOUDINARY_API_SECRET,
             file_bytes=file_bytes,
             folder=settings.CLOUDINARY_RECEIPTS_FOLDER,
+            delivery_type=DELIVERY_TYPE_AUTHENTICATED,
         )
     except CloudinaryUploadError:
         raise
@@ -119,7 +121,7 @@ def upload_member_document(
 ) -> CloudinaryUploadResult:
     """
     Member documents reuse finance receipt validation and Cloudinary upload
-    (JPEG/PNG/WebP/PDF, 10 MB) with a dedicated folder.
+    (JPEG/PNG/WebP/PDF, 10 MB) with a dedicated folder and authenticated delivery.
     """
     validate_receipt_file(content_type=content_type, size_bytes=len(file_bytes))
 
@@ -137,6 +139,7 @@ def upload_member_document(
             api_secret=settings.CLOUDINARY_API_SECRET,
             file_bytes=file_bytes,
             folder=settings.CLOUDINARY_MEMBER_DOCUMENTS_FOLDER,
+            delivery_type=DELIVERY_TYPE_AUTHENTICATED,
         )
     except CloudinaryUploadError:
         raise

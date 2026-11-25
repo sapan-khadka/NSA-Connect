@@ -197,10 +197,14 @@ export function LogFinanceEntryForm({
 
     try {
       let receiptUrl: string | null = null;
+      let receiptPublicId: string | null = null;
+      let receiptResourceType: string | null = null;
 
       if (receiptFile) {
         const upload = await uploadFinanceReceipt(receiptFile);
         receiptUrl = upload.receipt_url;
+        receiptPublicId = upload.public_id;
+        receiptResourceType = upload.resource_type;
       }
 
       const entry = await createFinanceEntry({
@@ -209,6 +213,8 @@ export function LogFinanceEntryForm({
         amount: formatAmountForSubmit(values.amount),
         description: values.description.trim(),
         receipt_url: receiptUrl,
+        receipt_public_id: receiptPublicId,
+        receipt_resource_type: receiptResourceType,
         event_id:
           lockedEventId ??
           (values.event_id ? Number(values.event_id) : null),

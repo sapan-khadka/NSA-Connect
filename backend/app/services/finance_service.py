@@ -300,6 +300,8 @@ def create_finance_entry(
         amount=data.amount,
         description=data.description,
         receipt_url=data.receipt_url,
+        receipt_public_id=data.receipt_public_id,
+        receipt_resource_type=data.receipt_resource_type,
         event_id=data.event_id,
         created_by_id=created_by.id,
         organization_id=resolve_organization_id(db, created_by),

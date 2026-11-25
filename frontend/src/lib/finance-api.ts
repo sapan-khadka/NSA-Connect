@@ -106,6 +106,8 @@ export type CreateFinanceEntryRequest = {
   amount: string;
   description?: string;
   receipt_url?: string | null;
+  receipt_public_id?: string | null;
+  receipt_resource_type?: string | null;
   event_id?: number | null;
 };
 
@@ -152,6 +154,8 @@ export type UpdateFinanceEntryRequest = {
   amount?: string;
   description?: string;
   receipt_url?: string | null;
+  receipt_public_id?: string | null;
+  receipt_resource_type?: string | null;
   event_id?: number | null;
 };
 

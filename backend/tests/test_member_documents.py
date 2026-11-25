@@ -87,6 +87,7 @@ def test_board_can_list_upload_and_delete_member_documents(
         "cloudinary_upload_receipt"
     ].call_args.kwargs
     assert upload_kwargs["folder"] == "nsa-connect/member-documents"
+    assert upload_kwargs["delivery_type"] == "authenticated"
 
     listed = client.get(
         f"/api/v1/members/{general_member.id}/documents",
