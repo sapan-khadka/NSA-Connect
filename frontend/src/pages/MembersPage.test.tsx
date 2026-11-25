@@ -389,11 +389,42 @@ describe("MembersPage", () => {
     expect(screen.queryByRole("combobox", { name: "Status" })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /^Filters$/i }));
-    expect(await screen.findByLabelText("Engagement")).toBeInTheDocument();
-    expect(screen.getByLabelText("Engagement")).toHaveDisplayValue("Everyone");
+    const engagement = await screen.findByLabelText("Engagement");
+    expect(engagement).toHaveDisplayValue("Everyone");
+    // Board has read-only dues access (GET /dues is require_board) but not
+    // member-management engagement focus (president / VP / owner only).
     expect(
-      screen.queryByRole("option", { name: "Outstanding dues" }),
+      within(engagement).getByRole("option", { name: "Outstanding dues" }),
+    ).toBeInTheDocument();
+    expect(
+      within(engagement).queryByRole("option", { name: "Active" }),
     ).not.toBeInTheDocument();
+    expect(
+      within(engagement).queryByRole("option", { name: "Idle" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers active and idle engagement filters to member managers", async () => {
+    const user = userEvent.setup();
+    await mockDirectoryApis({
+      members: [directoryMember],
+      total: 5,
+      approvedTotal: 5,
+      pendingTotal: 0,
+    });
+    renderMembersPage("president");
+
+    await user.click(screen.getByRole("button", { name: /^Filters$/i }));
+    const engagement = await screen.findByLabelText("Engagement");
+    expect(
+      within(engagement).getByRole("option", { name: "Active" }),
+    ).toBeInTheDocument();
+    expect(
+      within(engagement).getByRole("option", { name: "Idle" }),
+    ).toBeInTheDocument();
+    expect(
+      within(engagement).getByRole("option", { name: "Outstanding dues" }),
+    ).toBeInTheDocument();
   });
 
   it("opens Filter drawer without hollow committee/attendance controls", async () => {
