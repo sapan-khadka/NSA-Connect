@@ -424,6 +424,7 @@ export function EventDetailPage() {
               canManageSimple={canManageTasks}
               canCreateTasks={canCreateEventTasks(event)}
               canAssignChecklist={canViewBoard}
+              eventStartsAt={event.starts_at}
               assignableMembers={assignableMembers}
               fallbackChecklistTasks={event.prep_tasks}
               onFallbackTasksChange={(tasks) =>
@@ -457,6 +458,7 @@ export function EventDetailPage() {
                 canManageSimple={canManageTasks}
                 canCreateTasks={canCreateEventTasks(event)}
                 canAssignChecklist={canViewBoard}
+                eventStartsAt={event.starts_at}
                 assignableMembers={assignableMembers}
                 fallbackChecklistTasks={event.prep_tasks}
                 onFallbackTasksChange={(tasks) =>

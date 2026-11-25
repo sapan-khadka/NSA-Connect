@@ -124,6 +124,22 @@ export async function updateEventTask(
   return response.data;
 }
 
+export type ChecklistStructureUpdateRequest = {
+  title: string;
+  items: Array<{ id: number | null; label: string }>;
+};
+
+export async function saveEventTaskChecklist(
+  taskId: number,
+  data: ChecklistStructureUpdateRequest,
+): Promise<EventTaskResponse> {
+  const response = await api.put<EventTaskResponse>(
+    `/v1/event-tasks/${taskId}/checklist`,
+    data,
+  );
+  return response.data;
+}
+
 export async function updateEventTaskChecklistItem(
   taskId: number,
   itemId: number,

@@ -1,5 +1,6 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { AxiosError } from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MemberResponse } from "../lib/auth-api";
@@ -17,6 +18,17 @@ vi.mock("../lib/event-tasks-api", async () => {
     updateEventTask: vi.fn(),
     deleteEventTask: vi.fn(),
     updateEventTaskChecklistItem: vi.fn(),
+    saveEventTaskChecklist: vi.fn(),
+  };
+});
+
+vi.mock("../lib/events-api", async () => {
+  const actual = await vi.importActual<typeof import("../lib/events-api")>(
+    "../lib/events-api",
+  );
+  return {
+    ...actual,
+    addPrepTaskToEvent: vi.fn(),
   };
 });
 
@@ -29,8 +41,10 @@ import {
   deleteEventTask,
   fetchEventTasks,
   fetchMyEventTasks,
+  saveEventTaskChecklist,
   updateEventTask,
 } from "../lib/event-tasks-api";
+import { addPrepTaskToEvent } from "../lib/events-api";
 import { fetchAssignableMembers } from "../lib/members-api";
 import { EventTaskManager } from "./EventTaskManager";
 
@@ -39,6 +53,8 @@ const mockedFetchMine = vi.mocked(fetchMyEventTasks);
 const mockedCreate = vi.mocked(createEventTask);
 const mockedUpdate = vi.mocked(updateEventTask);
 const mockedDelete = vi.mocked(deleteEventTask);
+const mockedSaveChecklist = vi.mocked(saveEventTaskChecklist);
+const mockedAddChecklist = vi.mocked(addPrepTaskToEvent);
 const mockedFetchAssignees = vi.mocked(fetchAssignableMembers);
 
 const boardMember: MemberResponse = {
@@ -272,7 +288,221 @@ describe("EventTaskManager", () => {
       screen.queryByRole("button", { name: "New task" }),
     ).not.toBeInTheDocument();
     expect(
+      screen.queryByRole("button", { name: "New checklist" }),
+    ).not.toBeInTheDocument();
+    expect(
       screen.getByText("This event has ended. New tasks can't be added."),
     ).toBeInTheDocument();
+  });
+
+  function makeChecklist(
+    overrides: Partial<EventTaskResponse> = {},
+  ): EventTaskResponse {
+    return makeTask({
+      id: 40,
+      task_kind: "checklist",
+      title: "Setup",
+      group_name: "Setup",
+      description: "",
+      assignee_id: 2,
+      assignee_name: "Board Member",
+      due_date: "2030-05-20T12:00:00Z",
+      checklist_items: [
+        { id: 7, label: "Reserve room", is_completed: true, sort_order: 0 },
+        { id: 8, label: "Test AV", is_completed: false, sort_order: 1 },
+      ],
+      ...overrides,
+    });
+  }
+
+  it("saves renamed, reordered, and edited checklist items", async () => {
+    const user = userEvent.setup();
+    const checklist = makeChecklist();
+    mockedFetch.mockResolvedValue({ tasks: [checklist], total: 1 });
+    mockedSaveChecklist.mockImplementation(async (_taskId, draft) =>
+      makeChecklist({
+        title: draft.title,
+        group_name: draft.title,
+        checklist_items: draft.items.map((item, index) => ({
+          id: item.id ?? 90 + index,
+          label: item.label,
+          is_completed: item.id === 7,
+          sort_order: index,
+        })),
+      }),
+    );
+
+    renderManager({ eventStartsAt: "2030-06-01T18:00:00Z" });
+
+    expect(await screen.findByRole("button", { name: "Edit checklist" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete checklist" })).not.toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: "Task progress" })).toHaveAttribute(
+      "aria-valuenow",
+      "50",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Edit checklist" }));
+    const room = screen.getByDisplayValue("Reserve room");
+    expect(room.closest("div")?.className).toContain("flex-col");
+    expect(room.closest("div")?.className).toContain("sm:flex-row");
+
+    await user.clear(screen.getByLabelText("Category name"));
+    await user.type(screen.getByLabelText("Category name"), "Venue");
+    await user.clear(room);
+    await user.type(screen.getByLabelText("Checklist item 1"), "Book the auditorium");
+    await user.click(screen.getByRole("button", { name: "Move item 2 up" }));
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+    await user.type(screen.getByLabelText("Checklist item 3"), "Print signs");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(mockedSaveChecklist).toHaveBeenCalledTimes(1));
+    expect(mockedSaveChecklist).toHaveBeenCalledWith(40, {
+      title: "Venue",
+      items: [
+        { id: 8, label: "Test AV" },
+        { id: 7, label: "Book the auditorium" },
+        { id: null, label: "Print signs" },
+      ],
+    });
+    expect(await screen.findByRole("heading", { name: "Venue" })).toBeInTheDocument();
+    expect(screen.getByText("Book the auditorium")).toBeInTheDocument();
+    expect(screen.getByText(/Due /)).toBeInTheDocument();
+    expect(screen.getByText(/Board Member/)).toBeInTheDocument();
+  });
+
+  it("updates progress while items are added or removed", async () => {
+    const user = userEvent.setup();
+    mockedFetch.mockResolvedValue({ tasks: [makeChecklist()], total: 1 });
+
+    renderManager();
+    await user.click(await screen.findByRole("button", { name: "Edit checklist" }));
+    await user.click(screen.getByRole("button", { name: "Remove item 2" }));
+
+    expect(screen.getByRole("progressbar", { name: "Task progress" })).toHaveAttribute(
+      "aria-valuenow",
+      "100",
+    );
+    expect(screen.getByRole("progressbar", { name: "Overall task progress" })).toHaveAttribute(
+      "aria-valuenow",
+      "100",
+    );
+  });
+
+  it("asks before deleting a completed checklist item", async () => {
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    mockedFetch.mockResolvedValue({ tasks: [makeChecklist()], total: 1 });
+
+    renderManager();
+    await user.click(await screen.findByRole("button", { name: "Edit checklist" }));
+    await user.click(screen.getByRole("button", { name: "Remove item 1" }));
+
+    expect(confirm).toHaveBeenCalledWith('Delete the completed item "Reserve room"?');
+    expect(screen.getByDisplayValue("Reserve room")).toBeInTheDocument();
+    confirm.mockRestore();
+  });
+
+  it("keeps checklist edits on screen when saving fails", async () => {
+    const user = userEvent.setup();
+    mockedFetch.mockResolvedValue({ tasks: [makeChecklist()], total: 1 });
+    mockedSaveChecklist.mockRejectedValue(
+      new AxiosError("fail", "ERR_BAD_REQUEST", undefined, undefined, {
+        status: 422,
+        statusText: "Unprocessable",
+        headers: {},
+        config: { headers: {} as never },
+        data: { detail: "Checklist item not found" },
+      }),
+    );
+
+    renderManager();
+    await user.click(await screen.findByRole("button", { name: "Edit checklist" }));
+    await user.clear(screen.getByLabelText("Checklist item 2"));
+    await user.type(screen.getByLabelText("Checklist item 2"), "Check microphones");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Checklist item not found",
+    );
+    expect(screen.getByDisplayValue("Check microphones")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeInTheDocument();
+  });
+
+  it("cancels checklist editing without saving", async () => {
+    const user = userEvent.setup();
+    mockedFetch.mockResolvedValue({ tasks: [makeChecklist()], total: 1 });
+
+    renderManager();
+    await user.click(await screen.findByRole("button", { name: "Edit checklist" }));
+    await user.clear(screen.getByLabelText("Category name"));
+    await user.type(screen.getByLabelText("Category name"), "Venue");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(mockedSaveChecklist).not.toHaveBeenCalled();
+    expect(screen.getByRole("heading", { name: "Setup" })).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Venue")).not.toBeInTheDocument();
+  });
+
+  it("creates a checklist category for an existing event", async () => {
+    const user = userEvent.setup();
+    mockedFetch
+      .mockResolvedValueOnce({ tasks: [], total: 0 })
+      .mockResolvedValueOnce({ tasks: [makeChecklist({ title: "Publicity", group_name: "Publicity" })], total: 1 });
+    mockedAddChecklist.mockResolvedValue({
+      id: 40,
+      group_name: "Publicity",
+      due_date: "2030-05-18T17:00:00Z",
+      assignee_id: null,
+      is_overdue: false,
+      is_complete: false,
+      checklist_items: [],
+    });
+
+    renderManager({ eventStartsAt: "2030-06-01T18:00:00Z" });
+    await user.click(await screen.findByRole("button", { name: "New checklist" }));
+    await user.type(screen.getByLabelText("Category name"), "Publicity");
+    await user.type(screen.getByLabelText("New checklist item 1"), "Design the poster");
+    await user.click(screen.getByRole("button", { name: "Save checklist" }));
+
+    await waitFor(() => expect(mockedAddChecklist).toHaveBeenCalledTimes(1));
+    expect(mockedAddChecklist).toHaveBeenCalledWith(
+      10,
+      expect.objectContaining({
+        group_name: "Publicity",
+        checklist_items: ["Design the poster"],
+      }),
+    );
+    expect(await screen.findByRole("heading", { name: "Publicity" })).toBeInTheDocument();
+  });
+
+  it("deletes a checklist category after confirmation", async () => {
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    mockedFetch.mockResolvedValue({ tasks: [makeChecklist()], total: 1 });
+    mockedDelete.mockResolvedValue();
+
+    renderManager({ canManageSimple: true });
+    await user.click(await screen.findByRole("button", { name: "Delete checklist" }));
+
+    expect(confirm).toHaveBeenCalled();
+    await waitFor(() => expect(mockedDelete).toHaveBeenCalledWith(40));
+    await waitFor(() =>
+      expect(screen.queryByRole("heading", { name: "Setup" })).not.toBeInTheDocument(),
+    );
+    confirm.mockRestore();
+  });
+
+  it("hides checklist editing from members who cannot manage structure", async () => {
+    mockedFetchMine.mockResolvedValue({
+      tasks: [makeChecklist({ assignee_id: 6, assignee_name: "apsana" })],
+      total: 1,
+    });
+
+    renderManager({ member: generalMember });
+
+    expect(await screen.findByText("Reserve room")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit checklist" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete checklist" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "New checklist" })).not.toBeInTheDocument();
   });
 });

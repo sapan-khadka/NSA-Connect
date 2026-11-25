@@ -6,7 +6,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
-import { Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 
 import type { MemberResponse } from "../lib/auth-api";
 import { getApiErrorMessage } from "../lib/api-error";
@@ -19,11 +19,19 @@ import {
   deleteEventTask,
   fetchEventTasks,
   fetchMyEventTasks,
+  saveEventTaskChecklist,
   updateEventTask,
   updateEventTaskChecklistItem,
   type EventTaskResponse,
   type EventTaskStatus,
 } from "../lib/event-tasks-api";
+import { addPrepTaskToEvent } from "../lib/events-api";
+import { toLocalIsoDate } from "../lib/calendar";
+import {
+  MAX_CHECKLIST_ITEMS,
+  MAX_CHECKLIST_LABEL_LENGTH,
+} from "../lib/draft-checklist";
+import { buildCategoryDueDate } from "../lib/prep-task-create";
 import type { PrepTaskResponse } from "../lib/events-api";
 import type { EventTaskDraft } from "../lib/event-task-draft";
 import { fetchAssignableMembers } from "../lib/members-api";
@@ -35,8 +43,12 @@ import {
   calcEventTasksProgress,
   replaceEventTaskInList,
 } from "../lib/task-progress";
-import { ChecklistTaskCard } from "./ChecklistTaskCard";
+import {
+  ChecklistTaskCard,
+  type ChecklistStructureDraft,
+} from "./ChecklistTaskCard";
 import { PrepProgressBar } from "./PrepProgressBar";
+import { inputFieldClassName } from "./ui/Input";
 
 type EventTaskManagerProps = {
   eventId: number;
@@ -45,6 +57,7 @@ type EventTaskManagerProps = {
   canManageSimple: boolean;
   canCreateTasks?: boolean;
   canAssignChecklist: boolean;
+  eventStartsAt?: string | null;
   assignableMembers: MemberResponse[];
   fallbackChecklistTasks?: PrepTaskResponse[];
   onFallbackTasksChange?: (tasks: PrepTaskResponse[]) => void;
@@ -62,6 +75,18 @@ const STATUS_BADGE_STYLES: Record<EventTaskStatus, string> = {
 const STATUS_ORDER: EventTaskStatus[] = ["todo", "in_progress", "done"];
 
 const EMPTY_FALLBACK_CHECKLIST: PrepTaskResponse[] = [];
+
+function categoryDueDateFromEventStart(startsAt: string): string {
+  const start = new Date(startsAt);
+  const hours = String(start.getHours()).padStart(2, "0");
+  const minutes = String(start.getMinutes()).padStart(2, "0");
+  return buildCategoryDueDate(
+    toLocalIsoDate(start),
+    `${hours}:${minutes}`,
+    0,
+    1,
+  );
+}
 
 function getInitials(fullName: string): string {
   return fullName
@@ -274,6 +299,7 @@ export function EventTaskManager({
   canManageSimple,
   canCreateTasks = true,
   canAssignChecklist,
+  eventStartsAt = null,
   assignableMembers,
   fallbackChecklistTasks = EMPTY_FALLBACK_CHECKLIST,
   onFallbackTasksChange,
@@ -289,6 +315,14 @@ export function EventTaskManager({
   const [togglingItemId, setTogglingItemId] = useState<number | null>(null);
   const [assigningTaskId, setAssigningTaskId] = useState<number | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showChecklistForm, setShowChecklistForm] = useState(false);
+  const [checklistName, setChecklistName] = useState("");
+  const [checklistItemLabels, setChecklistItemLabels] = useState<string[]>([""]);
+  const [checklistError, setChecklistError] = useState<string | null>(null);
+  const [isSavingChecklist, setIsSavingChecklist] = useState(false);
+  const [checklistDrafts, setChecklistDrafts] = useState<
+    Record<number, Array<{ is_completed: boolean }>>
+  >({});
   const addFormRef = useRef<HTMLFormElement>(null);
 
   const [title, setTitle] = useState("");
@@ -458,6 +492,30 @@ export function EventTaskManager({
     });
   }, [taskDraft, onTaskDraftApplied]);
 
+  const handleStructurePreview = useCallback(
+    (taskId: number, items: Array<{ is_completed: boolean }> | null) => {
+      setChecklistDrafts((current) => {
+        if (items === null) {
+          if (!(taskId in current)) {
+            return current;
+          }
+          const next = { ...current };
+          delete next[taskId];
+          return next;
+        }
+        return { ...current, [taskId]: items };
+      });
+    },
+    [],
+  );
+
+  function resetChecklistForm() {
+    setChecklistName("");
+    setChecklistItemLabels([""]);
+    setChecklistError(null);
+    setShowChecklistForm(false);
+  }
+
   function resetAddForm() {
     setTitle("");
     setDescription("");
@@ -582,6 +640,90 @@ export function EventTaskManager({
     }
   }
 
+  async function handleSaveChecklist(
+    taskId: number,
+    draft: ChecklistStructureDraft,
+  ) {
+    const updated = await saveEventTaskChecklist(taskId, draft);
+    setTasks((current) => {
+      const next = replaceEventTaskInList(current, updated);
+      syncFallbackTasks(next);
+      return next;
+    });
+  }
+
+  async function handleDeleteChecklist(task: EventTaskResponse) {
+    const title = task.group_name ?? task.title;
+    if (
+      !window.confirm(
+        `Delete checklist "${title}" and all of its items? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+
+    setBusyTaskId(task.id);
+    setActionError(null);
+    try {
+      await deleteEventTask(task.id);
+      setTasks((current) => {
+        const next = current.filter((entry) => entry.id !== task.id);
+        syncFallbackTasks(next);
+        return next;
+      });
+    } catch (error) {
+      setActionError(getApiErrorMessage(error));
+    } finally {
+      setBusyTaskId(null);
+    }
+  }
+
+  async function handleCreateChecklist(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const name = checklistName.trim();
+    const labels = checklistItemLabels.map((label) => label.trim());
+    if (!name) {
+      setChecklistError("Category name is required.");
+      return;
+    }
+    if (labels.length === 0 || labels.some((label) => label.length === 0)) {
+      setChecklistError("Every checklist item needs a name.");
+      return;
+    }
+    if (!eventStartsAt) {
+      setChecklistError("This event needs a start time before a checklist can be added.");
+      return;
+    }
+
+    setIsSavingChecklist(true);
+    setChecklistError(null);
+    try {
+      await addPrepTaskToEvent(eventId, {
+        group_name: name,
+        due_date: categoryDueDateFromEventStart(eventStartsAt),
+        checklist_items: labels,
+      });
+    } catch (error) {
+      setChecklistError(getApiErrorMessage(error));
+      setIsSavingChecklist(false);
+      return;
+    }
+
+    try {
+      const refreshed = await fetchEventTasks(eventId);
+      setTasks(refreshed.tasks);
+      syncFallbackTasks(refreshed.tasks);
+      resetChecklistForm();
+    } catch (error) {
+      resetChecklistForm();
+      setActionError(
+        `Checklist saved, but the task list could not be refreshed: ${getApiErrorMessage(error)} Reload before adding it again.`,
+      );
+    } finally {
+      setIsSavingChecklist(false);
+    }
+  }
+
   async function handleAssignChecklistTask(
     taskId: number,
     nextAssigneeId: number | null,
@@ -622,10 +764,27 @@ export function EventTaskManager({
 
   const checklistTasks = tasks.filter((task) => task.task_kind === "checklist");
   const simpleTasks = tasks.filter((task) => task.task_kind === "simple");
-  const progress = calcEventTasksProgress(tasks);
+  const progressTasks = tasks.map((task) => {
+    const preview = checklistDrafts[task.id];
+    if (!preview) {
+      return task;
+    }
+    return {
+      ...task,
+      checklist_items: preview.map((item, index) => ({
+        id: -(index + 1),
+        label: "",
+        is_completed: item.is_completed,
+        sort_order: index,
+      })),
+    };
+  });
+  const progress = calcEventTasksProgress(progressTasks);
   const completionSummary = calcTaskCompletionSummary(tasks);
   const showSection = canFetchAll || tasks.length > 0;
   const allowCreateTasks = canManageSimple && canCreateTasks;
+  const canEditChecklist = canFetchAll;
+  const allowNewChecklist = canEditChecklist && canCreateTasks;
 
   if (!showSection) {
     return null;
@@ -640,6 +799,18 @@ export function EventTaskManager({
             <p className="event-command-count">
               {completionSummary.completed}/{completionSummary.total} done
             </p>
+          ) : null}
+          {allowNewChecklist && !showChecklistForm ? (
+            <button
+              type="button"
+              className="event-command-btn"
+              onClick={() => {
+                setChecklistError(null);
+                setShowChecklistForm(true);
+              }}
+            >
+              New checklist
+            </button>
           ) : null}
           {allowCreateTasks && !showAddForm ? (
             <button
@@ -663,6 +834,107 @@ export function EventTaskManager({
         <div className="mt-3">
           <PrepProgressBar progress={progress} label="Overall task progress" />
         </div>
+      ) : null}
+
+      {allowNewChecklist && showChecklistForm ? (
+        <Card padding="none" className="mt-3 space-y-2 p-3">
+          <form
+            onSubmit={(event) => void handleCreateChecklist(event)}
+            className="space-y-2"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-medium text-label">New checklist</p>
+              <button
+                type="button"
+                onClick={resetChecklistForm}
+                className="text-xs font-medium text-label transition-colors hover:text-foreground"
+              >
+                Cancel
+              </button>
+            </div>
+            <div>
+              <label
+                htmlFor="new-checklist-name"
+                className="block text-xs font-medium text-label"
+              >
+                Category name
+              </label>
+              <input
+                id="new-checklist-name"
+                value={checklistName}
+                maxLength={MAX_CHECKLIST_LABEL_LENGTH}
+                disabled={isSavingChecklist}
+                onChange={(event) => setChecklistName(event.target.value)}
+                className={`${inputFieldClassName} mt-1`}
+              />
+            </div>
+            <ul className="space-y-2">
+              {checklistItemLabels.map((label, index) => (
+                <li
+                  key={`new-checklist-item-${index}`}
+                  className="flex flex-col gap-2 sm:flex-row sm:items-center"
+                >
+                  <label className="sr-only" htmlFor={`new-checklist-item-${index}`}>
+                    New checklist item {index + 1}
+                  </label>
+                  <input
+                    id={`new-checklist-item-${index}`}
+                    value={label}
+                    maxLength={MAX_CHECKLIST_LABEL_LENGTH}
+                    disabled={isSavingChecklist}
+                    placeholder="Checklist item"
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setChecklistItemLabels((current) =>
+                        current.map((entry, entryIndex) =>
+                          entryIndex === index ? value : entry,
+                        ),
+                      );
+                    }}
+                    className={`${inputFieldClassName} min-w-0 flex-1`}
+                  />
+                  <button
+                    type="button"
+                    className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[10px] text-foreground hover:bg-surface-muted disabled:opacity-40"
+                    aria-label={`Remove new checklist item ${index + 1}`}
+                    disabled={isSavingChecklist || checklistItemLabels.length <= 1}
+                    onClick={() =>
+                      setChecklistItemLabels((current) =>
+                        current.filter((_, entryIndex) => entryIndex !== index),
+                      )
+                    }
+                  >
+                    <AppIcon icon={Trash2} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-foreground"
+              disabled={
+                isSavingChecklist || checklistItemLabels.length >= MAX_CHECKLIST_ITEMS
+              }
+              onClick={() => setChecklistItemLabels((current) => [...current, ""])}
+            >
+              <AppIcon icon={Plus} />
+              Add item
+            </button>
+            {checklistError ? (
+              <p className="ds-field-error" role="alert">
+                {checklistError}
+              </p>
+            ) : null}
+            <Button
+              type="submit"
+              size="sm"
+              loading={isSavingChecklist}
+              disabled={isSavingChecklist}
+            >
+              Save checklist
+            </Button>
+          </form>
+        </Card>
       ) : null}
 
       {allowCreateTasks && showAddForm ? (
@@ -798,6 +1070,8 @@ export function EventTaskManager({
               task={task}
               canToggle={canToggleChecklist(task)}
               canAssign={canAssignChecklist}
+              canEditStructure={canEditChecklist}
+              canDeleteCategory={canManageSimple}
               assignableMembers={assignableMembers}
               togglingItemId={togglingItemId}
               assigningTaskId={assigningTaskId}
@@ -807,6 +1081,11 @@ export function EventTaskManager({
               onAssign={(taskId, nextAssigneeId) => {
                 void handleAssignChecklistTask(taskId, nextAssigneeId);
               }}
+              onSaveStructure={handleSaveChecklist}
+              onDeleteCategory={(checklist) => {
+                void handleDeleteChecklist(checklist);
+              }}
+              onStructurePreview={handleStructurePreview}
             />
           ))}
 

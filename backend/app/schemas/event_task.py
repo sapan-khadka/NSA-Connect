@@ -149,6 +149,45 @@ class EventTaskChecklistItemUpdateRequest(BaseModel):
     is_completed: bool
 
 
+class ChecklistStructureItemWrite(BaseModel):
+    id: int | None = None
+    label: str = Field(min_length=1, max_length=255)
+
+    @field_validator("label", mode="before")
+    @classmethod
+    def strip_label(cls, value: str) -> str:
+        if isinstance(value, str):
+            value = value.strip()
+        if not value:
+            raise ValueError("Checklist item is required")
+        return value
+
+
+class ChecklistStructureUpdateRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=255)
+    items: list[ChecklistStructureItemWrite] = Field(min_length=1, max_length=20)
+
+    @field_validator("title", mode="before")
+    @classmethod
+    def strip_title(cls, value: str) -> str:
+        if isinstance(value, str):
+            value = value.strip()
+        if not value:
+            raise ValueError("Category name is required")
+        return value
+
+    @model_validator(mode="after")
+    def reject_duplicate_item_ids(self) -> "ChecklistStructureUpdateRequest":
+        seen: set[int] = set()
+        for item in self.items:
+            if item.id is None:
+                continue
+            if item.id in seen:
+                raise ValueError("Checklist item ids must be unique")
+            seen.add(item.id)
+        return self
+
+
 class EventTaskResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

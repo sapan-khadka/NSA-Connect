@@ -85,6 +85,7 @@ from app.services.event_service import (
     update_event,
 )
 from app.services.event_task_service import (
+    EventTaskCreationClosedError,
     InvalidEventTaskAssigneeError,
     InvalidPrepTaskDueDateError,
     PrepTaskGroupNotFoundError,
@@ -716,6 +717,11 @@ def add_prep_task_endpoint(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
+        ) from None
+    except EventTaskCreationClosedError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This event has ended. New tasks can no longer be added.",
         ) from None
 
     return PrepTaskResponse.from_event_task(task)
