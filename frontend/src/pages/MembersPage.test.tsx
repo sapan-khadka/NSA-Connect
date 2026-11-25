@@ -256,12 +256,11 @@ describe("MembersPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("hides custom titles manage item for non-presidents", async () => {
-    const user = userEvent.setup();
+  it("hides management menu for ordinary board members", async () => {
     await mockDirectoryApis();
     renderMembersPage("board");
 
-    await openManageMenu(user);
+    expect(screen.queryByRole("button", { name: /^Manage$/i })).not.toBeInTheDocument();
     expect(
       screen.queryByRole("menuitem", { name: "Custom titles" }),
     ).not.toBeInTheDocument();
@@ -377,6 +376,21 @@ describe("MembersPage", () => {
     expect(summary).toHaveTextContent(/board/i);
   });
 
+  it("omits the active count instead of showing 0 when engagement fails to load", async () => {
+    await mockDirectoryApis({
+      members: [directoryMember],
+      total: 6,
+      approvedTotal: 6,
+    });
+    const { fetchMembersEngagement } = await import("../lib/members-api");
+    vi.mocked(fetchMembersEngagement).mockRejectedValue(new Error("boom"));
+    renderMembersPage("president");
+
+    const summary = await screen.findByLabelText("Members summary");
+    expect(summary).toHaveTextContent(/1 member/i);
+    expect(summary).not.toHaveTextContent(/active/i);
+  });
+
   it("keeps engagement filters in the drawer instead of a status select", async () => {
     const user = userEvent.setup();
     await mockDirectoryApis({
@@ -390,11 +404,42 @@ describe("MembersPage", () => {
     expect(screen.queryByRole("combobox", { name: "Status" })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /^Filters$/i }));
-    expect(await screen.findByLabelText("Engagement")).toBeInTheDocument();
-    expect(screen.getByLabelText("Engagement")).toHaveDisplayValue("Everyone");
+    const engagement = await screen.findByLabelText("Engagement");
+    expect(engagement).toHaveDisplayValue("Everyone");
+    // Board has read-only dues access (GET /dues is require_board) but not
+    // member-management engagement focus (president / VP / owner only).
     expect(
-      screen.queryByRole("option", { name: "Outstanding dues" }),
+      within(engagement).getByRole("option", { name: "Outstanding dues" }),
+    ).toBeInTheDocument();
+    expect(
+      within(engagement).queryByRole("option", { name: "Active" }),
     ).not.toBeInTheDocument();
+    expect(
+      within(engagement).queryByRole("option", { name: "Idle" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers active and idle engagement filters to member managers", async () => {
+    const user = userEvent.setup();
+    await mockDirectoryApis({
+      members: [directoryMember],
+      total: 5,
+      approvedTotal: 5,
+      pendingTotal: 0,
+    });
+    renderMembersPage("president");
+
+    await user.click(screen.getByRole("button", { name: /^Filters$/i }));
+    const engagement = await screen.findByLabelText("Engagement");
+    expect(
+      within(engagement).getByRole("option", { name: "Active" }),
+    ).toBeInTheDocument();
+    expect(
+      within(engagement).getByRole("option", { name: "Idle" }),
+    ).toBeInTheDocument();
+    expect(
+      within(engagement).getByRole("option", { name: "Outstanding dues" }),
+    ).toBeInTheDocument();
   });
 
   it("opens Filter drawer without hollow committee/attendance controls", async () => {
@@ -507,7 +552,7 @@ describe("MembersPage", () => {
       pendingMembers: [pendingMember],
     });
 
-    renderMembersPage("board", "/members?tab=pending");
+    renderMembersPage("president", "/members?tab=pending");
 
     expect(
       await screen.findByRole("heading", { name: "Membership reviews" }),
@@ -539,7 +584,7 @@ describe("MembersPage", () => {
       pendingMembers: [pendingMember],
     });
 
-    renderMembersPage("board", "/members?tab=pending");
+    renderMembersPage("president", "/members?tab=pending");
     expect(
       await screen.findByRole("heading", { name: "Membership reviews" }),
     ).toBeInTheDocument();
@@ -563,7 +608,7 @@ describe("MembersPage", () => {
       pendingMembers: [pendingMember],
     });
 
-    renderMembersPage("board", "/members?tab=pending");
+    renderMembersPage("president", "/members?tab=pending");
     expect(
       await screen.findByRole("heading", { name: "Membership reviews" }),
     ).toBeInTheDocument();
@@ -584,7 +629,7 @@ describe("MembersPage", () => {
       pendingMembers: [pendingMember],
     });
 
-    renderMembersPage("board");
+    renderMembersPage("president");
 
     await user.click(screen.getByRole("button", { name: /^Filters$/i }));
     expect(await screen.findByRole("dialog", { name: "Filters" })).toBeInTheDocument();
@@ -638,7 +683,7 @@ describe("MembersPage", () => {
       ],
     });
 
-    renderMembersPage("treasurer");
+    renderMembersPage("president");
 
     const tableRegion = await screen.findByLabelText("Member table");
     const table = within(tableRegion).getByRole("table", {

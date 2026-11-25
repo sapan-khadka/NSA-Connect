@@ -320,7 +320,7 @@ export function MembersPage() {
         setKpis(
           deriveMembersDirectoryKpis({
             totalMembers: directory.total,
-            activeCount: engagementResult?.active_count ?? 0,
+            activeCount: engagementResult ? engagementResult.active_count : null,
             idleCount: engagementResult?.idle_count ?? 0,
             pendingCount: pendingPage.total,
             boardCount,
@@ -422,7 +422,7 @@ export function MembersPage() {
     }
     return members.filter((row) => row.status !== "rejected").length;
   }, [isArchiveView, members, rejectedCount]);
-  const activeCount = kpis?.activeCount ?? 0;
+  const activeCount = kpis?.activeCount ?? null;
   const boardCount = kpis?.boardCount ?? 0;
   const outstandingAmount = kpis?.outstandingDuesAmount ?? null;
   const activeSegment: MembersSegment =
@@ -452,7 +452,7 @@ export function MembersPage() {
       ? `${rejectedCount} rejected`
       : [
           `${memberCount} ${memberCount === 1 ? "member" : "members"}`,
-          `${activeCount} active`,
+          activeCount !== null ? `${activeCount} active` : null,
           `${boardCount} board`,
           outstandingAmount !== null
             ? `${formatCurrencyCompact(outstandingAmount)} outstanding`
@@ -597,7 +597,9 @@ export function MembersPage() {
                     <span className="members-page-title-meta" aria-hidden="true">
                       {isArchiveView
                         ? `${rejectedCount} rejected`
-                        : `${memberCount} · ${activeCount} active`}
+                        : activeCount !== null
+                          ? `${memberCount} · ${activeCount} active`
+                          : `${memberCount}`}
                     </span>
                   ) : null}
                 </h1>

@@ -137,18 +137,33 @@ Capabilities are also expressed as a fixed **platform permission catalog** in co
 
 ## Architecture (tenancy)
 
-NSA Connect is **multi-tenant ready** under the hood and **single-tenant at runtime** today:
+NSA Connect is a **single-organization application**. The data model has a tenancy hierarchy, but the app does **not** support multiple organizations or universities at runtime:
 
 ```
 Platform → University (SEMO) → Organization (NSA) → members, events, tasks, finance, …
 ```
+
+**What exists today**
+
+- `universities`, `organizations`, and `organization_memberships` tables, with exactly one university (SEMO) and one organization (NSA) created from `DEFAULT_UNIVERSITY_SLUG` / `DEFAULT_ORGANIZATION_SLUG`.
+- `organization_id` on top-level records (events, finance entries, dues, announcements, documents, media albums, discussion rooms, reports, suggestions, notifications). Child rows such as RSVPs, check-ins, and messages inherit their organization through the parent record. `users` is global; organization access goes through memberships.
+- Every request resolves to the default organization. There is no request-level organization selection.
+
+**Not implemented**
+
+- University administrator dashboard. The `super_admin` / `university_admin` platform roles exist on the user model but are not enforced or exposed anywhere.
+- Organization or university switching, and membership in more than one organization from the UI.
+- Multi-organization onboarding (creating or claiming a new organization). The only bootstrap path is the single-org owner flow described below.
+- Full per-organization query isolation. Some aggregate queries (for example, member engagement) are not filtered by organization because only one organization exists. Adding a second organization requires an isolation audit first.
+
+**Current behavior**
 
 - **Auth authority:** `OrganizationMembership` (role / status / position / `is_org_owner`) is the source of truth for org capabilities; `users.*` is dual-written during the transition.
 - **Default path:** Login → SEMO user (email domain from `University.email_domain`) → NSA membership → dashboard. No org/university switcher.
 - **Org owner allowlist:** Set `ORG_OWNER_EMAILS` (comma-separated, e.g. `nsa.connect@gmail.com`) so that address can register/login outside `@semo.edu` and become `is_org_owner`. The owner is **not** the chapter president — they approve members and appoint a president. All other accounts must use the university domain and stay pending until a board/owner approves them.
 - **Org owner:** System flag on membership (`is_org_owner`), distinct from President. Seeded for NSA (migration + `python -m scripts.ensure_org_owner`). Owner∪president permissions are unioned only when the same person holds both.
 - **Empty-org bootstrap:** When `ORG_OWNER_EMAILS` is set, only those emails are auto-approved as org owner (general role, no president seat). When unset (dev/legacy), the first registrant on an org with **zero approved members** becomes org owner the same way. Existing members and data are never deleted.
-- **Do not build yet:** custom RBAC UI, org/uni switchers, multi-org membership UX, university admin dashboards, public org claim flows.
+- **Out of scope for now:** custom RBAC UI and public organization claim flows, in addition to the unimplemented features listed above.
 
 Services must resolve the active org via `get_current_organization` / `resolve_organization_id` / `get_default_organization_id` — never hardcode org id `1` or the `"nsa"` slug outside seed helpers.
 

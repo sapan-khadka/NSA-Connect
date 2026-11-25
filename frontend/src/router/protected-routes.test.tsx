@@ -168,7 +168,29 @@ describe("protected route redirects", () => {
     ).toBeInTheDocument();
   });
 
-  it("loads pending approvals on home for board members", async () => {
+  it.each([
+    ["presidents", createMockMember("president", { position: "president" })],
+    ["vice presidents", createMockMember("board", { position: "vice_president" })],
+    ["org owners", createMockMember("general", { is_org_owner: true })],
+  ])("links pending approvals on home for %s", async (_label, member) => {
+    const { fetchNotificationSummary } = await import("../lib/notifications-api");
+
+    renderWithRouter(undefined, {
+      initialEntries: ["/"],
+      auth: { member, isAuthenticated: true },
+    });
+
+    await waitFor(() => {
+      expect(fetchNotificationSummary).toHaveBeenCalled();
+    });
+    expect(
+      await screen.findByRole("link", {
+        name: /3 pending approvals/i,
+      }),
+    ).toHaveAttribute("href", "/members?tab=pending");
+  });
+
+  it("does not offer member approvals on home to plain board members", async () => {
     const { fetchNotificationSummary } = await import("../lib/notifications-api");
 
     renderWithRouter(undefined, {
@@ -183,10 +205,14 @@ describe("protected route redirects", () => {
       expect(fetchNotificationSummary).toHaveBeenCalled();
     });
     expect(
-      await screen.findByRole("link", {
-        name: /3 pending approvals/i,
-      }),
-    ).toHaveAttribute("href", "/members?tab=pending");
+      await screen.findByRole("heading", { name: "Home" }),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText(/Loading/i)).not.toBeInTheDocument();
+    });
+    expect(
+      screen.queryByRole("link", { name: /pending approval/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("allows general members to browse /members", async () => {
@@ -203,7 +229,7 @@ describe("protected route redirects", () => {
     ).toBeInTheDocument();
   });
 
-  it("allows board members to view /finance budget tracking", async () => {
+  it("allows board members to view /finance treasury read-only", async () => {
     renderWithRouter(undefined, {
       initialEntries: ["/finance"],
       auth: {
@@ -212,10 +238,14 @@ describe("protected route redirects", () => {
       },
     });
 
-    expect(await screen.findByText("Event budget tracking")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Treasury" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Pulse" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Inbox" })).not.toBeInTheDocument();
   });
 
-  it("allows org owners to view /finance budget tracking", async () => {
+  it("allows org owners to view /finance treasury read-only", async () => {
     renderWithRouter(undefined, {
       initialEntries: ["/finance"],
       auth: {
@@ -224,7 +254,10 @@ describe("protected route redirects", () => {
       },
     });
 
-    expect(await screen.findByText("Event budget tracking")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Treasury" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Inbox" })).not.toBeInTheDocument();
   });
 
   it("allows org owners to view /events/meetings", async () => {
@@ -282,7 +315,9 @@ describe("protected route redirects", () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/");
     });
-    expect(screen.queryByText("Event budget tracking")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Treasury" }),
+    ).not.toBeInTheDocument();
   });
 
   it("redirects /tasks to /events/tasks", async () => {

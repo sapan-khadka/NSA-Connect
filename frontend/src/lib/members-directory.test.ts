@@ -372,4 +372,15 @@ describe("deriveMembersDirectoryKpis", () => {
       }).outstandingDuesCount,
     ).toBeNull();
   });
+
+  it("keeps active count null when engagement is unavailable", () => {
+    expect(
+      deriveMembersDirectoryKpis({
+        totalMembers: 6,
+        activeCount: null,
+        pendingCount: 0,
+        duesAvailable: false,
+      }).activeCount,
+    ).toBeNull();
+  });
 });
