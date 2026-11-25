@@ -61,7 +61,7 @@ describe("EditMemberDrawer", () => {
     vi.clearAllMocks();
   });
 
-  it("shows profile fields but not role/position for board (non-president)", () => {
+  it("denies editing for ordinary board members", () => {
     renderEdit({
       id: 1,
       full_name: "Board Viewer",
@@ -74,23 +74,7 @@ describe("EditMemberDrawer", () => {
       position: "member",
     });
 
-    const dialog = screen.getByRole("dialog", { name: /Edit Member/i });
-    expect(within(dialog).getByLabelText("Full name")).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Email")).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Major")).toBeInTheDocument();
-    expect(
-      within(dialog).getByLabelText("Graduation year"),
-    ).toBeInTheDocument();
-    expect(within(dialog).queryByText("Talents")).not.toBeInTheDocument();
-    expect(
-      within(dialog).queryByLabelText("Role and position"),
-    ).not.toBeInTheDocument();
-    expect(
-      within(dialog).queryByLabelText(/Change role/),
-    ).not.toBeInTheDocument();
-    expect(
-      within(dialog).queryByLabelText(/Change position/),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: /Edit Member/i })).not.toBeInTheDocument();
   });
 
   it("shows role and position controls for president", () => {
@@ -158,14 +142,14 @@ describe("EditMemberDrawer", () => {
     renderEdit(
       {
         id: 1,
-        full_name: "Board Viewer",
+        full_name: "Vice President Viewer",
         email: "board@semo.edu",
         student_id: "11111111",
         major: "CS",
         graduation_year: 2027,
         role: "board",
         status: "approved",
-        position: "member",
+        position: "vice_president",
       },
       { onMemberUpdated, onClose },
     );
