@@ -22,6 +22,7 @@ export function AnnouncementEmailPage() {
   const [eventType, setEventType] = useState<EventType>("cultural");
   const [eventDate, setEventDate] = useState("");
   const [eventTime, setEventTime] = useState("18:00");
+  const [endTime, setEndTime] = useState("");
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
   const [serverError, setServerError] = useState<string | null>(null);
@@ -53,6 +54,9 @@ export function AnnouncementEmailPage() {
           event_type: eventType,
           ...(eventDate
             ? { starts_at: combineDateAndTime(eventDate, eventTime) }
+            : {}),
+          ...(eventDate && endTime
+            ? { ends_at: combineDateAndTime(eventDate, endTime) }
             : {}),
           ...(location.trim() ? { location: location.trim() } : {}),
           ...(description.trim() ? { description: description.trim() } : {}),
@@ -185,6 +189,21 @@ export function AnnouncementEmailPage() {
                       type="time"
                       value={eventTime}
                       onChange={(event) => setEventTime(event.target.value)}
+                      className={inputClassName}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="announcement-end-time"
+                      className="block text-sm font-medium text-foreground"
+                    >
+                      End time
+                    </label>
+                    <input
+                      id="announcement-end-time"
+                      type="time"
+                      value={endTime}
+                      onChange={(event) => setEndTime(event.target.value)}
                       className={inputClassName}
                     />
                   </div>

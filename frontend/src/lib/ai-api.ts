@@ -66,8 +66,10 @@ export type DraftAnnouncementEmailRequest = {
   event_name: string;
   event_type?: EventType;
   starts_at?: string;
+  ends_at?: string;
   location?: string;
   description?: string;
+  event_id?: number;
 };
 
 export async function draftAnnouncementEmail(

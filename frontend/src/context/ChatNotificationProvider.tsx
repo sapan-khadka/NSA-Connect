@@ -189,11 +189,13 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
           return;
         }
         try {
-          const payload = JSON.parse(
-            String(event.data),
-          ) as DiscussionMessageNotifyPayload & { type: string };
+          const payload = JSON.parse(String(event.data)) as { type?: string };
+          if (payload.type === "inbox_notification") {
+            refreshRef.current();
+            return;
+          }
           if (payload.type === "discussion_message") {
-            handlePayload(payload);
+            handlePayload(payload as DiscussionMessageNotifyPayload);
           }
         } catch {
           // ignore malformed payloads

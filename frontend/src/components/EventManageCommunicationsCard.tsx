@@ -154,8 +154,10 @@ export function EventManageCommunicationsCard({
         event_name: event.name,
         event_type: event.event_type,
         starts_at: event.starts_at,
+        ...(event.ends_at ? { ends_at: event.ends_at } : {}),
         ...(event.location?.trim() ? { location: event.location.trim() } : {}),
         description: event.description,
+        event_id: event.id,
       });
       setTitle(draft.subject);
       setBody(draft.body);

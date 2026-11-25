@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -49,6 +49,7 @@ function MenuProbe() {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.useRealTimers();
 });
 
 describe("NotificationSummaryProvider", () => {
@@ -146,5 +147,48 @@ describe("NotificationSummaryProvider", () => {
       expect(screen.getByText("unread:0")).toBeInTheDocument();
     });
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("polls the inbox when no realtime event arrives", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    fetchNotificationSummary.mockResolvedValue(EMPTY_NOTIFICATION_SUMMARY);
+    fetchInboxNotifications.mockResolvedValue(EMPTY_INBOX);
+
+    render(
+      <MockAuthProvider
+        value={{
+          isAuthenticated: true,
+          member: {
+            id: 1,
+            full_name: "Board",
+            email: "board@semo.edu",
+            student_id: "1",
+            major: "CS",
+            graduation_year: 2028,
+            role: "board",
+            status: "approved",
+            position: "member",
+          },
+        }}
+      >
+        <MemoryRouter>
+          <NotificationSummaryProvider>
+            <MenuProbe />
+          </NotificationSummaryProvider>
+        </MemoryRouter>
+      </MockAuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(fetchInboxNotifications).toHaveBeenCalledTimes(1);
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(60_000);
+    });
+
+    await waitFor(() => {
+      expect(fetchInboxNotifications).toHaveBeenCalledTimes(2);
+    });
   });
 });
