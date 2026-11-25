@@ -1,6 +1,9 @@
 """Verify Alembic migrations against a live PostgreSQL database."""
 
 import pytest
+from alembic.config import Config
+from alembic.script import ScriptDirectory
+from pathlib import Path
 from sqlalchemy import text
 
 from app.core.database import engine
@@ -19,7 +22,13 @@ HOT_PATH_INDEXES: tuple[tuple[str, str], ...] = (
     ("announcements", "ix_announcements_created_at"),
 )
 
-ALEMBIC_HEAD = "b1c2d3e4f5b6"
+def _alembic_head() -> str:
+    """Resolve the migration head from the checked-in Alembic scripts."""
+    backend_dir = Path(__file__).resolve().parents[1]
+    config = Config(str(backend_dir / "alembic.ini"))
+    script = ScriptDirectory.from_config(config)
+    return script.get_current_head()
+
 
 
 def _require_postgres() -> None:
@@ -57,7 +66,7 @@ def test_hot_path_indexes_exist_after_migrations():
     except Exception as exc:
         pytest.fail(f"PostgreSQL migration verification failed: {exc}")
 
-    assert revision == ALEMBIC_HEAD, (
+    assert revision == _alembic_head(), (
         "Database is not at Alembic head; run `alembic upgrade head`"
     )
     assert missing == [], f"Missing indexes after migrations: {', '.join(missing)}"
