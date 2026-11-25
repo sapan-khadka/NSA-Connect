@@ -41,8 +41,11 @@ export const EMPTY_MEMBERS_DIRECTORY_FILTERS: MembersDirectoryFilters = {
 
 export type MembersDirectoryKpis = {
   totalMembers: number;
-  /** Activity-engaged approved members (attended, paid, tasks, suggestions). */
-  activeCount: number;
+  /**
+   * Activity-engaged approved members (attended, paid, tasks, suggestions);
+   * null when engagement data is unavailable to this viewer or failed to load.
+   */
+  activeCount: number | null;
   /** Approved members with no recent engagement signals. */
   idleCount: number;
   pendingCount: number;
@@ -415,7 +418,7 @@ export function filterDirectoryMembers(
 
 export function deriveMembersDirectoryKpis(input: {
   totalMembers: number;
-  activeCount: number;
+  activeCount: number | null;
   idleCount?: number;
   pendingCount: number;
   boardCount?: number;

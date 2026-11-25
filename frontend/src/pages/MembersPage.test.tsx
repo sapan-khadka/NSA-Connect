@@ -376,6 +376,21 @@ describe("MembersPage", () => {
     expect(summary).toHaveTextContent(/board/i);
   });
 
+  it("omits the active count instead of showing 0 when engagement fails to load", async () => {
+    await mockDirectoryApis({
+      members: [directoryMember],
+      total: 6,
+      approvedTotal: 6,
+    });
+    const { fetchMembersEngagement } = await import("../lib/members-api");
+    vi.mocked(fetchMembersEngagement).mockRejectedValue(new Error("boom"));
+    renderMembersPage("president");
+
+    const summary = await screen.findByLabelText("Members summary");
+    expect(summary).toHaveTextContent(/1 member/i);
+    expect(summary).not.toHaveTextContent(/active/i);
+  });
+
   it("keeps engagement filters in the drawer instead of a status select", async () => {
     const user = userEvent.setup();
     await mockDirectoryApis({
