@@ -9,6 +9,7 @@ from app.core.permissions import member_has_role_at_least
 from app.models.event import Event
 from app.models.event_task import (
     EventTask,
+    EventTaskChecklistItem,
     EventTaskKind,
     EventTaskStatus,
     checklist_items_from_group,
@@ -20,6 +21,7 @@ from app.models.member import Member, MemberPosition, MemberRole, MemberStatus
 from app.models.preptask import PrepTaskGroup
 from app.schemas.event_task import (
     ChecklistEventTaskCreateRequest,
+    ChecklistStructureUpdateRequest,
     EventTaskCreateRequest,
     EventTaskUpdateRequest,
     TaskOverviewMember,
@@ -27,7 +29,10 @@ from app.schemas.event_task import (
 )
 from app.services.event_service import EventNotFoundError
 from app.services.notification_scan_service import notify_task_assigned_if_enabled
-from app.services.organization_context import get_default_organization_id
+from app.services.organization_context import (
+    get_default_organization_id,
+    resolve_organization_id,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +67,14 @@ class EventTaskChecklistItemNotFoundError(Exception):
 
 class EventTaskCreationClosedError(Exception):
     """Raised when an event has ended and new tasks can no longer be added."""
+
+
+class ChecklistStructureInvalidError(Exception):
+    """Raised when a checklist replacement names an item that is not on the task."""
+
+
+class ChecklistStructureConflictError(Exception):
+    """Raised when the checklist changed after the editor loaded it."""
 
 
 def is_task_manager(member: Member) -> bool:
@@ -166,6 +179,60 @@ def _load_tasks_for_event(db: Session, event_id: int) -> list[EventTask]:
     )
 
 
+def _supports_row_locks(db: Session) -> bool:
+    bind = db.get_bind()
+    return bind is not None and bind.dialect.name != "sqlite"
+
+
+def _lock_checklist_rows(db: Session, task: EventTask) -> None:
+    """Serialize checklist edits and reload completion before any write.
+
+    PostgreSQL row locks make a completion toggle wait until a structure save
+    finishes, and the reload picks up a toggle that committed first. SQLite
+    tests run one transaction at a time, so they only need the reload.
+    """
+    if _supports_row_locks(db):
+        locked_id = db.scalar(
+            select(EventTask.id).where(EventTask.id == task.id).with_for_update(),
+        )
+        if locked_id is None:
+            raise EventTaskNotFoundError
+        db.scalars(
+            select(EventTaskChecklistItem)
+            .where(EventTaskChecklistItem.event_task_id == task.id)
+            .order_by(EventTaskChecklistItem.id)
+            .with_for_update(),
+        ).all()
+
+    db.refresh(task)
+    for item in list(task.checklist_items):
+        db.refresh(item)
+
+
+def _checklist_base_matches(task: EventTask, data: ChecklistStructureUpdateRequest) -> bool:
+    if task.title != data.base_title:
+        return False
+    current = {item.id: item for item in task.checklist_items}
+    if len(current) != len(data.base_items):
+        return False
+    for base in data.base_items:
+        row = current.get(base.id)
+        if row is None or row.label != base.label or row.sort_order != base.sort_order:
+            return False
+    return True
+
+
+def _require_event_in_member_org(
+    db: Session,
+    event: Event | None,
+    member: Member | None,
+) -> None:
+    if event is None or member is None:
+        raise EventNotFoundError
+    if event.organization_id != resolve_organization_id(db, member):
+        raise EventNotFoundError
+
+
 def _maybe_notify_new_assignee(
     db: Session,
     task: EventTask,
@@ -247,6 +314,10 @@ def create_checklist_event_task(
     event = db.get(Event, event_id)
     if event is None:
         raise EventNotFoundError
+    if created_by is not None:
+        _require_event_in_member_org(db, event, created_by)
+    if not event.is_upcoming:
+        raise EventTaskCreationClosedError
 
     _validate_checklist_due_date(data.due_date, event.starts_at)
     _validate_assignee(db, data.assignee_id)
@@ -326,6 +397,7 @@ def update_event_task(
     task = _load_task(db, task_id)
     if task is None:
         raise EventTaskNotFoundError
+    _require_event_in_member_org(db, task.event, current_member)
 
     is_board = member_has_role_at_least(current_member, MemberRole.BOARD)
     is_assignee = task.assignee_id == current_member.id
@@ -337,6 +409,9 @@ def update_event_task(
 
     if not is_board and (MANAGER_ONLY_FIELDS & updates.keys()):
         raise EventTaskForbiddenError
+
+    if task.task_kind == EventTaskKind.CHECKLIST:
+        _lock_checklist_rows(db, task)
 
     if "assignee_id" in updates:
         require_board_role = task.task_kind != EventTaskKind.SIMPLE
@@ -396,6 +471,7 @@ def update_event_task_checklist_item(
     task = _load_task(db, task_id)
     if task is None:
         raise EventTaskNotFoundError
+    _require_event_in_member_org(db, task.event, current_member)
 
     if task.task_kind != EventTaskKind.CHECKLIST:
         raise EventTaskNotFoundError
@@ -405,6 +481,7 @@ def update_event_task_checklist_item(
     if not (is_board or is_assignee):
         raise EventTaskForbiddenError
 
+    _lock_checklist_rows(db, task)
     checklist_item = next(
         (item for item in task.checklist_items if item.id == item_id),
         None,
@@ -421,12 +498,97 @@ def update_event_task_checklist_item(
     return reloaded
 
 
-def delete_event_task(db: Session, task_id: int) -> None:
-    task = db.get(EventTask, task_id)
+def delete_event_task(db: Session, task_id: int, *, actor: Member | None = None) -> None:
+    task = _load_task(db, task_id)
     if task is None:
         raise EventTaskNotFoundError
+    if actor is not None:
+        _require_event_in_member_org(db, task.event, actor)
+    if task.task_kind == EventTaskKind.CHECKLIST:
+        _lock_checklist_rows(db, task)
     db.delete(task)
     db.commit()
+
+
+_TEMP_SORT_ORDER_BASE = 10_000
+
+
+def replace_event_task_checklist(
+    db: Session,
+    task_id: int,
+    data: ChecklistStructureUpdateRequest,
+    current_member: Member,
+) -> EventTask:
+    """Replace a checklist's labels and order without touching completion or assignment.
+
+    Sort orders are parked above the unique range before the final order is
+    written, so the (task, sort_order) constraint cannot fail mid-update.
+    """
+    task = _load_task(db, task_id)
+    if task is None or task.task_kind != EventTaskKind.CHECKLIST:
+        raise EventTaskNotFoundError
+    _require_event_in_member_org(db, task.event, current_member)
+
+    if not member_has_role_at_least(current_member, MemberRole.BOARD):
+        raise EventTaskForbiddenError
+
+    _lock_checklist_rows(db, task)
+    if not _checklist_base_matches(task, data):
+        raise ChecklistStructureConflictError
+
+    existing = {item.id: item for item in task.checklist_items}
+    seen_ids: set[int] = set()
+    for item in data.items:
+        if item.id is None:
+            continue
+        if item.id in seen_ids or item.id not in existing:
+            raise ChecklistStructureInvalidError
+        seen_ids.add(item.id)
+
+    try:
+        _apply_checklist_structure(db, task, data, existing, seen_ids)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+    reloaded = _load_task(db, task_id)
+    assert reloaded is not None
+    return reloaded
+
+
+def _apply_checklist_structure(
+    db: Session,
+    task: EventTask,
+    data: ChecklistStructureUpdateRequest,
+    existing: dict[int, EventTaskChecklistItem],
+    seen_ids: set[int],
+) -> None:
+    for index, item in enumerate(list(task.checklist_items)):
+        item.sort_order = _TEMP_SORT_ORDER_BASE + index
+    db.flush()
+
+    for item in list(task.checklist_items):
+        if item.id not in seen_ids:
+            task.checklist_items.remove(item)
+    db.flush()
+
+    for index, incoming in enumerate(data.items):
+        if incoming.id is None:
+            task.checklist_items.append(
+                EventTaskChecklistItem(
+                    label=incoming.label,
+                    is_completed=False,
+                    sort_order=index,
+                ),
+            )
+            continue
+        item = existing[incoming.id]
+        item.label = incoming.label
+        item.sort_order = index
+
+    task.title = data.title
+    sync_checklist_status(task)
 
 
 def get_task_overview(db: Session) -> TaskOverviewResponse:

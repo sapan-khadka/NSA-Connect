@@ -640,6 +640,7 @@ export function EventManageDashboard({
           canManageSimple={canManageTasks}
           canCreateTasks={canCreateEventTasks(event)}
           canAssignChecklist={canViewBoard}
+          eventStartsAt={event.starts_at}
           assignableMembers={assignableMembers}
           refreshKey={refreshKey}
           taskDraft={taskDraft}

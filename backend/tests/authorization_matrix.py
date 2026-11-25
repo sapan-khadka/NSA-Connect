@@ -1402,6 +1402,14 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
         skip_role_probe=True,
     ),
     EndpointAuthRule(
+        "PUT",
+        "/api/v1/event-tasks/{task_id}/checklist",
+        "Replace saved checklist structure",
+        "board",
+        "require_board",
+        object_rules="Same organization; completion and assignee are preserved",
+    ),
+    EndpointAuthRule(
         "DELETE",
         "/api/v1/event-tasks/{task_id}",
         "Delete event task",

@@ -11,6 +11,7 @@ from app.core.dependencies import (
 from app.core.upload import read_upload_with_limit
 from app.models.member import Member
 from app.schemas.event_task import (
+    ChecklistStructureUpdateRequest,
     EventTaskChecklistItemUpdateRequest,
     EventTaskCreateRequest,
     EventTaskListResponse,
@@ -21,6 +22,8 @@ from app.schemas.event_task import (
 )
 from app.services.event_service import EventNotFoundError
 from app.services.event_task_service import (
+    ChecklistStructureConflictError,
+    ChecklistStructureInvalidError,
     EventTaskChecklistItemNotFoundError,
     EventTaskCreationClosedError,
     EventTaskForbiddenError,
@@ -31,6 +34,7 @@ from app.services.event_task_service import (
     get_task_overview,
     list_event_tasks_for_event,
     list_my_event_tasks,
+    replace_event_task_checklist,
     update_event_task,
     update_event_task_checklist_item,
 )
@@ -160,7 +164,7 @@ def update_event_task_endpoint(
 ):
     try:
         task = update_event_task(db, task_id, data, current_member)
-    except EventTaskNotFoundError:
+    except (EventTaskNotFoundError, EventNotFoundError):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found",
@@ -201,7 +205,7 @@ def update_event_task_checklist_item_endpoint(
             is_completed=data.is_completed,
             current_member=current_member,
         )
-    except EventTaskNotFoundError:
+    except (EventTaskNotFoundError, EventNotFoundError):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found",
@@ -220,15 +224,54 @@ def update_event_task_checklist_item_endpoint(
     return EventTaskResponse.from_task(task)
 
 
-@router.delete("/event-tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_event_task_endpoint(
+@router.put(
+    "/event-tasks/{task_id}/checklist",
+    response_model=EventTaskResponse,
+)
+def replace_event_task_checklist_endpoint(
     task_id: int,
-    _: Member = Depends(require_task_manager),
+    data: ChecklistStructureUpdateRequest,
+    current_member: Member = Depends(require_board),
     db: Session = Depends(get_db),
 ):
     try:
-        delete_event_task(db, task_id)
-    except EventTaskNotFoundError:
+        task = replace_event_task_checklist(db, task_id, data, current_member)
+    except (EventTaskNotFoundError, EventNotFoundError):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found",
+        ) from None
+    except EventTaskForbiddenError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You cannot modify this task",
+        ) from None
+    except ChecklistStructureInvalidError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Checklist item not found",
+        ) from None
+    except ChecklistStructureConflictError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "This checklist was updated by someone else. "
+                "Reload it and try again."
+            ),
+        ) from None
+
+    return EventTaskResponse.from_task(task)
+
+
+@router.delete("/event-tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_event_task_endpoint(
+    task_id: int,
+    current_member: Member = Depends(require_task_manager),
+    db: Session = Depends(get_db),
+):
+    try:
+        delete_event_task(db, task_id, actor=current_member)
+    except (EventTaskNotFoundError, EventNotFoundError):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found",

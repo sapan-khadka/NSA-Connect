@@ -386,6 +386,13 @@ def probe_request_kwargs(method: str, path_template: str) -> dict:
         kwargs["json"] = {"is_complete": True}
     elif "checklist-items" in path_template and method == "PATCH":
         kwargs["json"] = {"is_completed": True}
+    elif path_template.endswith("/event-tasks/{task_id}/checklist") and method == "PUT":
+        kwargs["json"] = {
+            "title": "Probe checklist",
+            "base_title": "Probe checklist",
+            "base_items": [],
+            "items": [{"id": None, "label": "Probe item"}],
+        }
     elif path_template == "/api/v1/finance/receipts" and method == "POST":
         kwargs["files"] = {
             "file": ("receipt.jpg", b"\xff\xd8\xffprobe", "image/jpeg"),
