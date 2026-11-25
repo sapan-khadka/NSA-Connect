@@ -7,7 +7,10 @@ from app.core.dependencies import get_current_member, require_board
 from app.core.rate_limit import AppRateLimitExceeded, enforce_ai_user_limit
 from app.core.safe_messages import GENERIC_AI_UNAVAILABLE
 from app.core.security_events import log_security_event
+from app.lib.event_timezone import resolve_event_timezone
+from app.models.event import Event
 from app.models.member import Member
+from app.models.organization import Organization
 from app.schemas.ai import (
     ChatRequest,
     ChatResponse,
@@ -36,6 +39,8 @@ from app.services.ai_minutes_service import (
     AIMinutesSummaryError,
     summarize_meeting_minutes,
 )
+from app.services.notification_email_service import build_event_url
+from app.services.organization_context import resolve_organization_id
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -93,15 +98,43 @@ def draft_announcement_email_endpoint(
     request: Request,
     data: DraftAnnouncementEmailRequest,
     current_member: Member = Depends(require_board),
+    db: Session = Depends(get_db),
 ) -> DraftAnnouncementEmailResponse:
     _enforce_ai_quota(request, current_member)
+    event_name = data.event_name
+    event_type = data.event_type
+    starts_at = data.starts_at
+    ends_at = data.ends_at
+    location = data.location
+    description = data.description
+    event_url = None
+    organization = None
+    if data.event_id is not None:
+        event = db.get(Event, data.event_id)
+        org_id = resolve_organization_id(db, current_member)
+        if event is None or event.organization_id != org_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Event not found",
+            )
+        event_name = event.title
+        event_type = event.event_type
+        starts_at = event.starts_at
+        ends_at = event.ends_at
+        location = event.location
+        description = event.description
+        event_url = build_event_url(event.id)
+        organization = db.get(Organization, event.organization_id)
     try:
         return draft_event_announcement_email(
-            event_name=data.event_name,
-            event_type=data.event_type,
-            starts_at=data.starts_at,
-            location=data.location,
-            description=data.description,
+            event_name=event_name,
+            event_type=event_type,
+            starts_at=starts_at,
+            ends_at=ends_at,
+            location=location,
+            description=description,
+            event_url=event_url,
+            timezone=resolve_event_timezone(organization),
         )
     except AIDisabledError:
         raise HTTPException(

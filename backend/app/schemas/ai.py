@@ -50,8 +50,10 @@ class DraftAnnouncementEmailRequest(BaseModel):
     event_name: str = Field(min_length=1, max_length=255)
     event_type: EventType | None = None
     starts_at: datetime | None = None
+    ends_at: datetime | None = None
     location: str | None = Field(default=None, max_length=255)
     description: str | None = Field(default=None, max_length=5000)
+    event_id: int | None = Field(default=None, ge=1)
 
     @field_validator("event_name", mode="before")
     @classmethod
@@ -70,16 +72,16 @@ class DraftAnnouncementEmailRequest(BaseModel):
         value = value.strip()
         return value or None
 
-    @field_validator("starts_at")
+    @field_validator("starts_at", "ends_at")
     @classmethod
-    def starts_at_must_be_timezone_aware(
+    def event_times_must_be_timezone_aware(
         cls,
         value: datetime | None,
     ) -> datetime | None:
         if value is None:
             return value
         if value.tzinfo is None or value.tzinfo.utcoffset(value) is None:
-            raise ValueError("starts_at must include a timezone")
+            raise ValueError("event times must include a timezone")
         return value
 
 

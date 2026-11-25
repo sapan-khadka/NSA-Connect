@@ -125,6 +125,13 @@ class Settings(BaseSettings):
     DEFAULT_UNIVERSITY_EMAIL_DOMAIN: str = "semo.edu"
     DEFAULT_ORGANIZATION_SLUG: str = "nsa"
     DEFAULT_ORGANIZATION_NAME: str = "Nepalese Student Association"
+    DEFAULT_EVENT_TIMEZONE: str = Field(
+        default="America/Chicago",
+        description=(
+            "IANA timezone used to present event times when an organization "
+            "has not set its own. Stored event timestamps stay UTC."
+        ),
+    )
 
     ORG_OWNER_EMAILS: str = Field(
         default="",

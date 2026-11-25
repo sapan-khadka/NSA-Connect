@@ -1,5 +1,3 @@
-from datetime import UTC, datetime
-
 from app.models.event import EventType
 from app.prompts.announcement_email import (
     ANNOUNCEMENT_EMAIL_SYSTEM_PROMPT,
@@ -31,13 +29,19 @@ def test_build_announcement_user_prompt_includes_optional_context():
     prompt = build_announcement_user_prompt(
         event_name="General Meeting",
         event_type=EventType.MEETING,
-        starts_at=datetime(2030, 6, 1, 18, 0, tzinfo=UTC),
-        location="University Center Room 204",
         description="Agenda includes budget review.",
     )
 
     assert "Event type: meeting" in prompt
     assert EVENT_TYPE_ANNOUNCEMENT_FOCUS[EventType.MEETING] in prompt
-    assert "Starts at: 2030-06-01T18:00:00+00:00" in prompt
-    assert "Location: University Center Room 204" in prompt
     assert "Agenda includes budget review." in prompt
+    assert "Do not include a date" in prompt
+    assert "Starts at:" not in prompt
+
+
+def test_system_prompt_forbids_placeholders_and_invented_facts():
+    prompt = ANNOUNCEMENT_EMAIL_SYSTEM_PROMPT
+    assert "[RSVP LINK]" in prompt
+    assert "Never include" in prompt
+    assert "admission price" in prompt
+    assert "contact email" in prompt

@@ -2,6 +2,7 @@ import json
 import logging
 import re
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from pydantic import ValidationError
 
@@ -10,6 +11,7 @@ from app.integrations.anthropic_client import (
     AnthropicNotConfiguredError,
     get_anthropic_client,
 )
+from app.lib.event_timezone import resolve_event_timezone
 from app.models.event import EventType
 from app.prompts.announcement_email import (
     ANNOUNCEMENT_EMAIL_SYSTEM_PROMPT,
@@ -17,6 +19,7 @@ from app.prompts.announcement_email import (
 )
 from app.schemas.ai import DraftAnnouncementEmailResponse
 from app.services.ai_checklist_service import AIDisabledError
+from app.services.announcement_draft import compose_announcement_draft
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +48,11 @@ def draft_event_announcement_email(
     event_name: str,
     event_type: EventType | None = None,
     starts_at: datetime | None = None,
+    ends_at: datetime | None = None,
     location: str | None = None,
     description: str | None = None,
+    event_url: str | None = None,
+    timezone: ZoneInfo | None = None,
 ) -> DraftAnnouncementEmailResponse:
     settings = get_settings()
     if not settings.AI_ENABLED:
@@ -68,8 +74,6 @@ def draft_event_announcement_email(
                     "content": build_announcement_user_prompt(
                         event_name=event_name,
                         event_type=event_type,
-                        starts_at=starts_at,
-                        location=location,
                         description=description,
                     ),
                 }
@@ -99,8 +103,20 @@ def draft_event_announcement_email(
             "Anthropic response did not match announcement schema",
         ) from exc
 
-    subject = parsed.subject.strip()
-    body = parsed.body.strip()
+    if not parsed.subject.strip() or not parsed.body.strip():
+        raise AIAnnouncementDraftError("Anthropic returned an empty announcement")
+
+    zone = timezone or resolve_event_timezone(None)
+    subject, body = compose_announcement_draft(
+        event_name=event_name,
+        creative_subject=parsed.subject,
+        creative_body=parsed.body,
+        starts_at=starts_at,
+        ends_at=ends_at,
+        location=location,
+        event_url=event_url,
+        timezone=zone,
+    )
     if not subject or not body:
         raise AIAnnouncementDraftError("Anthropic returned an empty announcement")
 

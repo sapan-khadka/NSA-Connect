@@ -395,7 +395,7 @@ def notify_announcement_published(
     author: Member,
     category_label: str | None = None,
     announcement=None,
-) -> int:
+) -> list[InboxNotification]:
     if announcement is not None:
         from app.services.announcement_recipients import list_announcement_recipients
 
@@ -407,17 +407,43 @@ def notify_announcement_published(
     else:
         recipients = [m for m in _approved_recipients(db) if m.id != author.id]
     category = category_label or "Announcement"
-    return notify_many(
-        db,
-        recipients=recipients,
-        type=InboxNotificationType.ANNOUNCEMENT,
-        title=title,
-        body=f"{category} from {author.full_name}",
-        href=f"/announcements?id={announcement_id}",
-        dedupe_key_for=lambda recipient: (
-            f"announcement:{announcement_id}:{recipient.id}"
-        ),
-    )
+    created: list[InboxNotification] = []
+    for recipient in recipients:
+        row = create_inbox_notification(
+            db,
+            member_id=recipient.id,
+            type=InboxNotificationType.ANNOUNCEMENT,
+            title=title,
+            body=f"{category} from {author.full_name}",
+            href=f"/announcements?id={announcement_id}",
+            dedupe_key=f"announcement:{announcement_id}:{recipient.id}",
+            commit=False,
+        )
+        if row is not None:
+            created.append(row)
+    if created:
+        db.commit()
+        for row in created:
+            db.refresh(row)
+        _publish_inbox_updates(created)
+    return created
+
+
+def _publish_inbox_updates(rows: list[InboxNotification]) -> None:
+    """Tell connected clients to refresh the bell. Polling remains the fallback."""
+    from app.services.discussion_realtime_sync import publish_user_notification
+
+    for row in rows:
+        publish_user_notification(
+            row.member_id,
+            {
+                "type": "inbox_notification",
+                "notification_id": row.id,
+                "title": row.title,
+                "body": row.body,
+                "href": row.href,
+            },
+        )
 
 
 def _active_inbox_filter(member_id: int):
