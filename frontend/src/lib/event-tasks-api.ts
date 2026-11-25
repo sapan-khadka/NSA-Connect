@@ -126,6 +126,8 @@ export async function updateEventTask(
 
 export type ChecklistStructureUpdateRequest = {
   title: string;
+  base_title: string;
+  base_items: Array<{ id: number; label: string; sort_order: number }>;
   items: Array<{ id: number | null; label: string }>;
 };
 

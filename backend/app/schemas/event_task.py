@@ -163,11 +163,30 @@ class ChecklistStructureItemWrite(BaseModel):
         return value
 
 
+class ChecklistStructureBaseItem(BaseModel):
+    """Item snapshot from when the editor opened the checklist."""
+
+    id: int
+    label: str = Field(min_length=1, max_length=255)
+    sort_order: int = Field(ge=0)
+
+    @field_validator("label", mode="before")
+    @classmethod
+    def strip_label(cls, value: str) -> str:
+        if isinstance(value, str):
+            value = value.strip()
+        if not value:
+            raise ValueError("Checklist item is required")
+        return value
+
+
 class ChecklistStructureUpdateRequest(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     items: list[ChecklistStructureItemWrite] = Field(min_length=1, max_length=20)
+    base_title: str = Field(min_length=1, max_length=255)
+    base_items: list[ChecklistStructureBaseItem] = Field(max_length=20)
 
-    @field_validator("title", mode="before")
+    @field_validator("title", "base_title", mode="before")
     @classmethod
     def strip_title(cls, value: str) -> str:
         if isinstance(value, str):
@@ -185,6 +204,11 @@ class ChecklistStructureUpdateRequest(BaseModel):
             if item.id in seen:
                 raise ValueError("Checklist item ids must be unique")
             seen.add(item.id)
+        seen_base: set[int] = set()
+        for item in self.base_items:
+            if item.id in seen_base:
+                raise ValueError("Checklist item ids must be unique")
+            seen_base.add(item.id)
         return self
 
 

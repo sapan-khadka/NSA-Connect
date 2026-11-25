@@ -389,6 +389,8 @@ def probe_request_kwargs(method: str, path_template: str) -> dict:
     elif path_template.endswith("/event-tasks/{task_id}/checklist") and method == "PUT":
         kwargs["json"] = {
             "title": "Probe checklist",
+            "base_title": "Probe checklist",
+            "base_items": [],
             "items": [{"id": None, "label": "Probe item"}],
         }
     elif path_template == "/api/v1/finance/receipts" and method == "POST":

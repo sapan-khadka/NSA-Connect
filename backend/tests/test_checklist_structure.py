@@ -8,10 +8,10 @@ from conftest import (
     register_member,
     set_member_approved,
 )
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.models.event import Event
-from app.models.event_task import EventTask
+from app.models.event_task import EventTask, EventTaskStatus
 from app.models.member import Member
 from app.models.organization import Organization, OrganizationStatus
 from app.services.organization_context import get_default_organization_id
@@ -53,6 +53,26 @@ def general_headers(client, db_session):
     return auth_header(client)
 
 
+def _category_name(task: dict) -> str:
+    return task.get("title") or task["group_name"]
+
+
+def _structure_update(task: dict, *, title: str, items: list[dict]) -> dict:
+    return {
+        "title": title,
+        "base_title": _category_name(task),
+        "base_items": [
+            {
+                "id": item["id"],
+                "label": item["label"],
+                "sort_order": item["sort_order"],
+            }
+            for item in task["checklist_items"]
+        ],
+        "items": items,
+    }
+
+
 def _create_checklist(client, headers, **event_overrides):
     event = client.post(
         "/api/v1/events",
@@ -83,14 +103,15 @@ def test_edit_keeps_completion_and_reorder_keeps_rows(client, board_headers):
 
     renamed = client.put(
         f"/api/v1/event-tasks/{task['id']}/checklist",
-        json={
-            "title": "Room setup",
-            "items": [
+        json=_structure_update(
+            task,
+            title="Room setup",
+            items=[
                 {"id": second["id"], "label": "Test AV"},
                 {"id": first["id"], "label": "Book the auditorium"},
                 {"id": None, "label": "Print signs"},
             ],
-        },
+        ),
         headers=board_headers,
     )
     assert renamed.status_code == 200, renamed.text
@@ -113,10 +134,11 @@ def test_edit_keeps_completion_and_reorder_keeps_rows(client, board_headers):
 
     removed = client.put(
         f"/api/v1/event-tasks/{task['id']}/checklist",
-        json={
-            "title": "Room setup",
-            "items": [{"id": first["id"], "label": "Book the auditorium"}],
-        },
+        json=_structure_update(
+            renamed.json(),
+            title="Room setup",
+            items=[{"id": first["id"], "label": "Book the auditorium"}],
+        ),
         headers=board_headers,
     )
     assert removed.status_code == 200
@@ -139,13 +161,14 @@ def test_rename_keeps_assignee_and_due_date(client, db_session, board_headers):
 
     renamed = client.put(
         f"/api/v1/event-tasks/{task['id']}/checklist",
-        json={
-            "title": "Venue",
-            "items": [
+        json=_structure_update(
+            task,
+            title="Venue",
+            items=[
                 {"id": item["id"], "label": item["label"]}
                 for item in task["checklist_items"]
             ],
-        },
+        ),
         headers=board_headers,
     )
     assert renamed.status_code == 200
@@ -182,12 +205,13 @@ def test_assignee_can_complete_items_but_not_change_structure(
 
     rejected = client.put(
         f"/api/v1/event-tasks/{task['id']}/checklist",
-        json={
-            "title": "Changed by assignee",
-            "items": [
+        json=_structure_update(
+            task,
+            title="Changed by assignee",
+            items=[
                 {"id": item["id"], "label": item["label"]} for item in event_task_items
             ],
-        },
+        ),
         headers=general_headers,
     )
     assert rejected.status_code == 403
@@ -222,10 +246,11 @@ def test_other_organization_cannot_edit_or_extend_a_checklist(
 
     rejected = client.put(
         f"/api/v1/event-tasks/{task['id']}/checklist",
-        json={
-            "title": "Stolen",
-            "items": [{"id": task["checklist_items"][0]["id"], "label": "Stolen"}],
-        },
+        json=_structure_update(
+            task,
+            title="Stolen",
+            items=[{"id": task["checklist_items"][0]["id"], "label": "Stolen"}],
+        ),
         headers=board_headers,
     )
     assert rejected.status_code == 404
@@ -242,10 +267,11 @@ def test_failed_structure_save_leaves_the_checklist_unchanged(client, board_head
     event, task = _create_checklist(client, board_headers)
     rejected = client.put(
         f"/api/v1/event-tasks/{task['id']}/checklist",
-        json={
-            "title": "Should not save",
-            "items": [{"id": 999999, "label": "Missing item"}],
-        },
+        json=_structure_update(
+            task,
+            title="Should not save",
+            items=[{"id": 999999, "label": "Missing item"}],
+        ),
         headers=board_headers,
     )
     assert rejected.status_code == 422
@@ -281,13 +307,14 @@ def test_past_event_rejects_new_categories_and_keeps_existing_edits(
 
     edited = client.put(
         f"/api/v1/event-tasks/{task['id']}/checklist",
-        json={
-            "title": "Setup",
-            "items": [
+        json=_structure_update(
+            task,
+            title="Setup",
+            items=[
                 {"id": task["checklist_items"][0]["id"], "label": "Reserve the hall"},
                 {"id": task["checklist_items"][1]["id"], "label": "Test AV"},
             ],
-        },
+        ),
         headers=board_headers,
     )
     assert edited.status_code == 200
@@ -308,6 +335,210 @@ def test_only_task_managers_can_delete_a_checklist_category(
 
     create_president_member(db_session)
     president_headers = auth_header(client, email="president@semo.edu")
+    deleted = client.delete(
+        f"/api/v1/event-tasks/{task['id']}",
+        headers=president_headers,
+    )
+    assert deleted.status_code == 204
+
+
+def test_stale_structure_save_keeps_the_other_organizers_edit(client, board_headers):
+    event, task = _create_checklist(client, board_headers)
+    renamed = client.put(
+        f"/api/v1/event-tasks/{task['id']}/checklist",
+        json=_structure_update(
+            task,
+            title="Setup",
+            items=[
+                {"id": task["checklist_items"][0]["id"], "label": "Reserve the hall"},
+                {"id": task["checklist_items"][1]["id"], "label": "Test AV"},
+            ],
+        ),
+        headers=board_headers,
+    )
+    assert renamed.status_code == 200, renamed.text
+
+    stale = client.put(
+        f"/api/v1/event-tasks/{task['id']}/checklist",
+        json=_structure_update(
+            task,
+            title="Setup",
+            items=[{"id": task["checklist_items"][0]["id"], "label": "Reserve room"}],
+        ),
+        headers=board_headers,
+    )
+    assert stale.status_code == 409
+
+    current = client.get(
+        f"/api/v1/events/{event['id']}/event-tasks",
+        headers=board_headers,
+    )
+    saved = next(entry for entry in current.json()["tasks"] if entry["id"] == task["id"])
+    assert [item["label"] for item in saved["checklist_items"]] == [
+        "Reserve the hall",
+        "Test AV",
+    ]
+
+
+def test_structure_save_reloads_completion_before_changing_labels(
+    client,
+    db_session,
+    board_headers,
+):
+    _, task = _create_checklist(client, board_headers)
+    member = db_session.scalar(select(Member).where(Member.email == "board@semo.edu"))
+    item_id = task["checklist_items"][0]["id"]
+    loaded = db_session.get(EventTask, task["id"])
+    assert loaded is not None
+    stale_item = next(item for item in loaded.checklist_items if item.id == item_id)
+    db_session.execute(
+        text(
+            "UPDATE event_task_checklist_items SET is_completed = 1 WHERE id = :item_id"
+        ),
+        {"item_id": item_id},
+    )
+    assert stale_item.is_completed is False
+
+    from app.schemas.event_task import ChecklistStructureUpdateRequest
+    from app.services.event_task_service import replace_event_task_checklist
+
+    saved = replace_event_task_checklist(
+        db_session,
+        task["id"],
+        ChecklistStructureUpdateRequest.model_validate(
+            _structure_update(
+                task,
+                title="Setup",
+                items=[
+                    {"id": item["id"], "label": item["label"]}
+                    for item in task["checklist_items"]
+                ],
+            ),
+        ),
+        member,
+    )
+    by_id = {item.id: item for item in saved.checklist_items}
+    assert by_id[item_id].is_completed is True
+    assert saved.status == EventTaskStatus.IN_PROGRESS
+
+
+def test_commit_failure_rolls_back_the_whole_checklist_update(
+    client,
+    db_session,
+    board_headers,
+    monkeypatch,
+):
+    _, task = _create_checklist(client, board_headers)
+    member = db_session.scalar(select(Member).where(Member.email == "board@semo.edu"))
+
+    from app.schemas.event_task import ChecklistStructureUpdateRequest
+    from app.services.event_task_service import replace_event_task_checklist
+
+    def fail_commit():
+        raise RuntimeError("commit failed")
+
+    monkeypatch.setattr(db_session, "commit", fail_commit)
+    with pytest.raises(RuntimeError, match="commit failed"):
+        replace_event_task_checklist(
+            db_session,
+            task["id"],
+            ChecklistStructureUpdateRequest.model_validate(
+                _structure_update(
+                    task,
+                    title="Should roll back",
+                    items=[
+                        {
+                            "id": task["checklist_items"][0]["id"],
+                            "label": "Only the first item",
+                        },
+                    ],
+                ),
+            ),
+            member,
+        )
+
+    db_session.rollback()
+    stored = db_session.get(EventTask, task["id"])
+    assert stored is not None
+    assert stored.title == "Setup"
+    labels = [
+        item.label
+        for item in sorted(stored.checklist_items, key=lambda item: item.sort_order)
+    ]
+    assert labels == ["Reserve room", "Test AV"]
+    assert [item.sort_order for item in stored.checklist_items] == [0, 1] or sorted(
+        item.sort_order for item in stored.checklist_items
+    ) == [0, 1]
+
+
+def test_structure_save_leaves_unrelated_tasks_unchanged(
+    client,
+    db_session,
+    board_headers,
+):
+    event, task = _create_checklist(client, board_headers)
+    other = client.post(
+        f"/api/v1/events/{event['id']}/tasks",
+        json=_checklist_payload(group_name="Logistics", checklist_items=["Order cups"]),
+        headers=board_headers,
+    )
+    assert other.status_code == 201, other.text
+    create_president_member(db_session)
+    president_headers = auth_header(client, email="president@semo.edu")
+    simple = client.post(
+        f"/api/v1/events/{event['id']}/event-tasks",
+        json={"title": "Buy snacks"},
+        headers=president_headers,
+    )
+    assert simple.status_code == 201, simple.text
+
+    saved = client.put(
+        f"/api/v1/event-tasks/{task['id']}/checklist",
+        json=_structure_update(
+            task,
+            title="Venue",
+            items=[
+                {"id": item["id"], "label": item["label"]}
+                for item in task["checklist_items"]
+            ],
+        ),
+        headers=board_headers,
+    )
+    assert saved.status_code == 200, saved.text
+
+    current = client.get(
+        f"/api/v1/events/{event['id']}/event-tasks",
+        headers=board_headers,
+    )
+    by_id = {entry["id"]: entry for entry in current.json()["tasks"]}
+    assert by_id[task["id"]]["title"] == "Venue"
+    assert [item["label"] for item in by_id[other.json()["id"]]["checklist_items"]] == [
+        "Order cups",
+    ]
+    assert by_id[simple.json()["id"]]["title"] == "Buy snacks"
+    assert by_id[simple.json()["id"]]["status"] == "todo"
+    assert by_id[simple.json()["id"]]["task_kind"] == "simple"
+
+
+def test_past_event_still_allows_checklist_deletion(
+    client,
+    db_session,
+    board_headers,
+):
+    event, task = _create_checklist(client, board_headers)
+    stored_event = db_session.get(Event, event["id"])
+    stored_event.starts_at = datetime(2020, 1, 1, tzinfo=UTC)
+    db_session.commit()
+
+    create_president_member(db_session)
+    president_headers = auth_header(client, email="president@semo.edu")
+    simple = client.post(
+        f"/api/v1/events/{event['id']}/event-tasks",
+        json={"title": "Late simple task"},
+        headers=president_headers,
+    )
+    assert simple.status_code == 400
+
     deleted = client.delete(
         f"/api/v1/event-tasks/{task['id']}",
         headers=president_headers,

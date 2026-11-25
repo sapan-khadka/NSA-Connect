@@ -358,6 +358,11 @@ describe("EventTaskManager", () => {
     await waitFor(() => expect(mockedSaveChecklist).toHaveBeenCalledTimes(1));
     expect(mockedSaveChecklist).toHaveBeenCalledWith(40, {
       title: "Venue",
+      base_title: "Setup",
+      base_items: [
+        { id: 7, label: "Reserve room", sort_order: 0 },
+        { id: 8, label: "Test AV", sort_order: 1 },
+      ],
       items: [
         { id: 8, label: "Test AV" },
         { id: 7, label: "Book the auditorium" },

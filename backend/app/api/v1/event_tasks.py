@@ -22,6 +22,7 @@ from app.schemas.event_task import (
 )
 from app.services.event_service import EventNotFoundError
 from app.services.event_task_service import (
+    ChecklistStructureConflictError,
     ChecklistStructureInvalidError,
     EventTaskChecklistItemNotFoundError,
     EventTaskCreationClosedError,
@@ -249,6 +250,14 @@ def replace_event_task_checklist_endpoint(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Checklist item not found",
+        ) from None
+    except ChecklistStructureConflictError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "This checklist was updated by someone else. "
+                "Reload it and try again."
+            ),
         ) from None
 
     return EventTaskResponse.from_task(task)

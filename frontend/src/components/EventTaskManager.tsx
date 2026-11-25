@@ -644,12 +644,23 @@ export function EventTaskManager({
     taskId: number,
     draft: ChecklistStructureDraft,
   ) {
-    const updated = await saveEventTaskChecklist(taskId, draft);
-    setTasks((current) => {
-      const next = replaceEventTaskInList(current, updated);
-      syncFallbackTasks(next);
-      return next;
-    });
+    try {
+      const updated = await saveEventTaskChecklist(taskId, draft);
+      setTasks((current) => {
+        const next = replaceEventTaskInList(current, updated);
+        syncFallbackTasks(next);
+        return next;
+      });
+    } catch (error) {
+      try {
+        const refreshed = await fetchEventTasks(eventId);
+        setTasks(refreshed.tasks);
+        syncFallbackTasks(refreshed.tasks);
+      } catch {
+        // The checklist editor keeps the unsaved draft and shows the save error.
+      }
+      throw error;
+    }
   }
 
   async function handleDeleteChecklist(task: EventTaskResponse) {

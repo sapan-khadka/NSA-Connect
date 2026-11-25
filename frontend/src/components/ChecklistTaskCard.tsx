@@ -30,6 +30,8 @@ type ChecklistDraftItem = {
 
 export type ChecklistStructureDraft = {
   title: string;
+  base_title: string;
+  base_items: Array<{ id: number; label: string; sort_order: number }>;
   items: Array<{ id: number | null; label: string }>;
 };
 
@@ -103,6 +105,10 @@ export function ChecklistTaskCard({
 }: ChecklistTaskCardProps) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(task.group_name ?? task.title);
+  const [baseTitle, setBaseTitle] = useState(task.group_name ?? task.title);
+  const [baseItems, setBaseItems] = useState<
+    ChecklistStructureDraft["base_items"]
+  >([]);
   const [draftItems, setDraftItems] = useState<ChecklistDraftItem[]>(() =>
     draftFromTask(task),
   );
@@ -139,7 +145,18 @@ export function ChecklistTaskCard({
   }, [draftItems, editing, onStructurePreview, task.id]);
 
   function startEditing() {
+    const snapshot = [...task.checklist_items].sort(
+      (a, b) => a.sort_order - b.sort_order,
+    );
     setTitle(viewTitle);
+    setBaseTitle(viewTitle);
+    setBaseItems(
+      snapshot.map((item) => ({
+        id: item.id,
+        label: item.label,
+        sort_order: item.sort_order,
+      })),
+    );
     setDraftItems(draftFromTask(task));
     setSaveError(null);
     setEditing(true);
@@ -211,7 +228,12 @@ export function ChecklistTaskCard({
     setSaving(true);
     setSaveError(null);
     try {
-      await onSaveStructure(task.id, { title: trimmedTitle, items });
+      await onSaveStructure(task.id, {
+        title: trimmedTitle,
+        base_title: baseTitle,
+        base_items: baseItems,
+        items,
+      });
       setEditing(false);
     } catch (error) {
       setSaveError(getApiErrorMessage(error));
