@@ -6,6 +6,7 @@ from app.api.v1.event_meetings import router as event_meetings_router
 from app.api.v1.event_photos import router as event_photos_router
 from app.core.database import get_db
 from app.core.dependencies import get_current_member, require_board
+from app.core.permissions import Permission, member_has
 from app.models.event import EventType
 from app.models.event_volunteer_signup import EventVolunteerSignupStatus
 from app.models.member import Member, MemberRole
@@ -131,14 +132,15 @@ def _build_event_response(
     db: Session,
     event,
     *,
-    member_id: int,
+    member: Member,
 ) -> EventResponse:
-    current_status = get_member_rsvp_status(db, event.id, member_id)
-    is_invited = is_member_invited_to_event(db, event.id, member_id)
+    current_status = get_member_rsvp_status(db, event.id, member.id)
+    is_invited = is_member_invited_to_event(db, event.id, member.id)
     return EventResponse.from_event(
         event,
         current_member_rsvp_status=current_status,
         current_member_is_invited_participant=is_invited,
+        include_budget=member_has(member, Permission.MANAGE_FINANCE),
     )
 
 
@@ -146,19 +148,19 @@ def _build_event_detail_response(
     db: Session,
     event,
     *,
-    member_id: int,
+    member: Member,
 ) -> EventDetailResponse:
-    current_status = get_member_rsvp_status(db, event.id, member_id)
-    is_invited = is_member_invited_to_event(db, event.id, member_id)
+    current_status = get_member_rsvp_status(db, event.id, member.id)
+    is_invited = is_member_invited_to_event(db, event.id, member.id)
     volunteer_signup = get_member_volunteer_signup(
         db,
         event_id=event.id,
-        member_id=member_id,
+        member_id=member.id,
     )
     member_feedback = get_member_event_feedback(
         db,
         event_id=event.id,
-        member_id=member_id,
+        member_id=member.id,
     )
     return EventDetailResponse.from_event(
         event,
@@ -174,6 +176,7 @@ def _build_event_detail_response(
             if member_feedback is not None
             else None
         ),
+        include_budget=member_has(member, Permission.MANAGE_FINANCE),
     )
 
 
@@ -199,7 +202,7 @@ def list_events_endpoint(
     )
     return EventListResponse(
         events=[
-            _build_event_response(db, event, member_id=current_member.id)
+            _build_event_response(db, event, member=current_member)
             for event in events
         ],
         total=total,
@@ -215,7 +218,7 @@ def list_upcoming_events_endpoint(
     events, total = list_upcoming_events(db, limit=limit, viewer=current_member)
     return EventListResponse(
         events=[
-            _build_event_response(db, event, member_id=current_member.id)
+            _build_event_response(db, event, member=current_member)
             for event in events
         ],
         total=total,
@@ -237,7 +240,7 @@ def list_past_events_endpoint(
     )
     return EventListResponse(
         events=[
-            _build_event_response(db, event, member_id=current_member.id)
+            _build_event_response(db, event, member=current_member)
             for event in events
         ],
         total=total,
@@ -265,7 +268,7 @@ def get_event_endpoint(
     return _build_event_detail_response(
         db,
         event,
-        member_id=current_member.id,
+        member=current_member,
     )
 
 
@@ -879,7 +882,7 @@ def duplicate_event_endpoint(
             detail="Event not found",
         ) from None
 
-    return _build_event_response(db, event, member_id=current_member.id)
+    return _build_event_response(db, event, member=current_member)
 
 
 @router.post(
@@ -898,7 +901,7 @@ def create_event_endpoint(
         created_by_id=current_member.id,
         created_by=current_member,
     )
-    return _build_event_response(db, event, member_id=current_member.id)
+    return _build_event_response(db, event, member=current_member)
 
 
 @router.patch("/{event_id}", response_model=EventResponse)
@@ -921,7 +924,7 @@ def patch_event_endpoint(
             detail=str(exc),
         ) from None
 
-    return _build_event_response(db, event, member_id=current_member.id)
+    return _build_event_response(db, event, member=current_member)
 
 
 @router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT)

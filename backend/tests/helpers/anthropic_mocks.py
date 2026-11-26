@@ -232,4 +232,5 @@ def mock_claude_chat_api(
         mock_settings.return_value.ANTHROPIC_MODEL = DEFAULT_MODEL
         mock_settings.return_value.ANTHROPIC_API_KEY = "sk-ant-test-key"
         mock_settings.return_value.AI_CHAT_RAG_CHUNK_LIMIT = 5
+        mock_settings.return_value.AI_CHAT_RAG_MIN_SIMILARITY = 0.45
         yield mock_client

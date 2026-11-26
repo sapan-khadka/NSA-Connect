@@ -83,7 +83,7 @@ class EventResponse(BaseModel):
     description: str
     location: str | None = None
     capacity: int | None = None
-    budget: Decimal
+    budget: Decimal | None = None
     created_by_id: int
     current_member_rsvp_status: RsvpStatus | None = None
     current_member_is_invited_participant: bool = False
@@ -102,6 +102,7 @@ class EventResponse(BaseModel):
         *,
         current_member_rsvp_status: RsvpStatus | None = None,
         current_member_is_invited_participant: bool = False,
+        include_budget: bool = True,
     ) -> "EventResponse":
         return cls(
             id=event.id,
@@ -112,7 +113,7 @@ class EventResponse(BaseModel):
             description=event.description,
             location=event.location,
             capacity=event.capacity,
-            budget=Decimal(event.budget),
+            budget=Decimal(event.budget) if include_budget else None,
             created_by_id=event.created_by_id,
             current_member_rsvp_status=current_member_rsvp_status,
             current_member_is_invited_participant=current_member_is_invited_participant,
@@ -248,11 +249,13 @@ class EventDetailResponse(EventResponse):
         current_member_is_invited_participant: bool = False,
         current_member_volunteer_signup: EventVolunteerSignupResponse | None = None,
         current_member_feedback: EventFeedbackResponse | None = None,
+        include_budget: bool = True,
     ) -> "EventDetailResponse":
         base = EventResponse.from_event(
             event,
             current_member_rsvp_status=current_member_rsvp_status,
             current_member_is_invited_participant=current_member_is_invited_participant,
+            include_budget=include_budget,
         )
         return cls(
             **base.model_dump(),

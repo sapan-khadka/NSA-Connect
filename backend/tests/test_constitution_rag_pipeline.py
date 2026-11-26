@@ -53,6 +53,7 @@ def _chat_settings_mock() -> MagicMock:
     settings.ANTHROPIC_MODEL = "claude-sonnet-4-20250514"
     settings.ANTHROPIC_API_KEY = "sk-ant-test-key"
     settings.AI_CHAT_RAG_CHUNK_LIMIT = 5
+    settings.AI_CHAT_RAG_MIN_SIMILARITY = 0.45
     return settings
 
 
@@ -122,7 +123,7 @@ def test_full_rag_pipeline_upload_embed_search_and_chat_cites_constitution(
 
     assert chat_body["constitution_sources"]
     assert CONSTITUTION_PHRASE in chat_body["constitution_sources"][0]["excerpt"]
-    assert chat_body["constitution_sources"][0]["similarity_score"] >= 0.0
+    assert chat_body["constitution_sources"][0]["similarity_score"] >= 0.45
 
     reply = chat_body["reply"].lower()
     assert "constitution" in reply

@@ -11,7 +11,12 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
-from app.core.permissions import member_has_role_at_least
+from app.core.permissions import (
+    Permission,
+    can_manage_treasury,
+    member_has,
+    member_has_role_at_least,
+)
 from app.lib.event_timezone import format_event_moment, resolve_event_timezone
 from app.lib.event_visibility import (
     apply_event_visibility_filter,
@@ -398,12 +403,32 @@ def _require_role(member: Member, minimum_role: MemberRole) -> None:
 
 
 def _require_treasury(member: Member) -> None:
-    from app.core.permissions import can_manage_treasury
-
     if not can_manage_treasury(member):
         raise ChatToolPermissionError(
             "Requires treasurer, president, or vice president",
         )
+
+
+def _event_tool_payload(
+    event: Event,
+    zone: ZoneInfo,
+    member: Member,
+    *,
+    include_description: bool = False,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "id": event.id,
+        "title": event.title,
+        "event_type": event.event_type,
+        "starts_at": _local_moment(event.starts_at, zone),
+        "location": event.location,
+    }
+    if include_description:
+        payload["description"] = event.description
+        payload["ends_at"] = _local_moment(event.ends_at, zone)
+    if member_has(member, Permission.MANAGE_FINANCE):
+        payload["budget"] = event.budget
+    return payload
 
 
 def _list_upcoming_events(
@@ -422,14 +447,7 @@ def _list_upcoming_events(
     events = db.scalars(query).all()
     return _tool_result(
         [
-            {
-                "id": event.id,
-                "title": event.title,
-                "event_type": event.event_type,
-                "starts_at": _local_moment(event.starts_at, zone),
-                "location": event.location,
-                "budget": event.budget,
-            }
+            _event_tool_payload(event, zone, member)
             for event in events
         ]
     )
@@ -469,16 +487,7 @@ def _get_event_details(
         raise EventNotFoundError
     zone = organization_zone(db, member)
     return _tool_result(
-        {
-            "id": event.id,
-            "title": event.title,
-            "description": event.description,
-            "event_type": event.event_type,
-            "starts_at": _local_moment(event.starts_at, zone),
-            "ends_at": _local_moment(event.ends_at, zone),
-            "location": event.location,
-            "budget": event.budget,
-        }
+        _event_tool_payload(event, zone, member, include_description=True)
     )
 
 

@@ -49,7 +49,8 @@ function hasPositiveBudget(
   event: EventDetailResponse,
   budget: FinanceEventBudgetSummary | null,
 ): boolean {
-  const planned = Number.parseFloat(budget?.planned_budget ?? event.budget);
+  const plannedSource = budget?.planned_budget ?? event.budget;
+  const planned = Number.parseFloat(plannedSource ?? "");
   return Number.isFinite(planned) && planned > 0;
 }
 

@@ -31,7 +31,7 @@ export type EventResponse = {
   description: string;
   location: string | null;
   capacity: number | null;
-  budget: string;
+  budget: string | null;
   created_by_id: number;
   current_member_rsvp_status: RsvpStatus | null;
   current_member_is_invited_participant?: boolean;

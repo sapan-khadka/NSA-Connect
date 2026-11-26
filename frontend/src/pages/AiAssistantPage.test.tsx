@@ -70,7 +70,7 @@ describe("AiAssistantPage", () => {
       ).toBeInTheDocument();
     });
 
-    expect(screen.getByText("Constitution sources")).toBeInTheDocument();
+        expect(screen.getByText("Retrieved excerpts")).toBeInTheDocument();
     expect(
       screen.getByText("Officers must be elected by a majority vote."),
     ).toBeInTheDocument();

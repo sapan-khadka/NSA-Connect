@@ -39,7 +39,7 @@ export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
             {message.content || " "}
           </p>
         ) : (
-          <div className="select-text">
+          <div className="min-w-0 select-text">
             {message.content ? <AssistantMarkdown content={message.content} /> : null}
             {message.isStreaming ? (
               <span
@@ -54,18 +54,21 @@ export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
         {!isUser && message.constitutionSources && message.constitutionSources.length > 0 ? (
           <div className="mt-3 border-t border-gray-100 pt-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-label">
-              Constitution sources
+              Retrieved excerpts
+            </p>
+            <p className="mt-1 text-[11px] leading-4 text-label">
+              Indexed passages related to this question, not citations the answer verified.
             </p>
             <ul className="mt-2 space-y-2">
               {message.constitutionSources.map((source) => (
                 <li
                   key={source.chunk_id}
-                  className="rounded-md bg-gray-50 px-3 py-2 text-xs text-label"
+                  className="min-w-0 break-words rounded-md bg-gray-50 px-3 py-2 text-xs text-label"
                 >
                   <span className="font-medium text-foreground">
                     {source.section ?? `Chunk ${source.chunk_index + 1}`}
                   </span>
-                  <p className="mt-1 line-clamp-3">{source.excerpt}</p>
+                  <p className="mt-1 line-clamp-3 break-words">{source.excerpt}</p>
                 </li>
               ))}
             </ul>

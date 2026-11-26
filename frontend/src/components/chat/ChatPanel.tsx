@@ -6,10 +6,12 @@ import {
   type ChatHistoryMessage,
 } from "../../lib/chat-stream";
 import { getApiErrorMessage } from "../../lib/api-error";
+import type { MemberResponse } from "../../lib/auth-api";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { ChatMessageBubble, type ChatMessage } from "./ChatMessageBubble";
 import { TypingIndicator } from "./TypingIndicator";
+import { useAuth } from "../../context/useAuth";
 
 function createMessageId(): string {
   return crypto.randomUUID();
@@ -24,6 +26,30 @@ function toHistory(messages: ChatMessage[]): ChatHistoryMessage[] {
     }));
 }
 
+function greetingMessage(): ChatMessage {
+  return {
+    id: createMessageId(),
+    role: "assistant",
+    content:
+      "Hi! I can look up live NSA Connect data: members, dues, events, tasks, and finance. I can also search the constitution and chapter documents the board uploads.",
+  };
+}
+
+function chatSessionKey(
+  member: MemberResponse | null,
+  isAuthenticated: boolean,
+): string {
+  if (!isAuthenticated || member == null) {
+    return "signed-out";
+  }
+  return [
+    member.id,
+    member.organization?.id ?? "none",
+    member.role,
+    member.position,
+    member.is_org_owner ? "owner" : "member",
+  ].join(":");
+}
 function statusLabelForPhase(phase: string): string {
   switch (phase) {
     case "retrieving":
@@ -42,16 +68,12 @@ export function ChatPanel({
 }: {
   starterQuery?: string | null;
 }) {
+  const { member, isAuthenticated } = useAuth();
+  const sessionKey = chatSessionKey(member, isAuthenticated);
+  const sessionKeyRef = useRef(sessionKey);
   const [searchParams] = useSearchParams();
   const initialQuery = searchParams.get("q")?.trim() ?? "";
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: createMessageId(),
-      role: "assistant",
-      content:
-        "Hi! I can look up live NSA Connect data: members, dues, events, tasks, and finance. I can also search the constitution and chapter documents the board uploads.",
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [greetingMessage()]);
   const [draft, setDraft] = useState(initialQuery);
   const [error, setError] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -77,6 +99,20 @@ export function ChatPanel({
       abortRef.current?.abort();
     };
   }, []);
+
+  useEffect(() => {
+    if (sessionKeyRef.current === sessionKey) {
+      return;
+    }
+    sessionKeyRef.current = sessionKey;
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setMessages([greetingMessage()]);
+    setDraft("");
+    setError(null);
+    setIsStreaming(false);
+    setStatusLabel(null);
+  }, [sessionKey]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -111,6 +147,7 @@ export function ChatPanel({
 
     const controller = new AbortController();
     abortRef.current = controller;
+    const requestSession = sessionKeyRef.current;
 
     try {
       await streamChatMessage(
@@ -120,9 +157,18 @@ export function ChatPanel({
         },
         {
           onStatus: (phase) => {
+            if (sessionKeyRef.current !== requestSession) {
+              return;
+            }
             setStatusLabel(statusLabelForPhase(phase));
           },
           onToken: (text) => {
+            if (
+              sessionKeyRef.current !== requestSession ||
+              controller.signal.aborted
+            ) {
+              return;
+            }
             setStatusLabel(null);
             setMessages((current) =>
               current.map((message) =>
@@ -133,6 +179,12 @@ export function ChatPanel({
             );
           },
           onMetadata: (metadata) => {
+            if (
+              sessionKeyRef.current !== requestSession ||
+              controller.signal.aborted
+            ) {
+              return;
+            }
             setMessages((current) =>
               current.map((message) =>
                 message.id === assistantMessageId
@@ -145,6 +197,9 @@ export function ChatPanel({
             );
           },
           onError: (message) => {
+            if (sessionKeyRef.current !== requestSession) {
+              return;
+            }
             setError(message);
             setMessages((current) =>
               current.filter(
@@ -163,6 +218,10 @@ export function ChatPanel({
         (caughtError instanceof DOMException &&
           caughtError.name === "AbortError");
 
+      if (sessionKeyRef.current !== requestSession) {
+        return;
+      }
+
       if (wasAborted) {
         setMessages((current) =>
           current.filter(
@@ -178,16 +237,20 @@ export function ChatPanel({
         );
       }
     } finally {
-      setIsStreaming(false);
-      setStatusLabel(null);
-      abortRef.current = null;
-      setMessages((current) =>
-        current.map((message) =>
-          message.id === assistantMessageId
-            ? { ...message, isStreaming: false }
-            : message,
-        ),
-      );
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+      }
+      if (sessionKeyRef.current === requestSession) {
+        setIsStreaming(false);
+        setStatusLabel(null);
+        setMessages((current) =>
+          current.map((message) =>
+            message.id === assistantMessageId
+              ? { ...message, isStreaming: false }
+              : message,
+          ),
+        );
+      }
     }
   }
 
@@ -204,11 +267,11 @@ export function ChatPanel({
   return (
     <Card
       padding="none"
-      className="flex h-[min(58dvh,720px)] flex-col overflow-hidden sm:h-[min(72vh,720px)]"
+      className="flex h-[min(58dvh,720px)] min-w-0 max-w-full flex-col overflow-hidden sm:h-[min(72vh,720px)]"
     >
       <div
         ref={scrollRef}
-        className="flex-1 space-y-4 overflow-y-auto px-4 py-5 sm:px-6"
+        className="min-h-0 min-w-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto px-4 py-5 sm:px-6"
         aria-live="polite"
       >
         {messages.map((message) => (
@@ -233,9 +296,9 @@ export function ChatPanel({
         onSubmit={(event) => {
           void handleSubmit(event);
         }}
-        className="border-t border-gray-200 bg-white px-4 py-4 sm:px-6"
+        className="min-w-0 border-t border-gray-200 bg-white px-4 py-4 sm:px-6"
       >
-        <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row">
           <label htmlFor="assistant-message" className="sr-only">
             Message the AI assistant
           </label>
@@ -246,13 +309,13 @@ export function ChatPanel({
             rows={2}
             placeholder="Ask about members, dues, events, constitution, or chapter docs…"
             disabled={isStreaming}
-            className="min-h-[3rem] flex-1 resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:bg-gray-100"
+            className="min-h-[3rem] w-full min-w-0 flex-1 resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:bg-gray-100"
           />
           {isStreaming ? (
             <button
               type="button"
               onClick={handleStop}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-foreground transition hover:border-accent hover:bg-accent/5 sm:self-end"
+              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-foreground transition hover:border-accent hover:bg-accent/5 sm:w-auto sm:self-end"
             >
               Stop
             </button>
@@ -260,7 +323,7 @@ export function ChatPanel({
             <Button
               type="submit"
               disabled={draft.trim().length === 0}
-              className="sm:self-end"
+              className="w-full sm:w-auto sm:self-end"
             >
               Send
             </Button>

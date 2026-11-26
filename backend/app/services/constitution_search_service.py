@@ -19,6 +19,19 @@ class ConstitutionSearchHit:
     similarity_score: float
 
 
+def clamp_cosine_similarity(value: float) -> float:
+    """Keep chat scores on the same 0–1 cosine scale as normalized embeddings."""
+    return max(0.0, min(1.0, float(value)))
+
+
+def cosine_similarity_from_distance(distance: float) -> float:
+    """Convert pgvector cosine distance to cosine similarity.
+
+    For normalized vectors, pgvector's cosine distance is ``1 - cosine``.
+    """
+    return clamp_cosine_similarity(1.0 - float(distance))
+
+
 def _cosine_similarity(left: list[float], right: list[float]) -> float:
     dot_product = sum(a * b for a, b in zip(left, right, strict=True))
     left_norm = math.sqrt(sum(value * value for value in left))
@@ -51,7 +64,7 @@ def _search_with_pgvector(
             chunk_index=chunk.chunk_index,
             section=chunk.section,
             content=chunk.content,
-            similarity_score=max(0.0, 1.0 - float(distance_value)),
+            similarity_score=cosine_similarity_from_distance(distance_value),
         )
         for chunk, distance_value in rows
     ]
@@ -79,7 +92,9 @@ def _search_in_memory(
             chunk_index=chunk.chunk_index,
             section=chunk.section,
             content=chunk.content,
-            similarity_score=_cosine_similarity(query_embedding, list(chunk.embedding)),
+            similarity_score=clamp_cosine_similarity(
+                _cosine_similarity(query_embedding, list(chunk.embedding)),
+            ),
         )
         for chunk in ranked
     ]
@@ -90,10 +105,12 @@ def search_constitution_chunks(
     *,
     query: str,
     limit: int | None = None,
+    query_embedding: list[float] | None = None,
 ) -> list[ConstitutionSearchHit]:
     """Find constitution chunks most similar to a natural-language question."""
     result_limit = limit or settings.CONSTITUTION_SEARCH_DEFAULT_LIMIT
-    query_embedding = generate_embeddings([query.strip()])[0]
+    if query_embedding is None:
+        query_embedding = generate_embeddings([query.strip()])[0]
 
     if db.get_bind().dialect.name == "postgresql":
         return _search_with_pgvector(db, query_embedding, result_limit)

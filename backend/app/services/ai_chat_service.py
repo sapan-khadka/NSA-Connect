@@ -27,9 +27,16 @@ from app.services.ai_chat_tools import (
     organization_zone,
 )
 from app.services.ai_checklist_service import AIDisabledError
+from app.services.constitution_relevance import constitution_chunk_retained
 from app.services.constitution_search_service import search_constitution_chunks
-from app.services.embedding_service import EmbeddingsNotConfiguredError
-from app.services.org_document_service import search_org_document_chunks
+from app.services.embedding_service import (
+    EmbeddingsNotConfiguredError,
+    generate_embeddings,
+)
+from app.services.org_document_service import (
+    organization_has_document_chunks,
+    search_org_document_chunks,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -100,12 +107,46 @@ def _format_document_context(hits) -> str:
     return "\n\n".join(sections)
 
 
+def _question_embedding(query: str) -> list[float] | None:
+    try:
+        return generate_embeddings([query.strip()])[0]
+    except EmbeddingsNotConfiguredError:
+        logger.warning("Chat retrieval skipped: OpenAI embeddings not configured")
+        return None
+    except Exception:
+        logger.exception("Chat retrieval embedding failed")
+        return None
+
+
+def _relevant_hits(hits, minimum: float):
+    return [
+        hit
+        for hit in hits
+        if hit.similarity_score >= minimum and hit.content.strip()
+    ]
+
+
+def _relevant_constitution_hits(hits, minimum: float, question: str):
+    return [
+        hit
+        for hit in hits
+        if constitution_chunk_retained(
+            question=question,
+            content=hit.content,
+            similarity=hit.similarity_score,
+            minimum=minimum,
+        )
+    ]
+
+
 def _retrieve_document_context(
     db: Session,
     *,
     member: Member,
     query: str,
     limit: int,
+    minimum: float,
+    query_embedding: list[float],
 ) -> str:
     try:
         hits = search_org_document_chunks(
@@ -113,14 +154,12 @@ def _retrieve_document_context(
             member=member,
             query=query,
             limit=limit,
+            query_embedding=query_embedding,
         )
-    except EmbeddingsNotConfiguredError:
-        logger.warning("Document RAG skipped: embeddings not configured")
-        return ""
     except Exception:
         logger.exception("Document RAG retrieval failed")
         return ""
-    return _format_document_context(hits)
+    return _format_document_context(_relevant_hits(hits, minimum))
 
 
 def _retrieve_constitution_context(
@@ -128,26 +167,42 @@ def _retrieve_constitution_context(
     *,
     query: str,
     limit: int,
+    minimum: float,
+    query_embedding: list[float],
 ) -> tuple[str, list[ChatConstitutionSource]]:
     try:
-        hits = search_constitution_chunks(db, query=query, limit=limit)
-    except EmbeddingsNotConfiguredError:
-        logger.warning("Constitution RAG skipped: OpenAI embeddings not configured")
-        return "", []
+        hits = search_constitution_chunks(
+            db,
+            query=query,
+            limit=limit,
+            query_embedding=query_embedding,
+        )
     except Exception:
         logger.exception("Constitution RAG retrieval failed")
         return "", []
 
-    return _format_rag_context(hits)
+    return _format_rag_context(
+        _relevant_constitution_hits(hits, minimum, query),
+    )
 
 
 def _history_messages(history) -> list[dict[str, Any]]:
+    """Forward only the caller's questions.
+
+    Assistant text is client-supplied. After a role change it can still contain
+    treasury figures or minutes the current caller must not see, so it is not
+    sent to the model. Tools run again under the current permission check.
+    """
     messages: list[dict[str, Any]] = []
     for item in history:
-        content = item.content
-        if item.role == "user":
-            content = wrap_untrusted_user_message(content)
-        messages.append({"role": item.role, "content": content})
+        if item.role != "user":
+            continue
+        messages.append(
+            {
+                "role": "user",
+                "content": wrap_untrusted_user_message(item.content),
+            }
+        )
     return messages
 
 
@@ -220,17 +275,30 @@ def _prepare_chat_context(
     data: ChatRequest,
 ) -> tuple[str, list[ChatConstitutionSource], list[dict[str, Any]]]:
     settings = get_settings()
-    rag_context, sources = _retrieve_constitution_context(
-        db,
-        query=data.message,
-        limit=settings.AI_CHAT_RAG_CHUNK_LIMIT,
-    )
-    document_context = _retrieve_document_context(
-        db,
-        member=member,
-        query=data.message,
-        limit=settings.AI_CHAT_RAG_CHUNK_LIMIT,
-    )
+    embedding = _question_embedding(data.message)
+    minimum = settings.AI_CHAT_RAG_MIN_SIMILARITY
+    if embedding is None:
+        rag_context, sources = "", []
+        document_context = ""
+    else:
+        rag_context, sources = _retrieve_constitution_context(
+            db,
+            query=data.message,
+            limit=settings.AI_CHAT_RAG_CHUNK_LIMIT,
+            minimum=minimum,
+            query_embedding=embedding,
+        )
+        if organization_has_document_chunks(db):
+            document_context = _retrieve_document_context(
+                db,
+                member=member,
+                query=data.message,
+                limit=settings.AI_CHAT_RAG_CHUNK_LIMIT,
+                minimum=minimum,
+                query_embedding=embedding,
+            )
+        else:
+            document_context = ""
     zone = organization_zone(db, member)
     local_date = format_local_date(_utc_now(), zone)
     timezone_name = getattr(zone, "key", None) or str(zone)

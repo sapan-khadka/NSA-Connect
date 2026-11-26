@@ -278,6 +278,16 @@ class Settings(BaseSettings):
         le=10,
         description="Constitution chunks injected into AI chat RAG context",
     )
+    AI_CHAT_RAG_MIN_SIMILARITY: float = Field(
+        default=0.45,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Minimum cosine similarity for a retrieved chunk to enter the chat "
+            "prompt or source cards. 1 is the same direction and 0 is orthogonal. "
+            "pgvector cosine distance is converted with max(0, 1 - distance)."
+        ),
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",
