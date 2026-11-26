@@ -177,6 +177,66 @@ def test_cosine_distance_uses_similarity_not_distance():
     assert cosine_similarity_from_distance(1.4) == 0
 
 
+def test_chat_keeps_voting_passage_below_similarity_floor(db_session, monkeypatch):
+    member = _member(
+        db_session,
+        email="voting-floor@semo.edu",
+        role=MemberRole.GENERAL,
+        student_id="61000017",
+    )
+    seen: dict[str, int] = {}
+
+    def constitution(_db, *, query, limit, query_embedding):
+        seen["limit"] = limit
+        return [
+            ConstitutionSearchHit(
+                1,
+                6,
+                "Elections",
+                "In order to vote, you must be physically present.",
+                0.335,
+            )
+        ]
+
+    monkeypatch.setattr("app.services.ai_chat_service.get_settings", lambda: _Settings())
+    monkeypatch.setattr(
+        "app.services.ai_chat_service.generate_embeddings",
+        lambda _texts: [[0.1, 0.2, 0.3]],
+    )
+    monkeypatch.setattr(
+        "app.services.ai_chat_service.search_constitution_chunks",
+        constitution,
+    )
+    monkeypatch.setattr(
+        "app.services.ai_chat_service.organization_has_document_chunks",
+        lambda _db: True,
+    )
+    monkeypatch.setattr(
+        "app.services.ai_chat_service.search_org_document_chunks",
+        lambda *_args, **_kwargs: [
+            OrgDocumentSearchHit(
+                9,
+                1,
+                "Handbook",
+                "public",
+                0,
+                "Dues",
+                "Members pay semester dues.",
+                0.222,
+            )
+        ],
+    )
+    context, sources, _messages = _prepare_chat_context(
+        db_session,
+        member=member,
+        data=ChatRequest(message="What does the constitution say about voting?"),
+    )
+    assert seen["limit"] == 5
+    assert sources[0].chunk_id == 1
+    assert "In order to vote, you must be physically present." in context
+    assert "Members pay semester dues." not in context
+
+
 def test_similarity_floor_keeps_boundary_and_drops_weaker_hits():
     hits = [
         ConstitutionSearchHit(1, 0, "Voting", "Officers are elected.", 0.45),

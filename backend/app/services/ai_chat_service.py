@@ -27,6 +27,7 @@ from app.services.ai_chat_tools import (
     organization_zone,
 )
 from app.services.ai_checklist_service import AIDisabledError
+from app.services.constitution_relevance import constitution_chunk_retained
 from app.services.constitution_search_service import search_constitution_chunks
 from app.services.embedding_service import (
     EmbeddingsNotConfiguredError,
@@ -125,6 +126,19 @@ def _relevant_hits(hits, minimum: float):
     ]
 
 
+def _relevant_constitution_hits(hits, minimum: float, question: str):
+    return [
+        hit
+        for hit in hits
+        if constitution_chunk_retained(
+            question=question,
+            content=hit.content,
+            similarity=hit.similarity_score,
+            minimum=minimum,
+        )
+    ]
+
+
 def _retrieve_document_context(
     db: Session,
     *,
@@ -167,7 +181,9 @@ def _retrieve_constitution_context(
         logger.exception("Constitution RAG retrieval failed")
         return "", []
 
-    return _format_rag_context(_relevant_hits(hits, minimum))
+    return _format_rag_context(
+        _relevant_constitution_hits(hits, minimum, query),
+    )
 
 
 def _history_messages(history) -> list[dict[str, Any]]:
