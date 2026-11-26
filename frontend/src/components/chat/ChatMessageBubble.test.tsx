@@ -101,6 +101,69 @@ describe("assistant markdown", () => {
     expect(screen.getByText("click")).toBeInTheDocument();
   });
 
+  it("drops obfuscated links, event handlers, and partial resource markup", () => {
+    const { container } = render(
+      <ChatMessageBubble
+        message={{
+          ...assistant,
+          content: [
+            "[mixed](JaVaScRiPt:alert(1))",
+            "[tab](java\tscript:alert(1))",
+            "[protocol](//evil.test/pixel.png)",
+            "[data](data:text/html,<script>alert(1)</script>)",
+            "[file](file:///etc/passwd)",
+            "[zero](\u200Bjavascript:alert(1))",
+            '<a href="https://ok.example" onclick="alert(1)">handler</a>',
+            '<img src="https://evil.test/pixel.png" onerror="alert(1)" />',
+            '<source src="https://evil.test/track.png" />',
+            '<iframe src="https://evil.test/embed"></iframe>',
+            "![pixel](https://evil.test/pixel.png)",
+            "Still open [click](javascript:alert(1)",
+            "```",
+            "partial fence",
+          ].join("\n"),
+          isStreaming: true,
+        }}
+      />,
+    );
+
+    expect(container.querySelector("script, img, iframe, source, video, object")).toBeNull();
+    expect(container.querySelector("a")).toBeNull();
+    expect(container.innerHTML).not.toContain("evil.test");
+    expect(container.innerHTML).not.toContain("javascript:");
+    expect(container.innerHTML).not.toContain("onclick");
+    expect(container.innerHTML).not.toContain("onerror");
+    expect(screen.getByTestId("streaming-cursor")).toBeInTheDocument();
+  });
+
+  it("keeps wide markdown inside the bubble", () => {
+    const { container } = render(
+      <ChatMessageBubble
+        message={{
+          ...assistant,
+          content: [
+            `See ${"https://nsa.example.edu/".padEnd(180, "a")}`,
+            "",
+            `| ${"Column".repeat(12)} | ${"Value".repeat(12)} |`,
+            "| --- | --- |",
+            `| ${"cell".repeat(12)} | ${"cell".repeat(12)} |`,
+            "",
+            "```",
+            "token".repeat(40),
+            "```",
+          ].join("\n"),
+        }}
+      />,
+    );
+
+    const bubble = container.querySelector("article > div");
+    expect(bubble?.className).toContain("overflow-hidden");
+    expect(bubble?.className).toContain("max-w-[85%]");
+    expect(screen.getByTestId("markdown-table-scroll")).toHaveClass("overflow-x-auto");
+    expect(container.querySelector("pre")).toHaveClass("overflow-x-auto");
+    expect(container.querySelector(".assistant-markdown")).toHaveClass("break-words");
+  });
+
   it("keeps user messages as plain text that can be selected", () => {
     render(
       <ChatMessageBubble

@@ -249,3 +249,53 @@ def test_other_organization_minutes_are_not_returned(db_session):
     assert "SECRET RAW NOTES" not in by_id
     assert "FOREIGN OFFICIAL OVERVIEW" not in by_title
     assert f'"event_id": {local.id}' in _minutes(db_session, member, query="Local Budget")
+
+
+def test_recent_minutes_results_say_when_the_archive_was_not_fully_searched(db_session):
+    member = _board(db_session)
+    hidden_tail = "UNIQUE-TAIL-DECISION"
+    long_meeting = _meeting(
+        db_session,
+        member,
+        title="Long Decision Meeting",
+        starts_at=datetime(2026, 9, 1, 0, 0, tzinfo=UTC),
+        summary="Long official overview.",
+        published_at=datetime(2026, 9, 1, 18, 0, tzinfo=UTC),
+        decisions=[f"Decision {index}" for index in range(20)] + [hidden_tail],
+    )
+    matched = _minutes(db_session, member, query=hidden_tail, limit=1)
+    assert f'"event_id": {long_meeting.id}' in matched
+    assert hidden_tail not in matched
+    assert '"truncated": true' in matched
+
+    for index in range(4):
+        _meeting(
+            db_session,
+            member,
+            title=f"Budget Window {index}",
+            starts_at=datetime(2026, 8, index + 1, 0, 0, tzinfo=UTC),
+            summary=f"Window overview {index}",
+            published_at=datetime(2026, 8, index + 1, 18, 0, tzinfo=UTC),
+        )
+    window = _minutes(db_session, member, query="Window overview", limit=1)
+    assert '"additional_matches_omitted": true' in window
+    assert "not a complete historical archive" in window
+    assert window.count("Window overview") == 1
+
+    for index in range(31):
+        _meeting(
+            db_session,
+            member,
+            title=f"Archive {index}",
+            starts_at=datetime(2025, 1, 1, 0, 0, tzinfo=UTC),
+            summary="Recent archive overview" if index else "OLDEST ARCHIVE OVERVIEW",
+            published_at=(
+                datetime(2025, 1, 1, tzinfo=UTC)
+                if index == 0
+                else datetime(2026, 1, index, tzinfo=UTC)
+            ),
+        )
+    oldest = _minutes(db_session, member, query="OLDEST ARCHIVE OVERVIEW")
+    assert "OLDEST ARCHIVE OVERVIEW" not in oldest
+    assert '"older_published_meetings_not_searched": true' in oldest
+    assert '"meetings": []' in oldest

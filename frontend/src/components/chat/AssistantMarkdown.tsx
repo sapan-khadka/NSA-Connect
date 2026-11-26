@@ -10,12 +10,14 @@ import { safeMarkdownHref } from "../../lib/markdown-link";
 const sanitizeSchema: Schema = {
   ...defaultSchema,
   tagNames: [
-    ...(defaultSchema.tagNames ?? []).filter((tag) => tag !== "img"),
+    ...(defaultSchema.tagNames ?? []).filter(
+      (tag) => tag !== "img" && tag !== "source",
+    ),
     "input",
   ],
   attributes: {
     ...defaultSchema.attributes,
-    input: ["type", "checked", "disabled"],
+    input: [["type", "checkbox"], "checked", ["disabled", true]],
   },
   protocols: {
     ...defaultSchema.protocols,

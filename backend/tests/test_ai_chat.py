@@ -218,6 +218,7 @@ def test_chat_prompt_is_read_only_and_uses_the_local_date(
     assert "cannot create, assign, update, delete, publish, or complete" in system
     assert "get_published_meeting_minutes" in system
     assert "untrusted data" in system
+    assert "complete historical record" in system
 
 
 def test_chat_requires_authentication(client):
