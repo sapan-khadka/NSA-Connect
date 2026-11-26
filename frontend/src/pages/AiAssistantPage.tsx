@@ -27,7 +27,7 @@ export function AiAssistantPage() {
   const [starterQuery, setStarterQuery] = useState<string | null>(null);
 
   return (
-    <div className="ai-assistant-page space-y-5 sm:space-y-6">
+    <div className="ai-assistant-page min-w-0 max-w-full space-y-5 overflow-x-hidden sm:space-y-6">
       <header>
         <h1 className="text-xl font-semibold tracking-headline text-foreground sm:text-2xl sm:font-light">
           AI Assistant
@@ -47,8 +47,8 @@ export function AiAssistantPage() {
       />
 
       {tab === "chat" ? (
-        <div className="space-y-3 sm:space-y-4">
-          <div className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden">
+        <div className="min-w-0 space-y-3 sm:space-y-4">
+          <div className="flex min-w-0 max-w-full gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden">
             {STARTERS.map((prompt) => (
               <button
                 key={prompt}

@@ -161,7 +161,7 @@ def test_chat_includes_constitution_sources(
 
     monkeypatch.setattr(
         "app.services.ai_chat_service.search_constitution_chunks",
-        lambda db, query, limit: [
+        lambda *args, **kwargs: [
             type(
                 "Hit",
                 (),

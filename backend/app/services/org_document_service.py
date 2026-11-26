@@ -23,6 +23,10 @@ from app.services.constitution_pdf_service import (
     ConstitutionPdfValidationError,
     extract_text_from_constitution_pdf,
 )
+from app.services.constitution_search_service import (
+    clamp_cosine_similarity,
+    cosine_similarity_from_distance,
+)
 from app.services.embedding_service import generate_embeddings
 from app.services.organization_context import get_default_organization_id
 from app.services.receipt_upload_service import (
@@ -297,18 +301,33 @@ class OrgDocumentSearchHit:
     similarity_score: float
 
 
+def organization_has_document_chunks(db: Session) -> bool:
+    """True when the default organization has at least one indexed chunk."""
+    org_id = get_default_organization_id(db)
+    return (
+        db.scalar(
+            select(OrgDocumentChunk.id)
+            .where(OrgDocumentChunk.organization_id == org_id)
+            .limit(1)
+        )
+        is not None
+    )
+
+
 def search_org_document_chunks(
     db: Session,
     *,
     member: Member,
     query: str,
     limit: int = 5,
+    query_embedding: list[float] | None = None,
 ) -> list[OrgDocumentSearchHit]:
     """Semantic search over chapter documents the member may read."""
     import math
 
     result_limit = max(1, min(limit, 20))
-    query_embedding = generate_embeddings([query.strip()])[0]
+    if query_embedding is None:
+        query_embedding = generate_embeddings([query.strip()])[0]
     org_id = get_default_organization_id(db)
     is_board = member_has_role_at_least(member, MemberRole.BOARD)
 
@@ -339,7 +358,7 @@ def search_org_document_chunks(
                 chunk_index=chunk.chunk_index,
                 section=chunk.section,
                 content=chunk.content,
-                similarity_score=max(0.0, 1.0 - float(distance_value)),
+                similarity_score=cosine_similarity_from_distance(distance_value),
             )
             for chunk, document, distance_value in rows
         ]
@@ -376,7 +395,9 @@ def search_org_document_chunks(
             chunk_index=chunk.chunk_index,
             section=chunk.section,
             content=chunk.content,
-            similarity_score=cosine(query_embedding, list(chunk.embedding)),
+            similarity_score=clamp_cosine_similarity(
+                cosine(query_embedding, list(chunk.embedding)),
+            ),
         )
         for chunk, document in ranked
     ]
