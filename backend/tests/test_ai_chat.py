@@ -189,6 +189,38 @@ def test_chat_includes_constitution_sources(
     assert sources[0]["section"] == "Article I"
 
 
+def test_chat_prompt_is_read_only_and_uses_the_local_date(
+    client,
+    general_member_headers,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        "app.services.ai_chat_service._utc_now",
+        lambda: datetime(2026, 11, 28, 0, 30, tzinfo=UTC),
+    )
+    monkeypatch.setattr(
+        "app.services.ai_chat_service.search_constitution_chunks",
+        lambda *args, **kwargs: [],
+    )
+
+    with mock_claude_chat_api() as mock_client:
+        response = client.post(
+            "/api/v1/ai/chat",
+            headers=general_member_headers,
+            json={"message": "What can you change?"},
+        )
+
+    assert response.status_code == 200
+    system = mock_client.messages.create.call_args.kwargs["system"]
+    assert "Friday, November 27, 2026" in system
+    assert "November 28, 2026" not in system
+    assert "Organization timezone: America/Chicago" in system
+    assert "cannot create, assign, update, delete, publish, or complete" in system
+    assert "get_published_meeting_minutes" in system
+    assert "untrusted data" in system
+    assert "complete historical record" in system
+
+
 def test_chat_requires_authentication(client):
     response = client.post(
         "/api/v1/ai/chat",

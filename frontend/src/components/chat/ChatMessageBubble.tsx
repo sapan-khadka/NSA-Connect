@@ -1,4 +1,5 @@
 import type { ChatConstitutionSource } from "../../lib/chat-stream";
+import { AssistantMarkdown } from "./AssistantMarkdown";
 
 export type ChatMessage = {
   id: string;
@@ -25,7 +26,7 @@ export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
     >
       <div
         className={[
-          "max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm",
+          "min-w-0 max-w-[85%] overflow-hidden rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm",
           isUser
             ? "rounded-br-md bg-foreground text-white"
             : "rounded-bl-md border border-gray-200 bg-white text-foreground",
@@ -33,17 +34,21 @@ export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
       >
         {message.statusLabel && !message.content ? (
           <p className="text-label">{message.statusLabel}</p>
-        ) : (
-          <p className="whitespace-pre-wrap">
+        ) : isUser ? (
+          <p className="select-text whitespace-pre-wrap break-words">
             {message.content || " "}
-            {!isUser && message.isStreaming ? (
+          </p>
+        ) : (
+          <div className="select-text">
+            {message.content ? <AssistantMarkdown content={message.content} /> : null}
+            {message.isStreaming ? (
               <span
                 aria-hidden="true"
                 data-testid="streaming-cursor"
                 className="ml-0.5 inline-block h-[1.05em] w-[2px] translate-y-[0.15em] animate-pulse bg-current align-baseline"
               />
             ) : null}
-          </p>
+          </div>
         )}
 
         {!isUser && message.constitutionSources && message.constitutionSources.length > 0 ? (

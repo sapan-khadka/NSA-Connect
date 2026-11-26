@@ -1,3 +1,4 @@
+import json
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -145,3 +146,98 @@ def test_chat_stream_handles_tool_use_before_final_tokens(
     assert "One upcoming event found." in body
     assert "list_upcoming_events" in body
     assert mock_chat_client.messages.stream.call_count == 2
+
+
+def _joined_token_text(body: str) -> str:
+    parts: list[str] = []
+    for block in body.split("\n\n"):
+        if "event: token" not in block:
+            continue
+        for line in block.split("\n"):
+            if line.startswith("data:"):
+                payload = json.loads(line.removeprefix("data:").strip())
+                parts.append(str(payload["text"]))
+    return "".join(parts)
+
+
+def test_chat_stream_separates_tool_narration_from_the_answer(
+    client,
+    general_member_headers,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        "app.services.ai_chat_service.search_constitution_chunks",
+        lambda *args, **kwargs: [],
+    )
+    mock_chat_client = MagicMock(name="anthropic_chat_client")
+    mock_chat_client.messages.stream.side_effect = [
+        _build_stream_context(
+            text_chunks=["I'll check the calendar."],
+            final_message=build_mock_anthropic_tool_use_response(
+                tool_name="list_upcoming_events",
+                tool_input={"limit": 3},
+            ),
+        ),
+        _build_stream_context(
+            text_chunks=["\n\n", "Nepali Cultural Night is on November 27."],
+            final_message=build_mock_anthropic_text_response(
+                "Nepali Cultural Night is on November 27.",
+            ),
+        ),
+    ]
+
+    with (
+        patch(CHAT_SETTINGS_PATCH, return_value=_chat_settings_mock()),
+        patch(CHAT_CLIENT_PATCH, return_value=mock_chat_client),
+    ):
+        with client.stream(
+            "POST",
+            "/api/v1/ai/chat/stream",
+            headers=general_member_headers,
+            json={"message": "When is Cultural Night?"},
+        ) as response:
+            assert response.status_code == 200
+            body = "".join(response.iter_text())
+
+    assert _joined_token_text(body) == (
+        "I'll check the calendar.\n\nNepali Cultural Night is on November 27."
+    )
+
+
+def test_chat_stream_does_not_add_a_second_paragraph_break(
+    client,
+    general_member_headers,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        "app.services.ai_chat_service.search_constitution_chunks",
+        lambda *args, **kwargs: [],
+    )
+    mock_chat_client = MagicMock(name="anthropic_chat_client")
+    mock_chat_client.messages.stream.side_effect = [
+        _build_stream_context(
+            text_chunks=["I'll check the calendar.\n\n"],
+            final_message=build_mock_anthropic_tool_use_response(
+                tool_name="list_upcoming_events",
+                tool_input={"limit": 3},
+            ),
+        ),
+        _build_stream_context(
+            text_chunks=["Here is the date."],
+            final_message=build_mock_anthropic_text_response("Here is the date."),
+        ),
+    ]
+
+    with (
+        patch(CHAT_SETTINGS_PATCH, return_value=_chat_settings_mock()),
+        patch(CHAT_CLIENT_PATCH, return_value=mock_chat_client),
+    ):
+        with client.stream(
+            "POST",
+            "/api/v1/ai/chat/stream",
+            headers=general_member_headers,
+            json={"message": "When is Cultural Night?"},
+        ) as response:
+            body = "".join(response.iter_text())
+
+    assert _joined_token_text(body) == "I'll check the calendar.\n\nHere is the date."
