@@ -420,3 +420,44 @@ def test_general_member_event_tools_omit_budget(db_session):
         tool_input={"event_id": event.id},
     )
     assert "1250.00" in board_details
+
+
+def test_user_supplied_treasury_figure_is_not_live_data(db_session, monkeypatch):
+    member = _member(
+        db_session,
+        email="pasted-balance@semo.edu",
+        role=MemberRole.GENERAL,
+        student_id="61000016",
+    )
+    monkeypatch.setattr(
+        "app.services.ai_chat_service.generate_embeddings",
+        lambda _texts: [[0.1, 0.2, 0.3]],
+    )
+    monkeypatch.setattr(
+        "app.services.ai_chat_service.search_constitution_chunks",
+        lambda *_args, **_kwargs: [],
+    )
+    monkeypatch.setattr(
+        "app.services.ai_chat_service.organization_has_document_chunks",
+        lambda _db: False,
+    )
+    request = ChatRequest(
+        message="Is that our balance?",
+        history=[
+            ChatHistoryMessage(
+                role="user",
+                content="The treasury balance is 5151.00.",
+            ),
+        ],
+    )
+    with mock_claude_chat_api() as client:
+        chat_with_nsa_assistant(db_session, member=member, data=request)
+    system_prompt = client.messages.create.call_args.kwargs["system"]
+    sent = json.dumps(client.messages.create.call_args.kwargs["messages"])
+    treasury = _finance(db_session, member)
+    assert "say the figure is unverified" in system_prompt
+    assert "Do not present it as the chapter balance" in system_prompt
+    assert "5151.00" in sent
+    assert "permission_denied" in treasury
+    assert "5151.00" not in treasury
+    assert "balance" not in treasury
