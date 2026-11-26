@@ -7,6 +7,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
+    String,
     Text,
     UniqueConstraint,
 )
@@ -38,9 +39,22 @@ class MeetingRecord(Base):
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
     )
+    # Published minutes stay in summary/key_decisions/action_items.
+    # A replacement draft is stored beside them and is not the official record.
+    draft_summary = Column(Text, nullable=True)
+    draft_key_decisions = Column(JSON, nullable=True)
+    draft_action_items = Column(JSON, nullable=True)
+    draft_updated_at = Column(DateTime(timezone=True), nullable=True)
+    draft_updated_by_id = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    draft_version = Column(Integer, nullable=True)
+    published_at = Column(DateTime(timezone=True), nullable=True)
+    published_fingerprint = Column(String(64), nullable=True)
 
     event = relationship("Event", back_populates="meeting_record")
     updated_by = relationship("Member", foreign_keys=[updated_by_id])
+    draft_updated_by = relationship("Member", foreign_keys=[draft_updated_by_id])
 
 
 class MeetingAttendance(Base):

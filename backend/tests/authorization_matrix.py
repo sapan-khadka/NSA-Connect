@@ -1033,6 +1033,20 @@ ENDPOINT_AUTH_RULES: tuple[EndpointAuthRule, ...] = (
     ),
     EndpointAuthRule(
         "PUT",
+        "/api/v1/events/{event_id}/meeting/draft",
+        "Save meeting minutes draft",
+        "meeting_manager",
+        "can_manage_meeting_records",
+    ),
+    EndpointAuthRule(
+        "POST",
+        "/api/v1/events/{event_id}/meeting/publish",
+        "Publish meeting minutes",
+        "meeting_manager",
+        "can_manage_meeting_records",
+    ),
+    EndpointAuthRule(
+        "PUT",
         "/api/v1/events/{event_id}/meeting/attendance",
         "Update meeting attendance",
         "meeting_manager",

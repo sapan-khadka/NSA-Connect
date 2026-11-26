@@ -75,19 +75,27 @@ SAMPLE_MINUTES_PAYLOAD = {
         "September."
     ),
     "key_decisions": [
-        "Approved Dashain Celebration for early October.",
-        "Treasurer will share updated budget at the next meeting.",
+        {
+            "text": "Approved Dashain Celebration for early October.",
+            "evidence": "approved dashain date",
+        },
+        {
+            "text": "Agreed to share the updated budget at the next meeting.",
+            "evidence": "agreed to share the updated budget",
+        },
     ],
     "action_items": [
         {
             "task": "Reserve University Center room for Dashain",
-            "owner": "Events chair",
-            "due": "By March 15",
+            "owner": "sapan",
+            "due": None,
+            "evidence": "sapan reserve room",
         },
         {
             "task": "Send updated budget spreadsheet to board",
             "owner": "Treasurer",
             "due": None,
+            "evidence": "treasurer send budget sheet",
         },
     ],
 }

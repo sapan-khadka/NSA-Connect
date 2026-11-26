@@ -5,7 +5,9 @@ import { MeetingMinutesEditor } from "./MeetingMinutesEditor";
 import { getApiErrorMessage } from "../lib/api-error";
 import {
   fetchMeetingDetail,
+  publishMeetingMinutes,
   saveMeetingAttendance,
+  saveMeetingDraft,
   saveMeetingNotes,
   summarizeMeetingForEvent,
   type MeetingDetailResponse,
@@ -89,8 +91,25 @@ export function MeetingRecordSection({
           );
           return updated;
         }}
-        onSummarize={async (rawNotes) => {
-          const updated = await summarizeMeetingForEvent(eventId, rawNotes);
+        onGenerate={async (rawNotes, confirmRegenerate, baseDraftVersion) => {
+          const updated = await summarizeMeetingForEvent(eventId, rawNotes, {
+            confirmRegenerate,
+            baseDraftVersion,
+          });
+          setDetail((current) =>
+            current ? { ...current, minutes: updated } : current,
+          );
+          return updated;
+        }}
+        onSaveDraft={async (draft) => {
+          const updated = await saveMeetingDraft(eventId, draft);
+          setDetail((current) =>
+            current ? { ...current, minutes: updated } : current,
+          );
+          return updated;
+        }}
+        onPublish={async (baseDraftVersion) => {
+          const updated = await publishMeetingMinutes(eventId, baseDraftVersion);
           setDetail((current) =>
             current ? { ...current, minutes: updated } : current,
           );

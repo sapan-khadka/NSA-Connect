@@ -199,10 +199,10 @@ def test_secretary_can_summarize_and_store_meeting_minutes(
 
         assert response.status_code == 200
         body = response.json()
-        assert body["summary"]
+        assert body["draft_summary"]
+        assert body["summary"] is None
         assert body["raw_notes"] == "approved dashain date\nreserve room"
-        mock_notify.assert_called_once()
-        assert mock_notify.call_args.kwargs["notification_kind"] == "summary"
+        mock_notify.assert_not_called()
 
 
 def test_board_member_can_list_meeting_history(client, board_member_headers):

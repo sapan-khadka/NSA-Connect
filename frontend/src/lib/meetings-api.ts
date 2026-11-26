@@ -1,5 +1,5 @@
 import api from "./api";
-import type { MeetingActionItem, SummarizeMinutesResponse } from "./ai-api";
+import type { MeetingActionItem } from "./ai-api";
 
 export type MeetingAttendanceStatus = "present" | "absent" | "excused";
 
@@ -18,6 +18,20 @@ export type MeetingMinutes = {
   action_items: MeetingActionItem[];
   updated_at: string | null;
   updated_by_name: string | null;
+  published_at?: string | null;
+  draft_summary?: string | null;
+  draft_key_decisions?: string[];
+  draft_action_items?: MeetingActionItem[];
+  draft_updated_at?: string | null;
+  draft_updated_by_name?: string | null;
+  draft_version?: number | null;
+};
+
+export type MeetingDraftUpdate = {
+  summary: string;
+  key_decisions: string[];
+  action_items: MeetingActionItem[];
+  base_draft_version: number | null;
 };
 
 export type MeetingDetailResponse = {
@@ -85,10 +99,40 @@ export async function saveMeetingNotes(
 export async function summarizeMeetingForEvent(
   eventId: number,
   rawNotes: string,
-): Promise<MeetingMinutes & SummarizeMinutesResponse> {
-  const response = await api.post<MeetingMinutes & SummarizeMinutesResponse>(
+  options?: {
+    confirmRegenerate?: boolean;
+    baseDraftVersion?: number | null;
+  },
+): Promise<MeetingMinutes> {
+  const response = await api.post<MeetingMinutes>(
     `/v1/events/${eventId}/meeting/summarize`,
-    { raw_notes: rawNotes },
+    {
+      raw_notes: rawNotes,
+      confirm_regenerate: options?.confirmRegenerate ?? false,
+      base_draft_version: options?.baseDraftVersion ?? null,
+    },
+  );
+  return response.data;
+}
+
+export async function saveMeetingDraft(
+  eventId: number,
+  draft: MeetingDraftUpdate,
+): Promise<MeetingMinutes> {
+  const response = await api.put<MeetingMinutes>(
+    `/v1/events/${eventId}/meeting/draft`,
+    draft,
+  );
+  return response.data;
+}
+
+export async function publishMeetingMinutes(
+  eventId: number,
+  baseDraftVersion: number,
+): Promise<MeetingMinutes> {
+  const response = await api.post<MeetingMinutes>(
+    `/v1/events/${eventId}/meeting/publish`,
+    { base_draft_version: baseDraftVersion },
   );
   return response.data;
 }
