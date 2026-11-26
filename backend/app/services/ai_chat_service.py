@@ -14,7 +14,11 @@ from app.integrations.anthropic_client import (
 )
 from app.lib.event_timezone import format_local_date
 from app.models.member import Member
-from app.prompts.chatbot import build_chat_system_prompt, wrap_untrusted_user_message
+from app.prompts.chatbot import (
+    build_chat_system_prompt,
+    wrap_prior_user_message,
+    wrap_untrusted_user_message,
+)
 from app.schemas.ai import (
     ChatConstitutionSource,
     ChatRequest,
@@ -27,8 +31,10 @@ from app.services.ai_chat_tools import (
     organization_zone,
 )
 from app.services.ai_checklist_service import AIDisabledError
-from app.services.constitution_relevance import constitution_chunk_retained
-from app.services.constitution_search_service import search_constitution_chunks
+from app.services.constitution_search_service import (
+    constitution_index_has_chunks,
+    search_constitution_chunks,
+)
 from app.services.embedding_service import (
     EmbeddingsNotConfiguredError,
     generate_embeddings,
@@ -126,17 +132,16 @@ def _relevant_hits(hits, minimum: float):
     ]
 
 
-def _relevant_constitution_hits(hits, minimum: float, question: str):
-    return [
-        hit
-        for hit in hits
-        if constitution_chunk_retained(
-            question=question,
-            content=hit.content,
-            similarity=hit.similarity_score,
-            minimum=minimum,
-        )
-    ]
+def _usable_constitution_hits(hits):
+    return [hit for hit in hits if hit.content.strip()]
+
+
+def _index_is_populated(check) -> bool | None:
+    try:
+        return bool(check())
+    except Exception:
+        logger.exception("Retrieval index check failed")
+        return None
 
 
 def _retrieve_document_context(
@@ -147,7 +152,7 @@ def _retrieve_document_context(
     limit: int,
     minimum: float,
     query_embedding: list[float],
-) -> str:
+) -> tuple[str, str]:
     try:
         hits = search_org_document_chunks(
             db,
@@ -158,8 +163,11 @@ def _retrieve_document_context(
         )
     except Exception:
         logger.exception("Document RAG retrieval failed")
-        return ""
-    return _format_document_context(_relevant_hits(hits, minimum))
+        return "", "failed"
+    relevant = _relevant_hits(hits, minimum)
+    if not relevant:
+        return "", "indexed_no_excerpts"
+    return _format_document_context(relevant), "retrieved"
 
 
 def _retrieve_constitution_context(
@@ -167,9 +175,8 @@ def _retrieve_constitution_context(
     *,
     query: str,
     limit: int,
-    minimum: float,
     query_embedding: list[float],
-) -> tuple[str, list[ChatConstitutionSource]]:
+) -> tuple[str, list[ChatConstitutionSource], str]:
     try:
         hits = search_constitution_chunks(
             db,
@@ -179,11 +186,13 @@ def _retrieve_constitution_context(
         )
     except Exception:
         logger.exception("Constitution RAG retrieval failed")
-        return "", []
+        return "", [], "failed"
 
-    return _format_rag_context(
-        _relevant_constitution_hits(hits, minimum, query),
-    )
+    usable = _usable_constitution_hits(hits)
+    if not usable:
+        return "", [], "indexed_no_excerpts"
+    context, sources = _format_rag_context(usable)
+    return context, sources, "retrieved"
 
 
 def _history_messages(history) -> list[dict[str, Any]]:
@@ -200,7 +209,7 @@ def _history_messages(history) -> list[dict[str, Any]]:
         messages.append(
             {
                 "role": "user",
-                "content": wrap_untrusted_user_message(item.content),
+                "content": wrap_prior_user_message(item.content),
             }
         )
     return messages
@@ -275,36 +284,47 @@ def _prepare_chat_context(
     data: ChatRequest,
 ) -> tuple[str, list[ChatConstitutionSource], list[dict[str, Any]]]:
     settings = get_settings()
-    embedding = _question_embedding(data.message)
+    constitution_indexed = _index_is_populated(lambda: constitution_index_has_chunks(db))
+    documents_indexed = _index_is_populated(lambda: organization_has_document_chunks(db))
+    needs_embedding = constitution_indexed is True or documents_indexed is True
+    embedding = _question_embedding(data.message) if needs_embedding else None
     minimum = settings.AI_CHAT_RAG_MIN_SIMILARITY
-    if embedding is None:
-        rag_context, sources = "", []
-        document_context = ""
+    if constitution_indexed is None:
+        rag_context, sources, constitution_state = "", [], "failed"
+    elif not constitution_indexed:
+        rag_context, sources, constitution_state = "", [], "empty"
+    elif embedding is None:
+        rag_context, sources, constitution_state = "", [], "failed"
     else:
-        rag_context, sources = _retrieve_constitution_context(
+        rag_context, sources, constitution_state = _retrieve_constitution_context(
             db,
+            query=data.message,
+            limit=settings.AI_CHAT_RAG_CHUNK_LIMIT,
+            query_embedding=embedding,
+        )
+    if documents_indexed is None:
+        document_context, document_state = "", "failed"
+    elif not documents_indexed:
+        document_context, document_state = "", "empty"
+    elif embedding is None:
+        document_context, document_state = "", "failed"
+    else:
+        document_context, document_state = _retrieve_document_context(
+            db,
+            member=member,
             query=data.message,
             limit=settings.AI_CHAT_RAG_CHUNK_LIMIT,
             minimum=minimum,
             query_embedding=embedding,
         )
-        if organization_has_document_chunks(db):
-            document_context = _retrieve_document_context(
-                db,
-                member=member,
-                query=data.message,
-                limit=settings.AI_CHAT_RAG_CHUNK_LIMIT,
-                minimum=minimum,
-                query_embedding=embedding,
-            )
-        else:
-            document_context = ""
     zone = organization_zone(db, member)
     local_date = format_local_date(_utc_now(), zone)
     timezone_name = getattr(zone, "key", None) or str(zone)
     system_prompt = build_chat_system_prompt(
         rag_context=rag_context,
         document_context=document_context,
+        constitution_state=constitution_state,
+        document_state=document_state,
         local_date=local_date,
         timezone_name=timezone_name,
     )

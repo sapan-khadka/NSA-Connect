@@ -74,7 +74,10 @@ const components: Components = {
   img: () => null,
   input: ReadOnlyCheckbox,
   table: ({ children }) => (
-    <div data-testid="markdown-table-scroll" className="my-2 max-w-full overflow-x-auto">
+    <div
+      data-testid="markdown-table-scroll"
+      className="my-2 w-full min-w-0 max-w-full overflow-x-auto"
+    >
       <table className="w-max min-w-full border-collapse text-left">{children}</table>
     </div>
   ),

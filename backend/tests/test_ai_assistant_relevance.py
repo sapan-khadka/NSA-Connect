@@ -144,6 +144,10 @@ def _patch_retrieval(monkeypatch, constitution_hits, document_hits=None, has_doc
         return document_hits or []
 
     monkeypatch.setattr("app.services.ai_chat_service.get_settings", lambda: _Settings())
+    monkeypatch.setattr(
+        "app.services.ai_chat_service.constitution_index_has_chunks",
+        lambda _db: True,
+    )
     monkeypatch.setattr("app.services.ai_chat_service.generate_embeddings", embed)
     monkeypatch.setattr(
         "app.services.ai_chat_service.search_constitution_chunks",
@@ -199,6 +203,10 @@ def test_chat_keeps_voting_passage_below_similarity_floor(db_session, monkeypatc
         ]
 
     monkeypatch.setattr("app.services.ai_chat_service.get_settings", lambda: _Settings())
+    monkeypatch.setattr(
+        "app.services.ai_chat_service.constitution_index_has_chunks",
+        lambda _db: True,
+    )
     monkeypatch.setattr(
         "app.services.ai_chat_service.generate_embeddings",
         lambda _texts: [[0.1, 0.2, 0.3]],
@@ -282,11 +290,25 @@ def test_mixed_question_keeps_relevant_excerpt_and_live_tools(db_session, monkey
             ConstitutionSearchHit(1, 0, "Dues", "Members pay semester dues.", 0.82),
             ConstitutionSearchHit(2, 1, "Events", "Unrelated nearest neighbor.", 0.21),
         ],
+        document_hits=[
+            OrgDocumentSearchHit(
+                9,
+                1,
+                "Handbook",
+                "public",
+                0,
+                "Other",
+                "Unrelated document neighbor.",
+                0.21,
+            )
+        ],
+        has_documents=True,
     )
     assert "Members pay semester dues." in context
-    assert "Unrelated nearest neighbor." not in context
+    assert "Unrelated nearest neighbor." in context
+    assert "Unrelated document neighbor." not in context
     assert "live" in context.lower()
-    assert [source.chunk_id for source in sources] == [1]
+    assert [source.chunk_id for source in sources] == [1, 2]
 
 
 def test_irrelevant_document_excerpt_is_omitted(db_session, monkeypatch):
@@ -518,6 +540,282 @@ def test_user_supplied_treasury_figure_is_not_live_data(db_session, monkeypatch)
     assert "say the figure is unverified" in system_prompt
     assert "Do not present it as the chapter balance" in system_prompt
     assert "5151.00" in sent
+    assert "Do not answer it." in sent
+    assert "Answer only this latest user message." in sent
     assert "permission_denied" in treasury
     assert "5151.00" not in treasury
     assert "balance" not in treasury
+
+
+# These tests inspect prompts and message payloads. They do not call the
+# production model and do not show that the model will follow the instructions.
+RECALL_QUESTIONS = [
+    "What is the election process?",
+    "What does the constitution say about the election process?",
+    "What does the constitution say about voting?",
+    "Who counts the ballots?",
+    "What events are coming up?",
+    "What is our treasury balance?",
+    "How are amendments adopted?",
+    "Who is eligible for membership?",
+    "What are the duties of the officers?",
+    "What is the treasury balance, and what does the constitution say about dues?",
+]
+
+
+@pytest.mark.parametrize(("offset", "question"), list(enumerate(RECALL_QUESTIONS)))
+def test_weak_constitution_hit_is_kept_for_each_question(
+    db_session,
+    monkeypatch,
+    offset,
+    question,
+):
+    member = _member(
+        db_session,
+        email=f"recall-{offset}@semo.edu",
+        role=MemberRole.GENERAL,
+        student_id=f"610002{offset:02d}",
+    )
+    context, sources, _recorded = _prepare(
+        db_session,
+        member,
+        question,
+        monkeypatch,
+        [
+            ConstitutionSearchHit(
+                1,
+                6,
+                "Elections",
+                "Elections shall be held each academic year.",
+                0.12,
+            )
+        ],
+    )
+    assert sources[0].similarity_score == 0.12
+    assert "Elections shall be held each academic year." in context
+    assert "Do not recite neighboring provisions from the same excerpt." in context
+    assert "Answer only the latest user question." in context
+
+
+def test_events_turn_keeps_earlier_questions_as_context_only(db_session, monkeypatch):
+    member = _member(
+        db_session,
+        email="events-context@semo.edu",
+        role=MemberRole.GENERAL,
+        student_id="61000300",
+    )
+    _patch_retrieval(
+        monkeypatch,
+        [
+            ConstitutionSearchHit(
+                1,
+                4,
+                "Events",
+                "The event manager coordinates programs.",
+                0.20,
+            )
+        ],
+    )
+    request = ChatRequest(
+        message="What events are coming up?",
+        history=[
+            ChatHistoryMessage(
+                role="assistant",
+                content=(
+                    "The treasury balance is 4242.00. SECRET RAW NOTES. "
+                    "Official voting overview."
+                ),
+            ),
+            ChatHistoryMessage(
+                role="user",
+                content="The treasury balance is 5151.00.",
+            ),
+            *[
+                ChatHistoryMessage(role="user", content=question)
+                for question in RECALL_QUESTIONS[:4]
+            ],
+        ],
+    )
+    context, sources, messages = _prepare_chat_context(
+        db_session,
+        member=member,
+        data=request,
+    )
+    sent = json.dumps(messages)
+    assert sources[0].similarity_score == 0.20
+    assert "4242.00" not in sent
+    assert "SECRET RAW NOTES" not in sent
+    assert "Official voting overview." not in sent
+    assert "5151.00" in sent
+    assert "say the figure is unverified" in context
+    assert sent.count("Do not answer it.") == 5
+    assert "Answer only this latest user message." in sent
+    assert "Do not answer earlier questions again." in context
+    assert "What is the election process?" in sent
+    assert messages[-1]["content"].count("What events are coming up?") == 1
+
+
+def test_later_turn_still_answers_only_the_latest_question(db_session, monkeypatch):
+    member = _member(
+        db_session,
+        email="latest-only@semo.edu",
+        role=MemberRole.GENERAL,
+        student_id="61000301",
+    )
+    _patch_retrieval(monkeypatch, [])
+    request = ChatRequest(
+        message=RECALL_QUESTIONS[-1],
+        history=[
+            ChatHistoryMessage(role="user", content=question)
+            for question in RECALL_QUESTIONS[:-1]
+        ],
+    )
+    _context, _sources, messages = _prepare_chat_context(
+        db_session,
+        member=member,
+        data=request,
+    )
+    sent = json.dumps(messages)
+    assert sent.count("Do not answer it.") == len(RECALL_QUESTIONS) - 1
+    assert "Answer only this latest user message." in messages[-1]["content"]
+    assert RECALL_QUESTIONS[-1] in messages[-1]["content"]
+
+
+def test_constitution_index_empty_is_stated_directly(db_session, monkeypatch):
+    member = _member(
+        db_session,
+        email="index-empty@semo.edu",
+        role=MemberRole.GENERAL,
+        student_id="61000302",
+    )
+    _patch_retrieval(monkeypatch, [])
+    monkeypatch.setattr(
+        "app.services.ai_chat_service.constitution_index_has_chunks",
+        lambda _db: False,
+    )
+    context, sources, recorded = _prepare_chat_context_recorded(
+        db_session,
+        member,
+        "What is the election process?",
+        monkeypatch,
+    )
+    assert sources == []
+    assert "The constitution index is empty." in context
+    assert "The constitution is indexed" not in context
+    assert recorded == []
+
+
+def _prepare_chat_context_recorded(db_session, member, message, monkeypatch):
+    embeds: list[list[str]] = []
+
+    def embed(texts):
+        embeds.append(list(texts))
+        return [[0.1, 0.2, 0.3]]
+
+    monkeypatch.setattr("app.services.ai_chat_service.get_settings", lambda: _Settings())
+    monkeypatch.setattr("app.services.ai_chat_service.generate_embeddings", embed)
+    context, sources, _messages = _prepare_chat_context(
+        db_session,
+        member=member,
+        data=ChatRequest(message=message),
+    )
+    return context, sources, embeds
+
+
+def test_indexed_constitution_without_excerpts_is_not_missing(db_session, monkeypatch):
+    member = _member(
+        db_session,
+        email="indexed-empty@semo.edu",
+        role=MemberRole.GENERAL,
+        student_id="61000303",
+    )
+    _patch_retrieval(monkeypatch, [])
+    context, sources, _recorded = _prepare(
+        db_session,
+        member,
+        "What is the election process?",
+        monkeypatch,
+        [],
+    )
+    assert sources == []
+    assert "The constitution is indexed, but no excerpt was retrieved" in context
+    assert "The constitution is not missing." in context
+    assert "The constitution index is empty." not in context
+
+
+def test_empty_document_library_does_not_make_constitution_missing(
+    db_session,
+    monkeypatch,
+):
+    member = _member(
+        db_session,
+        email="docs-empty@semo.edu",
+        role=MemberRole.GENERAL,
+        student_id="61000304",
+    )
+    context, sources, _recorded = _prepare(
+        db_session,
+        member,
+        "What does the constitution say about voting?",
+        monkeypatch,
+        [
+            ConstitutionSearchHit(
+                1,
+                6,
+                "Voting",
+                "In order to vote, you must be physically present.",
+                0.33,
+            )
+        ],
+    )
+    assert sources[0].chunk_id == 1
+    assert "The additional organization document library is empty." in context
+    assert "This does not mean the constitution is missing." in context
+    assert "In order to vote, you must be physically present." in context
+
+
+def test_retrieval_failure_does_not_say_the_constitution_is_missing(
+    db_session,
+    monkeypatch,
+):
+    member = _member(
+        db_session,
+        email="retrieval-failed@semo.edu",
+        role=MemberRole.GENERAL,
+        student_id="61000305",
+    )
+
+    def explode(*_args, **_kwargs):
+        raise RuntimeError("search unavailable")
+
+    monkeypatch.setattr("app.services.ai_chat_service.get_settings", lambda: _Settings())
+    monkeypatch.setattr(
+        "app.services.ai_chat_service.constitution_index_has_chunks",
+        lambda _db: True,
+    )
+    monkeypatch.setattr(
+        "app.services.ai_chat_service.organization_has_document_chunks",
+        lambda _db: True,
+    )
+    monkeypatch.setattr(
+        "app.services.ai_chat_service.generate_embeddings",
+        lambda _texts: [[0.1, 0.2, 0.3]],
+    )
+    monkeypatch.setattr(
+        "app.services.ai_chat_service.search_constitution_chunks",
+        explode,
+    )
+    monkeypatch.setattr(
+        "app.services.ai_chat_service.search_org_document_chunks",
+        explode,
+    )
+    context, sources, _messages = _prepare_chat_context(
+        db_session,
+        member=member,
+        data=ChatRequest(message="What is the election process?"),
+    )
+    assert sources == []
+    assert "Constitution retrieval failed." in context
+    assert "Additional organization document retrieval failed." in context
+    assert "The constitution is not missing." in context
+    assert "The constitution index is empty." not in context
