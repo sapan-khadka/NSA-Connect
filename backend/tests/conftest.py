@@ -531,6 +531,10 @@ def client(db_session: Session):
             "app.api.v1.discussion_ws.create_db_session",
             side_effect=override_create_db_session,
         ),
+        patch(
+            "app.core.ws_handshake.create_db_session",
+            side_effect=override_create_db_session,
+        ),
         TestClient(app) as test_client,
     ):
         yield test_client

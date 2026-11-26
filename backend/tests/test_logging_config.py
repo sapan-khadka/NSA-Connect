@@ -47,6 +47,30 @@ def test_log_level_is_case_insensitive(monkeypatch):
     assert resolve_log_level() == "DEBUG"
 
 
+def test_uvicorn_access_log_redacts_legacy_token_query(capsys):
+    root = logging.getLogger()
+    saved_handlers = root.handlers[:]
+    saved_level = root.level
+    secret = "legacy-query-value"
+    try:
+        configure_logging(force=True)
+        logging.getLogger("uvicorn.access").info(
+            '%s - "%s %s HTTP/%s" %d',
+            "127.0.0.1:9",
+            "GET",
+            f"/ws/notifications?token={secret}&ticket={secret}",
+            "1.1",
+            101,
+        )
+        rendered = capsys.readouterr().out
+        assert "token=REDACTED" in rendered
+        assert "ticket=REDACTED" in rendered
+        assert (secret in rendered) is False
+    finally:
+        root.handlers[:] = saved_handlers
+        root.setLevel(saved_level)
+
+
 def test_configure_logging_emits_security_events_to_stdout(capsys):
     root = logging.getLogger()
     saved_handlers = root.handlers[:]

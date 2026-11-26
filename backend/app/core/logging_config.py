@@ -11,6 +11,7 @@ from __future__ import annotations
 from logging.config import dictConfig
 
 from app.core.config import settings
+from app.core.log_redaction import install_credential_redaction
 
 _VALID_LEVELS = frozenset(
     {"CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"}
@@ -57,4 +58,5 @@ def configure_logging(*, force: bool = False) -> None:
         return
 
     dictConfig(build_logging_config())
+    install_credential_redaction()
     _configured = True
