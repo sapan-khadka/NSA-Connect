@@ -179,6 +179,7 @@ def test_generate_publish_and_reread_preserve_notes_and_skip_tasks(
 
 def test_replacement_draft_stays_hidden_until_publish(
     client,
+    db_session,
     secretary_headers,
     board_member_headers,
 ):
@@ -220,6 +221,33 @@ def test_replacement_draft_stays_hidden_until_publish(
     assert manager["draft_summary"] == "Replacement overview."
     assert manager["raw_notes"] == ""
 
+    listed = client.get("/api/v1/events/meetings", headers=board_member_headers)
+    assert listed.status_code == 200
+    assert "Replacement overview." not in listed.text
+
+    from app.services.ai_chat_tools import execute_chat_tool
+    from app.services.member_activity_service import get_member_activity
+
+    board_member = db_session.query(Member).filter(Member.email == "board@semo.edu").one()
+    secretary = db_session.query(Member).filter(Member.email == "secretary@semo.edu").one()
+    for tool_name, tool_input in (
+        ("list_upcoming_meetings", {}),
+        ("get_event_details", {"event_id": event_id}),
+    ):
+        result = execute_chat_tool(
+            db=db_session,
+            member=board_member,
+            tool_name=tool_name,
+            tool_input=tool_input,
+        )
+        assert "Replacement overview." not in result
+    activity = get_member_activity(
+        db_session,
+        member_id=secretary.id,
+        viewer=board_member,
+    )
+    assert "Replacement overview." not in activity.model_dump_json()
+
 
 def test_republishing_the_same_minutes_does_not_notify_again(
     client,
@@ -251,6 +279,7 @@ def test_republishing_the_same_minutes_does_not_notify_again(
     assert repeated.status_code == 200
     assert repeated.json()["summary"] == "Same overview."
     assert notify.call_count == 1
+    assert "Same overview." not in str(notify.call_args)
 
 
 def test_stale_draft_save_and_publish_do_not_overwrite(
@@ -400,3 +429,86 @@ def test_other_organization_cannot_read_or_publish_minutes(
     assert detail.status_code == 404
     assert publish.status_code == 404
     assert all(meeting["event_id"] != event_id for meeting in listed.json()["meetings"])
+
+
+def test_stale_generation_does_not_overwrite_a_newer_draft(client, secretary_headers):
+    event_id = _create_meeting_event(client, secretary_headers)
+    first = client.put(
+        f"/api/v1/events/{event_id}/meeting/draft",
+        json=_draft_body("First private draft.", version=None),
+        headers=secretary_headers,
+    )
+    version = first.json()["draft_version"]
+    newer = client.put(
+        f"/api/v1/events/{event_id}/meeting/draft",
+        json=_draft_body("Newer private draft.", version=version),
+        headers=secretary_headers,
+    )
+    assert newer.status_code == 200
+
+    with mock_claude_minutes_api(
+        {
+            "summary": "The board approved a replacement.",
+            "key_decisions": [],
+            "action_items": [],
+        }
+    ) as mock_client:
+        stale = client.post(
+            f"/api/v1/events/{event_id}/meeting/summarize",
+            json={
+                "raw_notes": "The board approved a replacement.",
+                "confirm_regenerate": True,
+                "base_draft_version": version,
+            },
+            headers=secretary_headers,
+        )
+
+    assert stale.status_code == 409
+    assert stale.json()["detail"] == MEETING_DRAFT_CONFLICT_DETAIL
+    mock_client.messages.create.assert_not_called()
+    current = client.get(
+        f"/api/v1/events/{event_id}/meeting",
+        headers=secretary_headers,
+    ).json()["minutes"]
+    assert current["draft_summary"] == "Newer private draft."
+    assert current["summary"] is None
+    assert current["raw_notes"] == ""
+
+
+def test_notification_failure_keeps_the_published_record(client, secretary_headers):
+    event_id = _create_meeting_event(client, secretary_headers)
+    notes = client.put(
+        f"/api/v1/events/{event_id}/meeting/notes",
+        json={"raw_notes": "Original treasurer notes."},
+        headers=secretary_headers,
+    )
+    assert notes.status_code == 200
+    draft = client.put(
+        f"/api/v1/events/{event_id}/meeting/draft",
+        json=_draft_body("Reviewed overview.", version=None),
+        headers=secretary_headers,
+    )
+    with patch(
+        "app.services.meeting_service.notify_board_of_meeting_update",
+        side_effect=RuntimeError("resend down"),
+    ):
+        with pytest.raises(RuntimeError, match="resend down"):
+            client.post(
+                f"/api/v1/events/{event_id}/meeting/publish",
+                json={"base_draft_version": draft.json()["draft_version"]},
+                headers=secretary_headers,
+            )
+
+    minutes = client.get(
+        f"/api/v1/events/{event_id}/meeting",
+        headers=secretary_headers,
+    ).json()["minutes"]
+    assert minutes["summary"] == "Reviewed overview."
+    assert minutes["draft_version"] is None
+    assert minutes["raw_notes"] == "Original treasurer notes."
+    repeated = client.post(
+        f"/api/v1/events/{event_id}/meeting/publish",
+        json={"base_draft_version": draft.json()["draft_version"]},
+        headers=secretary_headers,
+    )
+    assert repeated.status_code == 422

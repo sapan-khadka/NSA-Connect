@@ -24,9 +24,12 @@ not an action item unless someone was actually assigned the follow-up.
 - Proposal: someone suggested, recommended, or tentatively offered an action. \
 It is not an approved decision. Do not describe it as approved, voted, or agreed.
 - Approved decision: the notes explicitly say the board approved, voted to, \
-agreed to, decided to, or adopted something. Quote that wording in `evidence`.
+agreed to, decided to, or adopted something. Quote that wording in `evidence`. \
+A denial, postponement, condition, or hypothetical is not an approval. \
+"Did not approve", "approval was postponed", "no vote occurred", "proposed", \
+and "discussed whether to approve" must not become key decisions.
 - Action item: the notes assign a follow-up or a person says they will do it. \
-A discussion or a proposal is not an assignment.
+Quote that assignment. A discussion or a proposal is not an assignment.
 
 ## What to produce
 

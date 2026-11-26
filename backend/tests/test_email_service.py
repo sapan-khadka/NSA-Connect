@@ -162,6 +162,34 @@ def test_build_meeting_record_notification_email_body_includes_meeting_link():
     assert "http://localhost:5173/events/meetings/3" in body
 
 
+@patch("app.services.email_service.send_resend_email")
+@patch("app.services.email_service.settings")
+def test_meeting_notification_resend_failure_returns_false(
+    mock_settings,
+    mock_send_email,
+    caplog,
+):
+    from app.integrations.resend_client import ResendDeliveryError
+
+    mock_settings.EMAIL_ENABLED = True
+    mock_settings.RESEND_API_KEY = "re.test-key"
+    mock_send_email.side_effect = ResendDeliveryError("Resend returned 500")
+
+    with caplog.at_level(logging.ERROR):
+        delivered = send_meeting_record_notification_email(
+            email="board@semo.edu",
+            full_name="Board Member",
+            meeting_title="March Board Meeting",
+            notification_kind="summary",
+            recorded_by_name="Board Secretary",
+            meeting_starts_at=datetime(2030, 5, 1, 18, 0, tzinfo=UTC),
+            meeting_url="http://localhost:5173/events/meetings/3",
+        )
+
+    assert delivered is False
+    assert "Resend failed to deliver meeting record notification" in caplog.text
+
+
 def test_send_meeting_record_notification_email_skips_when_disabled(caplog):
     meeting_starts_at = datetime(2030, 5, 1, 18, 0, tzinfo=UTC)
 

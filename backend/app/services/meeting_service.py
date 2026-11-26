@@ -106,8 +106,14 @@ def _reload_record(db: Session, event_id: int) -> MeetingRecord | None:
 def _locked_record(db: Session, event_id: int) -> MeetingRecord:
     record = _get_or_create_meeting_record(db, event_id)
     if db.get_bind().dialect.name == "postgresql":
+        # The row may already be in this session from an earlier read. Expire it
+        # so the locked SELECT returns the version committed by the other writer.
+        db.expire(record)
         locked = db.scalar(
-            select(MeetingRecord).where(MeetingRecord.id == record.id).with_for_update()
+            select(MeetingRecord)
+            .where(MeetingRecord.id == record.id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
         )
         if locked is not None:
             return locked

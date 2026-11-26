@@ -70,6 +70,37 @@ _TENTATIVE = re.compile(
     r"\b(tentative(?:ly)?|maybe|might|proposed|proposal|suggest(?:ed|ion)?)\b",
     re.IGNORECASE,
 )
+# A quote that merely contains "approve" is not a decision when the same
+# sentence denies, postpones, or conditions that approval.
+_UNCONFIRMED = re.compile(
+    r"("
+    r"\b(?:did|do|does|was|were|is|are|has|have|had)(?:\s+not|n't)\b.{0,80}?\bapprov|"
+    r"\bnot\s+(?:to\s+)?approv|"
+    r"\bno\s+approval\b|"
+    r"\bwithout\s+(?:a\s+)?(?:vote|approval)\b|"
+    r"\bno\s+vote\b|"
+    r"\bpostpon(?:e|ed|ing)\b|"
+    r"\bdefer(?:red|ring)?\b|"
+    r"\btabled\b|"
+    r"\bwhether\s+to\b|"
+    r"\bif\s+(?:we|the|they|it)\b.{0,40}?\bapprov|"
+    r"\b(?:would|could|should|might)\s+approv|"
+    r"\bhypothetically\b"
+    r")",
+    re.IGNORECASE | re.DOTALL,
+)
+_DISCUSSION = re.compile(
+    r"\b(discussed|discussing|discussion|talked about|mentioned)\b",
+    re.IGNORECASE,
+)
+_FOLLOW_UP = re.compile(
+    r"\b("
+    r"will|shall|agreed to|assigned|needs to|need to|must|should|"
+    r"follow(?:\s+|-)up|responsible for|action item|"
+    r"to (?:prepare|send|submit|file|email|reserve|complete|draft|share|post)"
+    r")\b",
+    re.IGNORECASE,
+)
 _MONEY = re.compile(r"\$\s*\d[\d,]*(?:\.\d{1,2})?")
 _UNANIMOUS = re.compile(r"\bunanimous(?:ly)?\b", re.IGNORECASE)
 _SENTENCE = re.compile(r"(?<=[.!?])\s+")
@@ -219,10 +250,45 @@ def _invented_money(text: str, notes: str) -> bool:
     return False
 
 
+def _sentences(text: str) -> list[str]:
+    parts = re.split(r"(?<=[.!?])\s+|\n+", text)
+    return [part.strip() for part in parts if part.strip()]
+
+
+def _sentence_is_confirmed_approval(sentence: str) -> bool:
+    if _TENTATIVE.search(sentence) or _UNCONFIRMED.search(sentence):
+        return False
+    return _APPROVAL.search(sentence) is not None
+
+
+def _notes_have_confirmed_approval(notes: str) -> bool:
+    return any(_sentence_is_confirmed_approval(sentence) for sentence in _sentences(notes))
+
+
+def _evidence_confirms_approval(notes: str, evidence: str) -> bool:
+    """The notes sentence that contains the quote has to be an actual approval."""
+    quote = _norm(evidence)
+    matched = [sentence for sentence in _sentences(notes) if quote in _norm(sentence)]
+    if not matched:
+        return _sentence_is_confirmed_approval(evidence)
+    return all(_sentence_is_confirmed_approval(sentence) for sentence in matched)
+
+
+def _assigned_follow_up(notes: str, evidence: str) -> bool:
+    """A discussion, with no assignment in that sentence, is not an action item."""
+    quote = _norm(evidence)
+    matched = [sentence for sentence in _sentences(notes) if quote in _norm(sentence)]
+    targets = matched or [evidence]
+    return any(
+        _DISCUSSION.search(sentence) is None or _FOLLOW_UP.search(sentence) is not None
+        for sentence in targets
+    )
+
+
 def ground_summary(summary: str, notes: str) -> str:
     """Drop approval sentences when the notes never record an approval."""
     cleaned = summary.strip()
-    if not cleaned or _APPROVAL.search(notes):
+    if not cleaned or _notes_have_confirmed_approval(notes):
         return cleaned
 
     paragraphs: list[str] = []
@@ -245,7 +311,7 @@ def ground_decision(notes: str, text: str, evidence: str) -> str | None:
     decision = text.strip()
     if not decision or not evidence_in_notes(notes, evidence):
         return None
-    if _TENTATIVE.search(evidence) or not _APPROVAL.search(evidence):
+    if not _evidence_confirms_approval(notes, evidence):
         return None
     if _invented_money(decision, notes):
         return None
@@ -265,6 +331,8 @@ def ground_action_item(
 ) -> dict[str, str | None] | None:
     cleaned_task = task.strip()
     if not cleaned_task or not evidence_in_notes(notes, evidence):
+        return None
+    if not _assigned_follow_up(notes, evidence):
         return None
     if _invented_money(cleaned_task, notes):
         return None

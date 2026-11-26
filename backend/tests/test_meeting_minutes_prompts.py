@@ -38,6 +38,8 @@ def test_system_prompt_separates_discussion_from_decisions():
     assert "Action item" in MEETING_MINUTES_SYSTEM_PROMPT
     assert "evidence" in MEETING_MINUTES_SYSTEM_PROMPT
     assert "Do not invent a deadline" in MEETING_MINUTES_SYSTEM_PROMPT
+    assert "approval was postponed" in MEETING_MINUTES_SYSTEM_PROMPT
+    assert "discussed whether to approve" in MEETING_MINUTES_SYSTEM_PROMPT
 
 
 def test_user_prompt_includes_stored_meeting_date():
