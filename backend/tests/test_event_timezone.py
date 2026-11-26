@@ -3,7 +3,11 @@ from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 from app.core.config import settings
-from app.lib.event_timezone import format_event_moment, resolve_event_timezone
+from app.lib.event_timezone import (
+    format_event_moment,
+    format_local_date,
+    resolve_event_timezone,
+)
 
 
 def test_default_timezone_is_chicago_without_hardcoding_callers():
@@ -35,6 +39,16 @@ def test_daylight_saving_uses_central_daylight_time():
     zone = resolve_event_timezone(None)
     moment = format_event_moment(datetime(2026, 7, 15, 0, 0, tzinfo=UTC), zone)
     assert moment == "Tuesday, July 14, 2026 at 7:00 PM CDT"
+
+
+def test_local_date_uses_the_central_calendar_day():
+    zone = resolve_event_timezone(None)
+    late_utc = format_local_date(datetime(2026, 11, 28, 0, 30, tzinfo=UTC), zone)
+    year_boundary = format_local_date(datetime(2027, 1, 1, 0, 0, tzinfo=UTC), zone)
+    summer = format_local_date(datetime(2026, 7, 15, 0, 0, tzinfo=UTC), zone)
+    assert late_utc == "Friday, November 27, 2026"
+    assert year_boundary == "Thursday, December 31, 2026"
+    assert summer == "Tuesday, July 14, 2026"
 
 
 def test_midnight_boundary_stays_on_the_local_calendar_day():

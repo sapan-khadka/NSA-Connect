@@ -23,11 +23,21 @@ def resolve_event_timezone(organization: object | None = None) -> ZoneInfo:
     return ZoneInfo("UTC")
 
 
+def _as_utc(value: datetime) -> datetime:
+    if value.tzinfo is None or value.tzinfo.utcoffset(value) is None:
+        return value.replace(tzinfo=UTC)
+    return value
+
+
+def format_local_date(value: datetime, timezone: ZoneInfo) -> str:
+    """Calendar date of a stored instant in the given timezone."""
+    local = _as_utc(value).astimezone(timezone)
+    return f"{local.strftime('%A, %B')} {local.day}, {local.year}"
+
+
 def format_event_moment(value: datetime, timezone: ZoneInfo) -> str:
     """Format a stored UTC instant in the given timezone, including its abbreviation."""
-    if value.tzinfo is None or value.tzinfo.utcoffset(value) is None:
-        value = value.replace(tzinfo=UTC)
-    local = value.astimezone(timezone)
+    local = _as_utc(value).astimezone(timezone)
     hour = local.strftime("%I").lstrip("0") or "12"
     when = (
         f"{local.strftime('%A, %B')} {local.day}, {local.year} at "

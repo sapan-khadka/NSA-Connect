@@ -1,6 +1,7 @@
 import json
 import logging
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -11,6 +12,7 @@ from app.integrations.anthropic_client import (
     AnthropicNotConfiguredError,
     get_anthropic_client,
 )
+from app.lib.event_timezone import format_local_date
 from app.models.member import Member
 from app.prompts.chatbot import build_chat_system_prompt, wrap_untrusted_user_message
 from app.schemas.ai import (
@@ -19,7 +21,11 @@ from app.schemas.ai import (
     ChatResponse,
     ChatToolCallRecord,
 )
-from app.services.ai_chat_tools import CHAT_TOOL_DEFINITIONS, execute_chat_tool
+from app.services.ai_chat_tools import (
+    CHAT_TOOL_DEFINITIONS,
+    execute_chat_tool,
+    organization_zone,
+)
 from app.services.ai_checklist_service import AIDisabledError
 from app.services.constitution_search_service import search_constitution_chunks
 from app.services.embedding_service import EmbeddingsNotConfiguredError
@@ -36,6 +42,26 @@ class AIChatError(Exception):
 
 def _format_sse(event: str, data: dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
+
+
+def _utc_now() -> datetime:
+    return datetime.now(UTC)
+
+
+def _opening_gap(previous: str, upcoming: str) -> tuple[str, str]:
+    """Return a blank line between tool narration and the next answer.
+
+    Leading newlines on the upcoming text are dropped so a paragraph the model
+    already started is not given a second separator. Newlines already streamed
+    with the narration stay as they are.
+    """
+    body = upcoming.lstrip("\n")
+    if not previous.strip():
+        return "", body
+    trailing = len(previous) - len(previous.rstrip("\n"))
+    missing = 2 - trailing
+    gap = "\n" * missing if missing > 0 else ""
+    return gap, body
 
 
 def _format_rag_context(hits) -> tuple[str, list[ChatConstitutionSource]]:
@@ -205,9 +231,14 @@ def _prepare_chat_context(
         query=data.message,
         limit=settings.AI_CHAT_RAG_CHUNK_LIMIT,
     )
+    zone = organization_zone(db, member)
+    local_date = format_local_date(_utc_now(), zone)
+    timezone_name = getattr(zone, "key", None) or str(zone)
     system_prompt = build_chat_system_prompt(
         rag_context=rag_context,
         document_context=document_context,
+        local_date=local_date,
+        timezone_name=timezone_name,
     )
     messages = _history_messages(data.history)
     messages.append(
@@ -323,8 +354,12 @@ def _stream_chat_impl(
     )
     tool_records: list[ChatToolCallRecord] = []
     final_text = ""
+    pending_narration = ""
 
     for _round in range(MAX_TOOL_ROUNDS):
+        round_text = ""
+        held = ""
+        opening_closed = pending_narration == ""
         try:
             with client.messages.stream(
                 model=settings.ANTHROPIC_MODEL,
@@ -335,9 +370,26 @@ def _stream_chat_impl(
             ) as stream:
                 yield _format_sse("status", {"phase": "thinking"})
                 for text in stream.text_stream:
-                    if text:
-                        final_text += text
-                        yield _format_sse("token", {"text": text})
+                    if not text:
+                        continue
+                    if not opening_closed:
+                        held += text
+                        if not held.strip():
+                            continue
+                        gap, body = _opening_gap(pending_narration, held)
+                        pending_narration = ""
+                        opening_closed = True
+                        held = ""
+                        for piece in (gap, body):
+                            if not piece:
+                                continue
+                            final_text += piece
+                            round_text += piece
+                            yield _format_sse("token", {"text": piece})
+                        continue
+                    final_text += text
+                    round_text += text
+                    yield _format_sse("token", {"text": text})
                 response = stream.get_final_message()
         except Exception as exc:
             logger.exception("Anthropic chat stream failed for member=%s", member.id)
@@ -358,6 +410,8 @@ def _stream_chat_impl(
                 tool_records=tool_records,
             )
             messages.append({"role": "user", "content": tool_results})
+            if round_text.strip():
+                pending_narration = round_text
             final_text = ""
             continue
 

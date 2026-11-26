@@ -101,4 +101,34 @@ describe("ChatPanel streaming UX", () => {
     expect(screen.queryByTestId("streaming-cursor")).not.toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
+
+  it("sends the raw assistant markdown back in history", async () => {
+    const user = userEvent.setup();
+    mockedStreamChatMessage.mockImplementation(async (_request, handlers) => {
+      handlers.onToken("**Published** minutes");
+    });
+
+    renderChatPanel();
+
+    await user.type(screen.getByLabelText("Message the AI assistant"), "First");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Published")).toBeInTheDocument();
+    });
+
+    mockedStreamChatMessage.mockImplementation(async () => undefined);
+    await user.type(screen.getByLabelText("Message the AI assistant"), "Second");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => {
+      expect(mockedStreamChatMessage).toHaveBeenCalledTimes(2);
+    });
+    const secondRequest = mockedStreamChatMessage.mock.calls[1][0];
+    expect(secondRequest.history?.at(-1)).toEqual({
+      role: "assistant",
+      content: "**Published** minutes",
+    });
+    expect(JSON.stringify(secondRequest.history)).not.toContain("<strong>");
+  });
 });
