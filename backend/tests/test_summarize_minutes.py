@@ -16,7 +16,8 @@ VALID_PAYLOAD = {
     "notes": (
         "dashain oct - sapan reserve room\n"
         "treasurer send budget sheet\n"
-        "approved dashain date"
+        "approved dashain date\n"
+        "agreed to share the updated budget"
     ),
     "meeting_title": "March Board Meeting",
 }

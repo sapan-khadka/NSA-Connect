@@ -10,28 +10,48 @@ from tests.helpers.anthropic_mocks import mock_claude_minutes_api
 
 
 def test_summarize_meeting_minutes_parses_json_response():
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
     payload = {
         "summary": "The board reviewed upcoming events.",
-        "key_decisions": ["Approved social event budget."],
+        "key_decisions": [
+            {
+                "text": "Approved the social event budget.",
+                "evidence": "approved the social event budget",
+            }
+        ],
         "action_items": [
-            {"task": "Post flyer on Instagram", "owner": "Marketing", "due": None},
+            {
+                "task": "Post flyer on Instagram",
+                "owner": "Marketing",
+                "due": "2024-11-26",
+                "evidence": "marketing post flyer by November 26",
+            }
         ],
     }
+    notes = "Approved the social event budget. Marketing post flyer by November 26."
 
     with mock_claude_minutes_api(payload) as mock_client:
         result = summarize_meeting_minutes(
-            notes="social budget ok. marketing post flyer",
-            meeting_title="April board meeting",
+            notes=notes,
+            meeting_title="November board meeting",
+            starts_at=datetime(2026, 11, 20, 18, 0, tzinfo=ZoneInfo("America/Chicago")),
         )
 
     assert "reviewed upcoming events" in result.summary
-    assert result.key_decisions == ["Approved social event budget."]
+    assert result.key_decisions == ["Approved the social event budget."]
     assert result.action_items[0].task == "Post flyer on Instagram"
     assert result.action_items[0].owner == "Marketing"
+    assert result.action_items[0].due == "2026-11-26"
 
     call_kwargs = mock_client.messages.create.call_args.kwargs
     assert call_kwargs["system"] == MEETING_MINUTES_SYSTEM_PROMPT
-    assert "April board meeting" in call_kwargs["messages"][0]["content"]
+    content = call_kwargs["messages"][0]["content"]
+    assert "November board meeting" in content
+    assert "November 20, 2026" in content
+    assert "2026" in content
+    assert "America/Chicago" in content
 
 
 def test_summarize_meeting_minutes_raises_when_ai_disabled():

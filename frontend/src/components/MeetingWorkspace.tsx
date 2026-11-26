@@ -17,7 +17,9 @@ import {
 } from "../lib/meeting-workspace";
 import {
   meetingRecordStatus,
+  publishMeetingMinutes,
   saveMeetingAttendance,
+  saveMeetingDraft,
   saveMeetingNotes,
   summarizeMeetingForEvent,
   type MeetingDetailResponse,
@@ -343,13 +345,26 @@ export function MeetingWorkspace({
             onDetailChange({ ...detail, minutes: updated });
             return updated;
           }}
-          onSummarize={async (rawNotes) => {
-            const updated = await summarizeMeetingForEvent(
-              detail.event_id,
-              rawNotes,
-            );
+          onGenerate={async (rawNotes, confirmRegenerate, baseDraftVersion) => {
+            const updated = await summarizeMeetingForEvent(detail.event_id, rawNotes, {
+              confirmRegenerate,
+              baseDraftVersion,
+            });
             onDetailChange({ ...detail, minutes: updated });
             selectTab("ai-summary");
+            return updated;
+          }}
+          onSaveDraft={async (draft) => {
+            const updated = await saveMeetingDraft(detail.event_id, draft);
+            onDetailChange({ ...detail, minutes: updated });
+            return updated;
+          }}
+          onPublish={async (baseDraftVersion) => {
+            const updated = await publishMeetingMinutes(
+              detail.event_id,
+              baseDraftVersion,
+            );
+            onDetailChange({ ...detail, minutes: updated });
             return updated;
           }}
         />
@@ -357,7 +372,6 @@ export function MeetingWorkspace({
 
       {activeTab === "ai-summary" ? (
         <MeetingMinutesEditor
-          key={`summary-${detail.minutes.updated_at ?? "none"}`}
           eventName={detail.event_name}
           minutes={detail.minutes}
           canManage={detail.can_manage}
@@ -368,10 +382,23 @@ export function MeetingWorkspace({
             onDetailChange({ ...detail, minutes: updated });
             return updated;
           }}
-          onSummarize={async (rawNotes) => {
-            const updated = await summarizeMeetingForEvent(
+          onGenerate={async (rawNotes, confirmRegenerate, baseDraftVersion) => {
+            const updated = await summarizeMeetingForEvent(detail.event_id, rawNotes, {
+              confirmRegenerate,
+              baseDraftVersion,
+            });
+            onDetailChange({ ...detail, minutes: updated });
+            return updated;
+          }}
+          onSaveDraft={async (draft) => {
+            const updated = await saveMeetingDraft(detail.event_id, draft);
+            onDetailChange({ ...detail, minutes: updated });
+            return updated;
+          }}
+          onPublish={async (baseDraftVersion) => {
+            const updated = await publishMeetingMinutes(
               detail.event_id,
-              rawNotes,
+              baseDraftVersion,
             );
             onDetailChange({ ...detail, minutes: updated });
             return updated;

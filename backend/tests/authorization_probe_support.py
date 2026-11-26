@@ -369,7 +369,16 @@ def probe_request_kwargs(method: str, path_template: str) -> dict:
     elif path_template.endswith("/meeting/attendance") and method == "PUT":
         kwargs["json"] = {"entries": []}
     elif path_template.endswith("/meeting/summarize") and method == "POST":
-        kwargs["json"] = {}
+        kwargs["json"] = {"raw_notes": "Probe notes"}
+    elif path_template.endswith("/meeting/draft") and method == "PUT":
+        kwargs["json"] = {
+            "summary": "Probe draft",
+            "key_decisions": [],
+            "action_items": [],
+            "base_draft_version": None,
+        }
+    elif path_template.endswith("/meeting/publish") and method == "POST":
+        kwargs["json"] = {"base_draft_version": 1}
     elif path_template == "/api/v1/ai/generate-checklist" and method == "POST":
         kwargs["json"] = {"event_id": 1, "group_names": ["Food"]}
     elif path_template == "/api/v1/ai/draft-announcement-email" and method == "POST":
