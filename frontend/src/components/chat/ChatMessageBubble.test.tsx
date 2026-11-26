@@ -53,7 +53,11 @@ describe("assistant markdown", () => {
     expect(container.querySelector("ul")).not.toBeNull();
     expect(container.querySelector("ol")).not.toBeNull();
     expect(screen.getByRole("table")).toBeInTheDocument();
-    expect(screen.getByTestId("markdown-table-scroll")).toHaveClass("overflow-x-auto");
+    expect(screen.getByTestId("markdown-table-scroll")).toHaveClass(
+      "w-full",
+      "min-w-0",
+      "overflow-x-auto",
+    );
     expect(screen.getByText("2026-11-26")).toBeInTheDocument();
     const boxes = screen.getAllByRole("checkbox");
     expect(boxes).toHaveLength(2);
@@ -159,7 +163,11 @@ describe("assistant markdown", () => {
     const bubble = container.querySelector("article > div");
     expect(bubble?.className).toContain("overflow-hidden");
     expect(bubble?.className).toContain("max-w-[85%]");
-    expect(screen.getByTestId("markdown-table-scroll")).toHaveClass("overflow-x-auto");
+    expect(screen.getByTestId("markdown-table-scroll")).toHaveClass(
+      "w-full",
+      "min-w-0",
+      "overflow-x-auto",
+    );
     expect(container.querySelector("pre")).toHaveClass("overflow-x-auto");
     expect(container.querySelector(".assistant-markdown")).toHaveClass("break-words");
   });

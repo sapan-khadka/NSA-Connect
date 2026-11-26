@@ -100,6 +100,19 @@ def _search_in_memory(
     ]
 
 
+def constitution_index_has_chunks(db: Session) -> bool:
+    """True when the default organization has at least one constitution chunk."""
+    org_id = get_default_organization_id(db)
+    return (
+        db.scalar(
+            select(ConstitutionalChunk.id)
+            .where(ConstitutionalChunk.organization_id == org_id)
+            .limit(1)
+        )
+        is not None
+    )
+
+
 def search_constitution_chunks(
     db: Session,
     *,

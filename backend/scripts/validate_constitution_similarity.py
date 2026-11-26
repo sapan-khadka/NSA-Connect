@@ -13,9 +13,10 @@ Setup:
        /absolute/path/to/constitution.pdf
 
 The script embeds the PDF and the questions with text-embedding-3-small, then
-prints each chunk's cosine score, the similarity-only decision, and the hybrid
-decision. The hybrid decision keeps a top-five chunk at or above 0.45, and
-also keeps a top-five chunk that shares a constitutional term with the question.
+prints each chunk's cosine score. Chat keeps the nearest five non-empty
+constitution chunks regardless of score. Chunks outside that window are not
+retrieved. The 0.45 floor applies to additional organization documents, not
+to these constitution chunks.
 """
 
 from __future__ import annotations
@@ -29,10 +30,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app.core.config import get_settings
 from app.services.constitution_chunk_service import chunk_constitution_text
 from app.services.constitution_pdf_service import extract_text_from_constitution_pdf
-from app.services.constitution_relevance import (
-    constitution_chunk_retained,
-    shares_constitutional_term,
-)
 from app.services.embedding_service import generate_embeddings
 
 QUESTIONS = [
@@ -72,11 +69,11 @@ def main() -> int:
     )
     chunks = chunk_constitution_text(extracted.text)
     settings = get_settings()
-    minimum = settings.AI_CHAT_RAG_MIN_SIMILARITY
     limit = settings.AI_CHAT_RAG_CHUNK_LIMIT
     print(
         f"model={settings.EMBEDDING_MODEL} chunks={len(chunks)} "
-        f"threshold={minimum} limit={limit}"
+        f"constitution_limit={limit} document_threshold="
+        f"{settings.AI_CHAT_RAG_MIN_SIMILARITY}"
     )
 
     chunk_vectors = generate_embeddings([chunk.content for chunk in chunks])
@@ -94,37 +91,17 @@ def main() -> int:
             reverse=True,
         )
         print(f"\nQ: {question}")
-        outside: list[str] = []
         for rank, (score, chunk) in enumerate(ranked, start=1):
             section = chunk.section or f"Chunk {chunk.chunk_index + 1}"
             section = " ".join(section.split())
             excerpt = " ".join(chunk.content.split())[:120]
-            similarity = "dropped"
-            if score >= minimum and chunk.content.strip():
-                similarity = "kept"
-            in_window = rank <= limit
-            retained = constitution_chunk_retained(
-                question=question,
-                content=chunk.content,
-                similarity=score,
-                minimum=minimum,
-            )
-            if not in_window:
-                hybrid = "not-retrieved"
-            elif retained:
-                hybrid = "kept"
+            if rank <= limit and chunk.content.strip():
+                decision = "kept"
             else:
-                hybrid = "dropped"
-            if not in_window and shares_constitutional_term(question, chunk.content):
-                outside.append(f"chunk {chunk.chunk_index} {score:.3f}")
+                decision = "not-retrieved"
             print(
-                f"  rank={rank} similarity={similarity:7} hybrid={hybrid:13} "
-                f"{score:.3f}  {section}: {excerpt}"
+                f"  rank={rank} chat={decision:13} {score:.3f}  {section}: {excerpt}"
             )
-        if outside:
-            print("  relevant-outside-top-five: " + ", ".join(outside))
-        else:
-            print("  relevant-outside-top-five: none")
     return 0
 
 
