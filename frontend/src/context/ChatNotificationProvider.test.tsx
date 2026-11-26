@@ -41,7 +41,11 @@ class MockSocket {
     MockSocket.instances.push(this);
   }
 
-  send() {}
+  sent: string[] = [];
+
+  send(data: string) {
+    this.sent.push(data);
+  }
 
   close() {
     this.readyState = 3;
@@ -97,6 +101,16 @@ describe("ChatNotificationProvider", () => {
     await waitFor(() => {
       expect(MockSocket.instances).toHaveLength(1);
     });
+    expect(MockSocket.instances[0].url).toContain("/ws/notifications");
+    expect(MockSocket.instances[0].url).not.toContain("token=");
+
+    act(() => {
+      MockSocket.instances[0].onopen?.(new Event("open"));
+    });
+    expect(JSON.parse(MockSocket.instances[0].sent[0])).toMatchObject({
+      type: "auth",
+    });
+    expect(MockSocket.instances[0].url.includes("ticket-1")).toBe(false);
 
     act(() => {
       MockSocket.instances[0].onmessage?.({

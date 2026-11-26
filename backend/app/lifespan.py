@@ -6,6 +6,7 @@ from sqlalchemy import text
 
 from app.core.config import settings
 from app.core.database import engine
+from app.core.log_redaction import install_credential_redaction
 from app.services.discussion_ws_manager import discussion_connection_manager
 from app.services.user_notify_ws_manager import user_notify_connection_manager
 
@@ -14,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    install_credential_redaction()
     logger.info("Starting %s [%s]", settings.APP_NAME, settings.ENVIRONMENT)
 
     from app.core.production_checks import enforce_production_config

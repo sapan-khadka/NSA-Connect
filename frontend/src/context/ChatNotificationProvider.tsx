@@ -22,11 +22,10 @@ type DiscussionMessageNotifyPayload = {
   message_id?: number;
 };
 
-function buildNotifyWsUrl(token: string): string {
+function buildNotifyWsUrl(): string {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const host = window.location.host;
-  const params = new URLSearchParams({ token });
-  return `${protocol}//${host}/ws/notifications?${params.toString()}`;
+  return `${protocol}//${host}/ws/notifications`;
 }
 
 function roomIdFromPath(pathname: string): string | null {
@@ -168,13 +167,14 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
         socket = null;
       }
 
-      const next = new WebSocket(buildNotifyWsUrl(ticket));
+      const next = new WebSocket(buildNotifyWsUrl());
       socket = next;
 
       next.onopen = () => {
         if (cancelled || socket !== next) {
           return;
         }
+        next.send(JSON.stringify({ type: "auth", ticket }));
         backoff = INITIAL_BACKOFF_MS;
         clearHeartbeat();
         heartbeatTimer = window.setInterval(() => {

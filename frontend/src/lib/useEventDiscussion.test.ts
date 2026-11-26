@@ -76,7 +76,8 @@ describe("useDiscussion", () => {
 
     await waitFor(() => expect(sockets).toHaveLength(1));
     expect(sockets[0].url).toContain("/ws/events/12/discussion");
-    expect(sockets[0].url).toContain("token=ws-ticket");
+    expect(sockets[0].url).not.toContain("token=");
+    expect(JSON.parse(sockets[0].sent[0])).toMatchObject({ type: "auth" });
 
     act(() => {
       sockets[0].onmessage?.(
@@ -103,7 +104,7 @@ describe("useDiscussion", () => {
     act(() => {
       result.current.sendMessage("Reply");
     });
-    expect(sockets[0].sent).toEqual([JSON.stringify({ content: "Reply" })]);
+    expect(sockets[0].sent).toContain(JSON.stringify({ content: "Reply" }));
 
     act(() => {
       sockets[0].onmessage?.(

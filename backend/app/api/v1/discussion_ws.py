@@ -6,16 +6,18 @@ import json
 import logging
 from collections.abc import Callable
 
-from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.core.database import create_db_session
-from app.core.ws_auth import (
-    TokenAuthenticationError,
-    TokenAuthorizationError,
-    authenticate_member_from_token,
+from app.core.ws_handshake import (
+    WebSocketAuthClosed,
+    accept_authenticated_socket,
+    release_authenticated_socket,
 )
+from app.models.discussion_room import DiscussionRoom
+from app.models.event import Event
 from app.models.member import Member
 from app.schemas.discussion import (
     DiscussionMessageCreateRequest,
@@ -61,6 +63,10 @@ from app.services.discussion_ws_rate_limit import (
     allow_ws_typing,
 )
 from app.services.event_service import EventNotFoundError
+from app.services.organization_context import (
+    get_default_organization_id,
+    resolve_organization_id,
+)
 from app.services.user_notify_ws_manager import user_notify_connection_manager
 
 logger = logging.getLogger(__name__)
@@ -71,6 +77,23 @@ WS_HISTORY_LIMIT = 50
 WS_HISTORY_PAGE_MAX = 100
 WS_CLOSE_UNAUTHORIZED = 4001
 WS_CLOSE_FORBIDDEN = 4003
+
+
+def _socket_room_in_organization(
+    db: Session,
+    *,
+    organization_id: int,
+    room_event_id: int | None,
+    custom_room_id: int | None,
+) -> bool:
+    """Protected room data stays inside the member's active organization."""
+    if room_event_id is not None:
+        event = db.get(Event, room_event_id)
+        return event is not None and event.organization_id == organization_id
+    if custom_room_id is not None:
+        room = db.get(DiscussionRoom, custom_room_id)
+        return room is not None and room.organization_id == organization_id
+    return organization_id == get_default_organization_id(db)
 
 
 def _clamp_history_limit(limit: object | None) -> int:
@@ -183,26 +206,52 @@ async def _publish_typing(
 async def _discussion_websocket(
     websocket: WebSocket,
     *,
-    token: str | None,
     room_key: str,
     room_event_id: int | None,
     load_history: Callable,
     create_message: Callable,
     custom_room_id: int | None = None,
 ):
-    # Auth + history use a short-lived DB session so an open socket cannot
+    try:
+        member = await accept_authenticated_socket(websocket)
+    except WebSocketAuthClosed:
+        return
+    try:
+        await _discussion_session(
+            websocket,
+            member,
+            room_key=room_key,
+            room_event_id=room_event_id,
+            load_history=load_history,
+            create_message=create_message,
+            custom_room_id=custom_room_id,
+        )
+    finally:
+        await release_authenticated_socket(member.id)
+
+
+async def _discussion_session(
+    websocket: WebSocket,
+    member: Member,
+    *,
+    room_key: str,
+    room_event_id: int | None,
+    load_history: Callable,
+    create_message: Callable,
+    custom_room_id: int | None = None,
+):
+    # History uses a short-lived DB session so an open socket cannot
     # exhaust the SQLAlchemy connection pool and freeze the rest of the app.
     db = create_db_session()
     try:
-        try:
-            member = authenticate_member_from_token(db, token)
-        except TokenAuthenticationError:
-            await websocket.close(code=WS_CLOSE_UNAUTHORIZED)
-            return
-        except TokenAuthorizationError:
+        if not _socket_room_in_organization(
+            db,
+            organization_id=resolve_organization_id(db, member),
+            room_event_id=room_event_id,
+            custom_room_id=custom_room_id,
+        ):
             await websocket.close(code=WS_CLOSE_FORBIDDEN)
             return
-
         try:
             history = load_history(db, member=member)
             history_payload = _serialize_history_page(
@@ -243,7 +292,6 @@ async def _discussion_websocket(
     finally:
         db.close()
 
-    await websocket.accept()
     snapshot, is_first_for_user = await discussion_connection_manager.connect(
         room_key,
         websocket,
@@ -806,11 +854,9 @@ async def _discussion_websocket(
 async def event_discussion_websocket(
     websocket: WebSocket,
     event_id: int,
-    token: str | None = Query(default=None),
 ):
     await _discussion_websocket(
         websocket,
-        token=token,
         room_key=event_room_key(event_id),
         room_event_id=event_id,
         load_history=lambda db, member, before_id=None, limit=WS_HISTORY_LIMIT: _load_event_history(
@@ -835,11 +881,9 @@ async def event_discussion_websocket(
 @router.websocket("/ws/board/discussion")
 async def board_discussion_websocket(
     websocket: WebSocket,
-    token: str | None = Query(default=None),
 ):
     await _discussion_websocket(
         websocket,
-        token=token,
         room_key=BOARD_ROOM_KEY,
         room_event_id=None,
         load_history=lambda db, member, before_id=None, limit=WS_HISTORY_LIMIT: _load_board_history(
@@ -863,11 +907,9 @@ async def board_discussion_websocket(
 async def custom_room_discussion_websocket(
     websocket: WebSocket,
     room_id: int,
-    token: str | None = Query(default=None),
 ):
     await _discussion_websocket(
         websocket,
-        token=token,
         room_key=custom_room_key(room_id),
         room_event_id=None,
         custom_room_id=room_id,
@@ -892,41 +934,31 @@ async def custom_room_discussion_websocket(
 
 
 @router.websocket("/ws/notifications")
-async def user_notifications_websocket(
-    websocket: WebSocket,
-    token: str | None = Query(default=None),
-):
+async def user_notifications_websocket(websocket: WebSocket):
     """Realtime toast/push channel for inbox events (chat messages, etc.)."""
-    db = create_db_session()
     try:
+        member = await accept_authenticated_socket(websocket)
+    except WebSocketAuthClosed:
+        return
+    member_id = member.id
+    try:
+        await user_notify_connection_manager.connect(member_id, websocket)
+        touch_global_presence(member_id)
         try:
-            member = authenticate_member_from_token(db, token)
-        except TokenAuthenticationError:
-            await websocket.close(code=WS_CLOSE_UNAUTHORIZED)
-            return
-        except TokenAuthorizationError:
-            await websocket.close(code=WS_CLOSE_FORBIDDEN)
-            return
-        member_id = member.id
+            await websocket.send_json({"type": "ready"})
+            while True:
+                raw = await websocket.receive_text()
+                try:
+                    body = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                if not isinstance(body, dict):
+                    continue
+                if body.get("type") == "presence_heartbeat":
+                    touch_global_presence(member_id)
+        except WebSocketDisconnect:
+            pass
+        finally:
+            await user_notify_connection_manager.disconnect(member_id, websocket)
     finally:
-        db.close()
-
-    await websocket.accept()
-    await user_notify_connection_manager.connect(member_id, websocket)
-    touch_global_presence(member_id)
-    try:
-        await websocket.send_json({"type": "ready"})
-        while True:
-            raw = await websocket.receive_text()
-            try:
-                body = json.loads(raw)
-            except json.JSONDecodeError:
-                continue
-            if not isinstance(body, dict):
-                continue
-            if body.get("type") == "presence_heartbeat":
-                touch_global_presence(member_id)
-    except WebSocketDisconnect:
-        pass
-    finally:
-        await user_notify_connection_manager.disconnect(member_id, websocket)
+        await release_authenticated_socket(member_id)

@@ -1,3 +1,4 @@
+import uuid
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 
@@ -141,7 +142,8 @@ def create_ws_ticket(
     ttl = expires_seconds
     if ttl is None:
         ttl = settings.WS_TICKET_EXPIRE_SECONDS
-    expires_at = datetime.now(UTC) + timedelta(seconds=ttl)
+    issued_at = datetime.now(UTC)
+    expires_at = issued_at + timedelta(seconds=ttl)
     payload = {
         "member_id": member_id,
         "user_id": member_id,
@@ -149,7 +151,9 @@ def create_ws_ticket(
         "role": role,
         "tv": token_version,
         "typ": TokenType.WS.value,
+        "iat": issued_at,
         "exp": expires_at,
+        "jti": str(uuid.uuid4()),
     }
     return _encode_token(payload), expires_at
 

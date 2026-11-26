@@ -144,17 +144,16 @@ function scopeKey(scope: DiscussionScope | null): string | null {
   return `room:${scope.roomId}`;
 }
 
-function buildDiscussionWsUrl(scope: DiscussionScope, token: string): string {
+function buildDiscussionWsUrl(scope: DiscussionScope): string {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const host = window.location.host;
-  const params = new URLSearchParams({ token });
   const path =
     scope.type === "board"
       ? "/ws/board/discussion"
       : scope.type === "event"
         ? `/ws/events/${scope.eventId}/discussion`
         : `/ws/rooms/${scope.roomId}/discussion`;
-  return `${protocol}//${host}${path}?${params.toString()}`;
+  return `${protocol}//${host}${path}`;
 }
 
 function normalizeReactions(
@@ -863,15 +862,14 @@ export function useDiscussion(
           return;
         }
 
-        const socket = new WebSocket(
-          buildDiscussionWsUrl(currentScope, ticket),
-        );
+        const socket = new WebSocket(buildDiscussionWsUrl(currentScope));
         socketRef.current = socket;
 
         socket.onopen = () => {
           if (cancelled || socketRef.current !== socket) {
             return;
           }
+          socket.send(JSON.stringify({ type: "auth", ticket }));
           backoffRef.current = INITIAL_BACKOFF_MS;
           reconnectAttemptsRef.current = 0;
           setStatus("live");

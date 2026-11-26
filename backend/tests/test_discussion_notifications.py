@@ -32,6 +32,8 @@ def test_ws_ticket_is_short_lived_ws_type(client, db_session):
     payload = decode_ws_ticket(body["token"])
     assert payload["typ"] == TokenType.WS.value
     assert payload["email"] == "ticket@semo.edu"
+    assert isinstance(payload["jti"], str) and payload["jti"]
+    assert isinstance(payload["iat"], int)
 
 
 def test_dm_message_publishes_ws_without_inbox_and_respects_mute(

@@ -33,6 +33,22 @@ class Settings(BaseSettings):
         default=120,
         description="TTL for short-lived WebSocket auth tickets",
     )
+    WS_AUTH_TIMEOUT_SECONDS: float = Field(
+        default=5,
+        description="Seconds a WebSocket may stay open before the auth message",
+    )
+    WS_MAX_PENDING_CONNECTIONS: int = Field(
+        default=32,
+        description="Sockets waiting for the first auth message",
+    )
+    WS_MAX_CONNECTIONS_PER_USER: int = Field(
+        default=8,
+        description="Authenticated notification and discussion sockets per member",
+    )
+    WS_MAX_TOTAL_CONNECTIONS: int = Field(
+        default=500,
+        description="Authenticated and pending WebSocket sockets for this process",
+    )
 
     RATE_LIMIT_STORAGE_URI: str = Field(
         default="",
