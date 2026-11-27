@@ -226,6 +226,77 @@ describe("ChatPanel streaming UX", () => {
     expect(screen.getByText(/Hi! I can look up/)).toBeInTheDocument();
   });
 
+  it("shows the treasury card before later prose and drops a late card after switching accounts", async () => {
+    const user = userEvent.setup();
+    const card = {
+      currency: "USD" as const,
+      period_label: "All recorded activity",
+      total_income: "0.00",
+      total_expense: "224.74",
+      balance: "-224.74",
+      breakdown: [{ label: "Pre-event and general", expense: "224.74" }],
+    };
+    const late: { release: () => void } = {
+      release: () => {
+        throw new Error("late continuation was not captured");
+      },
+    };
+
+    mockedStreamChatMessage.mockImplementation(async (_request, handlers) => {
+      handlers.onToken?.("Draft before the tool: expenses are $999.99.");
+      handlers.onResetText?.();
+      handlers.onFinanceSummary?.(card);
+      await new Promise<void>((resolve) => {
+        late.release = () => {
+          resolve();
+        };
+      });
+      handlers.onFinanceSummary?.(card);
+      handlers.onToken?.("Late prose for the previous account.");
+      handlers.onMetadata?.({
+        constitution_sources: [],
+        tool_calls: [],
+        finance_summary: card,
+      });
+    });
+
+    render(
+      <SessionHarness
+        initial={createMockMember("treasurer", { id: 9 })}
+        next={createMockMember("general", { id: 10 })}
+      />,
+    );
+
+    await user.type(
+      screen.getByLabelText("Message the AI assistant"),
+      "What is the balance?",
+    );
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("treasury-summary")).toHaveTextContent(
+        "USD 224.74",
+      );
+    });
+    expect(screen.queryByText(/\$999\.99/)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Change session" }));
+    await waitFor(() => {
+      expect(screen.queryByTestId("treasury-summary")).not.toBeInTheDocument();
+    });
+
+    late.release();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Hi! I can look up/)).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId("treasury-summary")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Late prose for the previous account."),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("USD 224.74")).not.toBeInTheDocument();
+  });
+
   it("aborts an in-flight reply when the member signs out", async () => {
     const user = userEvent.setup();
     mockedStreamChatMessage.mockImplementation(async (_request, handlers, signal) => {

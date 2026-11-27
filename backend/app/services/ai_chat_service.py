@@ -33,9 +33,12 @@ from app.services.ai_chat_tools import (
 )
 from app.services.ai_checklist_service import AIDisabledError
 from app.services.chat_finance_card import (
+    NON_TREASURY_FOLLOW_UP_TIMEOUT_SECONDS,
+    TREASURY_NOTE,
     TREASURY_UNAVAILABLE,
     authorized_finance_card,
     finance_summary_records,
+    messages_for_non_treasury_follow_up,
     non_treasury_instruction,
     prose_after_finance_separation,
     public_tool_records,
@@ -350,27 +353,31 @@ def _non_treasury_prose(
     *,
     system_prompt: str,
     base_messages: list[dict[str, Any]],
+    tool_records: list[ChatToolCallRecord],
     ledger_available: bool,
 ) -> str:
     """Ask for the non-treasury answer without sending ledger figures.
 
-    The follow-up receives the original question and retrieved excerpts. It does
-    not receive the finance tool JSON or the discarded model draft.
+    The follow-up receives the original question, retrieved excerpts, and the
+    authorized non-treasury tool results from this turn. It does not receive
+    the finance tool JSON or the discarded model draft. A failure or timeout
+    returns the deterministic sentence. The caller keeps any card it already
+    built.
     """
-    fallback = (
-        "Here is the chapter treasury summary."
-        if ledger_available
-        else TREASURY_UNAVAILABLE
-    )
+    fallback = TREASURY_NOTE if ledger_available else TREASURY_UNAVAILABLE
     try:
         response = client.messages.create(
             model=settings.ANTHROPIC_MODEL,
             max_tokens=1024,
+            timeout=NON_TREASURY_FOLLOW_UP_TIMEOUT_SECONDS,
             system=(
                 f"{system_prompt}\n\n"
                 f"{non_treasury_instruction(ledger_available=ledger_available)}"
             ),
-            messages=base_messages,
+            messages=messages_for_non_treasury_follow_up(
+                base_messages,
+                tool_records,
+            ),
         )
     except Exception:
         logger.exception("Non-treasury follow-up failed")
@@ -398,6 +405,7 @@ def _reply_for_finance_records(
         settings,
         system_prompt=system_prompt,
         base_messages=base_messages,
+        tool_records=tool_records,
         ledger_available=card is not None,
     )
     return prose, card
@@ -526,6 +534,7 @@ def _stream_chat_impl(
     final_text = ""
     pending_narration = ""
     withhold_model_text = False
+    announced_finance: dict[str, Any] | None = None
 
     for _round in range(MAX_TOOL_ROUNDS):
         round_text = ""
@@ -581,11 +590,18 @@ def _stream_chat_impl(
                 tool_records=tool_records,
             )
             messages.append({"role": "user", "content": tool_results})
-            if finance_summary_records(tool_records) and not withhold_model_text:
-                withhold_model_text = True
-                pending_narration = ""
-                final_text = ""
-                yield _format_sse("reset_text", {})
+            if finance_summary_records(tool_records):
+                if not withhold_model_text:
+                    withhold_model_text = True
+                    pending_narration = ""
+                    final_text = ""
+                    yield _format_sse("reset_text", {})
+                finance_card = authorized_finance_card(tool_records)
+                if finance_card is not None:
+                    finance_payload = finance_card.model_dump(mode="json")
+                    if finance_payload != announced_finance:
+                        announced_finance = finance_payload
+                        yield _format_sse("finance_summary", finance_payload)
             elif round_text.strip():
                 pending_narration = round_text
                 final_text = ""

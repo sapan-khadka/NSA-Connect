@@ -49,6 +49,7 @@ export type ChatStreamHandlers = {
   onStatus?: (phase: string) => void;
   onToken: (text: string) => void;
   onResetText?: () => void;
+  onFinanceSummary?: (summary: unknown) => void;
   onMetadata?: (metadata: ChatStreamMetadata) => void;
   onError?: (message: string) => void;
 };
@@ -97,6 +98,9 @@ function dispatchSseEvent(
       break;
     case "reset_text":
       handlers.onResetText?.();
+      break;
+    case "finance_summary":
+      handlers.onFinanceSummary?.(payload);
       break;
     case "metadata":
       handlers.onMetadata?.(payload as unknown as ChatStreamMetadata);

@@ -194,6 +194,24 @@ export function ChatPanel({
               ),
             );
           },
+          onFinanceSummary: (summary) => {
+            if (
+              sessionKeyRef.current !== requestSession ||
+              controller.signal.aborted
+            ) {
+              return;
+            }
+            if (!isTreasurySummary(summary)) {
+              return;
+            }
+            setMessages((current) =>
+              current.map((message) =>
+                message.id === assistantMessageId
+                  ? { ...message, financeSummary: summary }
+                  : message,
+              ),
+            );
+          },
           onMetadata: (metadata) => {
             if (
               sessionKeyRef.current !== requestSession ||
