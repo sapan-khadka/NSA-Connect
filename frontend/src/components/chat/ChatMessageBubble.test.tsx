@@ -204,7 +204,10 @@ describe("assistant markdown", () => {
     expect(summary).toHaveTextContent("USD");
     expect(summary).not.toHaveTextContent("224.85");
     expect(summary).toHaveClass("w-full", "min-w-0", "max-w-full");
-    expect(screen.getByText(/semester dues of \$20/)).toBeInTheDocument();
+    const dues = screen.getByText(/semester dues of \$20/);
+    expect(
+      dues.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("keeps user messages as plain text that can be selected", () => {

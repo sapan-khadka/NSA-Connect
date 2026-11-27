@@ -13,6 +13,7 @@ from app.services.chat_finance_card import (
     TREASURY_NOTE,
     TREASURY_UNAVAILABLE,
     messages_for_non_treasury_follow_up,
+    non_treasury_instruction,
 )
 from app.services.constitution_search_service import ConstitutionSearchHit
 from tests.helpers.anthropic_mocks import (
@@ -78,6 +79,14 @@ def _ledger_json() -> str:
 
 def _record(tool_name: str, output: str) -> ChatToolCallRecord:
     return ChatToolCallRecord(tool_name=tool_name, input={}, output=output)
+
+
+def test_follow_up_instruction_does_not_announce_a_separate_display():
+    for available in (True, False):
+        text = non_treasury_instruction(ledger_available=available)
+        assert "displayed separately" not in text.casefold()
+        assert "NONE" in text
+        assert "treasury balance" in text.casefold()
 
 
 def test_follow_up_attachment_omits_ledger_and_keeps_other_results():
