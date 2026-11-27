@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type UIEvent,
+} from "react";
 import { useSearchParams } from "react-router";
 
 import {
@@ -80,7 +87,31 @@ export function ChatPanel({
   const [isStreaming, setIsStreaming] = useState(false);
   const [statusLabel, setStatusLabel] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const stickToBottomRef = useRef(true);
+  const userScrollIntentRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
+  const nearBottomPx = 48;
+
+  function noteUserScrollIntent() {
+    userScrollIntentRef.current = true;
+  }
+
+  function rememberScrollPosition(event: UIEvent<HTMLDivElement>) {
+    if (!event.isTrusted && !userScrollIntentRef.current) {
+      return;
+    }
+    const container = scrollRef.current;
+    if (!container) {
+      return;
+    }
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    const nearBottom = distanceFromBottom <= nearBottomPx;
+    stickToBottomRef.current = nearBottom;
+    if (nearBottom) {
+      userScrollIntentRef.current = false;
+    }
+  }
 
   useEffect(() => {
     if (starterQuery?.trim()) {
@@ -88,11 +119,16 @@ export function ChatPanel({
     }
   }, [starterQuery]);
 
-  useEffect(() => {
-    const container = scrollRef.current;
-    if (container) {
-      container.scrollTop = container.scrollHeight;
-    }
+  useLayoutEffect(() => {
+    const pinToBottom = () => {
+      const container = scrollRef.current;
+      if (container && stickToBottomRef.current) {
+        container.scrollTop = container.scrollHeight;
+      }
+    };
+    pinToBottom();
+    const frame = window.requestAnimationFrame(pinToBottom);
+    return () => window.cancelAnimationFrame(frame);
   }, [messages, statusLabel, isStreaming]);
 
   useEffect(() => {
@@ -106,6 +142,8 @@ export function ChatPanel({
       return;
     }
     sessionKeyRef.current = sessionKey;
+    stickToBottomRef.current = true;
+    userScrollIntentRef.current = false;
     abortRef.current?.abort();
     abortRef.current = null;
     setMessages([greetingMessage()]);
@@ -124,6 +162,8 @@ export function ChatPanel({
 
     setError(null);
     setDraft("");
+    stickToBottomRef.current = true;
+    userScrollIntentRef.current = false;
 
     const userMessage: ChatMessage = {
       id: createMessageId(),
@@ -309,7 +349,11 @@ export function ChatPanel({
     >
       <div
         ref={scrollRef}
-        className="min-h-0 min-w-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto px-4 py-5 sm:px-6"
+        data-testid="chat-transcript"
+        onWheel={noteUserScrollIntent}
+        onTouchMove={noteUserScrollIntent}
+        onScroll={rememberScrollPosition}
+        className="min-h-0 min-w-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto overflow-anchor-none px-4 py-5 sm:px-6"
         aria-live="polite"
       >
         {messages.map((message) => (

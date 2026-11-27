@@ -45,9 +45,6 @@ export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
           </p>
         ) : (
           <div className="min-w-0 select-text">
-            {message.financeSummary ? (
-              <TreasurySummaryCard summary={message.financeSummary} />
-            ) : null}
             {message.content ? <AssistantMarkdown content={message.content} /> : null}
             {message.isStreaming ? (
               <span
@@ -81,6 +78,10 @@ export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
               ))}
             </ul>
           </div>
+        ) : null}
+
+        {!isUser && message.financeSummary ? (
+          <TreasurySummaryCard summary={message.financeSummary} />
         ) : null}
       </div>
     </article>
