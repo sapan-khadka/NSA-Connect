@@ -25,14 +25,30 @@ export type ChatStreamRequest = {
   history?: ChatHistoryMessage[];
 };
 
+export type ChatFinanceBreakdownLine = {
+  label: string;
+  expense: string;
+};
+
+export type ChatFinanceSummary = {
+  currency: "USD";
+  period_label: string;
+  total_income: string;
+  total_expense: string;
+  balance: string;
+  breakdown: ChatFinanceBreakdownLine[];
+};
+
 export type ChatStreamMetadata = {
   constitution_sources: ChatConstitutionSource[];
   tool_calls: ChatToolCallRecord[];
+  finance_summary?: ChatFinanceSummary | null;
 };
 
 export type ChatStreamHandlers = {
   onStatus?: (phase: string) => void;
   onToken: (text: string) => void;
+  onResetText?: () => void;
   onMetadata?: (metadata: ChatStreamMetadata) => void;
   onError?: (message: string) => void;
 };
@@ -78,6 +94,9 @@ function dispatchSseEvent(
       break;
     case "token":
       handlers.onToken(String(payload.text ?? ""));
+      break;
+    case "reset_text":
+      handlers.onResetText?.();
       break;
     case "metadata":
       handlers.onMetadata?.(payload as unknown as ChatStreamMetadata);

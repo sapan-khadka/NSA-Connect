@@ -166,6 +166,9 @@ describe("ChatPanel streaming UX", () => {
   it("clears messages and source cards when identity or permissions change", async () => {
     const user = userEvent.setup();
     mockedStreamChatMessage.mockImplementation(async (_request, handlers) => {
+      handlers.onToken("Total expenses are $224.85.");
+      handlers.onResetText?.();
+      handlers.onToken("Here is the chapter treasury summary.");
       handlers.onMetadata?.({
         constitution_sources: [
           {
@@ -177,8 +180,18 @@ describe("ChatPanel streaming UX", () => {
           },
         ],
         tool_calls: [],
+        finance_summary: {
+          currency: "USD",
+          period_label: "All recorded activity",
+          total_income: "0.00",
+          total_expense: "224.74",
+          balance: "-224.74",
+          breakdown: [
+            { label: "Pre-event and general", expense: "29.89" },
+            { label: "TEEJ Celebration", expense: "194.85" },
+          ],
+        },
       });
-      handlers.onToken("The balance is 8800.");
     });
 
     render(
@@ -195,15 +208,19 @@ describe("ChatPanel streaming UX", () => {
     await user.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() => {
-      expect(screen.getByText("The balance is 8800.")).toBeInTheDocument();
+      expect(screen.getByTestId("treasury-summary")).toBeInTheDocument();
     });
+    expect(screen.getByTestId("treasury-summary")).toHaveTextContent("USD 224.74");
+    expect(screen.getByTestId("treasury-summary")).not.toHaveTextContent("224.85");
+    expect(screen.queryByText(/Total expenses are \$224\.85/)).not.toBeInTheDocument();
     expect(screen.getByText("Retrieved excerpts")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Change session" }));
 
     await waitFor(() => {
-      expect(screen.queryByText("The balance is 8800.")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("treasury-summary")).not.toBeInTheDocument();
     });
+    expect(screen.queryByText("USD 224.74")).not.toBeInTheDocument();
     expect(screen.queryByText("Retrieved excerpts")).not.toBeInTheDocument();
     expect(screen.queryByText("What is the balance?")).not.toBeInTheDocument();
     expect(screen.getByText(/Hi! I can look up/)).toBeInTheDocument();

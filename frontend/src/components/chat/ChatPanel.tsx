@@ -5,6 +5,7 @@ import {
   streamChatMessage,
   type ChatHistoryMessage,
 } from "../../lib/chat-stream";
+import { isTreasurySummary } from "../../lib/treasury-summary";
 import { getApiErrorMessage } from "../../lib/api-error";
 import type { MemberResponse } from "../../lib/auth-api";
 import { Button } from "../ui/Button";
@@ -178,7 +179,7 @@ export function ChatPanel({
               ),
             );
           },
-          onMetadata: (metadata) => {
+          onResetText: () => {
             if (
               sessionKeyRef.current !== requestSession ||
               controller.signal.aborted
@@ -188,9 +189,28 @@ export function ChatPanel({
             setMessages((current) =>
               current.map((message) =>
                 message.id === assistantMessageId
+                  ? { ...message, content: "", financeSummary: null }
+                  : message,
+              ),
+            );
+          },
+          onMetadata: (metadata) => {
+            if (
+              sessionKeyRef.current !== requestSession ||
+              controller.signal.aborted
+            ) {
+              return;
+            }
+            const financeSummary = isTreasurySummary(metadata.finance_summary)
+              ? metadata.finance_summary
+              : null;
+            setMessages((current) =>
+              current.map((message) =>
+                message.id === assistantMessageId
                   ? {
                       ...message,
                       constitutionSources: metadata.constitution_sources,
+                      financeSummary,
                     }
                   : message,
               ),

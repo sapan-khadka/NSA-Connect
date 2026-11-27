@@ -169,7 +169,24 @@ class ChatToolCallRecord(BaseModel):
     output: str
 
 
+class ChatFinanceBreakdownLine(BaseModel):
+    label: str = Field(min_length=1, max_length=120)
+    expense: str = Field(pattern=r"^\d+\.\d{2}$")
+
+
+class ChatFinanceSummaryCard(BaseModel):
+    """Ledger totals rendered by the server. Amounts are exact decimal strings."""
+
+    currency: Literal["USD"] = "USD"
+    period_label: str = Field(min_length=1, max_length=80)
+    total_income: str = Field(pattern=r"^\d+\.\d{2}$")
+    total_expense: str = Field(pattern=r"^\d+\.\d{2}$")
+    balance: str = Field(pattern=r"^-?\d+\.\d{2}$")
+    breakdown: list[ChatFinanceBreakdownLine] = Field(default_factory=list)
+
+
 class ChatResponse(BaseModel):
     reply: str = Field(min_length=1, max_length=10000)
     constitution_sources: list[ChatConstitutionSource] = Field(default_factory=list)
     tool_calls: list[ChatToolCallRecord] = Field(default_factory=list)
+    finance_summary: ChatFinanceSummaryCard | None = None

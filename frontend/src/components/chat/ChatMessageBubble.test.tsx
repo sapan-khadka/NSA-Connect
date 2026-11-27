@@ -172,6 +172,41 @@ describe("assistant markdown", () => {
     expect(container.querySelector(".assistant-markdown")).toHaveClass("break-words");
   });
 
+  it("renders the server treasury card instead of a contradictory model total", () => {
+    render(
+      <ChatMessageBubble
+        message={{
+          ...assistant,
+          content:
+            "Here is the chapter treasury summary.\n\nThe constitution says members pay semester dues of $20.",
+          financeSummary: {
+            currency: "USD",
+            period_label: "All recorded activity",
+            total_income: "0.00",
+            total_expense: "224.74",
+            balance: "-224.74",
+            breakdown: [
+              { label: "Pre-event and general", expense: "29.89" },
+              { label: "TEEJ Celebration", expense: "194.85" },
+            ],
+          },
+        }}
+      />,
+    );
+
+    const summary = screen.getByTestId("treasury-summary");
+    expect(summary).toHaveTextContent("USD 0.00");
+    expect(summary).toHaveTextContent("USD 224.74");
+    expect(summary).toHaveTextContent("USD -224.74");
+    expect(summary).toHaveTextContent("USD 29.89");
+    expect(summary).toHaveTextContent("USD 194.85");
+    expect(summary).toHaveTextContent("All recorded activity");
+    expect(summary).toHaveTextContent("USD");
+    expect(summary).not.toHaveTextContent("224.85");
+    expect(summary).toHaveClass("w-full", "min-w-0", "max-w-full");
+    expect(screen.getByText(/semester dues of \$20/)).toBeInTheDocument();
+  });
+
   it("keeps user messages as plain text that can be selected", () => {
     render(
       <ChatMessageBubble
