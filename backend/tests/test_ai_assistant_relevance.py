@@ -423,7 +423,7 @@ def test_finance_officers_can_read_treasury(db_session, factory, email, student_
     assert "balance" in result
 
 
-def test_plain_board_and_owner_follow_existing_treasury_policy(db_session):
+def test_plain_board_cannot_read_treasury_and_owner_can(db_session):
     board = create_board_member(
         db_session,
         email="plain-board-tool@semo.edu",
@@ -438,8 +438,12 @@ def test_plain_board_and_owner_follow_existing_treasury_policy(db_session):
             student_id="61000011",
         ),
     )
-    assert "permission_denied" in _finance(db_session, board)
-    assert "permission_denied" in _finance(db_session, owner)
+    board_result = _finance(db_session, board)
+    owner_result = _finance(db_session, owner)
+    assert "permission_denied" in board_result
+    assert "balance" not in board_result
+    assert "permission_denied" not in owner_result
+    assert "balance" in owner_result
 
 
 def test_board_and_owner_can_read_published_minutes(db_session):

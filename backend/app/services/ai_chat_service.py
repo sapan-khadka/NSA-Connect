@@ -21,6 +21,7 @@ from app.prompts.chatbot import (
 )
 from app.schemas.ai import (
     ChatConstitutionSource,
+    ChatFinanceSummaryCard,
     ChatRequest,
     ChatResponse,
     ChatToolCallRecord,
@@ -31,6 +32,17 @@ from app.services.ai_chat_tools import (
     organization_zone,
 )
 from app.services.ai_checklist_service import AIDisabledError
+from app.services.chat_finance_card import (
+    NON_TREASURY_FOLLOW_UP_TIMEOUT_SECONDS,
+    TREASURY_NOTE,
+    TREASURY_UNAVAILABLE,
+    authorized_finance_card,
+    finance_summary_records,
+    messages_for_non_treasury_follow_up,
+    non_treasury_instruction,
+    prose_after_finance_separation,
+    public_tool_records,
+)
 from app.services.constitution_search_service import (
     constitution_index_has_chunks,
     search_constitution_chunks,
@@ -335,6 +347,70 @@ def _prepare_chat_context(
     return system_prompt, sources, messages
 
 
+def _non_treasury_prose(
+    client: Any,
+    settings: Any,
+    *,
+    system_prompt: str,
+    base_messages: list[dict[str, Any]],
+    tool_records: list[ChatToolCallRecord],
+    ledger_available: bool,
+) -> str:
+    """Ask for the non-treasury answer without sending ledger figures.
+
+    The follow-up receives the original question, retrieved excerpts, and the
+    authorized non-treasury tool results from this turn. It does not receive
+    the finance tool JSON or the discarded model draft. A failure or timeout
+    returns the deterministic sentence. The caller keeps any card it already
+    built.
+    """
+    fallback = TREASURY_NOTE if ledger_available else TREASURY_UNAVAILABLE
+    try:
+        response = client.messages.create(
+            model=settings.ANTHROPIC_MODEL,
+            max_tokens=1024,
+            timeout=NON_TREASURY_FOLLOW_UP_TIMEOUT_SECONDS,
+            system=(
+                f"{system_prompt}\n\n"
+                f"{non_treasury_instruction(ledger_available=ledger_available)}"
+            ),
+            messages=messages_for_non_treasury_follow_up(
+                base_messages,
+                tool_records,
+            ),
+        )
+    except Exception:
+        logger.exception("Non-treasury follow-up failed")
+        return fallback
+    return prose_after_finance_separation(
+        _extract_text(response),
+        ledger_available=ledger_available,
+    )
+
+
+def _reply_for_finance_records(
+    client: Any,
+    settings: Any,
+    *,
+    system_prompt: str,
+    base_messages: list[dict[str, Any]],
+    tool_records: list[ChatToolCallRecord],
+    model_text: str,
+) -> tuple[str, ChatFinanceSummaryCard | None]:
+    if not finance_summary_records(tool_records):
+        return model_text, None
+    card = authorized_finance_card(tool_records)
+    prose = _non_treasury_prose(
+        client,
+        settings,
+        system_prompt=system_prompt,
+        base_messages=base_messages,
+        tool_records=tool_records,
+        ledger_available=card is not None,
+    )
+    return prose, card
+
+
 def chat_with_nsa_assistant(
     db: Session,
     *,
@@ -353,6 +429,7 @@ def chat_with_nsa_assistant(
     system_prompt, sources, messages = _prepare_chat_context(
         db, member=member, data=data
     )
+    base_messages = [dict(item) for item in messages]
     tool_records: list[ChatToolCallRecord] = []
     final_text = ""
 
@@ -386,16 +463,28 @@ def chat_with_nsa_assistant(
             continue
 
         final_text = _extract_text(response)
-        if not final_text:
+        if not final_text and not finance_summary_records(tool_records):
             raise AIChatError("Anthropic returned an empty response")
         break
     else:
         raise AIChatError("Chat exceeded maximum tool-use rounds")
 
+    reply, finance_summary = _reply_for_finance_records(
+        client,
+        settings,
+        system_prompt=system_prompt,
+        base_messages=base_messages,
+        tool_records=tool_records,
+        model_text=final_text,
+    )
+    if not reply.strip():
+        raise AIChatError("Anthropic returned an empty response")
+
     return ChatResponse(
-        reply=final_text,
+        reply=reply,
         constitution_sources=sources,
-        tool_calls=tool_records,
+        tool_calls=public_tool_records(tool_records),
+        finance_summary=finance_summary,
     )
 
 
@@ -440,9 +529,12 @@ def _stream_chat_impl(
     system_prompt, sources, messages = _prepare_chat_context(
         db, member=member, data=data
     )
+    base_messages = [dict(item) for item in messages]
     tool_records: list[ChatToolCallRecord] = []
     final_text = ""
     pending_narration = ""
+    withhold_model_text = False
+    announced_finance: dict[str, Any] | None = None
 
     for _round in range(MAX_TOOL_ROUNDS):
         round_text = ""
@@ -458,7 +550,7 @@ def _stream_chat_impl(
             ) as stream:
                 yield _format_sse("status", {"phase": "thinking"})
                 for text in stream.text_stream:
-                    if not text:
+                    if not text or withhold_model_text:
                         continue
                     if not opening_closed:
                         held += text
@@ -498,16 +590,44 @@ def _stream_chat_impl(
                 tool_records=tool_records,
             )
             messages.append({"role": "user", "content": tool_results})
-            if round_text.strip():
+            if finance_summary_records(tool_records):
+                if not withhold_model_text:
+                    withhold_model_text = True
+                    pending_narration = ""
+                    final_text = ""
+                    yield _format_sse("reset_text", {})
+                finance_card = authorized_finance_card(tool_records)
+                if finance_card is not None:
+                    finance_payload = finance_card.model_dump(mode="json")
+                    if finance_payload != announced_finance:
+                        announced_finance = finance_payload
+                        yield _format_sse("finance_summary", finance_payload)
+            elif round_text.strip():
                 pending_narration = round_text
-            final_text = ""
+                final_text = ""
+            else:
+                final_text = ""
             continue
 
-        if not final_text.strip():
+        if not final_text.strip() and not finance_summary_records(tool_records):
             raise AIChatError("Anthropic returned an empty response")
         break
     else:
         raise AIChatError("Chat exceeded maximum tool-use rounds")
+
+    reply, finance_summary = _reply_for_finance_records(
+        client,
+        settings,
+        system_prompt=system_prompt,
+        base_messages=base_messages,
+        tool_records=tool_records,
+        model_text=final_text,
+    )
+    if not reply.strip():
+        raise AIChatError("Anthropic returned an empty response")
+    if finance_summary_records(tool_records):
+        final_text = ""
+        yield _format_sse("token", {"text": reply})
 
     yield _format_sse(
         "metadata",
@@ -515,7 +635,15 @@ def _stream_chat_impl(
             "constitution_sources": [
                 source.model_dump(mode="json") for source in sources
             ],
-            "tool_calls": [record.model_dump(mode="json") for record in tool_records],
+            "tool_calls": [
+                record.model_dump(mode="json")
+                for record in public_tool_records(tool_records)
+            ],
+            "finance_summary": (
+                finance_summary.model_dump(mode="json")
+                if finance_summary is not None
+                else None
+            ),
         },
     )
     yield _format_sse("done", {})

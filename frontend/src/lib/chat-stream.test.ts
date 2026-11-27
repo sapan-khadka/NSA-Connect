@@ -28,6 +28,7 @@ describe("streamChatMessage", () => {
           'event: status\ndata: {"phase":"thinking"}\n\n',
           'event: token\ndata: {"text":"Hello"}\n\n',
           'event: token\ndata: {"text":" world"}\n\n',
+          'event: finance_summary\ndata: {"currency":"USD","period_label":"All recorded activity","total_income":"0.00","total_expense":"224.74","balance":"-224.74","breakdown":[]}\n\n',
           'event: metadata\ndata: {"constitution_sources":[],"tool_calls":[]}\n\n',
           "event: done\ndata: {}\n\n",
         ]),
@@ -36,11 +37,15 @@ describe("streamChatMessage", () => {
 
     const tokens: string[] = [];
     let metadataReceived = false;
+    let financeSummary: unknown;
 
     await streamChatMessage(
       { message: "Hi" },
       {
         onToken: (text) => tokens.push(text),
+        onFinanceSummary: (summary) => {
+          financeSummary = summary;
+        },
         onMetadata: () => {
           metadataReceived = true;
         },
@@ -49,5 +54,6 @@ describe("streamChatMessage", () => {
 
     expect(tokens).toEqual(["Hello", " world"]);
     expect(metadataReceived).toBe(true);
+    expect(financeSummary).toMatchObject({ total_expense: "224.74" });
   });
 });

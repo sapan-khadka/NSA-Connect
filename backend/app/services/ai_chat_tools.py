@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.core.permissions import (
     Permission,
-    can_manage_treasury,
+    can_read_treasury,
     member_has,
     member_has_role_at_least,
 )
@@ -137,7 +137,8 @@ CHAT_TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "name": "get_member_dues",
         "description": (
             "Look up membership dues for a person by name (or optional member_id). "
-            "Answers 'Did Mukesh pay dues?'. Treasurer / president / VP only."
+            "Answers 'Did Mukesh pay dues?'. "
+            "Organization owner, president, vice president, or treasurer."
         ),
         "input_schema": {
             "type": "object",
@@ -156,7 +157,7 @@ CHAT_TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "name": "get_dues_summary",
         "description": (
             "Chapter dues dashboard for a semester (paid/unpaid counts and totals). "
-            "Treasurer / president / VP only."
+            "Organization owner, president, vice president, or treasurer."
         ),
         "input_schema": {
             "type": "object",
@@ -178,7 +179,8 @@ CHAT_TOOL_DEFINITIONS: list[dict[str, Any]] = [
     {
         "name": "get_finance_summary",
         "description": (
-            "Treasury balance, income, expenses. Treasurer / president / VP only."
+            "Treasury balance, income, and expenses. "
+            "Organization owner, president, vice president, or treasurer."
         ),
         "input_schema": {
             "type": "object",
@@ -403,9 +405,9 @@ def _require_role(member: Member, minimum_role: MemberRole) -> None:
 
 
 def _require_treasury(member: Member) -> None:
-    if not can_manage_treasury(member):
+    if not can_read_treasury(member):
         raise ChatToolPermissionError(
-            "Requires treasurer, president, or vice president",
+            "Requires the organization owner, president, vice president, or treasurer",
         )
 
 

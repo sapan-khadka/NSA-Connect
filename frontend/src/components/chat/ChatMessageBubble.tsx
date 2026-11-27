@@ -1,5 +1,9 @@
-import type { ChatConstitutionSource } from "../../lib/chat-stream";
+import type {
+  ChatConstitutionSource,
+  ChatFinanceSummary,
+} from "../../lib/chat-stream";
 import { AssistantMarkdown } from "./AssistantMarkdown";
+import { TreasurySummaryCard } from "./TreasurySummaryCard";
 
 export type ChatMessage = {
   id: string;
@@ -8,6 +12,7 @@ export type ChatMessage = {
   isStreaming?: boolean;
   statusLabel?: string;
   constitutionSources?: ChatConstitutionSource[];
+  financeSummary?: ChatFinanceSummary | null;
 };
 
 type ChatMessageBubbleProps = {
@@ -40,6 +45,9 @@ export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
           </p>
         ) : (
           <div className="min-w-0 select-text">
+            {message.financeSummary ? (
+              <TreasurySummaryCard summary={message.financeSummary} />
+            ) : null}
             {message.content ? <AssistantMarkdown content={message.content} /> : null}
             {message.isStreaming ? (
               <span

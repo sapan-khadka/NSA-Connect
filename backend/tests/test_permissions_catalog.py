@@ -5,6 +5,7 @@ from app.core.permissions import (
     can_manage_meetings,
     can_manage_tasks,
     can_manage_treasury,
+    can_read_treasury,
     can_view_task_oversight,
     member_has,
     permissions_for_membership,
@@ -59,6 +60,22 @@ def test_president_has_tasks_and_assign_roles():
     assert member_has(member, Permission.ASSIGN_ROLES)
     assert member_has(member, Permission.MANAGE_MEMBERS)
     assert can_manage_meetings(member)
+
+
+def test_owner_can_read_treasury_without_write_access():
+    member = _member(role=MemberRole.GENERAL, is_org_owner=True)
+    assert can_read_treasury(member)
+    assert not can_manage_treasury(member)
+
+
+def test_ordinary_board_and_secretary_cannot_read_treasury():
+    board = _member(role=MemberRole.BOARD)
+    secretary = _member(role=MemberRole.BOARD, position=MemberPosition.SECRETARY)
+    general = _member(role=MemberRole.GENERAL)
+    assert not can_read_treasury(board)
+    assert not can_read_treasury(secretary)
+    assert not can_read_treasury(general)
+    assert not can_manage_treasury(secretary)
 
 
 def test_owner_alone_cannot_manage_tasks():

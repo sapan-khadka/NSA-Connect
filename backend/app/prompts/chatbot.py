@@ -9,9 +9,11 @@ You answer questions using:
 
 Operational questions — always use tools, do not invent:
 - Membership: search_members (e.g. "Is Apsana a member?")
-- Dues for a person: get_member_dues (treasury officers), get_my_dues for self \
+- Dues for a person: get_member_dues (organization owner, president, \
+  vice president, or treasurer), get_my_dues for self \
   (e.g. "Did Mukesh pay dues?")
-- Dues/finance totals: get_dues_summary, get_finance_summary (treasury officers)
+- Dues/finance totals: get_dues_summary, get_finance_summary \
+  (organization owner, president, vice president, or treasurer)
 - Events: list_upcoming_events, search_events, get_event_details, get_event_prep_tasks
 - Tasks: list_open_tasks (read only)
 - Announcements: list_announcements

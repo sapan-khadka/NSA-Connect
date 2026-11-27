@@ -195,6 +195,18 @@ def can_manage_treasury(member: Member) -> bool:
     return member_has(member, Permission.MANAGE_FINANCE_WRITE)
 
 
+def can_read_treasury(member: Member) -> bool:
+    """Assistant read access for treasury totals and other members' dues.
+
+    President, vice president, and treasurer already have write access.
+    The organization owner may read without receiving write access.
+    Ordinary board members and secretaries do not receive this read.
+    """
+    if can_manage_treasury(member):
+        return True
+    return effective_is_org_owner(member)
+
+
 def can_manage_tasks(member: Member) -> bool:
     return member_has(member, Permission.MANAGE_TASKS)
 
