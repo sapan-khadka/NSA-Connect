@@ -32,6 +32,9 @@ def test_production_config_flags_insecure_defaults():
         ORG_OWNER_EMAILS="",
         CLOUDINARY_CLOUD_NAME="",
         RESEND_API_KEY="",
+        DATABASE_URL="postgresql://postgres:postgres@localhost:5433/nsa_connect",
+        REDIS_URL="redis://localhost:6379/0",
+        RESEND_FROM_EMAIL="onboarding@resend.dev",
     )
     issues = production_config_issues(settings)
     assert any("DEBUG" in issue for issue in issues)

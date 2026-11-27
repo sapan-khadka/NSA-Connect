@@ -115,7 +115,7 @@ def test_chat_uses_tool_then_replies(
 ):
     _seed_event(db_session)
     monkeypatch.setattr(
-        "app.services.ai_chat_service.search_constitution_chunks",
+        "app.services.ai_chat_tools.search_constitution_chunks",
         lambda *args, **kwargs: [],
     )
 
@@ -147,7 +147,6 @@ def test_chat_includes_constitution_sources(
     client,
     general_member_headers,
     db_session,
-    monkeypatch,
 ):
     db_session.add(
         ConstitutionalChunk(
@@ -159,24 +158,17 @@ def test_chat_includes_constitution_sources(
     )
     db_session.commit()
 
-    monkeypatch.setattr(
-        "app.services.ai_chat_service.search_constitution_chunks",
-        lambda *args, **kwargs: [
-            type(
-                "Hit",
-                (),
-                {
-                    "id": 1,
-                    "section": "Article I",
-                    "chunk_index": 0,
-                    "content": "Officers must be elected by a majority vote.",
-                    "similarity_score": 0.91,
-                },
-            )()
+    with mock_claude_chat_api(
+        responses=[
+            build_mock_anthropic_tool_use_response(
+                tool_name="search_constitution",
+                tool_input={"query": "How are officers elected?"},
+            ),
+            build_mock_anthropic_text_response(
+                "Officers must be elected by a majority vote."
+            ),
         ],
-    )
-
-    with mock_claude_chat_api():
+    ):
         response = client.post(
             "/api/v1/ai/chat",
             headers=general_member_headers,
@@ -187,6 +179,8 @@ def test_chat_includes_constitution_sources(
     sources = response.json()["constitution_sources"]
     assert len(sources) == 1
     assert sources[0]["section"] == "Article I"
+    assert "majority vote" in sources[0]["excerpt"]
+    assert response.json()["tool_calls"][0]["tool_name"] == "search_constitution"
 
 
 def test_chat_prompt_is_read_only_and_uses_the_local_date(
@@ -199,7 +193,7 @@ def test_chat_prompt_is_read_only_and_uses_the_local_date(
         lambda: datetime(2026, 11, 28, 0, 30, tzinfo=UTC),
     )
     monkeypatch.setattr(
-        "app.services.ai_chat_service.search_constitution_chunks",
+        "app.services.ai_chat_tools.search_constitution_chunks",
         lambda *args, **kwargs: [],
     )
 

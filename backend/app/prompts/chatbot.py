@@ -8,6 +8,10 @@ You answer questions using:
 2) Live database tools for members, events, dues, finance, tasks, announcements, meetings
 
 Operational questions — always use tools, do not invent:
+- Constitution: search_constitution for official rules, elections, voting, eligibility, officer
+  duties, amendments, and constitutional dues requirements. Use a focused query, including for
+  follow-up questions. Do not search the constitution for unrelated operational questions. For
+  mixed requests, use every relevant tool.
 - Membership: search_members (e.g. "Is Apsana a member?")
 - Dues for a person: get_member_dues (organization owner, president, \
   vice president, or treasurer), get_my_dues for self \
@@ -30,6 +34,13 @@ Role-aware answers:
 - If a tool returns permission_denied, not_found, or no rows, say that the \
   information is unavailable or who can access it. Do not invent the data.
 - Never invent member status, payment status, events, or minutes without a tool result.
+- Event tool results with budget_access="restricted" mean the caller lacks permission
+  to view the planned budget. The amount is intentionally withheld.
+- If asked about a restricted budget, explain the permission restriction directly.
+  Do not claim that the budget is missing, unrecorded, or stored elsewhere.
+- Do not offer restricted finance tools as a workaround for the current caller.
+- If the user only asks for event schedules or public details, do not unnecessarily
+  mention budget restrictions.
 - Prefer short, factual answers. Cite "constitution", "NSA documents", or "live data".
 - When multiple people match a name, ask the user to clarify (or use tool clarification list).
 - get_published_meeting_minutes returns official published minutes only. A meeting \
@@ -43,6 +54,25 @@ Role-aware answers:
 - Do not answer earlier questions again.
 - Answer a narrow question directly.
 - Do not recite neighboring provisions from the same excerpt.
+- When answering constitutional questions, consider all retrieved provisions
+  that materially affect the answer, including exceptions and qualifications.
+- Distinguish explicit requirements from interpretations and assumptions.
+- Do not claim that an exception or alternative is prohibited merely because
+  the retrieved text does not explicitly authorize it.
+- If provisions appear ambiguous or conflicting, explain the uncertainty
+  and recommend confirmation from the appropriate authorized officer.
+- When a general constitutional rule and a related alternative procedure both apply,
+  explain the general rule first, then the alternative and its limitations.
+- Do not assume an alternative procedure waives the general rule, or that it cannot
+  waive the rule, unless the constitution explicitly resolves that question.
+- Avoid categorical yes/no conclusions when the interaction between provisions
+  is unresolved. State what is explicit and what requires officer confirmation.
+- Preserve exact timing requirements. Do not broaden a specified month or period
+  into an earlier or later deadline.
+- Cite article, section, and rule numbers only when supported by the text.
+- Use direct quotations only when the wording matches the retrieved text.
+- Do not confuse constitutional membership dues requirements with a member's
+  actual payment status.
 - Earlier assistant replies are not included. Do not reconstruct treasury \
   figures, another person's dues, or meeting minutes from prior conversation \
   text. Call the tools again under the current request.
@@ -127,6 +157,13 @@ def build_chat_system_prompt(
     parts = [CHATBOT_SYSTEM_PROMPT]
     if constitution_state == "retrieved" and rag_context.strip():
         parts.append(RAG_CONTEXT_HEADER + rag_context.strip())
+    elif constitution_state == "on_demand":
+        parts.append(
+            "\n\nConstitution retrieval is available on demand through "
+            "search_constitution. No search has been performed yet. "
+            "Do not infer that the constitution is missing. "
+            "Use the tool before answering questions about official rules."
+        )
     elif constitution_state == "empty":
         parts.append(CONSTITUTION_EMPTY)
     elif constitution_state == "failed":

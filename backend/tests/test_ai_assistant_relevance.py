@@ -145,12 +145,12 @@ def _patch_retrieval(monkeypatch, constitution_hits, document_hits=None, has_doc
 
     monkeypatch.setattr("app.services.ai_chat_service.get_settings", lambda: _Settings())
     monkeypatch.setattr(
-        "app.services.ai_chat_service.constitution_index_has_chunks",
+        "app.services.ai_chat_tools.constitution_index_has_chunks",
         lambda _db: True,
     )
     monkeypatch.setattr("app.services.ai_chat_service.generate_embeddings", embed)
     monkeypatch.setattr(
-        "app.services.ai_chat_service.search_constitution_chunks",
+        "app.services.ai_chat_tools.search_constitution_chunks",
         constitution,
     )
     if has_documents:
@@ -173,6 +173,39 @@ def _prepare(db_session, member, message, monkeypatch, hits, **kwargs):
         data=ChatRequest(message=message),
     )
     return _context, sources, recorded
+
+
+
+def _search_for_test(
+    db_session, member, monkeypatch, hits,
+    *, query="Official constitution rules", indexed=True,
+    fail=False,
+):
+    calls = []
+
+    def search(_db, **kwargs):
+        calls.append(kwargs)
+        if fail:
+            raise RuntimeError("search unavailable")
+        return hits
+
+    monkeypatch.setattr(
+        "app.services.ai_chat_tools.constitution_index_has_chunks",
+        lambda *args, **kwargs: indexed,
+    )
+    monkeypatch.setattr(
+        "app.services.ai_chat_tools.search_constitution_chunks",
+        search,
+    )
+
+    payload = json.loads(execute_chat_tool(
+        db=db_session,
+        member=member,
+        tool_name="search_constitution",
+        tool_input={"query": query},
+    ))
+
+    return payload, calls
 
 
 def test_cosine_distance_uses_similarity_not_distance():
@@ -204,7 +237,7 @@ def test_chat_keeps_voting_passage_below_similarity_floor(db_session, monkeypatc
 
     monkeypatch.setattr("app.services.ai_chat_service.get_settings", lambda: _Settings())
     monkeypatch.setattr(
-        "app.services.ai_chat_service.constitution_index_has_chunks",
+        "app.services.ai_chat_tools.constitution_index_has_chunks",
         lambda _db: True,
     )
     monkeypatch.setattr(
@@ -212,7 +245,7 @@ def test_chat_keeps_voting_passage_below_similarity_floor(db_session, monkeypatc
         lambda _texts: [[0.1, 0.2, 0.3]],
     )
     monkeypatch.setattr(
-        "app.services.ai_chat_service.search_constitution_chunks",
+        "app.services.ai_chat_tools.search_constitution_chunks",
         constitution,
     )
     monkeypatch.setattr(
@@ -239,9 +272,22 @@ def test_chat_keeps_voting_passage_below_similarity_floor(db_session, monkeypatc
         member=member,
         data=ChatRequest(message="What does the constitution say about voting?"),
     )
-    assert seen["limit"] == 5
-    assert sources[0].chunk_id == 1
-    assert "In order to vote, you must be physically present." in context
+    assert seen == {}
+    assert sources == []
+    payload, calls = _search_for_test(
+        db_session, member, monkeypatch,
+        [ConstitutionSearchHit(
+            1, 6, "Elections",
+            "In order to vote, you must be physically present.",
+            0.335,
+        )],
+        query="Voting eligibility and physical presence",
+    )
+    assert calls[0]["limit"] == 5
+    assert payload["status"] == "retrieved"
+    assert payload["passages"][0]["chunk_id"] == 1
+    assert payload["passages"][0]["similarity_score"] == 0.335
+    assert "physically present" in payload["passages"][0]["content"]
     assert "Members pay semester dues." not in context
 
 
@@ -269,9 +315,19 @@ def test_general_member_keeps_relevant_constitution_excerpt(db_session, monkeypa
         monkeypatch,
         [ConstitutionSearchHit(1, 0, "Voting", "Officers must be elected.", 0.82)],
     )
-    assert "Officers must be elected." in context
-    assert sources[0].excerpt == "Officers must be elected."
-    assert sources[0].section == "Voting"
+    assert sources == []
+    assert "Officers must be elected." not in context
+    payload, calls = _search_for_test(
+        db_session, member, monkeypatch,
+        [ConstitutionSearchHit(
+            1, 0, "Voting", "Officers must be elected.", 0.82,
+        )],
+        query="Officer elections",
+    )
+    assert payload["status"] == "retrieved"
+    assert payload["passages"][0]["content"] == "Officers must be elected."
+    assert payload["passages"][0]["section"] == "Voting"
+    assert calls[0]["query"] == "Officer elections"
 
 
 def test_mixed_question_keeps_relevant_excerpt_and_live_tools(db_session, monkeypatch):
@@ -304,11 +360,25 @@ def test_mixed_question_keeps_relevant_excerpt_and_live_tools(db_session, monkey
         ],
         has_documents=True,
     )
-    assert "Members pay semester dues." in context
-    assert "Unrelated nearest neighbor." in context
+    assert sources == []
+    assert "Members pay semester dues." not in context
+    assert "Unrelated nearest neighbor." not in context
     assert "Unrelated document neighbor." not in context
     assert "live" in context.lower()
-    assert [source.chunk_id for source in sources] == [1, 2]
+    payload, calls = _search_for_test(
+        db_session, member, monkeypatch,
+        [
+            ConstitutionSearchHit(
+                1, 0, "Dues", "Members pay semester dues.", 0.82,
+            ),
+            ConstitutionSearchHit(
+                2, 1, "Events", "Unrelated nearest neighbor.", 0.21,
+            ),
+        ],
+        query="Constitutional semester dues requirements",
+    )
+    assert calls[0]["query"] == "Constitutional semester dues requirements"
+    assert [p["chunk_id"] for p in payload["passages"]] == [1, 2]
 
 
 def test_irrelevant_document_excerpt_is_omitted(db_session, monkeypatch):
@@ -336,10 +406,12 @@ def test_irrelevant_document_excerpt_is_omitted(db_session, monkeypatch):
     )
     assert "Relevant fee rule." in context
     assert "Irrelevant document text." not in context
-    assert recorded[0] and recorded[1][0] == recorded[2][0]
+    assert len(recorded[0]) == 1
+    assert recorded[1] == []
+    assert recorded[2] == [[0.1, 0.2, 0.3]]
 
 
-def test_empty_document_library_skips_second_embedding(db_session, monkeypatch):
+def test_empty_document_library_skips_initial_embedding(db_session, monkeypatch):
     member = _member(
         db_session,
         email="empty-docs@semo.edu",
@@ -354,8 +426,8 @@ def test_empty_document_library_skips_second_embedding(db_session, monkeypatch):
         [],
     )
     embeds, constitution_embeddings, document_embeddings = recorded
-    assert len(embeds) == 1
-    assert constitution_embeddings == [[0.1, 0.2, 0.3]]
+    assert embeds == []
+    assert constitution_embeddings == []
     assert document_embeddings == []
 
 
@@ -366,7 +438,7 @@ def test_stale_assistant_history_is_not_sent_to_the_model(db_session, monkeypatc
         lambda _texts: [[0.1, 0.2, 0.3]],
     )
     monkeypatch.setattr(
-        "app.services.ai_chat_service.search_constitution_chunks",
+        "app.services.ai_chat_tools.search_constitution_chunks",
         lambda *_args, **_kwargs: [],
     )
     monkeypatch.setattr(
@@ -494,18 +566,28 @@ def test_general_member_event_tools_omit_budget(db_session):
         tool_name="get_event_details",
         tool_input={"event_id": event.id},
     )
-    for payload in (listed, details):
-        assert "Public Cultural Night" in payload
-        assert "University Center" in details
-        assert "1250" not in payload
+    listed_payload = json.loads(listed)
+    detail_payload = json.loads(details)
+
+    listed_event = next(
+        item for item in listed_payload if item["id"] == event.id
+    )
+
+    for payload in (listed_event, detail_payload):
+        assert payload["title"] == "Public Cultural Night"
+        assert payload["location"] == "University Center"
         assert "budget" not in payload
+        assert payload["budget_access"] == "restricted"
+        assert "1250" not in json.dumps(payload)
     board_details = execute_chat_tool(
         db=db_session,
         member=creator,
         tool_name="get_event_details",
         tool_input={"event_id": event.id},
     )
-    assert "1250.00" in board_details
+    board_payload = json.loads(board_details)
+    assert board_payload["budget"] == "1250.00"
+    assert board_payload["budget_access"] == "authorized"
 
 
 def test_user_supplied_treasury_figure_is_not_live_data(db_session, monkeypatch):
@@ -520,7 +602,7 @@ def test_user_supplied_treasury_figure_is_not_live_data(db_session, monkeypatch)
         lambda _texts: [[0.1, 0.2, 0.3]],
     )
     monkeypatch.setattr(
-        "app.services.ai_chat_service.search_constitution_chunks",
+        "app.services.ai_chat_tools.search_constitution_chunks",
         lambda *_args, **_kwargs: [],
     )
     monkeypatch.setattr(
@@ -568,7 +650,7 @@ RECALL_QUESTIONS = [
 
 
 @pytest.mark.parametrize(("offset", "question"), list(enumerate(RECALL_QUESTIONS)))
-def test_weak_constitution_hit_is_kept_for_each_question(
+def test_initial_context_does_not_eagerly_retrieve_constitution(
     db_session,
     monkeypatch,
     offset,
@@ -595,8 +677,11 @@ def test_weak_constitution_hit_is_kept_for_each_question(
             )
         ],
     )
-    assert sources[0].similarity_score == 0.12
-    assert "Elections shall be held each academic year." in context
+    assert sources == []
+    assert "Elections shall be held each academic year." not in context
+    assert "search_constitution" in context
+    assert "No search has been performed yet." in context
+    assert _recorded[1] == []
     assert "Do not recite neighboring provisions from the same excerpt." in context
     assert "Answer only the latest user question." in context
 
@@ -646,7 +731,7 @@ def test_events_turn_keeps_earlier_questions_as_context_only(db_session, monkeyp
         data=request,
     )
     sent = json.dumps(messages)
-    assert sources[0].similarity_score == 0.20
+    assert sources == []
     assert "4242.00" not in sent
     assert "SECRET RAW NOTES" not in sent
     assert "Official voting overview." not in sent
@@ -694,7 +779,7 @@ def test_constitution_index_empty_is_stated_directly(db_session, monkeypatch):
     )
     _patch_retrieval(monkeypatch, [])
     monkeypatch.setattr(
-        "app.services.ai_chat_service.constitution_index_has_chunks",
+        "app.services.ai_chat_tools.constitution_index_has_chunks",
         lambda _db: False,
     )
     context, sources, recorded = _prepare_chat_context_recorded(
@@ -704,9 +789,14 @@ def test_constitution_index_empty_is_stated_directly(db_session, monkeypatch):
         monkeypatch,
     )
     assert sources == []
-    assert "The constitution index is empty." in context
-    assert "The constitution is indexed" not in context
+    assert "No search has been performed yet." in context
     assert recorded == []
+    payload, calls = _search_for_test(
+        db_session, member, monkeypatch, [], indexed=False,
+    )
+    assert payload["status"] == "empty"
+    assert payload["passages"] == []
+    assert calls == []
 
 
 def _prepare_chat_context_recorded(db_session, member, message, monkeypatch):
@@ -742,9 +832,13 @@ def test_indexed_constitution_without_excerpts_is_not_missing(db_session, monkey
         [],
     )
     assert sources == []
-    assert "The constitution is indexed, but no excerpt was retrieved" in context
-    assert "The constitution is not missing." in context
-    assert "The constitution index is empty." not in context
+    assert "Do not infer that the constitution is missing." in context
+    payload, calls = _search_for_test(
+        db_session, member, monkeypatch, [],
+    )
+    assert payload["status"] == "no_results"
+    assert payload["passages"] == []
+    assert len(calls) == 1
 
 
 def test_empty_document_library_does_not_make_constitution_missing(
@@ -772,10 +866,20 @@ def test_empty_document_library_does_not_make_constitution_missing(
             )
         ],
     )
-    assert sources[0].chunk_id == 1
+    assert sources == []
     assert "The additional organization document library is empty." in context
     assert "This does not mean the constitution is missing." in context
-    assert "In order to vote, you must be physically present." in context
+    payload, calls = _search_for_test(
+        db_session, member, monkeypatch,
+        [ConstitutionSearchHit(
+            1, 6, "Voting",
+            "In order to vote, you must be physically present.",
+            0.33,
+        )],
+    )
+    assert payload["status"] == "retrieved"
+    assert payload["passages"][0]["chunk_id"] == 1
+    assert len(calls) == 1
 
 
 def test_retrieval_failure_does_not_say_the_constitution_is_missing(
@@ -794,7 +898,7 @@ def test_retrieval_failure_does_not_say_the_constitution_is_missing(
 
     monkeypatch.setattr("app.services.ai_chat_service.get_settings", lambda: _Settings())
     monkeypatch.setattr(
-        "app.services.ai_chat_service.constitution_index_has_chunks",
+        "app.services.ai_chat_tools.constitution_index_has_chunks",
         lambda _db: True,
     )
     monkeypatch.setattr(
@@ -806,7 +910,7 @@ def test_retrieval_failure_does_not_say_the_constitution_is_missing(
         lambda _texts: [[0.1, 0.2, 0.3]],
     )
     monkeypatch.setattr(
-        "app.services.ai_chat_service.search_constitution_chunks",
+        "app.services.ai_chat_tools.search_constitution_chunks",
         explode,
     )
     monkeypatch.setattr(
@@ -819,7 +923,79 @@ def test_retrieval_failure_does_not_say_the_constitution_is_missing(
         data=ChatRequest(message="What is the election process?"),
     )
     assert sources == []
-    assert "Constitution retrieval failed." in context
     assert "Additional organization document retrieval failed." in context
-    assert "The constitution is not missing." in context
-    assert "The constitution index is empty." not in context
+    assert "Do not infer that the constitution is missing." in context
+    payload, calls = _search_for_test(
+        db_session, member, monkeypatch, [], fail=True,
+    )
+    assert payload["error"] == "retrieval_failed"
+    assert "search unavailable" not in json.dumps(payload)
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize(
+    "account_type",
+    ["general", "board", "vp", "treasurer", "president", "owner"],
+)
+def test_event_budget_access_metadata_by_account(db_session, account_type):
+    creator = create_board_member(
+        db_session,
+        email="budget-metadata-creator@semo.edu",
+        student_id="61900100",
+    )
+    event = _public_event(db_session, creator)
+
+    factories = {
+        "board": create_board_member,
+        "vp": create_vice_president_member,
+        "treasurer": create_treasurer_member,
+        "president": create_president_member,
+    }
+
+    email = f"budget-metadata-{account_type}@semo.edu"
+
+    if account_type in factories:
+        member = factories[account_type](
+            db_session,
+            email=email,
+            student_id="61900101",
+        )
+    else:
+        member = _member(
+            db_session,
+            email=email,
+            role=MemberRole.GENERAL,
+            student_id="61900101",
+        )
+        if account_type == "owner":
+            member = _attach_owner(db_session, member)
+
+    listed = json.loads(execute_chat_tool(
+        db=db_session,
+        member=member,
+        tool_name="list_upcoming_events",
+        tool_input={"limit": 10},
+    ))
+
+    details = json.loads(execute_chat_tool(
+        db=db_session,
+        member=member,
+        tool_name="get_event_details",
+        tool_input={"event_id": event.id},
+    ))
+
+    listed_event = next(
+        item for item in listed if item["id"] == event.id
+    )
+
+    for payload in (listed_event, details):
+        assert payload["title"] == event.title
+        assert payload["location"] == event.location
+
+        if account_type == "general":
+            assert payload["budget_access"] == "restricted"
+            assert "budget" not in payload
+            assert "1250" not in json.dumps(payload)
+        else:
+            assert payload["budget_access"] == "authorized"
+            assert payload["budget"] == "1250.00"

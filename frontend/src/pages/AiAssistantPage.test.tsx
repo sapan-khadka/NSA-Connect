@@ -70,7 +70,21 @@ describe("AiAssistantPage", () => {
       ).toBeInTheDocument();
     });
 
-        expect(screen.getByText("Retrieved excerpts")).toBeInTheDocument();
+        const summary = screen.getByText("Retrieved excerpts (1)");
+    const details = summary.closest("details");
+
+    expect(details).not.toBeNull();
+    expect(details).not.toHaveAttribute("open");
+
+    await user.click(summary);
+
+    expect(details).toHaveAttribute("open");
+    expect(
+      screen.getByText(/not independently verified citations/i),
+    ).toBeInTheDocument();
+
+    await user.click(summary);
+    expect(details).not.toHaveAttribute("open");
     expect(
       screen.getByText("Officers must be elected by a majority vote."),
     ).toBeInTheDocument();

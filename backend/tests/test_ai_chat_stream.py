@@ -47,7 +47,7 @@ def test_chat_stream_emits_tokens_metadata_and_done(
     monkeypatch,
 ):
     monkeypatch.setattr(
-        "app.services.ai_chat_service.search_constitution_chunks",
+        "app.services.ai_chat_tools.search_constitution_chunks",
         lambda *args, **kwargs: [],
     )
 
@@ -108,7 +108,7 @@ def test_chat_stream_handles_tool_use_before_final_tokens(
     monkeypatch,
 ):
     monkeypatch.setattr(
-        "app.services.ai_chat_service.search_constitution_chunks",
+        "app.services.ai_chat_tools.search_constitution_chunks",
         lambda *args, **kwargs: [],
     )
 
@@ -166,7 +166,7 @@ def test_chat_stream_separates_tool_narration_from_the_answer(
     monkeypatch,
 ):
     monkeypatch.setattr(
-        "app.services.ai_chat_service.search_constitution_chunks",
+        "app.services.ai_chat_tools.search_constitution_chunks",
         lambda *args, **kwargs: [],
     )
     mock_chat_client = MagicMock(name="anthropic_chat_client")
@@ -210,7 +210,7 @@ def test_chat_stream_does_not_add_a_second_paragraph_break(
     monkeypatch,
 ):
     monkeypatch.setattr(
-        "app.services.ai_chat_service.search_constitution_chunks",
+        "app.services.ai_chat_tools.search_constitution_chunks",
         lambda *args, **kwargs: [],
     )
     mock_chat_client = MagicMock(name="anthropic_chat_client")

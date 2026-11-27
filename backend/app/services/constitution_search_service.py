@@ -45,6 +45,7 @@ def _search_with_pgvector(
     db: Session,
     query_embedding: list[float],
     limit: int,
+    organization_id: int,
 ) -> list[ConstitutionSearchHit]:
     distance = ConstitutionalChunk.embedding.cosine_distance(query_embedding).label(
         "distance",
@@ -52,7 +53,7 @@ def _search_with_pgvector(
     rows = db.execute(
         select(ConstitutionalChunk, distance)
         .where(
-            ConstitutionalChunk.organization_id == get_default_organization_id(db)
+            ConstitutionalChunk.organization_id == organization_id
         )
         .order_by(distance)
         .limit(limit),
@@ -74,10 +75,11 @@ def _search_in_memory(
     db: Session,
     query_embedding: list[float],
     limit: int,
+    organization_id: int,
 ) -> list[ConstitutionSearchHit]:
     chunks = db.scalars(
         select(ConstitutionalChunk).where(
-            ConstitutionalChunk.organization_id == get_default_organization_id(db)
+            ConstitutionalChunk.organization_id == organization_id
         )
     ).all()
     ranked = sorted(
@@ -100,9 +102,14 @@ def _search_in_memory(
     ]
 
 
-def constitution_index_has_chunks(db: Session) -> bool:
-    """True when the default organization has at least one constitution chunk."""
-    org_id = get_default_organization_id(db)
+def constitution_index_has_chunks(
+    db: Session, *, organization_id: int | None = None
+) -> bool:
+    """True when the selected organization has constitution chunks."""
+    org_id = (
+        organization_id if organization_id is not None
+        else get_default_organization_id(db)
+    )
     return (
         db.scalar(
             select(ConstitutionalChunk.id)
@@ -119,13 +126,18 @@ def search_constitution_chunks(
     query: str,
     limit: int | None = None,
     query_embedding: list[float] | None = None,
+    organization_id: int | None = None,
 ) -> list[ConstitutionSearchHit]:
     """Find constitution chunks most similar to a natural-language question."""
+    org_id = (
+        organization_id if organization_id is not None
+        else get_default_organization_id(db)
+    )
     result_limit = limit or settings.CONSTITUTION_SEARCH_DEFAULT_LIMIT
     if query_embedding is None:
         query_embedding = generate_embeddings([query.strip()])[0]
 
     if db.get_bind().dialect.name == "postgresql":
-        return _search_with_pgvector(db, query_embedding, result_limit)
+        return _search_with_pgvector(db, query_embedding, result_limit, org_id)
 
-    return _search_in_memory(db, query_embedding, result_limit)
+    return _search_in_memory(db, query_embedding, result_limit, org_id)

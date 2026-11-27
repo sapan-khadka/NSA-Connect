@@ -213,7 +213,16 @@ describe("ChatPanel streaming UX", () => {
     expect(screen.getByTestId("treasury-summary")).toHaveTextContent("USD 224.74");
     expect(screen.getByTestId("treasury-summary")).not.toHaveTextContent("224.85");
     expect(screen.queryByText(/Total expenses are \$224\.85/)).not.toBeInTheDocument();
-    expect(screen.getByText("Retrieved excerpts")).toBeInTheDocument();
+    const summary = screen.getByText("Retrieved excerpts (1)");
+    const details = summary.closest("details");
+
+    expect(details).not.toBeNull();
+    expect(details).not.toHaveAttribute("open");
+
+    await user.click(summary);
+
+    expect(details).toHaveAttribute("open");
+    expect(screen.getByText("Officers must be elected.")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Change session" }));
 
@@ -221,7 +230,8 @@ describe("ChatPanel streaming UX", () => {
       expect(screen.queryByTestId("treasury-summary")).not.toBeInTheDocument();
     });
     expect(screen.queryByText("USD 224.74")).not.toBeInTheDocument();
-    expect(screen.queryByText("Retrieved excerpts")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Retrieved excerpts/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Officers must be elected.")).not.toBeInTheDocument();
     expect(screen.queryByText("What is the balance?")).not.toBeInTheDocument();
     expect(screen.getByText(/Hi! I can look up/)).toBeInTheDocument();
   });
