@@ -21351,12 +21351,23 @@
 
   @media (max-width: 767px) {
     .events-calendar-column-main .events-calendar-card {
-      flex: 1 1 auto;
-      min-height: 16rem;
+      flex: 0 0 auto;
+      min-height: 0;
+      height: auto;
     }
 
-    .events-calendar-grid__days {
-      min-height: 16.5rem;
+    .events-calendar-column-main .events-calendar-grid {
+      flex: 0 0 auto;
+    }
+
+    .events-calendar-column-main .events-calendar-grid__days {
+      flex: 0 0 auto;
+      min-height: 0;
+      grid-auto-rows: minmax(3.35rem, auto);
+    }
+
+    .events-calendar-column-main .events-upcoming-strip {
+      flex-shrink: 0;
     }
   }
 
