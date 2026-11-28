@@ -1,0 +1,68 @@
+/*
+ * Chat-only mobile viewport layout. The regular Documents tab keeps the app's
+ * scrollable page canvas, and tablet/desktop layouts remain unchanged.
+ */
+@media (max-width: 639px) {
+  .ds-app-column > .ds-workspace-row > .ds-main-canvas:has(.ai-assistant-chat-body) {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0;
+  }
+
+  .ai-assistant-page:has(.ai-assistant-chat-body) {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.625rem;
+    overflow: hidden;
+    padding: 0.625rem 0.75rem 0.5rem;
+  }
+
+  /* Neutralize Tailwind space-y margins while the chat fills the viewport. */
+  .ai-assistant-page:has(.ai-assistant-chat-body) > * + *,
+  .ai-assistant-chat-body > * + * {
+    margin-top: 0;
+  }
+
+  .ai-assistant-page:has(.ai-assistant-chat-body) > header p {
+    display: none;
+  }
+
+  .ai-assistant-page:has(.ai-assistant-chat-body) > header h1 {
+    font-size: 1.125rem;
+    line-height: 1.5rem;
+  }
+
+  .ai-assistant-chat-body {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.5rem;
+    overflow: hidden;
+  }
+
+  .ai-assistant-chat-body > .ai-assistant-starters {
+    flex: 0 0 auto;
+  }
+
+  .ai-assistant-chat-body > .ai-assistant-chat-panel {
+    min-height: 0;
+    height: auto;
+    max-height: 100%;
+    flex: 1 1 auto;
+  }
+
+  .ai-assistant-chat-panel [data-testid="chat-transcript"] {
+    padding: 0.75rem;
+  }
+
+  .ai-assistant-chat-panel form {
+    flex-shrink: 0;
+    padding: 0.5rem;
+  }
+}
