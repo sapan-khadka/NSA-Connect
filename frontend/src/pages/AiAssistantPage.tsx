@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+import "./AiAssistantPage.mobile.css";
+
 import { ChatPanel } from "../components/chat/ChatPanel";
 import { NsaDocumentsPanel } from "../components/NsaDocumentsPanel";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
