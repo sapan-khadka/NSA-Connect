@@ -31,7 +31,7 @@ export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
     >
       <div
         className={[
-          "min-w-0 max-w-[85%] overflow-hidden rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm",
+          "min-w-0 max-w-full overflow-hidden rounded-2xl px-3 py-3 text-sm leading-6 shadow-sm sm:max-w-[85%] sm:px-4",
           isUser
             ? "rounded-br-md bg-foreground text-white"
             : "rounded-bl-md border border-gray-200 bg-white text-foreground",
