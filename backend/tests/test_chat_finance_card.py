@@ -24,7 +24,7 @@ from app.schemas.ai import ChatRequest, ChatToolCallRecord
 from app.services.ai_chat_service import chat_with_nsa_assistant
 from app.services.ai_chat_tools import execute_chat_tool
 from app.services.chat_finance_card import (
-    TREASURY_NOTE,
+    TREASURY_PERMISSION_DENIED,
     TREASURY_UNAVAILABLE,
     finance_card_from_tool_output,
     money_string,
@@ -38,6 +38,12 @@ from tests.helpers.anthropic_mocks import (
     build_mock_anthropic_text_response,
     build_mock_anthropic_tool_use_response,
     mock_claude_chat_api,
+)
+
+EXPECTED_TREASURY_PROSE = (
+    "Across all recorded activity, the association has "
+    "a treasury deficit of $224.74. Recorded income totals "
+    "$0.00, and recorded expenses total $224.74."
 )
 
 FINANCE_POST_PAYLOAD = {
@@ -181,7 +187,7 @@ def test_reported_totals_become_exact_card_and_drop_model_total(db_session):
         ("Pre-event and general", "29.89"),
         ("TEEJ Celebration", "194.85"),
     ]
-    assert response.reply == TREASURY_NOTE
+    assert response.reply == EXPECTED_TREASURY_PROSE
     assert WRONG_TOTAL not in response.reply
     payload = response.model_dump(mode="json")
     assert WRONG_TOTAL not in json.dumps(payload)
@@ -258,7 +264,7 @@ def test_mixed_question_keeps_constitution_dues_and_hides_wrong_total(db_session
     )
     assert response.finance_summary is not None
     assert response.finance_summary.total_expense == "224.74"
-    assert response.reply == dues_answer
+    assert response.reply == (EXPECTED_TREASURY_PROSE + '\n\n') + dues_answer
     assert "$20" in response.reply
     assert WRONG_TOTAL not in response.reply
     assert WRONG_TOTAL not in json.dumps(response.model_dump(mode="json"))
@@ -285,7 +291,7 @@ def test_denied_and_malformed_finance_tools_show_no_card(db_session, monkeypatch
         wrong_draft="The balance is $224.85.",
     )
     assert denied.finance_summary is None
-    assert denied.reply == TREASURY_UNAVAILABLE
+    assert denied.reply == TREASURY_PERMISSION_DENIED
     assert WRONG_TOTAL not in denied.reply
 
     treasurer = create_treasurer_member(

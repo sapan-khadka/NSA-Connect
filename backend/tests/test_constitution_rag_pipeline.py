@@ -16,6 +16,7 @@ from tests.helpers.anthropic_mocks import (
     CHAT_CLIENT_PATCH,
     CHAT_SETTINGS_PATCH,
     build_mock_anthropic_text_response,
+    build_mock_anthropic_tool_use_response,
 )
 from tests.helpers.pdf_fixtures import SAMPLE_CONSTITUTION_PDF
 
@@ -99,7 +100,20 @@ def test_full_rag_pipeline_upload_embed_search_and_chat_cites_constitution(
 
     def fake_chat_create(**kwargs):
         captured["system"] = kwargs["system"]
-        assert CONSTITUTION_PHRASE in kwargs["system"]
+        assert CONSTITUTION_PHRASE not in kwargs["system"]
+
+        if mock_chat_client.messages.create.call_count == 1:
+            assert any(
+                tool["name"] == "search_constitution"
+                for tool in kwargs["tools"]
+            )
+            return build_mock_anthropic_tool_use_response(
+                tool_name="search_constitution",
+                tool_input={"query": CONSTITUTION_QUESTION},
+            )
+
+        captured["messages"] = str(kwargs["messages"])
+        assert CONSTITUTION_PHRASE in captured["messages"]
         return build_mock_anthropic_text_response(
             "According to the NSA constitution (Article I), the document states: "
             f"{CONSTITUTION_PHRASE}."
@@ -130,5 +144,10 @@ def test_full_rag_pipeline_upload_embed_search_and_chat_cites_constitution(
     assert "article i" in reply
     assert CONSTITUTION_PHRASE.lower() in reply
 
-    assert CONSTITUTION_PHRASE in captured["system"]
-    mock_chat_client.messages.create.assert_called_once()
+    assert CONSTITUTION_PHRASE not in captured["system"]
+    assert CONSTITUTION_PHRASE in captured["messages"]
+    assert mock_chat_client.messages.create.call_count == 2
+    assert any(
+        call["tool_name"] == "search_constitution"
+        for call in chat_body["tool_calls"]
+    )

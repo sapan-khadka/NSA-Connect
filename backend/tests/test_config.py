@@ -1,8 +1,14 @@
 from app.core.config import Settings, get_settings
 
 
-def test_settings_defaults():
-    settings = Settings()
+def test_settings_defaults(monkeypatch):
+    import os
+
+    for key in list(os.environ):
+        if key.upper() in Settings.model_fields:
+            monkeypatch.delenv(key, raising=False)
+
+    settings = Settings(_env_file=None)
     assert settings.APP_NAME == "NSA Connect API"
     assert settings.ENVIRONMENT == "development"
     assert settings.DATABASE_URL.startswith("postgresql://")

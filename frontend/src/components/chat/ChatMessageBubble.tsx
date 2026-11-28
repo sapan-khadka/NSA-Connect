@@ -57,12 +57,12 @@ export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
         )}
 
         {!isUser && message.constitutionSources && message.constitutionSources.length > 0 ? (
-          <div className="mt-3 border-t border-gray-100 pt-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-label">
-              Retrieved excerpts
-            </p>
-            <p className="mt-1 text-[11px] leading-4 text-label">
-              Indexed passages related to this question, not citations the answer verified.
+          <details className="mt-3 border-t border-gray-100 pt-3">
+            <summary className="cursor-pointer text-xs font-medium text-label">
+              Retrieved excerpts ({message.constitutionSources.length})
+            </summary>
+            <p className="mt-2 text-[11px] leading-4 text-label">
+              Retrieved context from the constitution, not independently verified citations.
             </p>
             <ul className="mt-2 space-y-2">
               {message.constitutionSources.map((source) => (
@@ -73,11 +73,13 @@ export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
                   <span className="font-medium text-foreground">
                     {source.section ?? `Chunk ${source.chunk_index + 1}`}
                   </span>
-                  <p className="mt-1 line-clamp-3 break-words">{source.excerpt}</p>
+                  <p className="mt-1 whitespace-pre-wrap break-words">
+                    {source.excerpt}
+                  </p>
                 </li>
               ))}
             </ul>
-          </div>
+          </details>
         ) : null}
 
         {!isUser && message.financeSummary ? (

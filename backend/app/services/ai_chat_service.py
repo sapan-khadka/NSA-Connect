@@ -42,10 +42,8 @@ from app.services.chat_finance_card import (
     non_treasury_instruction,
     prose_after_finance_separation,
     public_tool_records,
-)
-from app.services.constitution_search_service import (
-    constitution_index_has_chunks,
-    search_constitution_chunks,
+    treasury_summary_prose,
+    treasury_unavailable_message,
 )
 from app.services.embedding_service import (
     EmbeddingsNotConfiguredError,
@@ -89,27 +87,6 @@ def _opening_gap(previous: str, upcoming: str) -> tuple[str, str]:
     return gap, body
 
 
-def _format_rag_context(hits) -> tuple[str, list[ChatConstitutionSource]]:
-    if not hits:
-        return "", []
-
-    sections: list[str] = []
-    sources: list[ChatConstitutionSource] = []
-    for hit in hits:
-        label = hit.section or f"Chunk {hit.chunk_index + 1}"
-        sections.append(
-            f"[{label} | score={hit.similarity_score:.3f}]\n{hit.content.strip()}",
-        )
-        sources.append(
-            ChatConstitutionSource(
-                chunk_id=hit.id,
-                section=hit.section,
-                chunk_index=hit.chunk_index,
-                similarity_score=round(hit.similarity_score, 6),
-                excerpt=hit.content.strip(),
-            ),
-        )
-    return "\n\n".join(sections), sources
 
 
 def _format_document_context(hits) -> str:
@@ -144,8 +121,6 @@ def _relevant_hits(hits, minimum: float):
     ]
 
 
-def _usable_constitution_hits(hits):
-    return [hit for hit in hits if hit.content.strip()]
 
 
 def _index_is_populated(check) -> bool | None:
@@ -182,29 +157,6 @@ def _retrieve_document_context(
     return _format_document_context(relevant), "retrieved"
 
 
-def _retrieve_constitution_context(
-    db: Session,
-    *,
-    query: str,
-    limit: int,
-    query_embedding: list[float],
-) -> tuple[str, list[ChatConstitutionSource], str]:
-    try:
-        hits = search_constitution_chunks(
-            db,
-            query=query,
-            limit=limit,
-            query_embedding=query_embedding,
-        )
-    except Exception:
-        logger.exception("Constitution RAG retrieval failed")
-        return "", [], "failed"
-
-    usable = _usable_constitution_hits(hits)
-    if not usable:
-        return "", [], "indexed_no_excerpts"
-    context, sources = _format_rag_context(usable)
-    return context, sources, "retrieved"
 
 
 def _history_messages(history) -> list[dict[str, Any]]:
@@ -289,6 +241,40 @@ def _process_tool_use_blocks(
     return tool_results
 
 
+def _constitution_sources_from_tools(
+    tool_records: list[ChatToolCallRecord],
+) -> list[ChatConstitutionSource]:
+    sources: dict[int, ChatConstitutionSource] = {}
+
+    for record in tool_records:
+        if record.tool_name != "search_constitution":
+            continue
+
+        try:
+            payload = json.loads(record.output)
+            if not isinstance(payload, dict):
+                continue
+            if payload.get("status") != "retrieved":
+                continue
+
+            for passage in payload.get("passages", []):
+                source = ChatConstitutionSource(
+                    chunk_id=passage["chunk_id"],
+                    section=passage["section"],
+                    chunk_index=passage["chunk_index"],
+                    similarity_score=round(
+                        passage["similarity_score"], 6
+                    ),
+                    excerpt=passage["content"].strip(),
+                )
+                if source.excerpt:
+                    sources[source.chunk_id] = source
+        except (ValueError, TypeError, KeyError, AttributeError):
+            logger.warning("Invalid constitution tool result")
+
+    return list(sources.values())
+
+
 def _prepare_chat_context(
     db: Session,
     *,
@@ -296,24 +282,18 @@ def _prepare_chat_context(
     data: ChatRequest,
 ) -> tuple[str, list[ChatConstitutionSource], list[dict[str, Any]]]:
     settings = get_settings()
-    constitution_indexed = _index_is_populated(lambda: constitution_index_has_chunks(db))
-    documents_indexed = _index_is_populated(lambda: organization_has_document_chunks(db))
-    needs_embedding = constitution_indexed is True or documents_indexed is True
-    embedding = _question_embedding(data.message) if needs_embedding else None
+    documents_indexed = _index_is_populated(
+        lambda: organization_has_document_chunks(db)
+    )
+    embedding = (
+        _question_embedding(data.message)
+        if documents_indexed is True
+        else None
+    )
     minimum = settings.AI_CHAT_RAG_MIN_SIMILARITY
-    if constitution_indexed is None:
-        rag_context, sources, constitution_state = "", [], "failed"
-    elif not constitution_indexed:
-        rag_context, sources, constitution_state = "", [], "empty"
-    elif embedding is None:
-        rag_context, sources, constitution_state = "", [], "failed"
-    else:
-        rag_context, sources, constitution_state = _retrieve_constitution_context(
-            db,
-            query=data.message,
-            limit=settings.AI_CHAT_RAG_CHUNK_LIMIT,
-            query_embedding=embedding,
-        )
+    rag_context = ""
+    sources: list[ChatConstitutionSource] = []
+    constitution_state = "on_demand"
     if documents_indexed is None:
         document_context, document_state = "", "failed"
     elif not documents_indexed:
@@ -400,6 +380,20 @@ def _reply_for_finance_records(
     if not finance_summary_records(tool_records):
         return model_text, None
     card = authorized_finance_card(tool_records)
+
+    finance_records = finance_summary_records(tool_records)
+
+    treasury_only = (
+        len(finance_records) == 1
+        and len(tool_records) == 1
+        and finance_records[0].input.get("remaining_question") == ""
+    )
+
+    if treasury_only:
+        if card is not None:
+            return treasury_summary_prose(card), card
+        return treasury_unavailable_message(tool_records), None
+
     prose = _non_treasury_prose(
         client,
         settings,
@@ -408,6 +402,23 @@ def _reply_for_finance_records(
         tool_records=tool_records,
         ledger_available=card is not None,
     )
+    if card is not None:
+        treasury_text = treasury_summary_prose(card)
+
+        if prose.strip() == TREASURY_NOTE:
+            return treasury_text, card
+
+        return f"{treasury_text}\n\n{prose}", card
+
+    unavailable = treasury_unavailable_message(tool_records)
+
+    if prose == TREASURY_UNAVAILABLE:
+        return unavailable, None
+
+    suffix = "\n\n" + TREASURY_UNAVAILABLE
+    if prose.endswith(suffix):
+        prose = prose[:-len(suffix)] + "\n\n" + unavailable
+
     return prose, card
 
 
@@ -482,7 +493,7 @@ def chat_with_nsa_assistant(
 
     return ChatResponse(
         reply=reply,
-        constitution_sources=sources,
+        constitution_sources=_constitution_sources_from_tools(tool_records),
         tool_calls=public_tool_records(tool_records),
         finance_summary=finance_summary,
     )
@@ -633,7 +644,8 @@ def _stream_chat_impl(
         "metadata",
         {
             "constitution_sources": [
-                source.model_dump(mode="json") for source in sources
+                source.model_dump(mode="json")
+                for source in _constitution_sources_from_tools(tool_records)
             ],
             "tool_calls": [
                 record.model_dump(mode="json")
