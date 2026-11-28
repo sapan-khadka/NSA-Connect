@@ -345,7 +345,7 @@ export function ChatPanel({
   return (
     <Card
       padding="none"
-      className="flex h-[min(58dvh,720px)] min-w-0 max-w-full flex-col overflow-hidden sm:h-[min(72vh,720px)]"
+      className="ai-assistant-chat-panel flex h-[min(58dvh,720px)] min-w-0 max-w-full flex-col overflow-hidden sm:h-[min(72vh,720px)]"
     >
       <div
         ref={scrollRef}
@@ -380,7 +380,7 @@ export function ChatPanel({
         }}
         className="min-w-0 border-t border-gray-200 bg-white px-4 py-4 sm:px-6"
       >
-        <div className="flex min-w-0 flex-col gap-3 sm:flex-row">
+        <div className="flex min-w-0 flex-row items-end gap-2">
           <label htmlFor="assistant-message" className="sr-only">
             Message the AI assistant
           </label>
@@ -391,13 +391,13 @@ export function ChatPanel({
             rows={2}
             placeholder="Ask about members, dues, events, constitution, or chapter docs…"
             disabled={isStreaming}
-            className="min-h-[3rem] w-full min-w-0 flex-1 resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:bg-gray-100"
+            className="min-h-[2.75rem] max-h-28 w-full min-w-0 flex-1 resize-none rounded-lg border border-gray-300 px-3 py-2 text-base text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:bg-gray-100 sm:max-h-none sm:resize-y sm:text-sm"
           />
           {isStreaming ? (
             <button
               type="button"
               onClick={handleStop}
-              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-foreground transition hover:border-accent hover:bg-accent/5 sm:w-auto sm:self-end"
+              className="shrink-0 self-end rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-foreground transition hover:border-accent hover:bg-accent/5 sm:px-4"
             >
               Stop
             </button>
@@ -405,7 +405,7 @@ export function ChatPanel({
             <Button
               type="submit"
               disabled={draft.trim().length === 0}
-              className="w-full sm:w-auto sm:self-end"
+              className="shrink-0 self-end px-3 sm:px-4"
             >
               Send
             </Button>
