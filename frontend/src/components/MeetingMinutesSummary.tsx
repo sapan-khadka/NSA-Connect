@@ -4,6 +4,7 @@ type MeetingMinutesSummaryProps = {
   result: SummarizeMinutesResponse;
   title?: string;
   onClear?: () => void;
+  wideLayout?: boolean;
 };
 
 function formatMeta(value: string | null): string {
@@ -14,6 +15,7 @@ export function MeetingMinutesSummary({
   result,
   title = "Official minutes",
   onClear,
+  wideLayout = false,
 }: MeetingMinutesSummaryProps) {
   const summaryParagraphs = result.summary
     .split(/\n\s*\n/)
@@ -23,7 +25,7 @@ export function MeetingMinutesSummary({
   return (
     <section
       aria-label="Official meeting minutes"
-      className="rounded-lg border border-accent/20 bg-accent/5 p-4 sm:p-6"
+      className="rounded-lg border border-gray-200 bg-gray-50 p-4 sm:p-6"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -44,8 +46,8 @@ export function MeetingMinutesSummary({
         ) : null}
       </div>
 
-      <div className="mt-5 space-y-6">
-        <article className="rounded-md border border-white/80 bg-white p-4">
+      <div className={`mt-5 grid min-w-0 grid-cols-1 gap-4${wideLayout && result.key_decisions.length > 0 && result.action_items.length > 0 ? " xl:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]" : ""}`}>
+        <article className="col-span-full min-w-0 rounded-md border border-gray-200 bg-white p-4">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-label">
             Overview
           </h3>
@@ -57,7 +59,7 @@ export function MeetingMinutesSummary({
         </article>
 
         {result.key_decisions.length > 0 ? (
-          <article className="rounded-md border border-white/80 bg-white p-4">
+          <article className="min-w-0 rounded-md border border-gray-200 bg-white p-4">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-label">
               Key decisions
             </h3>
@@ -75,7 +77,7 @@ export function MeetingMinutesSummary({
         ) : null}
 
         {result.action_items.length > 0 ? (
-          <article className="rounded-md border border-white/80 bg-white p-4">
+          <article className="min-w-0 rounded-md border border-gray-200 bg-white p-4">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-label">
               Action items
             </h3>

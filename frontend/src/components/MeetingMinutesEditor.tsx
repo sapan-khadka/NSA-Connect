@@ -266,12 +266,12 @@ export function MeetingMinutesEditor({
       {showSummary ? (
         <div
           data-testid="minutes-review-layout"
-          className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2"
+          className={`mt-4 grid grid-cols-1 gap-4${canManage ? " lg:grid-cols-2" : ""}`}
         >
           <div className="min-w-0" data-testid="published-minutes">
             {publishedResult ? (
               <>
-                <MeetingMinutesSummary result={publishedResult} title="Published minutes" />
+                <MeetingMinutesSummary result={publishedResult} title="Published minutes" wideLayout={!canManage} />
                 {savedMinutes.updated_by_name &&
                 (savedMinutes.published_at || savedMinutes.updated_at) ? (
                   <p className="mt-3 text-xs text-label">

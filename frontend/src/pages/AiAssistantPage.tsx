@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+import "./AiAssistantPage.mobile.css";
+
 import { ChatPanel } from "../components/chat/ChatPanel";
 import { NsaDocumentsPanel } from "../components/NsaDocumentsPanel";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
@@ -47,8 +49,8 @@ export function AiAssistantPage() {
       />
 
       {tab === "chat" ? (
-        <div className="min-w-0 space-y-3 sm:space-y-4">
-          <div className="flex min-w-0 max-w-full gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden">
+        <div className="ai-assistant-chat-body min-w-0 space-y-3 sm:space-y-4">
+          <div className="ai-assistant-starters flex min-w-0 max-w-full gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden">
             {STARTERS.map((prompt) => (
               <button
                 key={prompt}
