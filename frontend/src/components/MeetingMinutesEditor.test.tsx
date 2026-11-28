@@ -159,6 +159,9 @@ describe("MeetingMinutesEditor", () => {
     expect(screen.getByText("The board reviewed the election timeline.")).toBeInTheDocument();
     expect(screen.queryByText("Secret replacement")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Overview")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("minutes-draft-editor")).not.toBeInTheDocument();
+    expect(screen.getByTestId("minutes-review-layout")).not.toHaveClass("lg:grid-cols-2");
+    expect(screen.getByRole("region", { name: "Official meeting minutes" }).querySelector(".grid")).toHaveClass("xl:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]");
   });
 
   it("stacks the editor on small screens and places it beside published minutes on desktop", () => {
